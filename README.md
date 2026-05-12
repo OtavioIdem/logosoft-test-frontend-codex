@@ -1,8 +1,38 @@
-# logosoft Frontend v1.11.0a2
+# logosoft Frontend v1.11.0a3
 
 Frontend do ERP **logosoft** em **Next.js**, **React**, **TypeScript** e **PrimeReact/Sakai**, consumindo a API real em `http://localhost:8080` por padrão.
 
 Esta aplicação foi construída para operação real de ERP: autenticação, permissões, cadastros, estoque, vendas, financeiro, compras, auditoria, dashboard, validações, dialogs de motivo, feedbacks visuais e integração centralizada via Axios.
+
+## v1.11.0a3 — Auditoria modular de testes e procedimentos
+
+Versão anterior aplicada: `v1.11.0a2`.
+
+Esta manutenção documenta uma varredura por módulo usando a cobertura existente de testes unitários, componentes e E2E crítico. Não altera fluxo funcional; consolida o estado atual e a fila de melhorias recomendadas.
+
+### Resultado consolidado
+
+- Unitários/componentes por módulo: `93/100` testes passaram.
+- Falhas concentradas em Segurança/usuários, Estoque e Financeiro.
+- E2E crítico: `5/5` testes bloqueados por ambiente, pois o Chromium gerenciado do Playwright não está instalado.
+- Documento técnico criado: `docs/AUDITORIA_MODULOS_V1_11_0A3.md`.
+
+### Principais melhorias identificadas
+
+- Criar helper de teste `renderWithProviders` para componentes que dependem de TanStack Query.
+- Centralizar a regra de GUID opcional para evitar divergência entre Estoque e Financeiro.
+- Ajustar Financeiro para limpar `filialId`, `origemId`, `0` e `99` antes da validação.
+- Revisar Estoque para alinhar `null` versus omissão em campos opcionais.
+- Instalar browsers do Playwright ou configurar a suíte E2E para usar Chrome local.
+- Adicionar testes de componente para Dashboard, ReasonDialog e ações críticas por permissão.
+
+### Validação executada
+
+```bash
+npm run validate:source
+vitest run por grupos modulares
+npm run test:e2e:critical -- --reporter=line
+```
 
 ## v1.11.0a2 — Login full-screen e payload sem filial
 

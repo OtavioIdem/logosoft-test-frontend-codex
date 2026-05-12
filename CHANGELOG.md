@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.11.0a3
+
+Versão anterior aplicada: `v1.11.0a2`.
+
+### Documentado
+- Executada auditoria modular de testes unitários, componentes e E2E crítico.
+- Criado documento `docs/AUDITORIA_MODULOS_V1_11_0A3.md`.
+- README atualizado com matriz resumida de estado por módulo e melhorias recomendadas.
+
+### Resultado
+- Unitários/componentes: `93/100` testes passaram.
+- Falhas concentradas em Segurança/usuários, Estoque e Financeiro.
+- E2E crítico: `5/5` testes bloqueados por ambiente, devido ao Chromium gerenciado do Playwright ausente.
+
+### Melhorias identificadas
+- Criar `renderWithProviders` para testes de componentes com TanStack Query.
+- Centralizar normalização de GUID opcional.
+- Ajustar Financeiro e Estoque para alinhar GUID vazio/inválido com a regra de não envio.
+- Tornar E2E crítico executável com instalação de browsers ou uso do Chrome local.
+
+### Alterado
+- Atualizada a versão visual/documental para `1.11.0a3`.
+
 ## v1.11.0a2
 
 Versão anterior aplicada: `v1.11.0a1`.
