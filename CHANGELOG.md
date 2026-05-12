@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.11.0a4
+
+Versao anterior aplicada: `v1.11.0a3`.
+
+### Adicionado
+- `LoadingState` com variantes `table`, `detail`, `metrics` e `panel`.
+- Skeleton automatico no `DataTableServer` para carregamento inicial sem registros visiveis.
+- Skeleton de ficha nos detalhes de pedido de venda e pedido de compra.
+- Skeleton de metricas no Dashboard e nos cards de resumo de Saldos de estoque.
+
+### Alterado
+- Removidos skeletons locais duplicados das listagens, centralizando o comportamento no wrapper de tabela.
+- Auditoria e demais telas que usam `DataTableServer` passam a receber skeleton sem implementacao local.
+- Atualizada a versao visual/documental para `1.11.0a4`.
+
+### Documentacao
+- README atualizado com causa, modulos impactados e validacao.
+- Criado documento `docs/IMPLEMENTACAO_V1_11_0A4.md`.
+
+### Validacao
+- `npm run validate:source` executado.
+- `npm run build` executado.
+
 ## v1.11.0a3
 
 Versão anterior aplicada: `v1.11.0a2`.

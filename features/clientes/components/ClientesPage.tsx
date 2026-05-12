@@ -15,7 +15,6 @@ import { DataTableServer } from '@/components/data/DataTableServer';
 import { StatusTag } from '@/components/data/StatusTag';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { LoadingState } from '@/components/feedback/LoadingState';
 import { ReasonDialog } from '@/components/feedback/ReasonDialog';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
@@ -108,7 +107,6 @@ export const ClientesPage = () => {
             <Message className="w-full mb-3" severity="info" text="Cliente é vinculado a uma pessoa ativa. O backend valida código único por empresa e regras de crédito." />
             <OperationalGovernancePanel title="Governança comercial e de crédito" description="Resumo da carteira de clientes carregada, com controle visual de status e atenção ao bloqueio de crédito." records={records} activeLabel="Operacionais" inactiveLabel="Restritos" complianceNote="Bloqueio, desbloqueio e inativação exigem motivo para preservar rastreabilidade comercial e financeira." sensitiveDataNote="Cliente herda dados pessoais da pessoa vinculada; documentos devem ser exibidos de forma minimizada quando possível." />
             <Card>
-                {listQuery.isLoading ? <LoadingState /> : null}
                 {listQuery.error ? <ApiErrorPanel error={mapApiError(listQuery.error)} /> : null}
                 <DataTableServer<ClienteResponse> value={visibleRecords} totalRecords={records.length} loading={listQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhum cliente encontrado.">
                     <Column field="codigo" header="Código" />

@@ -14,7 +14,6 @@ import { DataTableServer } from '@/components/data/DataTableServer';
 import { StatusTag } from '@/components/data/StatusTag';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { LoadingState } from '@/components/feedback/LoadingState';
 import { ReasonDialog } from '@/components/feedback/ReasonDialog';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
@@ -121,7 +120,6 @@ export const CatalogoProdutoPage = ({ kind }: { kind: CatalogoKind }) => {
             <Message className="w-full mb-3" severity="info" text="O backend valida unicidade por empresa e impede alteração de registros inativos." />
             <OperationalGovernancePanel title="Governança do cadastro auxiliar" description="Resumo dos registros carregados para manter categorias, unidades e marcas consistentes com o catálogo de produtos." records={records} complianceNote="Registros auxiliares inativos não devem ser selecionados em novos produtos; alterações permanecem controladas por permissão e validação do backend." />
             <Card>
-                {query.isLoading ? <LoadingState /> : null}
                 {query.error ? <ApiErrorPanel error={mapApiError(query.error)} /> : null}
                 <DataTableServer<CatalogoRecord> value={visibleRecords} totalRecords={records.length} loading={query.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhum registro encontrado.">
                     {kind === 'categoria' ? <Column field="codigo" header="Código" /> : null}

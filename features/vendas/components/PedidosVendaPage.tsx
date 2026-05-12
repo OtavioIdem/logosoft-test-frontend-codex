@@ -14,7 +14,6 @@ import { DataTableServer } from '@/components/data/DataTableServer';
 import { StatusTag } from '@/components/data/StatusTag';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { LoadingState } from '@/components/feedback/LoadingState';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { EmpresaFilialFilter } from '@/components/forms/EmpresaFilialFilter';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
@@ -78,7 +77,6 @@ export const PedidosVendaPage = () => {
                 <div className="col-12 md:col-3"><Card><span className="block text-color-secondary mb-1">Valor total</span><strong className="text-xl">{formatMoney(summary.valorTotal)}</strong></Card></div>
             </div>
             <Card>
-                {pedidosQuery.isLoading ? <LoadingState /> : null}
                 {pedidosQuery.error ? <ApiErrorPanel error={mapApiError(pedidosQuery.error)} /> : null}
                 <DataTableServer<PedidoVendaResponse> value={visibleRecords} totalRecords={records.length} loading={pedidosQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhum pedido encontrado.">
                     <Column field="numero" header="Número" />

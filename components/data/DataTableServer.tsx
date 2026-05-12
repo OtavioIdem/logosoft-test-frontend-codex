@@ -1,7 +1,8 @@
 'use client';
 
+import { LoadingState } from '@/components/feedback/LoadingState';
 import { DataTable, type DataTablePageEvent, type DataTableSortEvent, type DataTableValue } from 'primereact/datatable';
-import { ReactNode } from 'react';
+import { Children, ReactNode } from 'react';
 
 type DataTableServerProps<T extends object> = {
     value: T[];
@@ -19,6 +20,10 @@ type DataTableServerProps<T extends object> = {
 };
 
 export function DataTableServer<T extends object>({ value, totalRecords, loading, first, rows, sortField, sortOrder, dataKey = 'id', emptyMessage = 'Nenhum registro encontrado.', onPage, onSort, children }: DataTableServerProps<T>) {
+    if (loading && value.length === 0) {
+        return <LoadingState variant="table" rows={rows} columns={Children.count(children)} />;
+    }
+
     return (
         <DataTable
             value={value as DataTableValue[]}

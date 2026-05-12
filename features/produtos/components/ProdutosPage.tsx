@@ -15,7 +15,6 @@ import { DataTableServer } from '@/components/data/DataTableServer';
 import { StatusTag } from '@/components/data/StatusTag';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { LoadingState } from '@/components/feedback/LoadingState';
 import { ReasonDialog } from '@/components/feedback/ReasonDialog';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
@@ -157,7 +156,6 @@ export const ProdutosPage = () => {
             <Message className="w-full mb-3" severity="info" text="Produto inativo não deve ser comprado, vendido ou movimentado. O backend valida unicidade de código, preço/custo não negativos e vínculo obrigatório com unidade." />
             <OperationalGovernancePanel title="Governança de catálogo" description="Resumo dos produtos carregados, com foco em disponibilidade operacional, dados fiscais e impacto em vendas, compras e estoque." records={records} activeLabel="Disponíveis" inactiveLabel="Bloqueados" complianceNote="Produtos inativos não devem ser utilizados em venda, compra ou movimentação; preço, custo e dados fiscais seguem validação do backend." />
             <Card>
-                {produtosQuery.isLoading ? <LoadingState /> : null}
                 {produtosQuery.error ? <ApiErrorPanel error={mapApiError(produtosQuery.error)} /> : null}
                 <DataTableServer<ProdutoResponse> value={visibleRecords} totalRecords={records.length} loading={produtosQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhum produto encontrado.">
                     <Column field="codigo" header="Código" />

@@ -15,7 +15,6 @@ import { DataTableActions } from '@/components/data/DataTableActions';
 import { DataTableServer } from '@/components/data/DataTableServer';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { LoadingState } from '@/components/feedback/LoadingState';
 import { ReasonDialog } from '@/components/feedback/ReasonDialog';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
@@ -165,7 +164,6 @@ export const AdministracaoPage = ({ resourceKey }: { resourceKey: AdministracaoR
             <Message className="w-full mb-3" severity="info" text={config.listDescription} />
             <OperationalGovernancePanel title="Governança da estrutura organizacional" description="Resumo operacional dos registros carregados para apoiar revisão de status, vínculos por empresa/filial e rastreabilidade administrativa." records={records} complianceNote="Cadastros administrativos não são excluídos fisicamente; inativação exige motivo e permanece rastreável para módulos comerciais, financeiros, estoque e auditoria." />
             <Card>
-                {listQuery.isLoading ? <LoadingState /> : null}
                 {listQuery.error ? <ApiErrorPanel error={mapApiError(listQuery.error)} /> : null}
                 <DataTableServer<Record<string, unknown>>
                     value={visibleRecords}

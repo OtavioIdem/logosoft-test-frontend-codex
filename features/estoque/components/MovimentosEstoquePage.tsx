@@ -8,7 +8,6 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { DataTableServer } from '@/components/data/DataTableServer';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { LoadingState } from '@/components/feedback/LoadingState';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { EstoqueFilterBar } from '@/features/estoque/components/EstoqueFilterBar';
 import { filterLocalRecords, formatDateTime, formatQuantity } from '@/features/estoque/components/estoqueUiUtils';
@@ -47,7 +46,6 @@ export const MovimentosEstoquePage = () => {
                 <div className="col-12 md:col-3"><Card><span className="block text-color-secondary mb-2">Quantidade movimentada</span><strong className="text-2xl">{formatQuantity(resumo.quantidadeMovimentada)}</strong><small className="block text-color-secondary mt-2">{resumo.reservas} movimento(s) de reserva</small></Card></div>
             </div>
             <Card>
-                {movimentosQuery.isLoading ? <LoadingState /> : null}
                 {movimentosQuery.error ? <ApiErrorPanel error={mapApiError(movimentosQuery.error)} /> : null}
                 <DataTableServer<MovimentoEstoqueResponse> value={visibleRecords} totalRecords={records.length} loading={movimentosQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }}>
                     <Column header="Produto" body={(row) => produtoLabelMap.get(row.produtoId) ?? 'Produto não carregado'} />

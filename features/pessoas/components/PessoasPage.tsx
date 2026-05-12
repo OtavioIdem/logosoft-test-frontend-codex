@@ -15,7 +15,6 @@ import { DataTableServer } from '@/components/data/DataTableServer';
 import { StatusTag } from '@/components/data/StatusTag';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { LoadingState } from '@/components/feedback/LoadingState';
 import { ReasonDialog } from '@/components/feedback/ReasonDialog';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
@@ -108,7 +107,6 @@ export const PessoasPage = () => {
             <Message className="w-full mb-3" severity="info" text="CPF/CNPJ é preservado no payload; o backend continua sendo a fonte final de validação documental." />
             <OperationalGovernancePanel title="Governança de dados pessoais" description="Resumo da base de pessoas carregada, com atenção a status, documentos e uso compartilhado por clientes, fornecedores e demais módulos." records={records} complianceNote="Pessoa inativa não deve ser alterada nem vinculada a novos papéis operacionais; a validação definitiva permanece no backend." sensitiveDataNote="Documentos pessoais são mascarados na listagem e devem ser exibidos integralmente apenas quando houver permissão e necessidade operacional." />
             <Card>
-                {listQuery.isLoading ? <LoadingState /> : null}
                 {listQuery.error ? <ApiErrorPanel error={mapApiError(listQuery.error)} /> : null}
                 <DataTableServer<PessoaResponse> value={visibleRecords} totalRecords={records.length} loading={listQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhuma pessoa encontrada.">
                     <Column header="Tipo" body={(row: PessoaResponse) => <Tag value={tipoPessoaLabel(row.tipoPessoa)} severity="info" />} />

@@ -11,7 +11,6 @@ import { DataTableServer } from '@/components/data/DataTableServer';
 import { StatusTag } from '@/components/data/StatusTag';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { LoadingState } from '@/components/feedback/LoadingState';
 import { ReasonDialog } from '@/components/feedback/ReasonDialog';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
@@ -88,7 +87,6 @@ export const LocaisEstoquePage = () => {
                 <div className="col-12 md:col-4"><Card><span className="block text-color-secondary mb-2">Inativos/bloqueados</span><strong className="text-2xl">{resumo.inativos}</strong></Card></div>
             </div>
             <Card>
-                {listQuery.isLoading ? <LoadingState /> : null}
                 {listQuery.error ? <ApiErrorPanel error={mapApiError(listQuery.error)} /> : null}
                 <DataTableServer<LocalEstoqueResponse> value={visibleRecords} totalRecords={records.length} loading={listQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }}>
                     <Column field="codigo" header="Código" />
