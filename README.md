@@ -1,8 +1,31 @@
-# logosoft Frontend v1.11.0
+# logosoft Frontend v1.11.0a1
 
 Frontend do ERP **logosoft** em **Next.js**, **React**, **TypeScript** e **PrimeReact/Sakai**, consumindo a API real em `http://localhost:8080` por padrão.
 
 Esta aplicação foi construída para operação real de ERP: autenticação, permissões, cadastros, estoque, vendas, financeiro, compras, auditoria, dashboard, validações, dialogs de motivo, feedbacks visuais e integração centralizada via Axios.
+
+## v1.11.0a1 — Build e Dashboard
+
+Versão anterior aplicada: `v1.11.0`.
+
+Esta manutenção corrige um erro de build introduzido na tela de Login e padroniza a altura dos cards da Dashboard em zoom normal, mantendo o bloco Fiscal/Nota Fiscal protegido pelo gate de contrato.
+
+### Implementado nesta versão
+
+- Corrigido `features/auth/components/LoginForm.tsx`, removendo a prop `inputProps` não suportada pelo `Password` do PrimeReact 10.2.1.
+- Mantidos `aria-invalid` e `aria-describedby` diretamente no componente `Password`, que herda atributos nativos de input.
+- Criado `styles/layout/_dashboard.scss` para padronizar o grid e a altura dos cards do Dashboard.
+- Atualizado `features/dashboard/components/DashboardPage.tsx` para usar classes específicas de layout em métricas, fluxos, auditoria e atalhos.
+- Documentada esta manutenção em `docs/IMPLEMENTACAO_V1_11_0A1.md`.
+
+### Validação
+
+Executado:
+
+```bash
+npm run validate:source
+npm run build
+```
 
 ## v1.11.0 — Fiscal Contract Gate
 

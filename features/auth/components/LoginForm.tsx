@@ -90,10 +90,8 @@ export const LoginForm = () => {
                                 feedback={false}
                                 toggleMask
                                 autoComplete="current-password"
-                                inputProps={{
-                                    'aria-invalid': Boolean(errors.senha),
-                                    'aria-describedby': errors.senha ? 'senha-error' : undefined
-                                }}
+                                aria-invalid={Boolean(errors.senha)}
+                                aria-describedby={errors.senha ? 'senha-error' : undefined}
                                 onChange={(event) => {
                                     clearApiError();
                                     field.onChange(event);

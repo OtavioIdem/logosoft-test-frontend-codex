@@ -1,5 +1,22 @@
 # Changelog
 
+## v1.11.0a1
+
+Versão anterior aplicada: `v1.11.0`.
+
+### Corrigido
+- Corrigido erro de build em `LoginForm`, removendo `inputProps` do `Password` do PrimeReact 10.2.1.
+- Padronizado o layout da Dashboard com grid próprio e cards de métrica com altura estável.
+
+### Alterado
+- Atualizada a versão visual/documental para `1.11.0a1`.
+- Criado `styles/layout/_dashboard.scss`.
+- Criado documento `docs/IMPLEMENTACAO_V1_11_0A1.md`.
+
+### Validação
+- `npm run validate:source` executado.
+- `npm run build` executado.
+
 ## v1.11.0
 
 Versão anterior aplicada: `v1.10.15a1`.

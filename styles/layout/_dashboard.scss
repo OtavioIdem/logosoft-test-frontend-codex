@@ -1,0 +1,144 @@
+.dashboard-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.dashboard-metric-cell {
+    min-width: 0;
+}
+
+.dashboard-metric-cell,
+.dashboard-metric-cell > a,
+.dashboard-metric-card {
+    display: block;
+    height: 100%;
+}
+
+.dashboard-metric-card {
+    min-height: 11.75rem;
+
+    .p-card-body,
+    .p-card-content {
+        height: 100%;
+    }
+
+    .p-card-body {
+        padding: 1.5rem;
+    }
+
+    .p-card-content {
+        display: flex;
+        padding: 0;
+    }
+}
+
+.dashboard-metric-card__body {
+    display: grid;
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr) 3rem;
+    gap: 1rem;
+    align-items: start;
+}
+
+.dashboard-metric-card__content {
+    min-width: 0;
+}
+
+.dashboard-metric-card__title,
+.dashboard-metric-card__detail {
+    display: -webkit-box;
+    overflow: hidden;
+    color: var(--text-color-secondary);
+    line-height: 1.5;
+    -webkit-box-orient: vertical;
+}
+
+.dashboard-metric-card__title {
+    min-height: 3rem;
+    margin-bottom: 0.35rem;
+    font-weight: 600;
+    -webkit-line-clamp: 2;
+}
+
+.dashboard-metric-card__value {
+    min-height: 2.25rem;
+    color: var(--text-color);
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.dashboard-metric-card__detail {
+    min-height: 3rem;
+    margin-top: 0.75rem;
+    -webkit-line-clamp: 2;
+}
+
+.dashboard-metric-card__icon {
+    display: inline-flex;
+    width: 3rem;
+    height: 3rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+}
+
+.dashboard-flow-panel,
+.dashboard-audit-panel {
+    min-height: 16rem;
+}
+
+.dashboard-flow-panel {
+    .p-card-content {
+        min-height: 12rem;
+    }
+}
+
+.dashboard-audit-panel {
+    .p-card-content {
+        display: flex;
+        min-height: 12rem;
+        flex-direction: column;
+        justify-content: center;
+    }
+}
+
+.dashboard-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.dashboard-action-cell,
+.dashboard-action-cell > a,
+.dashboard-action-card {
+    display: block;
+    height: 100%;
+    min-width: 0;
+}
+
+.dashboard-action-card {
+    min-height: 5rem;
+    padding: 1rem;
+    border: 1px solid var(--surface-border);
+    border-radius: 8px;
+}
+
+@media (max-width: 1199px) {
+    .dashboard-metrics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 767px) {
+    .dashboard-metrics-grid,
+    .dashboard-actions-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-metric-card {
+        min-height: 10.75rem;
+    }
+}

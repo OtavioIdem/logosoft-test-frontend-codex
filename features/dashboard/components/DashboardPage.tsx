@@ -7,6 +7,7 @@ import { Divider } from 'primereact/divider';
 import { Message } from 'primereact/message';
 import { Skeleton } from 'primereact/skeleton';
 import { Tag } from 'primereact/tag';
+import { classNames } from 'primereact/utils';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
@@ -41,19 +42,19 @@ const quickActions: QuickAction[] = [
 
 const MetricCard = ({ metric }: { metric: DashboardMetric }) => (
     <PermissionGuard permission={metric.permission} mode="hide">
-        <div className="col-12 md:col-6 xl:col-4">
+        <div className="dashboard-metric-cell">
             <Link href={metric.href} className="no-underline text-color">
-                <Card className={metric.unavailable ? 'opacity-70' : undefined}>
-                    <div className="flex align-items-center justify-content-between gap-3">
-                        <div>
-                            <span className="block text-color-secondary font-medium mb-2">{metric.title}</span>
-                            <div className="text-900 font-semibold text-2xl">{metric.unavailable ? '-' : metric.value}</div>
+                <Card className={classNames('dashboard-metric-card', { 'opacity-70': metric.unavailable })}>
+                    <div className="dashboard-metric-card__body">
+                        <div className="dashboard-metric-card__content">
+                            <span className="dashboard-metric-card__title">{metric.title}</span>
+                            <div className="dashboard-metric-card__value">{metric.unavailable ? '-' : metric.value}</div>
+                            <span className="dashboard-metric-card__detail">{metric.unavailable ? 'Consulta indisponível para este usuário ou endpoint.' : metric.detail}</span>
                         </div>
-                        <div className={`flex align-items-center justify-content-center border-round ${severityClass(metric.severity)}`} style={{ width: '2.75rem', height: '2.75rem' }}>
+                        <div className={`dashboard-metric-card__icon ${severityClass(metric.severity)}`}>
                             <i className={`pi ${metric.icon} text-xl`} aria-hidden="true" />
                         </div>
                     </div>
-                    <span className="text-color-secondary block mt-3 line-height-3">{metric.unavailable ? 'Consulta indisponível para este usuário ou endpoint.' : metric.detail}</span>
                 </Card>
             </Link>
         </div>
@@ -81,13 +82,13 @@ const AuditList = ({ items }: { items: DashboardAuditItem[] }) => {
 };
 
 const QuickActions = () => (
-    <Card title="Atalhos operacionais">
-        <div className="grid">
+    <Card title="Atalhos operacionais" className="dashboard-action-panel">
+        <div className="dashboard-actions-grid">
             {quickActions.map((action) => (
                 <PermissionGuard key={action.href} permission={action.permission} mode="hide">
-                    <div className="col-12 md:col-6">
+                    <div className="dashboard-action-cell">
                         <Link href={action.href} className="no-underline text-color">
-                            <div className="border-1 surface-border border-round p-3 h-full">
+                            <div className="dashboard-action-card">
                                 <div className="flex align-items-center gap-2 mb-2">
                                     <i className={action.icon} aria-hidden="true" />
                                     <span className="font-medium">{action.label}</span>
@@ -119,15 +120,15 @@ export const DashboardPage = () => {
                 </div>
             ) : null}
             {dashboardQuery.isLoading ? (
-                <div className="grid">
-                    {[1, 2, 3, 4, 5, 6].map((item) => <div key={item} className="col-12 md:col-6 xl:col-4"><Card><Skeleton height="7rem" /></Card></div>)}
+                <div className="dashboard-metrics-grid">
+                    {[1, 2, 3, 4, 5, 6].map((item) => <Card key={item} className="dashboard-metric-card"><Skeleton height="7rem" /></Card>)}
                 </div>
             ) : (
-                <div className="grid">{data?.metrics.map((metric) => <MetricCard key={metric.key} metric={metric} />)}</div>
+                <div className="dashboard-metrics-grid">{data?.metrics.map((metric) => <MetricCard key={metric.key} metric={metric} />)}</div>
             )}
             <div className="grid">
                 <div className="col-12 lg:col-7">
-                    <Card title="Fluxos críticos">
+                    <Card title="Fluxos críticos" className="dashboard-flow-panel">
                         <div className="flex flex-column gap-3">
                             {(data?.criticalFlows ?? []).map((flow) => (
                                 <PermissionGuard key={flow.name} permission={flow.permission} mode="hide">
@@ -152,7 +153,7 @@ export const DashboardPage = () => {
                     </Card>
                 </div>
                 <div className="col-12 lg:col-5">
-                    <Card title="Auditoria recente">
+                    <Card title="Auditoria recente" className="dashboard-audit-panel">
                         <AuditList items={data?.auditItems ?? []} />
                     </Card>
                 </div>
