@@ -8,7 +8,7 @@ import { normalizeGuidOrNull } from '@/lib/http/requestUtils';
 
 const MANAGER_TEST_EMAIL = 'manager@erp.local';
 
-export const buildLoginPayload = ({ email, password, empresaId, filialId }: LoginRequest): LoginPayload => {
+export const buildLoginPayload = ({ email, password, empresaId }: LoginRequest): LoginPayload => {
     const normalizedEmail = email.trim();
     const payload: LoginPayload = {
         email: normalizedEmail,
@@ -20,14 +20,9 @@ export const buildLoginPayload = ({ email, password, empresaId, filialId }: Logi
     }
 
     const normalizedEmpresaId = normalizeGuidOrNull(empresaId);
-    const normalizedFilialId = normalizeGuidOrNull(filialId);
 
     if (normalizedEmpresaId) {
         payload.empresaId = normalizedEmpresaId;
-    }
-
-    if (normalizedFilialId) {
-        payload.filialId = normalizedFilialId;
     }
 
     return payload;
@@ -43,7 +38,7 @@ const preserveApiMessage = (message: string, fallback: string) => (genericLoginM
 
 const mapLoginErrorMessage = (apiError: ReturnType<typeof mapApiError>) => {
     if (apiError.status === 401) {
-        return preserveApiMessage(apiError.message, 'Credenciais inválidas ou acesso não autorizado para a empresa/filial informada.');
+        return preserveApiMessage(apiError.message, 'Credenciais inválidas ou acesso não autorizado para a empresa informada.');
     }
 
     if (apiError.status === 403) {
@@ -51,7 +46,7 @@ const mapLoginErrorMessage = (apiError: ReturnType<typeof mapApiError>) => {
     }
 
     if (apiError.status === 400) {
-        return preserveApiMessage(apiError.message, 'Empresa, filial ou credenciais inválidas. Revise os dados informados.');
+        return preserveApiMessage(apiError.message, 'Empresa ou credenciais inválidas. Revise os dados informados.');
     }
 
     return apiError.message;

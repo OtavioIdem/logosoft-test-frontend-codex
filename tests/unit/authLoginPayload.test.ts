@@ -9,36 +9,33 @@ describe('buildLoginPayload', () => {
                 password: 'Manager@2026!',
                 empresaId: '0',
                 filialId: '99'
-            })
+            } as any)
         ).toEqual({
             email: 'manager@erp.local',
             password: 'Manager@2026!'
         });
     });
 
-    it('remove empresaId e filialId inválidos antes do login', () => {
+    it('remove empresaId invalido antes do login e ignora filial legado', () => {
         expect(
             buildLoginPayload({
                 email: 'usuario@erp.local',
                 password: 'Senha@2026!',
                 empresaId: '0',
                 filialId: '99'
-            })
+            } as any)
         ).toEqual({
             email: 'usuario@erp.local',
             password: 'Senha@2026!'
         });
     });
 
-
-
-    it('remove valores que não são registro válido para usuário comum', () => {
+    it('remove valores que nao sao registro valido para usuario comum', () => {
         expect(
             buildLoginPayload({
                 email: 'usuario@erp.local',
                 password: 'Senha@2026!',
-                empresaId: 'abc',
-                filialId: ''
+                empresaId: 'abc'
             })
         ).toEqual({
             email: 'usuario@erp.local',
@@ -46,19 +43,18 @@ describe('buildLoginPayload', () => {
         });
     });
 
-    it('mantém empresaId e filialId válidos', () => {
+    it('mantem empresaId valido sem enviar filialId no payload', () => {
         expect(
             buildLoginPayload({
                 email: 'usuario@erp.local',
                 password: 'Senha@2026!',
                 empresaId: '3f7d2a41-93e3-4f0e-9e34-d98f6b70a6ef',
                 filialId: '93cfa7b1-37f1-4530-91ad-ad3c61657d42'
-            })
+            } as any)
         ).toEqual({
             email: 'usuario@erp.local',
             password: 'Senha@2026!',
-            empresaId: '3f7d2a41-93e3-4f0e-9e34-d98f6b70a6ef',
-            filialId: '93cfa7b1-37f1-4530-91ad-ad3c61657d42'
+            empresaId: '3f7d2a41-93e3-4f0e-9e34-d98f6b70a6ef'
         });
     });
 });

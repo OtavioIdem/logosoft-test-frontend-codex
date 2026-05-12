@@ -147,6 +147,36 @@ if (!sessionStorage.includes('SESSION_MAX_AGE_MS = 5 * 60 * 60 * 1000') || !sess
     failures.push('lib/auth/sessionStorage.ts: política de sessão deve manter 5 horas máximas e 30 minutos de inatividade');
 }
 
+const fiscalImplementationPaths = [
+    'app/(main)/fiscal',
+    'app/(main)/nota-fiscal',
+    'app/(main)/notas-fiscais',
+    'features/fiscal',
+    'features/nota-fiscal',
+    'features/notas-fiscais'
+];
+const fiscalImplementationFound = fiscalImplementationPaths.some((fiscalPath) => {
+    try {
+        statSync(join(root, fiscalPath));
+        return true;
+    } catch {
+        return false;
+    }
+});
+if (fiscalImplementationFound) {
+    try {
+        statSync(join(root, 'docs/CONTRATO_FISCAL_OFICIAL.md'));
+    } catch {
+        failures.push('Fiscal/Nota Fiscal: implementação fiscal exige docs/CONTRATO_FISCAL_OFICIAL.md antes de criar rotas, features ou chamadas de API');
+    }
+}
+
+try {
+    statSync(join(root, 'docs/IMPLEMENTACAO_V1_11_0.md'));
+} catch {
+    failures.push('docs/IMPLEMENTACAO_V1_11_0.md: documentação do gate Fiscal v1.11.0 obrigatória ausente');
+}
+
 const mainLayout = readFileSync(join(root, 'app/(main)/layout.tsx'), 'utf8');
 if (!mainLayout.includes('<RoutePermissionGate>')) {
     failures.push('app/(main)/layout.tsx: rotas internas devem passar pelo RoutePermissionGate');

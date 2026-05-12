@@ -1,8 +1,122 @@
-# logosoft Frontend v1.10.15a1
+# logosoft Frontend v1.11.0a3
 
 Frontend do ERP **logosoft** em **Next.js**, **React**, **TypeScript** e **PrimeReact/Sakai**, consumindo a API real em `http://localhost:8080` por padrão.
 
 Esta aplicação foi construída para operação real de ERP: autenticação, permissões, cadastros, estoque, vendas, financeiro, compras, auditoria, dashboard, validações, dialogs de motivo, feedbacks visuais e integração centralizada via Axios.
+
+## v1.11.0a3 — Auditoria modular de testes e procedimentos
+
+Versão anterior aplicada: `v1.11.0a2`.
+
+Esta manutenção documenta uma varredura por módulo usando a cobertura existente de testes unitários, componentes e E2E crítico. Não altera fluxo funcional; consolida o estado atual e a fila de melhorias recomendadas.
+
+### Resultado consolidado
+
+- Unitários/componentes por módulo: `93/100` testes passaram.
+- Falhas concentradas em Segurança/usuários, Estoque e Financeiro.
+- E2E crítico: `5/5` testes bloqueados por ambiente, pois o Chromium gerenciado do Playwright não está instalado.
+- Documento técnico criado: `docs/AUDITORIA_MODULOS_V1_11_0A3.md`.
+
+### Principais melhorias identificadas
+
+- Criar helper de teste `renderWithProviders` para componentes que dependem de TanStack Query.
+- Centralizar a regra de GUID opcional para evitar divergência entre Estoque e Financeiro.
+- Ajustar Financeiro para limpar `filialId`, `origemId`, `0` e `99` antes da validação.
+- Revisar Estoque para alinhar `null` versus omissão em campos opcionais.
+- Instalar browsers do Playwright ou configurar a suíte E2E para usar Chrome local.
+- Adicionar testes de componente para Dashboard, ReasonDialog e ações críticas por permissão.
+
+### Validação executada
+
+```bash
+npm run validate:source
+vitest run por grupos modulares
+npm run test:e2e:critical -- --reporter=line
+```
+
+## v1.11.0a2 — Login full-screen e payload sem filial
+
+Versão anterior aplicada: `v1.11.0a1`.
+
+Esta manutenção ajusta a rota `/login` para ocupar toda a viewport e remove o campo `Filial` do formulário e do payload, acompanhando a alteração do método real de autenticação.
+
+### Implementado nesta versão
+
+- A tela `/login` passa a usar layout full-screen, sem card central limitado no desktop.
+- O formulário permanece na coluna esquerda e o painel institucional ocupa toda a coluna direita.
+- Removido o campo visual `Filial` do `LoginForm`.
+- Removido `filialId` de `loginSchema`, `LoginRequest`, `LoginPayload`, `useLogin` e `buildLoginPayload`.
+- `buildLoginPayload` agora ignora qualquer `filialId` legado recebido por engano e nunca envia esse campo para `/api/auth/login`.
+- Mensagens de erro de autenticação foram ajustadas para mencionar apenas empresa/credenciais.
+- Testes de componente e payload de login atualizados.
+- Documentada esta manutenção em `docs/IMPLEMENTACAO_V1_11_0A2.md`.
+
+### Validação
+
+Executar:
+
+```bash
+npm run validate:source
+npm run test:component -- LoginForm
+npm run test:unit -- authLoginPayload
+npm run build
+```
+
+## v1.11.0a1 — Build e Dashboard
+
+Versão anterior aplicada: `v1.11.0`.
+
+Esta manutenção corrige um erro de build introduzido na tela de Login e padroniza a altura dos cards da Dashboard em zoom normal, mantendo o bloco Fiscal/Nota Fiscal protegido pelo gate de contrato.
+
+### Implementado nesta versão
+
+- Corrigido `features/auth/components/LoginForm.tsx`, removendo a prop `inputProps` não suportada pelo `Password` do PrimeReact 10.2.1.
+- Mantidos `aria-invalid` e `aria-describedby` diretamente no componente `Password`, que herda atributos nativos de input.
+- Criado `styles/layout/_dashboard.scss` para padronizar o grid e a altura dos cards do Dashboard.
+- Atualizado `features/dashboard/components/DashboardPage.tsx` para usar classes específicas de layout em métricas, fluxos, auditoria e atalhos.
+- Documentada esta manutenção em `docs/IMPLEMENTACAO_V1_11_0A1.md`.
+
+### Validação
+
+Executado:
+
+```bash
+npm run validate:source
+npm run build
+```
+
+## v1.11.0 — Fiscal Contract Gate
+
+A v1.11.0 inicia a etapa Fiscal/Nota Fiscal de forma controlada, sem criar módulo operacional, endpoints, regras fiscais, CFOP, CST, CSOSN, XML, SEFAZ, prefeitura ou cálculos tributários sem contrato oficial.
+
+Versão anterior aplicada: `v1.10.15a1`, equivalente à manutenção criada sobre a base antiga `v10.0.15`.
+
+### Implementado nesta versão
+
+- Criado documento técnico `docs/IMPLEMENTACAO_V1_11_0.md`.
+- Atualizada a versão visual/documental para `v1.11.0`.
+- `validate:source` agora bloqueia a criação de rotas/features fiscais sem o arquivo `docs/CONTRATO_FISCAL_OFICIAL.md`.
+- Formalizado que o bloco Fiscal só pode avançar com:
+  - contrato real da API;
+  - tipo de documento alvo, como NF-e, NFC-e, NFS-e ou outro;
+  - UF/município quando aplicável;
+  - regime tributário;
+  - estratégia de certificado digital;
+  - validação fiscal/contador ou documentação oficial aplicável.
+
+### Validação
+
+Executado:
+
+```bash
+npm run validate:source
+npm run test:unit
+```
+
+Resultado:
+
+- `validate:source` passou.
+- `test:unit` executou com Node `24.15.0` e npm `11.12.1`; 93 testes passaram e 7 falhas preexistentes foram aceitas temporariamente nesta etapa.
 
 ## v1.10.15a1 — Login UX final
 

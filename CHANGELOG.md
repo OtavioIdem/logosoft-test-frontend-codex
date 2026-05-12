@@ -1,5 +1,88 @@
 # Changelog
 
+## v1.11.0a3
+
+Versão anterior aplicada: `v1.11.0a2`.
+
+### Documentado
+- Executada auditoria modular de testes unitários, componentes e E2E crítico.
+- Criado documento `docs/AUDITORIA_MODULOS_V1_11_0A3.md`.
+- README atualizado com matriz resumida de estado por módulo e melhorias recomendadas.
+
+### Resultado
+- Unitários/componentes: `93/100` testes passaram.
+- Falhas concentradas em Segurança/usuários, Estoque e Financeiro.
+- E2E crítico: `5/5` testes bloqueados por ambiente, devido ao Chromium gerenciado do Playwright ausente.
+
+### Melhorias identificadas
+- Criar `renderWithProviders` para testes de componentes com TanStack Query.
+- Centralizar normalização de GUID opcional.
+- Ajustar Financeiro e Estoque para alinhar GUID vazio/inválido com a regra de não envio.
+- Tornar E2E crítico executável com instalação de browsers ou uso do Chrome local.
+
+### Alterado
+- Atualizada a versão visual/documental para `1.11.0a3`.
+
+## v1.11.0a2
+
+Versão anterior aplicada: `v1.11.0a1`.
+
+### Alterado
+- `/login` agora ocupa a tela inteira no desktop, sem card central limitado.
+- Painel institucional do login passa a preencher toda a coluna direita da viewport.
+- Removido o campo `Filial` do formulário de login.
+- Removido `filialId` do schema, tipos, hook e payload de login.
+- `buildLoginPayload` ignora `filialId` legado e não envia mais o campo para `/api/auth/login`.
+- Mensagens de erro de autenticação passaram a mencionar apenas empresa/credenciais.
+- Atualizada a versão visual/documental para `1.11.0a2`.
+
+### Documentação
+- Criado documento `docs/IMPLEMENTACAO_V1_11_0A2.md`.
+- README atualizado com a causa, telas alteradas e validação recomendada.
+
+### Validação
+- `npm run validate:source` recomendado.
+- `npm run test:component -- LoginForm` recomendado.
+- `npm run test:unit -- authLoginPayload` recomendado.
+- `npm run build` recomendado.
+
+## v1.11.0a1
+
+Versão anterior aplicada: `v1.11.0`.
+
+### Corrigido
+- Corrigido erro de build em `LoginForm`, removendo `inputProps` do `Password` do PrimeReact 10.2.1.
+- Padronizado o layout da Dashboard com grid próprio e cards de métrica com altura estável.
+
+### Alterado
+- Atualizada a versão visual/documental para `1.11.0a1`.
+- Criado `styles/layout/_dashboard.scss`.
+- Criado documento `docs/IMPLEMENTACAO_V1_11_0A1.md`.
+
+### Validação
+- `npm run validate:source` executado.
+- `npm run build` executado.
+
+## v1.11.0
+
+Versão anterior aplicada: `v1.10.15a1`.
+
+### Adicionado
+- Criado gate técnico/documental para início seguro do bloco Fiscal/Nota Fiscal.
+- Criado documento `docs/IMPLEMENTACAO_V1_11_0.md`.
+- `validate:source` passou a bloquear implementação fiscal sem `docs/CONTRATO_FISCAL_OFICIAL.md`.
+
+### Alterado
+- Atualizada a versão visual/documental para `1.11.0`.
+
+### Observação
+- Nenhum endpoint, rota, menu ou regra fiscal foi criado nesta etapa.
+- O bloco Fiscal continua dependente de contrato oficial, validação fiscal e documentação tributária aplicável.
+
+### Validação
+- `npm run validate:source` passou.
+- `npm run test:unit` executou: 93 testes passaram e 7 falhas preexistentes foram aceitas temporariamente.
+
 ## v1.10.15a1
 
 Versão anterior aplicada: `v10.0.15`. Esta entrega inaugura a nomenclatura operacional `v1.10.15`, usando o sufixo `a1` para manutenção dentro da mesma tag.

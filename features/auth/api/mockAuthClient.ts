@@ -66,7 +66,7 @@ export const mockAuthClient = {
                 nome: 'Administrador logosoft',
                 email: payload.email,
                 empresaId: payload.empresaId,
-                filialId: payload.filialId,
+                filialId: null,
                 permissoes: mockPermissions
             }
         };

@@ -5,14 +5,12 @@ export type LoginRequest = {
     email: string;
     password: string;
     empresaId?: string;
-    filialId?: string;
 };
 
 export type LoginPayload = {
     email: string;
     password: string;
     empresaId?: string;
-    filialId?: string;
 };
 
 export type LoginResponse = AuthSession;
