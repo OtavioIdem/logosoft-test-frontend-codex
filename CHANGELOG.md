@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.11.0
+
+Versão anterior aplicada: `v1.10.15a1`.
+
+### Adicionado
+- Criado gate técnico/documental para início seguro do bloco Fiscal/Nota Fiscal.
+- Criado documento `docs/IMPLEMENTACAO_V1_11_0.md`.
+- `validate:source` passou a bloquear implementação fiscal sem `docs/CONTRATO_FISCAL_OFICIAL.md`.
+
+### Alterado
+- Atualizada a versão visual/documental para `1.11.0`.
+
+### Observação
+- Nenhum endpoint, rota, menu ou regra fiscal foi criado nesta etapa.
+- O bloco Fiscal continua dependente de contrato oficial, validação fiscal e documentação tributária aplicável.
+
+### Validação
+- `npm run validate:source` passou.
+- `npm run test:unit` executou: 93 testes passaram e 7 falhas preexistentes foram aceitas temporariamente.
+
 ## v1.10.15a1
 
 Versão anterior aplicada: `v10.0.15`. Esta entrega inaugura a nomenclatura operacional `v1.10.15`, usando o sufixo `a1` para manutenção dentro da mesma tag.
