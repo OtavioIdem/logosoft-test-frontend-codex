@@ -1,0 +1,293 @@
+.login-shell {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    background:
+        linear-gradient(135deg, rgba(248, 250, 252, 0.95), rgba(238, 243, 255, 0.95) 52%, rgba(255, 244, 250, 0.92)),
+        var(--surface-ground);
+}
+
+.login-card {
+    width: min(1120px, 100%);
+    min-height: 640px;
+    display: grid;
+    grid-template-columns: minmax(380px, 0.9fr) minmax(420px, 1.1fr);
+    overflow: hidden;
+    border: 1px solid var(--surface-border);
+    border-radius: 8px;
+    background: var(--surface-card);
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.16);
+}
+
+.login-card__form {
+    display: flex;
+    align-items: center;
+    padding: 3rem;
+}
+
+.login-form {
+    width: 100%;
+    max-width: 29rem;
+    margin: 0 auto;
+}
+
+.login-form__header {
+    margin-bottom: 2rem;
+
+    h1 {
+        margin: 1.5rem 0 0.5rem;
+        color: var(--text-color);
+        font-size: 2rem;
+        line-height: 1.15;
+        letter-spacing: 0;
+    }
+
+    p {
+        margin: 0;
+        color: var(--text-color-secondary);
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+}
+
+.login-form__logo-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.login-form__logo {
+    width: 148px;
+    height: auto;
+}
+
+.login-form__fields {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.login-form__company-row {
+    margin-top: 0;
+}
+
+.login-form__submit {
+    margin-top: 0.25rem;
+}
+
+.login-field {
+    label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--text-color);
+        font-weight: 600;
+    }
+}
+
+.login-environment-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2rem;
+    padding: 0.25rem 0.625rem;
+    border: 1px solid var(--surface-border);
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.login-environment-badge--production {
+    color: #12653d;
+    background: #e8f7ee;
+    border-color: #b8e5c9;
+}
+
+.login-environment-badge--homologation {
+    color: #755100;
+    background: #fff5d6;
+    border-color: #f5d887;
+}
+
+.login-environment-badge--development {
+    color: #155e75;
+    background: #e6f7fb;
+    border-color: #9bd9e8;
+}
+
+.login-brand-panel {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    min-height: 100%;
+    overflow: hidden;
+    padding: 3rem;
+    color: #ffffff;
+    background:
+        linear-gradient(135deg, rgba(28, 64, 214, 0.94), rgba(101, 45, 190, 0.94) 50%, rgba(199, 32, 132, 0.94)),
+        #2733a6;
+}
+
+.login-brand-panel__grid {
+    position: absolute;
+    inset: 0;
+    opacity: 0.24;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.24) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.24) 1px, transparent 1px);
+    background-size: 48px 48px;
+    transform: skewY(-8deg) translateY(-32px);
+    transform-origin: top left;
+}
+
+.login-brand-panel__shape {
+    position: absolute;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(8px);
+}
+
+.login-brand-panel__shape--primary {
+    top: 7rem;
+    right: 5rem;
+    width: 14rem;
+    height: 14rem;
+    transform: rotate(45deg);
+}
+
+.login-brand-panel__shape--accent {
+    top: 3rem;
+    left: 4rem;
+    width: 9rem;
+    height: 9rem;
+    background: rgba(27, 208, 210, 0.22);
+    transform: rotate(18deg) skew(-8deg);
+}
+
+.login-brand-panel__shape--line {
+    right: -4rem;
+    bottom: 7rem;
+    width: 20rem;
+    height: 5rem;
+    background: rgba(255, 209, 102, 0.18);
+    transform: rotate(-22deg);
+}
+
+.login-brand-panel__content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    max-width: 22rem;
+    flex-direction: column;
+    gap: 0.75rem;
+
+    strong {
+        font-size: 2.75rem;
+        line-height: 1;
+        letter-spacing: 0;
+    }
+
+    span {
+        color: rgba(255, 255, 255, 0.82);
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+}
+
+.login-brand-panel__eyebrow {
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.login-brand-panel__campaign {
+    position: absolute;
+    top: 2rem;
+    right: 2rem;
+    z-index: 1;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.86);
+    background: rgba(255, 255, 255, 0.14);
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+
+@media (prefers-color-scheme: dark) {
+    .login-shell {
+        background:
+            linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(30, 41, 59, 0.95) 50%, rgba(58, 28, 79, 0.92)),
+            var(--surface-ground);
+    }
+
+    .login-card {
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+    }
+
+    .login-form__logo {
+        filter: brightness(1.15);
+    }
+}
+
+@media (max-width: 991px) {
+    .login-card {
+        grid-template-columns: 1fr;
+        min-height: auto;
+    }
+
+    .login-card__form {
+        padding: 2.25rem;
+    }
+
+    .login-brand-panel {
+        order: -1;
+        min-height: 180px;
+        padding: 1.5rem 2.25rem;
+    }
+
+    .login-brand-panel__content strong {
+        font-size: 2rem;
+    }
+
+    .login-brand-panel__campaign {
+        top: 1.25rem;
+        right: 1.25rem;
+    }
+}
+
+@media (max-width: 767px) {
+    .login-shell {
+        align-items: stretch;
+        padding: 0;
+    }
+
+    .login-card {
+        min-height: 100vh;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .login-card__form {
+        align-items: center;
+        padding: 1.5rem;
+    }
+
+    .login-form__header {
+        h1 {
+            font-size: 1.75rem;
+        }
+    }
+
+    .login-form__logo-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .login-brand-panel {
+        display: none;
+    }
+}

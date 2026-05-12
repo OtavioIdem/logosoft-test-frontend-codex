@@ -1,0 +1,89 @@
+import { PermissionCode } from '@/types/erp';
+import { LoginRequest, LoginResponse } from '@/features/auth/types/auth.types';
+import type { RefreshSessionResponse } from '@/features/auth/api/authResponseMapper';
+
+const mockPermissions: PermissionCode[] = [
+    'AUDITORIA_CONSULTAR',
+    'ADMINISTRACAO_CONSULTAR',
+    'ADMINISTRACAO_GERENCIAR',
+    'SEGURANCA_USUARIOS_CONSULTAR',
+    'SEGURANCA_USUARIOS_GERENCIAR',
+    'SEGURANCA_PERMISSOES_GERENCIAR',
+    'SEGURANCA_SESSOES_GERENCIAR',
+    'PESSOAS_CONSULTAR',
+    'PESSOAS_GERENCIAR',
+    'CLIENTES_CONSULTAR',
+    'CLIENTES_GERENCIAR',
+    'FORNECEDORES_CONSULTAR',
+    'FORNECEDORES_GERENCIAR',
+    'PRODUTOS_CONSULTAR',
+    'PRODUTOS_GERENCIAR',
+    'PRODUTOS_INATIVAR',
+    'PRODUTOS_DADOS_FISCAIS_GERENCIAR',
+    'CATEGORIAS_PRODUTO_GERENCIAR',
+    'UNIDADES_MEDIDA_GERENCIAR',
+    'MARCAS_GERENCIAR',
+    'ESTOQUE_CONSULTAR',
+    'ESTOQUE_MOVIMENTAR',
+    'ESTOQUE_RESERVAR',
+    'ESTOQUE_INVENTARIO_GERENCIAR',
+    'LOCAIS_ESTOQUE_GERENCIAR',
+    'VENDAS_CONSULTAR',
+    'VENDAS_GERENCIAR',
+    'VENDAS_APROVAR',
+    'VENDAS_CANCELAR',
+    'VENDAS_FATURAR',
+    'FINANCEIRO_CONSULTAR',
+    'FINANCEIRO_GERENCIAR',
+    'FINANCEIRO_RECEBER',
+    'FINANCEIRO_PAGAR',
+    'FINANCEIRO_ESTORNAR',
+    'FINANCEIRO_CANCELAR',
+    'FORMAS_PAGAMENTO_GERENCIAR',
+    'CONDICOES_PAGAMENTO_GERENCIAR',
+    'COMPRAS_CONSULTAR',
+    'COMPRAS_GERENCIAR',
+    'COMPRAS_APROVAR',
+    'COMPRAS_CANCELAR',
+    'COMPRAS_RECEBER'
+];
+
+export const mockAuthClient = {
+    async login(payload: LoginRequest): Promise<LoginResponse> {
+        await new Promise((resolve) => setTimeout(resolve, 350));
+
+        if (!payload.email || !payload.password) {
+            throw new Error('Informe e-mail e senha.');
+        }
+
+        return {
+            accessToken: 'mock-access-token',
+            accessTokenExpiraEm: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+            refreshToken: 'mock-refresh-token',
+            refreshTokenExpiraEm: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            user: {
+                id: 'mock-user-id',
+                nome: 'Administrador logosoft',
+                email: payload.email,
+                empresaId: payload.empresaId,
+                filialId: payload.filialId,
+                permissoes: mockPermissions
+            }
+        };
+    },
+
+    async refresh(): Promise<RefreshSessionResponse> {
+        return {
+            accessToken: 'mock-access-token-renovado',
+            accessTokenExpiraEm: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+            refreshToken: 'mock-refresh-token-renovado',
+            refreshTokenExpiraEm: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+            permissoes: mockPermissions
+        };
+    },
+
+    async logout() {
+        return undefined;
+    }
+};

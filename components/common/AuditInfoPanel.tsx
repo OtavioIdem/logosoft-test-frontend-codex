@@ -1,0 +1,4 @@
+'use client';
+import { Panel } from 'primereact/panel';
+import { AuditInfo } from '@/types/erp';
+export const AuditInfoPanel = ({ audit }: { audit?: AuditInfo }) => audit ? <Panel header="Auditoria" toggleable collapsed><div className="grid text-sm line-height-3"><div className="col-12 md:col-6"><strong>Criado por:</strong> {audit.criadoPor ?? '-'}</div><div className="col-12 md:col-6"><strong>Criado em:</strong> {audit.criadoEm ? new Date(audit.criadoEm).toLocaleString('pt-BR') : '-'}</div><div className="col-12 md:col-6"><strong>Alterado por:</strong> {audit.alteradoPor ?? '-'}</div><div className="col-12 md:col-6"><strong>Alterado em:</strong> {audit.alteradoEm ? new Date(audit.alteradoEm).toLocaleString('pt-BR') : '-'}</div>{audit.motivo ? <div className="col-12"><strong>Motivo:</strong> {audit.motivo}</div> : null}</div></Panel> : null;

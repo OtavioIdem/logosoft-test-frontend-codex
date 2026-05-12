@@ -1,0 +1,34 @@
+'use client';
+import { Controller, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Button } from 'primereact/button';
+import { Checkbox } from 'primereact/checkbox';
+import { Dialog } from 'primereact/dialog';
+import { Dropdown } from 'primereact/dropdown';
+import { InputText } from 'primereact/inputtext';
+import { InputTextarea } from 'primereact/inputtextarea';
+import { Calendar } from 'primereact/calendar';
+import { classNames } from 'primereact/utils';
+import { useEffect, useMemo } from 'react';
+import { CpfCnpjInput } from '@/components/forms/CpfCnpjInput';
+import { FieldError } from '@/components/forms/FieldError';
+import { MoneyInput } from '@/components/forms/MoneyInput';
+import { PercentInput } from '@/components/forms/PercentInput';
+import { QuantityInput } from '@/components/forms/QuantityInput';
+import { PermissionGuard } from '@/components/security/PermissionGuard';
+import { createResourceSchema } from '@/features/shared/schemas/createResourceSchema';
+import { ResourceDefinition, ResourceField, ResourceSavePayload } from '@/features/shared/types/resource.types';
+const defaultValueFor = (field: ResourceField, record?: Record<string, unknown>) => {
+    const value = record?.[field.name]; if (value !== undefined && value !== null) return value;
+    if (field.kind === 'checkbox') return false; if (field.kind === 'number' || field.kind === 'money' || field.kind === 'percent') return undefined; return '';
+};
+const toDate = (value: unknown) => !value ? null : value instanceof Date ? value : new Date(String(value));
+export const DynamicResourceForm = ({ definition, visible, record, loading, onHide, onSubmit }: { definition: ResourceDefinition; visible: boolean; record?: Record<string, unknown> | null; loading?: boolean; onHide: () => void; onSubmit: (payload: ResourceSavePayload) => void }) => {
+    const schema = useMemo(() => createResourceSchema(definition), [definition]);
+    const defaultValues = useMemo(() => Object.fromEntries(definition.fields.map((field) => [field.name, defaultValueFor(field, record ?? undefined)])), [definition.fields, record]);
+    const { control, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<Record<string, unknown>>({ resolver: zodResolver(schema), defaultValues });
+    useEffect(() => { reset(defaultValues); }, [defaultValues, reset]);
+    const footer = <div className="flex justify-content-end gap-2"><Button type="button" label="Cancelar" icon="pi pi-times" text onClick={onHide} disabled={loading || isSubmitting} /><Button type="submit" form="resource-form" label="Salvar" icon="pi pi-check" loading={loading || isSubmitting} /></div>;
+    const renderField = (field: ResourceField) => <PermissionGuard key={field.name} permission={field.permission} mode="hide"><div className={field.col ?? 'col-12 md:col-6'}><label htmlFor={field.name} className="block font-medium mb-2">{field.label} {field.required ? <span className="text-red-500">*</span> : null}</label><Controller name={field.name} control={control} render={({ field: controllerField }) => { const invalid = Boolean(errors[field.name]); const commonClassName = classNames('w-full', { 'p-invalid': invalid }); switch (field.kind) { case 'textarea': return <InputTextarea id={field.name} value={String(controllerField.value ?? '')} onChange={controllerField.onChange} rows={4} className={commonClassName} placeholder={field.placeholder} />; case 'money': return <MoneyInput id={field.name} value={typeof controllerField.value === 'number' ? controllerField.value : null} onChange={controllerField.onChange} />; case 'percent': return <PercentInput id={field.name} value={typeof controllerField.value === 'number' ? controllerField.value : null} onChange={controllerField.onChange} />; case 'number': return <QuantityInput id={field.name} value={typeof controllerField.value === 'number' ? controllerField.value : null} onChange={controllerField.onChange} />; case 'cpfCnpj': case 'cnpj': return <CpfCnpjInput id={field.name} value={String(controllerField.value ?? '')} onChange={controllerField.onChange} />; case 'select': return <Dropdown id={field.name} value={controllerField.value ?? null} options={field.options ?? []} optionLabel="label" optionValue="value" placeholder={field.placeholder ?? 'Selecione'} showClear className={commonClassName} onChange={(event) => controllerField.onChange(event.value)} />; case 'checkbox': return <div className="flex align-items-center gap-2 h-3rem"><Checkbox inputId={field.name} checked={Boolean(controllerField.value)} onChange={(event) => controllerField.onChange(Boolean(event.checked))} /><label htmlFor={field.name}>Sim</label></div>; case 'date': case 'datetime': return <Calendar id={field.name} value={toDate(controllerField.value)} onChange={(event) => controllerField.onChange(event.value)} dateFormat="dd/mm/yy" showTime={field.kind === 'datetime'} hourFormat="24" showIcon className={commonClassName} />; default: return <InputText id={field.name} value={String(controllerField.value ?? '')} onChange={controllerField.onChange} className={commonClassName} placeholder={field.placeholder} />; } }} /><FieldError message={String(errors[field.name]?.message ?? '')} />{field.helperText ? <small className="block text-600 mt-1 line-height-3">{field.helperText}</small> : null}</div></PermissionGuard>;
+    return <Dialog header={record?.id ? `Editar ${definition.title}` : `Novo registro - ${definition.title}`} visible={visible} style={{ width: 'min(64rem, 96vw)' }} modal onHide={onHide} footer={footer}><form id="resource-form" onSubmit={handleSubmit((values) => onSubmit({ ...values, id: record?.id as string | undefined }))} noValidate><div className="grid formgrid p-fluid">{definition.fields.map(renderField)}</div></form></Dialog>;
+};
