@@ -29,8 +29,7 @@ export const useLogin = () => {
                 await login({
                     email: values.email,
                     password: values.senha,
-                    empresaId: values.empresaId || undefined,
-                    filialId: values.filialId || undefined
+                    empresaId: values.empresaId || undefined
                 });
                 return true;
             } catch (error) {

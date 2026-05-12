@@ -1,8 +1,36 @@
-# logosoft Frontend v1.11.0a1
+# logosoft Frontend v1.11.0a2
 
 Frontend do ERP **logosoft** em **Next.js**, **React**, **TypeScript** e **PrimeReact/Sakai**, consumindo a API real em `http://localhost:8080` por padrão.
 
 Esta aplicação foi construída para operação real de ERP: autenticação, permissões, cadastros, estoque, vendas, financeiro, compras, auditoria, dashboard, validações, dialogs de motivo, feedbacks visuais e integração centralizada via Axios.
+
+## v1.11.0a2 — Login full-screen e payload sem filial
+
+Versão anterior aplicada: `v1.11.0a1`.
+
+Esta manutenção ajusta a rota `/login` para ocupar toda a viewport e remove o campo `Filial` do formulário e do payload, acompanhando a alteração do método real de autenticação.
+
+### Implementado nesta versão
+
+- A tela `/login` passa a usar layout full-screen, sem card central limitado no desktop.
+- O formulário permanece na coluna esquerda e o painel institucional ocupa toda a coluna direita.
+- Removido o campo visual `Filial` do `LoginForm`.
+- Removido `filialId` de `loginSchema`, `LoginRequest`, `LoginPayload`, `useLogin` e `buildLoginPayload`.
+- `buildLoginPayload` agora ignora qualquer `filialId` legado recebido por engano e nunca envia esse campo para `/api/auth/login`.
+- Mensagens de erro de autenticação foram ajustadas para mencionar apenas empresa/credenciais.
+- Testes de componente e payload de login atualizados.
+- Documentada esta manutenção em `docs/IMPLEMENTACAO_V1_11_0A2.md`.
+
+### Validação
+
+Executar:
+
+```bash
+npm run validate:source
+npm run test:component -- LoginForm
+npm run test:unit -- authLoginPayload
+npm run build
+```
 
 ## v1.11.0a1 — Build e Dashboard
 

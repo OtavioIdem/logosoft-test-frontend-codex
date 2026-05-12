@@ -1,35 +1,37 @@
 .login-shell {
     min-height: 100vh;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
+    align-items: stretch;
+    justify-content: stretch;
+    padding: 0;
     background:
         linear-gradient(135deg, rgba(248, 250, 252, 0.95), rgba(238, 243, 255, 0.95) 52%, rgba(255, 244, 250, 0.92)),
         var(--surface-ground);
 }
 
 .login-card {
-    width: min(1120px, 100%);
-    min-height: 640px;
+    width: 100%;
+    min-height: 100vh;
     display: grid;
-    grid-template-columns: minmax(380px, 0.9fr) minmax(420px, 1.1fr);
+    grid-template-columns: minmax(420px, 42vw) minmax(520px, 1fr);
     overflow: hidden;
-    border: 1px solid var(--surface-border);
-    border-radius: 8px;
+    border: 0;
+    border-radius: 0;
     background: var(--surface-card);
-    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.16);
+    box-shadow: none;
 }
 
 .login-card__form {
     display: flex;
     align-items: center;
-    padding: 3rem;
+    justify-content: center;
+    min-height: 100vh;
+    padding: clamp(2rem, 5vw, 5rem);
 }
 
 .login-form {
     width: 100%;
-    max-width: 29rem;
+    max-width: 32rem;
     margin: 0 auto;
 }
 
@@ -68,10 +70,6 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
-}
-
-.login-form__company-row {
-    margin-top: 0;
 }
 
 .login-form__submit {
@@ -122,9 +120,9 @@
     position: relative;
     display: flex;
     align-items: flex-end;
-    min-height: 100%;
+    min-height: 100vh;
     overflow: hidden;
-    padding: 3rem;
+    padding: clamp(3rem, 5vw, 6rem);
     color: #ffffff;
     background:
         linear-gradient(135deg, rgba(28, 64, 214, 0.94), rgba(101, 45, 190, 0.94) 50%, rgba(199, 32, 132, 0.94)),
@@ -224,7 +222,7 @@
     }
 
     .login-card {
-        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+        box-shadow: none;
     }
 
     .login-form__logo {
@@ -235,16 +233,17 @@
 @media (max-width: 991px) {
     .login-card {
         grid-template-columns: 1fr;
-        min-height: auto;
+        min-height: 100vh;
     }
 
     .login-card__form {
+        min-height: calc(100vh - 220px);
         padding: 2.25rem;
     }
 
     .login-brand-panel {
         order: -1;
-        min-height: 180px;
+        min-height: 220px;
         padding: 1.5rem 2.25rem;
     }
 
@@ -259,20 +258,13 @@
 }
 
 @media (max-width: 767px) {
-    .login-shell {
-        align-items: stretch;
-        padding: 0;
-    }
-
     .login-card {
         min-height: 100vh;
-        border: 0;
-        border-radius: 0;
-        box-shadow: none;
     }
 
     .login-card__form {
         align-items: center;
+        min-height: 100vh;
         padding: 1.5rem;
     }
 

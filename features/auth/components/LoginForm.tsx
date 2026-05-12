@@ -27,8 +27,7 @@ export const LoginForm = () => {
         defaultValues: {
             email: '',
             senha: '',
-            empresaId: '',
-            filialId: ''
+            empresaId: ''
         }
     });
 
@@ -102,53 +101,26 @@ export const LoginForm = () => {
                     <FieldError id="senha-error" message={errors.senha?.message} />
                 </div>
 
-                <div className="grid formgrid login-form__company-row">
-                    <div className="col-12 md:col-6">
-                        <div className="login-field">
-                            <label htmlFor="empresaId">Empresa</label>
-                            <Controller
-                                name="empresaId"
-                                control={control}
-                                render={({ field }) => (
-                                    <InputText
-                                        {...field}
-                                        id="empresaId"
-                                        className="w-full"
-                                        placeholder="Código autorizado"
-                                        autoComplete="organization"
-                                        aria-label="Empresa"
-                                        onChange={(event) => {
-                                            clearApiError();
-                                            field.onChange(event);
-                                        }}
-                                    />
-                                )}
+                <div className="login-field">
+                    <label htmlFor="empresaId">Empresa</label>
+                    <Controller
+                        name="empresaId"
+                        control={control}
+                        render={({ field }) => (
+                            <InputText
+                                {...field}
+                                id="empresaId"
+                                className="w-full"
+                                placeholder="Código autorizado"
+                                autoComplete="organization"
+                                aria-label="Empresa"
+                                onChange={(event) => {
+                                    clearApiError();
+                                    field.onChange(event);
+                                }}
                             />
-                        </div>
-                    </div>
-                    <div className="col-12 md:col-6">
-                        <div className="login-field">
-                            <label htmlFor="filialId">Filial</label>
-                            <Controller
-                                name="filialId"
-                                control={control}
-                                render={({ field }) => (
-                                    <InputText
-                                        {...field}
-                                        id="filialId"
-                                        className="w-full"
-                                        placeholder="Código autorizado"
-                                        autoComplete="off"
-                                        aria-label="Filial"
-                                        onChange={(event) => {
-                                            clearApiError();
-                                            field.onChange(event);
-                                        }}
-                                    />
-                                )}
-                            />
-                        </div>
-                    </div>
+                        )}
+                    />
                 </div>
 
                 <Button type="submit" label="Entrar" icon="pi pi-sign-in" loading={isSubmitting} disabled={isSubmitting} className="w-full login-form__submit" />

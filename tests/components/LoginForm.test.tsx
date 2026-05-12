@@ -22,7 +22,7 @@ vi.mock('next/image', () => ({
 vi.mock('@/config/app', () => ({
     appConfig: {
         name: 'logosoft',
-        version: '1.10.15a1',
+        version: '1.11.0a2',
         env: 'production',
         apiUrl: 'http://localhost:8080',
         useMockAuth: false,
@@ -46,7 +46,7 @@ describe('LoginForm', () => {
         expect(screen.getByLabelText('E-mail')).toBeInTheDocument();
         expect(screen.getByLabelText('Senha')).toBeInTheDocument();
         expect(screen.getByLabelText('Empresa')).toBeInTheDocument();
-        expect(screen.getByLabelText('Filial')).toBeInTheDocument();
+        expect(screen.queryByLabelText('Filial')).not.toBeInTheDocument();
         expect(screen.getByLabelText('Ambiente Produção')).toBeInTheDocument();
         expect(screen.queryByText(/guid/i)).not.toBeInTheDocument();
     });
@@ -69,14 +69,12 @@ describe('LoginForm', () => {
         await user.type(screen.getByLabelText('E-mail'), 'usuario@erp.local');
         await user.type(screen.getByLabelText('Senha'), 'Senha@2026!');
         await user.type(screen.getByLabelText('Empresa'), 'LOGO');
-        await user.type(screen.getByLabelText('Filial'), 'MATRIZ');
         await user.click(screen.getByRole('button', { name: /entrar/i }));
 
         expect(loginState.submitLogin).toHaveBeenCalledWith({
             email: 'usuario@erp.local',
             senha: 'Senha@2026!',
-            empresaId: 'LOGO',
-            filialId: 'MATRIZ'
+            empresaId: 'LOGO'
         });
     });
 

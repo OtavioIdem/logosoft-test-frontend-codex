@@ -1,5 +1,28 @@
 # Changelog
 
+## v1.11.0a2
+
+Versão anterior aplicada: `v1.11.0a1`.
+
+### Alterado
+- `/login` agora ocupa a tela inteira no desktop, sem card central limitado.
+- Painel institucional do login passa a preencher toda a coluna direita da viewport.
+- Removido o campo `Filial` do formulário de login.
+- Removido `filialId` do schema, tipos, hook e payload de login.
+- `buildLoginPayload` ignora `filialId` legado e não envia mais o campo para `/api/auth/login`.
+- Mensagens de erro de autenticação passaram a mencionar apenas empresa/credenciais.
+- Atualizada a versão visual/documental para `1.11.0a2`.
+
+### Documentação
+- Criado documento `docs/IMPLEMENTACAO_V1_11_0A2.md`.
+- README atualizado com a causa, telas alteradas e validação recomendada.
+
+### Validação
+- `npm run validate:source` recomendado.
+- `npm run test:component -- LoginForm` recomendado.
+- `npm run test:unit -- authLoginPayload` recomendado.
+- `npm run build` recomendado.
+
 ## v1.11.0a1
 
 Versão anterior aplicada: `v1.11.0`.
