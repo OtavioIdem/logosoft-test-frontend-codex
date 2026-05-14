@@ -1,5 +1,26 @@
 # Changelog
 
+## v1.11.0a5
+
+Versao anterior aplicada: `v1.11.0a4`.
+
+### Adicionado
+- Campo de busca acima da lista da sidebar para localizar modulos e telas.
+- Filtro por nome do item e rota, com normalizacao de acentos.
+- Estado vazio para pesquisas sem resultado.
+
+### Alterado
+- A sidebar passa a aplicar a busca somente depois do filtro de permissao, evitando exposicao de telas nao liberadas ao usuario.
+- Atualizada a versao visual/documental para `1.11.0a5`.
+
+### Documentacao
+- README atualizado com causa, modulos impactados e validacao.
+- Criado documento `docs/IMPLEMENTACAO_V1_11_0A5.md`.
+
+### Validacao
+- `npm run validate:source` executado.
+- `npm run build` executado.
+
 ## v1.11.0a4
 
 Versao anterior aplicada: `v1.11.0a3`.

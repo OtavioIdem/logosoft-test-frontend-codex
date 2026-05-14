@@ -1,8 +1,37 @@
-# logosoft Frontend v1.11.0a4
+# logosoft Frontend v1.11.0a5
 
 Frontend do ERP **logosoft** em **Next.js**, **React**, **TypeScript** e **PrimeReact/Sakai**, consumindo a API real em `http://localhost:8080` por padrão.
 
 Esta aplicação foi construída para operação real de ERP: autenticação, permissões, cadastros, estoque, vendas, financeiro, compras, auditoria, dashboard, validações, dialogs de motivo, feedbacks visuais e integração centralizada via Axios.
+
+## v1.11.0a5 - Busca de telas na sidebar
+
+Versao anterior aplicada: `v1.11.0a4`.
+
+Esta manutencao adiciona uma busca exclusiva para os modulos e telas da sidebar. O objetivo e facilitar a navegacao conforme o ERP crescer, sem alterar a estrutura geral do layout.
+
+### Implementado nesta versao
+
+- Campo "Buscar tela ou modulo" adicionado acima da lista da sidebar.
+- A busca filtra apenas os itens de menu que ja passaram pela validacao de permissao do usuario.
+- O filtro considera nome da tela/modulo e rota, permitindo encontrar itens como `clientes`, `estoque`, `saidas` ou `contas-receber`.
+- A busca ignora acentos para melhorar a experiencia de digitacao.
+- Estado vazio discreto para pesquisas sem resultado.
+- Documentada esta manutencao em `docs/IMPLEMENTACAO_V1_11_0A5.md`.
+
+### Modulos impactados
+
+- Layout/sidebar: `layout/AppMenu.tsx`.
+- Estilo da sidebar: `styles/layout/_menu.scss`.
+
+### Validacao
+
+Executar:
+
+```bash
+npm run validate:source
+npm run build
+```
 
 ## v1.11.0a4 - Skeleton loading nas telas operacionais
 
