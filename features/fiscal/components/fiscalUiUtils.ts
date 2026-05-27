@@ -63,6 +63,15 @@ export const statusNotaFiscalLabel = (value?: number | string | null) => {
     return labels[Number(value)] ?? String(value ?? '-');
 };
 
+
+export const fiscalReferenceContextLabel = (entityName: string, value?: string | null) => (value ? `${entityName} vinculada` : '-');
+
+export const fiscalOrigemContextLabel = (origem?: number | string | null, origemId?: string | null) => {
+    const label = origemNotaFiscalLabel(origem);
+    if (label === '-') return '-';
+    return origemId ? `${label} com vínculo operacional` : label;
+};
+
 export const statusNotaFiscalTagValue = (value?: number | string | null) => {
     const labels: Record<number, string> = {
         [StatusNotaFiscal.Rascunho]: 'RASCUNHO',

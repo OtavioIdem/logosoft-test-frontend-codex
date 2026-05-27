@@ -83,3 +83,10 @@ Essa regra evita consultar a listagem fiscal com uma pessoa pertencente a outro 
 - Arquivos versionados não devem conter espaços finais, tabs finais ou linha em branco extra no final do arquivo.
 - Antes de empacotar ou commitar, executar `npm run validate:source`, `git diff --check` e `git diff --cached --check`.
 - Documentações Markdown devem terminar com exatamente uma quebra de linha final, sem linha vazia adicional.
+
+## v1.11.0a8b16 — visualização de vínculos no detalhe fiscal
+
+- Telas de detalhe fiscal não devem exibir identificadores técnicos de empresa, filial ou origem quando não houver nome amigável disponível no contrato.
+- Quando o backend retornar apenas o vínculo técnico, a UI deve mostrar uma mensagem operacional, como `Empresa vinculada` ou `Pedido de venda com vínculo operacional`.
+- O ID continua sendo usado internamente para payloads, rotas e chamadas de API, mas não deve ser apresentado como informação principal para o operador.
+- Tabelas fiscais devem evitar colunas duplicadas e priorizar campos operacionais úteis para conferência.

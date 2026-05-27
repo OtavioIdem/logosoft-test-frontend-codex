@@ -34,6 +34,8 @@ import {
     XmlPipelineDialog
 } from '@/features/fiscal/components/FiscalActionDialogs';
 import {
+    fiscalOrigemContextLabel,
+    fiscalReferenceContextLabel,
     formatFiscalDate,
     formatFiscalMoney,
     notaFiscalBloqueiosVisuais,
@@ -179,9 +181,9 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
                                     <DetailValue label="Status" value={<StatusTag status={statusNotaFiscalTagValue(nota.statusFiscal)} />} />
                                     <DetailValue label="Tipo documento" value={tipoDocumentoFiscalLabel(nota.tipoDocumento)} />
                                     <DetailValue label="Operação" value={tipoOperacaoFiscalLabel(nota.tipoOperacao)} />
-                                    <DetailValue label="Empresa" value={nota.empresaId} mono />
-                                    <DetailValue label="Filial" value={nota.filialId ?? '-'} mono />
-                                    <DetailValue label="Origem" value={`${nota.origem}${nota.origemId ? ` • ${nota.origemId}` : ''}`} mono />
+                                    <DetailValue label="Empresa" value={fiscalReferenceContextLabel('Empresa', nota.empresaId)} />
+                                    <DetailValue label="Filial" value={fiscalReferenceContextLabel('Filial', nota.filialId)} />
+                                    <DetailValue label="Origem" value={fiscalOrigemContextLabel(nota.origem, nota.origemId)} />
                                     <DetailValue label="Chave acesso" value={nota.chaveAcesso ?? '-'} mono />
                                     <DetailValue label="Protocolo" value={nota.protocoloAutorizacao ?? '-'} mono />
                                     <DetailValue label="Emissão" value={formatFiscalDate(nota.dataEmissao)} />

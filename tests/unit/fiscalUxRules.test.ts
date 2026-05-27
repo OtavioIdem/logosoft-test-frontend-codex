@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { OrigemNotaFiscal, StatusNotaFiscal, TipoDocumentoFiscal, TipoOperacaoFiscal } from '@/types/erp';
 import {
+    fiscalOrigemContextLabel,
+    fiscalReferenceContextLabel,
     maskFiscalSensitiveText,
     notaFiscalBloqueiosVisuais,
     notaPodeCancelar,
@@ -99,6 +101,14 @@ describe('regras visuais fiscais', () => {
             page: 1,
             pageSize: 20
         });
+    });
+
+
+    it('representa vínculos fiscais sem expor identificadores técnicos no detalhe', () => {
+        expect(fiscalReferenceContextLabel('Empresa', '11111111-1111-1111-1111-111111111111')).toBe('Empresa vinculada');
+        expect(fiscalReferenceContextLabel('Filial', null)).toBe('-');
+        expect(fiscalOrigemContextLabel(OrigemNotaFiscal.PedidoVenda, '22222222-2222-2222-2222-222222222222')).toBe('Pedido de venda com vínculo operacional');
+        expect(fiscalOrigemContextLabel(OrigemNotaFiscal.Manual, null)).toBe('Manual');
     });
 
     it('mascara payload fiscal sensível na observabilidade', () => {
