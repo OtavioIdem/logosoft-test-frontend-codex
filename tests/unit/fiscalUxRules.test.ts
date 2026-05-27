@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { OrigemNotaFiscal, StatusNotaFiscal, TipoDocumentoFiscal, TipoOperacaoFiscal } from '@/types/erp';
-import { maskFiscalSensitiveText, notaFiscalBloqueiosVisuais, notaPodeCancelar, notaPodeEditarItens, notaPodeGerarDanfe, notaPodeTransmitir, notaPodeValidar, statusNotaFiscalLabel } from '@/features/fiscal/components/fiscalUiUtils';
+import {
+    maskFiscalSensitiveText,
+    notaFiscalBloqueiosVisuais,
+    notaPodeCancelar,
+    notaPodeEditarItens,
+    notaPodeGerarDanfe,
+    notaPodeTransmitir,
+    notaPodeValidar,
+    origemNotaFiscalLabel,
+    resetFiltrosFiscaisPorEmpresa,
+    resetFiltrosFiscaisPorFilial,
+    statusNotaFiscalLabel
+} from '@/features/fiscal/components/fiscalUiUtils';
 import { NotaFiscalResponse } from '@/features/fiscal/types/fiscal.types';
 
 const baseNota: NotaFiscalResponse = {
@@ -54,6 +66,41 @@ describe('regras visuais fiscais', () => {
         expect(notaPodeGerarDanfe(autorizada)).toBe(true);
     });
 
+    it('formata origem fiscal para listagem sem expor identificador técnico', () => {
+        expect(origemNotaFiscalLabel(OrigemNotaFiscal.Manual)).toBe('Manual');
+        expect(origemNotaFiscalLabel(OrigemNotaFiscal.PedidoVenda)).toBe('Pedido de venda');
+        expect(origemNotaFiscalLabel(null)).toBe('-');
+    });
+
+    it('reseta filtros dependentes ao trocar empresa ou filial na consulta fiscal', () => {
+        const filtros = {
+            empresaId: 'empresa-a',
+            filialId: 'filial-a',
+            pessoaId: 'pessoa-a',
+            statusFiscal: StatusNotaFiscal.Autorizada,
+            page: 3,
+            pageSize: 20
+        };
+
+        expect(resetFiltrosFiscaisPorEmpresa(filtros, 'empresa-b')).toMatchObject({
+            empresaId: 'empresa-b',
+            filialId: null,
+            pessoaId: null,
+            statusFiscal: StatusNotaFiscal.Autorizada,
+            page: 1,
+            pageSize: 20
+        });
+
+        expect(resetFiltrosFiscaisPorFilial(filtros, 'filial-b')).toMatchObject({
+            empresaId: 'empresa-a',
+            filialId: 'filial-b',
+            pessoaId: null,
+            statusFiscal: StatusNotaFiscal.Autorizada,
+            page: 1,
+            pageSize: 20
+        });
+    });
+
     it('mascara payload fiscal sensível na observabilidade', () => {
         expect(maskFiscalSensitiveText('token=abc123; senha=segredo; <NFe><infNFe /></NFe>')).toBe('token=[MASKED]; senha=[MASKED]; [XML_MASKED]');
         expect(maskFiscalSensitiveText(null)).toBe('-');
@@ -68,5 +115,4 @@ describe('regras visuais fiscais', () => {
         expect(masked).not.toContain('12345678000199');
         expect(masked).not.toContain('<total>');
     });
-
 });

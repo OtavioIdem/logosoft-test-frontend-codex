@@ -99,6 +99,10 @@ for (const file of formattingFiles) {
     if (firstTrailingWhitespaceLine >= 0) {
         failures.push(`${relative(root, file)}:${firstTrailingWhitespaceLine + 1}: trailing whitespace não permitido`);
     }
+
+    if (content.endsWith('\n\n') || content.endsWith('\r\n\r\n')) {
+        failures.push(`${relative(root, file)}: linha em branco extra no final do arquivo não permitida`);
+    }
 }
 
 const packageJson = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));

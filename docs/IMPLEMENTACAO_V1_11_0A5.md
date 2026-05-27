@@ -35,4 +35,3 @@ Executar:
 npm run validate:source
 npm run build
 ```
-

@@ -1,4 +1,4 @@
-import { SelectOption, StatusNotaFiscal, TipoDocumentoFiscal, TipoEventoFiscal, TipoOperacaoFiscal, TipoServicoTransmissaoFiscal, TipoXmlFiscal } from '@/types/erp';
+import { OrigemNotaFiscal, SelectOption, StatusNotaFiscal, TipoDocumentoFiscal, TipoEventoFiscal, TipoOperacaoFiscal, TipoServicoTransmissaoFiscal, TipoXmlFiscal } from '@/types/erp';
 import { AcoesResumoFiscalResponse, NotaFiscalResponse, ResumoOperacionalNotaFiscalResponse, WorkflowOperacionalNotaFiscalResponse } from '@/features/fiscal/types/fiscal.types';
 
 export const formatFiscalMoney = (value?: number | null) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value ?? 0));
@@ -32,6 +32,17 @@ export const tipoOperacaoFiscalLabel = (value?: number | string | null) => {
         [TipoOperacaoFiscal.Servico]: 'Serviço',
         [TipoOperacaoFiscal.Transporte]: 'Transporte',
         [TipoOperacaoFiscal.Outro]: 'Outro'
+    };
+    return labels[Number(value)] ?? String(value ?? '-');
+};
+
+export const origemNotaFiscalLabel = (value?: number | string | null) => {
+    const labels: Record<number, string> = {
+        [OrigemNotaFiscal.Manual]: 'Manual',
+        [OrigemNotaFiscal.PedidoVenda]: 'Pedido de venda',
+        [OrigemNotaFiscal.PedidoCompra]: 'Pedido de compra',
+        [OrigemNotaFiscal.Servico]: 'Serviço',
+        [OrigemNotaFiscal.Importacao]: 'Importação'
     };
     return labels[Number(value)] ?? String(value ?? '-');
 };
@@ -110,9 +121,11 @@ export const workflowAcaoHabilitada = (workflow: WorkflowOperacionalNotaFiscalRe
 
 export const notaPodeEditarItens = (nota?: NotaFiscalResponse | null) => [StatusNotaFiscal.Rascunho, StatusNotaFiscal.Validada].includes(Number(nota?.statusFiscal));
 export const notaPodeValidar = (nota?: NotaFiscalResponse | null, resumo?: ResumoOperacionalNotaFiscalResponse | null) => acaoResumo(resumo)?.podeValidar ?? (Number(nota?.statusFiscal) === StatusNotaFiscal.Rascunho && (nota?.itens?.length ?? 0) > 0);
-export const notaPodeGerarXml = (nota?: NotaFiscalResponse | null, resumo?: ResumoOperacionalNotaFiscalResponse | null) => acaoResumo(resumo)?.podeGerarXmlEnvio ?? [StatusNotaFiscal.Rascunho, StatusNotaFiscal.Validada].includes(Number(nota?.statusFiscal));
+export const notaPodeGerarXml = (nota?: NotaFiscalResponse | null, resumo?: ResumoOperacionalNotaFiscalResponse | null) =>
+    acaoResumo(resumo)?.podeGerarXmlEnvio ?? [StatusNotaFiscal.Rascunho, StatusNotaFiscal.Validada].includes(Number(nota?.statusFiscal));
 export const notaPodeAssinarXml = (nota?: NotaFiscalResponse | null, resumo?: ResumoOperacionalNotaFiscalResponse | null) => acaoResumo(resumo)?.podeAssinarXmlEnvio ?? Number(nota?.statusFiscal) === StatusNotaFiscal.Validada;
-export const notaPodeTransmitir = (nota?: NotaFiscalResponse | null, resumo?: ResumoOperacionalNotaFiscalResponse | null) => acaoResumo(resumo)?.podeTransmitirSefaz ?? [StatusNotaFiscal.Assinada, StatusNotaFiscal.Contingencia].includes(Number(nota?.statusFiscal));
+export const notaPodeTransmitir = (nota?: NotaFiscalResponse | null, resumo?: ResumoOperacionalNotaFiscalResponse | null) =>
+    acaoResumo(resumo)?.podeTransmitirSefaz ?? [StatusNotaFiscal.Assinada, StatusNotaFiscal.Contingencia].includes(Number(nota?.statusFiscal));
 export const notaPodeCancelar = (nota?: NotaFiscalResponse | null, resumo?: ResumoOperacionalNotaFiscalResponse | null) => acaoResumo(resumo)?.podeCancelar ?? Number(nota?.statusFiscal) === StatusNotaFiscal.Autorizada;
 export const notaPodeCartaCorrecao = (nota?: NotaFiscalResponse | null, resumo?: ResumoOperacionalNotaFiscalResponse | null) => acaoResumo(resumo)?.podeEmitirCartaCorrecao ?? Number(nota?.statusFiscal) === StatusNotaFiscal.Autorizada;
 export const notaPodeGerarDanfe = (nota?: NotaFiscalResponse | null, resumo?: ResumoOperacionalNotaFiscalResponse | null) => acaoResumo(resumo)?.podeGerarDanfe ?? Number(nota?.statusFiscal) === StatusNotaFiscal.Autorizada;
@@ -121,21 +134,23 @@ export const notaPodeGerarContaReceber = (resumo?: ResumoOperacionalNotaFiscalRe
 export const notaPodeConsultarProtocolo = (nota?: NotaFiscalResponse | null, workflow?: WorkflowOperacionalNotaFiscalResponse | null) =>
     workflowAcaoHabilitada(workflow, ['CONSULTAR_PROTOCOLO', 'CONSULTAR_RETORNO_AUTORIZACAO']) ?? [StatusNotaFiscal.Transmitida, StatusNotaFiscal.Rejeitada].includes(Number(nota?.statusFiscal));
 export const notaPodeHabilitarContingencia = (nota?: NotaFiscalResponse | null, workflow?: WorkflowOperacionalNotaFiscalResponse | null) =>
-    workflowAcaoHabilitada(workflow, ['HABILITAR_CONTINGENCIA', 'CONTINGENCIA', 'AVALIAR_CONTINGENCIA']) ?? [StatusNotaFiscal.Assinada, StatusNotaFiscal.Transmitida, StatusNotaFiscal.Rejeitada, StatusNotaFiscal.Contingencia].includes(Number(nota?.statusFiscal));
+    workflowAcaoHabilitada(workflow, ['HABILITAR_CONTINGENCIA', 'CONTINGENCIA', 'AVALIAR_CONTINGENCIA']) ??
+    [StatusNotaFiscal.Assinada, StatusNotaFiscal.Transmitida, StatusNotaFiscal.Rejeitada, StatusNotaFiscal.Contingencia].includes(Number(nota?.statusFiscal));
 
 export const notaFiscalBloqueiosVisuais = (nota?: NotaFiscalResponse | null): string[] => {
     if (!nota) return [];
     const status = Number(nota.statusFiscal);
     const bloqueios: string[] = [];
     if ((nota.itens?.length ?? 0) === 0) bloqueios.push('Inclua pelo menos um item antes de validar, gerar XML ou transmitir.');
-    if ([StatusNotaFiscal.Transmitida, StatusNotaFiscal.Autorizada, StatusNotaFiscal.Cancelada, StatusNotaFiscal.Inutilizada, StatusNotaFiscal.Denegada, StatusNotaFiscal.Contingencia].includes(status)) bloqueios.push('Itens e impostos não devem ser alterados após transmissão, autorização, cancelamento, inutilização ou denegação.');
+    if ([StatusNotaFiscal.Transmitida, StatusNotaFiscal.Autorizada, StatusNotaFiscal.Cancelada, StatusNotaFiscal.Inutilizada, StatusNotaFiscal.Denegada, StatusNotaFiscal.Contingencia].includes(status))
+        bloqueios.push('Itens e impostos não devem ser alterados após transmissão, autorização, cancelamento, inutilização ou denegação.');
     if (status !== StatusNotaFiscal.Autorizada) bloqueios.push('Cancelamento, CC-e e DANFE ficam disponíveis somente após autorização.');
     if (status === StatusNotaFiscal.Rejeitada) bloqueios.push('Nota rejeitada exige fluxo controlado de correção antes de nova emissão.');
     return bloqueios;
 };
 
-
-const SENSITIVE_FISCAL_PATTERN = /\b(senha|password|token|secret|segredo|certificado|certificate|thumbprint|conteudoXml|xmlEnvio|xmlEventoAssinado|xmlInutilizacaoAssinado|xmlStatusServico|xmlConsultaAssinado|xmlCancelamento)\b\s*[:=]\s*("[^"]*"|'[^']*'|[^;,&\n\r]*)/gi;
+const SENSITIVE_FISCAL_PATTERN =
+    /\b(senha|password|token|secret|segredo|certificado|certificate|thumbprint|conteudoXml|xmlEnvio|xmlEventoAssinado|xmlInutilizacaoAssinado|xmlStatusServico|xmlConsultaAssinado|xmlCancelamento)\b\s*[:=]\s*("[^"]*"|'[^']*'|[^;,&\n\r]*)/gi;
 const FISCAL_XML_ROOT_TAGS = 'NFe|nfeProc|infNFe|consStatServ|consSitNFe|evento|inutNFe|CTe|cteProc|MDFe|mdfeProc';
 const FISCAL_XML_BLOCK_PATTERN = new RegExp(`<\\s*(${FISCAL_XML_ROOT_TAGS})\\b[^>]*>[\\s\\S]*?<\\/\\s*\\1\\s*>`, 'gi');
 const FISCAL_XML_SELF_CLOSING_PATTERN = new RegExp(`<\\s*(?:${FISCAL_XML_ROOT_TAGS})\\b[^>]*\\/\\s*>`, 'gi');
@@ -162,6 +177,21 @@ export const maskFiscalSensitiveText = (value?: string | null) => {
     return masked.length > 500 ? `${masked.slice(0, 497)}...` : masked;
 };
 
+export const resetFiltrosFiscaisPorEmpresa = <T extends { empresaId?: string | null; filialId?: string | null; pessoaId?: string | null; page?: number }>(current: T, empresaId: string | null): T => ({
+    ...current,
+    page: 1,
+    empresaId,
+    filialId: null,
+    pessoaId: null
+});
+
+export const resetFiltrosFiscaisPorFilial = <T extends { filialId?: string | null; pessoaId?: string | null; page?: number }>(current: T, filialId: string | null): T => ({
+    ...current,
+    page: 1,
+    filialId,
+    pessoaId: null
+});
+
 export const hasFiscalSensitiveContent = (value?: string | null) => {
     if (!value) return false;
     SENSITIVE_FISCAL_PATTERN.lastIndex = 0;
@@ -184,6 +214,14 @@ export const hasFiscalSensitiveContent = (value?: string | null) => {
 export const tipoDocumentoFiscalOptions: SelectOption<number>[] = [
     { label: 'NF-e', value: TipoDocumentoFiscal.NFe },
     { label: 'NFC-e', value: TipoDocumentoFiscal.NFCe }
+];
+
+export const origemNotaFiscalOptions: SelectOption<number>[] = [
+    { label: 'Manual', value: OrigemNotaFiscal.Manual },
+    { label: 'Pedido de venda', value: OrigemNotaFiscal.PedidoVenda },
+    { label: 'Pedido de compra', value: OrigemNotaFiscal.PedidoCompra },
+    { label: 'Serviço', value: OrigemNotaFiscal.Servico },
+    { label: 'Importação', value: OrigemNotaFiscal.Importacao }
 ];
 
 export const statusNotaFiscalOptions: SelectOption<number>[] = [
@@ -218,4 +256,8 @@ export const servicoTransmissaoFiscalOptions: SelectOption<number>[] = [
     { label: 'Status serviço', value: TipoServicoTransmissaoFiscal.StatusServico }
 ];
 
-export const gerarCorrelationId = (fluxo: string) => `front-${fluxo}-${new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)}-${Math.random().toString(36).slice(2, 8)}`;
+export const gerarCorrelationId = (fluxo: string) =>
+    `front-${fluxo}-${new Date()
+        .toISOString()
+        .replace(/[-:.TZ]/g, '')
+        .slice(0, 14)}-${Math.random().toString(36).slice(2, 8)}`;

@@ -45,4 +45,3 @@ npm install
 npm run build
 docker build -t logosoft-frontend:10.0.13.1 .
 ```
-

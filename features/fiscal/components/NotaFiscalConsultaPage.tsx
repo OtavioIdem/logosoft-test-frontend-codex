@@ -19,8 +19,11 @@ import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { EmpresaFilialFilter } from '@/components/forms/EmpresaFilialFilter';
+import { EntitySelect } from '@/components/forms/EntitySelect';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
+import { usePessoas } from '@/features/pessoas/hooks/usePessoasResources';
+import { PessoaResponse } from '@/features/pessoas/types/pessoas.types';
 import { CriarNotaFiscalDialog, GerarNotaFiscalPedidoVendaDialog } from '@/features/fiscal/components/FiscalActionDialogs';
 import { formatFiscalApiError } from '@/features/fiscal/api/fiscalApi';
 import { useFiscalMutations, useNotasFiscais } from '@/features/fiscal/hooks/useFiscalResources';
@@ -28,6 +31,10 @@ import { NotaFiscalListQuery, NotaFiscalListagemItemResponse } from '@/features/
 import {
     formatFiscalDate,
     formatFiscalMoney,
+    origemNotaFiscalLabel,
+    origemNotaFiscalOptions,
+    resetFiltrosFiscaisPorEmpresa,
+    resetFiltrosFiscaisPorFilial,
     statusNotaFiscalOptions,
     statusNotaFiscalTagValue,
     tipoDocumentoFiscalLabel,
@@ -36,6 +43,7 @@ import {
     tipoOperacaoFiscalOptions
 } from '@/features/fiscal/components/fiscalUiUtils';
 import { useAppToast } from '@/hooks/useAppToast';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { mapApiError } from '@/lib/http/apiError';
 
 const pendenciaOptions = [
@@ -48,6 +56,12 @@ const pendenciaOptions = [
 type PendenciaKey = (typeof pendenciaOptions)[number]['value'];
 
 const clampExportLimit = (value: number | null | undefined) => Math.min(5000, Math.max(1, Number(value ?? 1000)));
+
+const pessoaOptions = (pessoas: PessoaResponse[]) =>
+    pessoas.map((pessoa) => ({
+        label: [pessoa.nomeRazaoSocial, pessoa.nomeFantasia, pessoa.documento].filter(Boolean).join(' • '),
+        value: pessoa.id
+    }));
 
 const ExportarCsvDialog = ({ visible, loading, onHide, onSubmit }: { visible: boolean; loading?: boolean; onHide: () => void; onSubmit: (values: { motivo: string; limite: number }) => void }) => {
     const [motivo, setMotivo] = useState('Conferência operacional fiscal');
@@ -102,6 +116,10 @@ export const NotaFiscalConsultaPage = () => {
     const [criarVisible, setCriarVisible] = useState(false);
     const [pedidoVisible, setPedidoVisible] = useState(false);
     const [exportVisible, setExportVisible] = useState(false);
+    const [pessoaSearch, setPessoaSearch] = useState('');
+    const pessoaSearchTerm = useDebouncedValue(pessoaSearch.trim());
+    const pessoasQuery = usePessoas({ empresaId: filters.empresaId ?? null, filialId: filters.filialId ?? null, termo: pessoaSearchTerm || null }, { enabled: Boolean(filters.empresaId) });
+    const pessoasOptions = useMemo(() => pessoaOptions(pessoasQuery.data ?? []), [pessoasQuery.data]);
     const notasQuery = useNotasFiscais(filters);
     const data = notasQuery.data;
     const items = data?.items ?? [];
@@ -122,8 +140,23 @@ export const NotaFiscalConsultaPage = () => {
         setFilters((current) => ({ ...current, page: 1, [name]: value === '' ? null : value }));
     };
 
+    const handleEmpresaChange = (value: string | null) => {
+        setPessoaSearch('');
+        setFilters((current) => resetFiltrosFiscaisPorEmpresa(current, value));
+    };
+
+    const handleFilialChange = (value: string | null) => {
+        setPessoaSearch('');
+        setFilters((current) => resetFiltrosFiscaisPorFilial(current, value));
+    };
+
     const togglePendencia = (key: PendenciaKey, checked: boolean) => {
         setFilters((current) => ({ ...current, page: 1, [key]: checked || null }));
+    };
+
+    const limparFiltrosOperacionais = () => {
+        setPessoaSearch('');
+        setFilters((current) => ({ empresaId: current.empresaId ?? null, filialId: current.filialId ?? null, page: 1, pageSize: current.pageSize ?? 20 }));
     };
 
     const criarNota = async (values: unknown) => {
@@ -190,7 +223,7 @@ export const NotaFiscalConsultaPage = () => {
             <Card className="mb-3">
                 <div className="grid formgrid p-fluid">
                     <div className="field col-12 lg:col-5">
-                        <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
+                        <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={handleEmpresaChange} onFilialChange={handleFilialChange} />
                     </div>
                     <div className="field col-12 md:col-3 lg:col-2">
                         <label className="font-medium block mb-2">Status</label>
@@ -205,6 +238,24 @@ export const NotaFiscalConsultaPage = () => {
                         <Dropdown value={filters.tipoOperacao ?? null} options={tipoOperacaoFiscalOptions} showClear placeholder="Operação" onChange={(event) => updateFilter('tipoOperacao', event.value ?? null)} />
                     </div>
                     <div className="field col-12 md:col-3">
+                        <label className="font-medium block mb-2">Origem</label>
+                        <Dropdown value={filters.origem ?? null} options={origemNotaFiscalOptions} showClear placeholder="Origem" onChange={(event) => updateFilter('origem', event.value ?? null)} />
+                    </div>
+                    <div className="field col-12 md:col-5">
+                        <label className="font-medium block mb-2">Pessoa/cliente</label>
+                        <EntitySelect
+                            entityName="pessoa"
+                            value={filters.pessoaId ?? null}
+                            options={pessoasOptions}
+                            disabled={!filters.empresaId || pessoasQuery.isLoading}
+                            loading={pessoasQuery.isFetching}
+                            emptyMessage={filters.empresaId ? 'Nenhuma pessoa encontrada para a empresa/filial selecionada.' : 'Selecione a empresa antes de buscar pessoa.'}
+                            onSearch={setPessoaSearch}
+                            onChange={(value) => updateFilter('pessoaId', value)}
+                        />
+                        <small className="text-color-secondary block mt-1 line-height-3">Filtro carregado pela API de Pessoas. Não informe GUID manualmente.</small>
+                    </div>
+                    <div className="field col-12 md:col-3">
                         <label className="font-medium block mb-2">Série</label>
                         <InputText value={filters.serie ?? ''} onChange={(event) => updateFilter('serie', event.target.value || null)} />
                     </div>
@@ -216,6 +267,10 @@ export const NotaFiscalConsultaPage = () => {
                         <label className="font-medium block mb-2">Chave de acesso</label>
                         <InputText value={filters.chaveAcesso ?? ''} onChange={(event) => updateFilter('chaveAcesso', event.target.value || null)} />
                     </div>
+                    <div className="field col-12 md:col-6">
+                        <label className="font-medium block mb-2">Protocolo de autorização</label>
+                        <InputText value={filters.protocoloAutorizacao ?? ''} onChange={(event) => updateFilter('protocoloAutorizacao', event.target.value || null)} />
+                    </div>
                     <div className="field col-12">
                         <div className="flex flex-wrap gap-3">
                             {pendenciaOptions.map((option) => (
@@ -225,6 +280,9 @@ export const NotaFiscalConsultaPage = () => {
                                 </div>
                             ))}
                         </div>
+                    </div>
+                    <div className="field col-12 flex justify-content-end">
+                        <Button type="button" label="Limpar filtros operacionais" icon="pi pi-filter-slash" text onClick={limparFiltrosOperacionais} />
                     </div>
                 </div>
             </Card>
@@ -270,6 +328,7 @@ export const NotaFiscalConsultaPage = () => {
                         <Column field="numero" header="Número" body={(row: NotaFiscalListagemItemResponse) => `${row.serie}/${row.numero}`} />
                         <Column header="Tipo" body={(row: NotaFiscalListagemItemResponse) => tipoDocumentoFiscalLabel(row.tipoDocumento)} />
                         <Column header="Operação" body={(row: NotaFiscalListagemItemResponse) => tipoOperacaoFiscalLabel(row.tipoOperacao)} />
+                        <Column header="Origem" body={(row: NotaFiscalListagemItemResponse) => origemNotaFiscalLabel(row.origem)} />
                         <Column header="Status" body={(row: NotaFiscalListagemItemResponse) => <StatusTag status={statusNotaFiscalTagValue(row.statusFiscal)} />} />
                         <Column header="Emissão" body={(row: NotaFiscalListagemItemResponse) => formatFiscalDate(row.dataEmissao)} />
                         <Column header="Total" body={(row: NotaFiscalListagemItemResponse) => formatFiscalMoney(row.valorTotal)} />

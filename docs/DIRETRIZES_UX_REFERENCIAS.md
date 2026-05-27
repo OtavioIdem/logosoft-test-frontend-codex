@@ -64,3 +64,22 @@ A revisão de manutenção reforça que:
 - fluxos fiscais com referência recebida do contexto devem mostrar mensagem operacional, não campo editável de GUID;
 - erros retornados pela API devem preservar `code`, `status` e `traceId` quando disponíveis, especialmente em operações fiscais auditadas;
 - novas telas devem continuar passando por `validate:source` e por verificação de trailing whitespace antes de commit.
+
+## v1.11.0a8b14 — filtros fiscais por referência
+
+- Listagens fiscais também seguem a regra de referência por API: pessoa/cliente deve usar select com busca server-side, escopado por empresa e filial.
+- Origem fiscal deve ser selecionada por enum conhecido do contrato, nunca digitada como número solto.
+- Filtros técnicos como série, número, chave de acesso e protocolo continuam como texto porque são identificadores fiscais/documentais, não entidades relacionais do ERP.
+- Ao limpar filtros operacionais, manter empresa/filial e paginação base para evitar consulta fiscal sem escopo multiempresa.
+
+## v1.11.0a8b14 — reset de dependências em filtros por referência
+
+Ao alterar a empresa selecionada em filtros fiscais, a tela deve limpar `filialId`, `pessoaId` e termo de busca da pessoa, pois esses valores são dependentes do escopo de empresa. Ao alterar a filial, a tela deve limpar `pessoaId` e o termo de busca da pessoa.
+
+Essa regra evita consultar a listagem fiscal com uma pessoa pertencente a outro escopo organizacional.
+
+## v1.11.0a8b15 — gate obrigatório de whitespace
+
+- Arquivos versionados não devem conter espaços finais, tabs finais ou linha em branco extra no final do arquivo.
+- Antes de empacotar ou commitar, executar `npm run validate:source`, `git diff --check` e `git diff --cached --check`.
+- Documentações Markdown devem terminar com exatamente uma quebra de linha final, sem linha vazia adicional.
