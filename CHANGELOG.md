@@ -1,5 +1,120 @@
 # Changelog
 
+## v1.11.0a8b8
+
+- Corrigido mascaramento defensivo de XML fiscal na observabilidade.
+- `maskFiscalSensitiveText` agora substitui blocos XML completos por `[XML_MASKED]`, evitando vazamento de tags internas como `emit`, `CNPJ`, totais ou valores fiscais.
+- Adicionado teste unitário com XML fiscal contendo dados internos para impedir regressão de segurança.
+- Atualizada versão visual/documental para `1.11.0a8b8`.
+
+## v1.11.0a8b7
+
+- Evoluída a tela de Observabilidade Fiscal com filtros locais por operação, status, reprocessamento e dado sensível mascarado.
+- Adicionada consulta operacional de status de serviço fiscal via `POST /api/fiscal/sefaz/status-servico`.
+- Adicionados históricos de status de serviço e contingência na observabilidade.
+- Adicionado mascaramento visual defensivo para `payloadResumo` fiscal, evitando exposição de token, senha, certificado, segredo ou XML completo.
+- Adicionados testes unitários para payload de status de serviço e mascaramento fiscal.
+- Corrigida duplicidade residual de `etapaAtual` no tipo de workflow fiscal.
+
+## v1.11.0a8b6
+
+- Corrigido `baixarDocumentoAuxiliar` para sempre retornar `filename` como string, preservando o contrato `DownloadedFiscalFile`.
+- Adicionado fallback seguro `documento-auxiliar-fiscal-{documentoAuxiliarId}.bin` quando o backend não enviar `Content-Disposition`.
+- Download de documento auxiliar passa a retornar `contentType` quando disponível.
+- Atualizada versão visual/documental para `1.11.0a8b6`.
+- Criado `docs/IMPLEMENTACAO_V1_11_0A8B6.md`.
+
+## v1.11.0a8b5
+
+- Corrigido `UsuarioFormDialog`: `Password` agora usa `inputId="senha"`, mantendo o wrapper separado como `senha-wrapper`.
+- Exportação CSV fiscal agora ignora paginação visual (`page`/`pageSize`) e usa filtros + limite auditado.
+- Adicionada validação local para empresa obrigatória na exportação fiscal.
+- Adicionada validação local para filtros conflitantes de pendência XML, DANFE e financeiro.
+- Tratamento de erro em resposta `blob` para JSON, ProblemDetails e texto simples.
+- Sanitização de nome de arquivo e fallback `notas-fiscais-YYYY-MM-DD.csv`.
+- Adicionado teste unitário para parâmetros da exportação CSV auditada.
+- Criado `docs/IMPLEMENTACAO_V1_11_0A8B5.md`.
+
+## v1.11.0a8b4
+
+Versão anterior aplicada: `v1.11.0a8`.
+
+### Corrigido
+- Normalizado payload fiscal de geração de conta a receber para enviar `primeiraDataVencimento` como string ISO.
+- `LoadingState` passou a aceitar o variant `cards`.
+- Corrigidas regressões unitárias em fiscal, financeiro, estoque, auth refresh e formulário de usuário.
+- Ações fiscais de consulta de protocolo e contingência passam a respeitar workflow/regras operacionais, não apenas permissão.
+- Reprocessamento de integração fiscal passou a usar `PermissionGuard` com `FISCAL_EMITIR`.
+
+### Alterado
+- Campo de condição de pagamento no fluxo fiscal financeiro deixou de aceitar digitação manual de ID e passou a usar select carregado por API.
+- Atualizada versão visual/documental para `1.11.0a8b4`.
+
+### Documentação
+- Criado `docs/IMPLEMENTACAO_V1_11_0A8B4.md`.
+- Criado `docs/DIRETRIZES_UX_REFERENCIAS.md` com regra global de dropdowns/selects para entidades relacionadas.
+
+### Validação
+- `node scripts/validate-source.mjs` executado com sucesso.
+- `npm install` não concluiu no container por Node 22/npm 10 e timeout/SIGTERM; validar `typecheck`, `lint`, `test:unit` e `build` em Node 24/npm 11.
+
+## v1.11.0a8
+
+Versão anterior aplicada: `v1.11.0a7`.
+
+### Adicionado
+- Listagem fiscal operacional em `/fiscal/notas` usando `GET /api/fiscal/notas-fiscais` com filtros, paginação, pendências e ação principal sugerida pelo backend.
+- Exportação CSV auditada com motivo obrigatório e permissão `FISCAL_EXPORTAR`.
+- Consumo de `resumo-operacional`, `workflow-operacional` e integrações no detalhe da nota fiscal.
+- Abas de Workflow e Integrações na tela de detalhe fiscal.
+- Modais de reprocessamento SEFAZ, consulta de protocolo, contingência, baixa de estoque e geração de conta a receber.
+- Tela `/fiscal/observabilidade` com métricas e logs fiscais sanitizados.
+- Tipos, schemas, hooks e API client para o contrato fiscal frontend/backend v1.10.0a18.
+
+### Alterado
+- Atualizada a versão visual/documental para `1.11.0a8`.
+- Módulo fiscal passa a usar `resumo.acoes` e workflow do backend para orientar ações críticas.
+- `docs/CONTRATO_FISCAL_OFICIAL.md` atualizado para a documentação fiscal v1.10.0a18.
+- Menu e proteção de rotas fiscais passam a reconhecer `FISCAL_EXPORTAR` e `/fiscal/observabilidade`.
+
+### Corrigido
+- Corrigida duplicidade de declaração em `CartaCorrecaoResponse` dentro dos tipos fiscais.
+
+### Documentação
+- Criado documento `docs/IMPLEMENTACAO_V1_11_0A8.md` com etapas padronizadas `v1.11.0a8b1` a `v1.11.0a8b7` para validação incremental.
+
+### Validação
+- `node scripts/validate-source.mjs` executado com sucesso.
+- Validação sintática local dos arquivos alterados executada com `typescript.transpileModule`.
+- `npm install`, `typecheck`, `lint`, testes e build dependem de Node 24/npm 11; o container atual está em Node 22/npm 10.
+
+## v1.11.0a7
+
+Versão anterior aplicada: `v1.11.0a6`.
+
+### Alterado
+- Removido o caminho de mock de runtime de autenticação e recursos compartilhados.
+- `authApi` e `createResourceClient` passam a usar somente endpoints reais da API.
+- Playwright mantém interceptações apenas em testes, sem flags públicas `NEXT_PUBLIC_USE_MOCK_*`.
+- Módulo fiscal troca campos manuais de empresa, filial, pessoa, pedido e produto por selects conectados aos endpoints já existentes.
+- Textos fiscais deixam de mencionar mock e passam a indicar ambiente configurado no backend.
+- Download fiscal passa a usar `Content-Disposition` quando disponível.
+- Erros fiscais preservam metadados técnicos de suporte: code, status HTTP e traceId.
+
+### Removido
+- `features/auth/api/mockAuthClient.ts`.
+- `features/shared/api/mockErpStore.ts`.
+- `features/shared/api/resourceMockClient.ts`.
+- Flags `NEXT_PUBLIC_USE_MOCK_AUTH` e `NEXT_PUBLIC_USE_MOCK_API` dos arquivos `.env`.
+
+### Documentação
+- Criado documento `docs/IMPLEMENTACAO_V1_11_0A7.md`.
+- Atualizado `docs/CONTRATO_FISCAL_OFICIAL.md` para v1.11.0a7.
+
+### Validação
+- `npm run validate:source` executado com sucesso.
+- Demais comandos dependem de Node 24/npm 11 por causa do `engine-strict=true`.
+
 ## v1.11.0a5
 
 Versao anterior aplicada: `v1.11.0a4`.

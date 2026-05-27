@@ -1,16 +1,49 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { extname, join, relative } from 'node:path';
 
 const root = process.cwd();
 const sourceDirs = ['app', 'components', 'config', 'features', 'hooks', 'layout', 'lib', 'providers', 'types'];
 const files = [];
+const formattingFiles = [];
+const formattingAllowedExtensions = new Set([
+    '.cjs',
+    '.css',
+    '.html',
+    '.js',
+    '.json',
+    '.jsx',
+    '.md',
+    '.mjs',
+    '.scss',
+    '.ts',
+    '.tsx',
+    '.txt',
+    '.yaml',
+    '.yml'
+]);
+const formattingAllowedFilenames = new Set([
+    '.dockerignore',
+    '.editorconfig',
+    '.env',
+    '.env.example',
+    '.env.test',
+    '.eslintrc.json',
+    '.gitignore',
+    '.node-version',
+    '.npmrc',
+    '.nvmrc',
+    '.prettierignore',
+    '.prettierrc.json',
+    'Dockerfile'
+]);
+const ignoredDirs = new Set(['node_modules', '.next', 'coverage', '.git', 'dist', 'build', 'playwright-report', 'test-results']);
 
 const walk = (dir) => {
     for (const entry of readdirSync(dir)) {
         const path = join(dir, entry);
         const stat = statSync(path);
         if (stat.isDirectory()) {
-            if (['node_modules', '.next', 'coverage'].includes(entry)) continue;
+            if (ignoredDirs.has(entry)) continue;
             walk(path);
             continue;
         }
@@ -18,7 +51,24 @@ const walk = (dir) => {
     }
 };
 
+const walkFormattingFiles = (dir) => {
+    for (const entry of readdirSync(dir)) {
+        const path = join(dir, entry);
+        const stat = statSync(path);
+        if (stat.isDirectory()) {
+            if (ignoredDirs.has(entry)) continue;
+            walkFormattingFiles(path);
+            continue;
+        }
+
+        if (formattingAllowedExtensions.has(extname(entry)) || formattingAllowedFilenames.has(entry)) {
+            formattingFiles.push(path);
+        }
+    }
+};
+
 sourceDirs.forEach((dir) => walk(join(root, dir)));
+walkFormattingFiles(root);
 
 const checks = [
     { name: 'console.* em código de aplicação', pattern: /\bconsole\s*\./ },
@@ -38,6 +88,16 @@ for (const file of files) {
         if (check.pattern.test(content)) {
             failures.push(`${relative(root, file)}: ${check.name}`);
         }
+    }
+}
+
+for (const file of formattingFiles) {
+    const content = readFileSync(file, 'utf8');
+    const lines = content.split(/\r?\n/);
+    const firstTrailingWhitespaceLine = lines.findIndex((line) => /[ \t]+$/.test(line));
+
+    if (firstTrailingWhitespaceLine >= 0) {
+        failures.push(`${relative(root, file)}:${firstTrailingWhitespaceLine + 1}: trailing whitespace não permitido`);
     }
 }
 
@@ -96,8 +156,8 @@ for (const e2eFile of requiredE2eFiles) {
 }
 
 const playwrightConfig = readFileSync(join(root, 'playwright.config.ts'), 'utf8');
-if (!playwrightConfig.includes("NEXT_PUBLIC_USE_MOCK_AUTH: 'true'") || !playwrightConfig.includes("NEXT_PUBLIC_USE_MOCK_API: 'true'")) {
-    failures.push('playwright.config.ts: testes E2E devem subir ambiente com mocks explícitos para não depender de backend manual');
+if (/NEXT_PUBLIC_USE_MOCK_(AUTH|API)/.test(playwrightConfig)) {
+    failures.push('playwright.config.ts: runtime mock flags não devem ser usadas; testes E2E devem interceptar rotas via Playwright.');
 }
 if (!JSON.stringify(packageJson.scripts ?? {}).includes('test:e2e:critical')) {
     failures.push('package.json: script test:e2e:critical obrigatório para smoke E2E rápido');

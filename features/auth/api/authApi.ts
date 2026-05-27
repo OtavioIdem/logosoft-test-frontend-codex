@@ -3,7 +3,6 @@ import { mapApiError } from '@/lib/http/apiError';
 import { clearSession, getRefreshToken, updateTokens } from '@/lib/auth/sessionStorage';
 import { LoginPayload, LoginRequest } from '@/features/auth/types/auth.types';
 import { normalizeLoginSession, normalizeRefreshSession } from '@/features/auth/api/authResponseMapper';
-import { appConfig } from '@/config/app';
 import { normalizeGuidOrNull } from '@/lib/http/requestUtils';
 
 const MANAGER_TEST_EMAIL = 'manager@erp.local';
@@ -65,11 +64,6 @@ export const authApi = {
     async login(payload: LoginRequest) {
         const loginPayload = buildLoginPayload(payload);
 
-        if (appConfig.useMockAuth) {
-            const { mockAuthClient } = await import('@/features/auth/api/mockAuthClient');
-            return mockAuthClient.login(loginPayload);
-        }
-
         return runAuthRequest(async () => {
             const response = await httpClient.post('/api/auth/login', loginPayload);
             return normalizeLoginSession(response.data);
@@ -80,13 +74,6 @@ export const authApi = {
         const refreshToken = getRefreshToken();
         if (!refreshToken) {
             throw new Error('Refresh token ausente.');
-        }
-
-        if (appConfig.useMockAuth) {
-            const { mockAuthClient } = await import('@/features/auth/api/mockAuthClient');
-            const refreshSession = await mockAuthClient.refresh();
-            updateTokens(refreshSession, refreshSession.permissoes);
-            return refreshSession;
         }
 
         return runAuthRequest(async () => {
@@ -101,12 +88,6 @@ export const authApi = {
         const refreshToken = getRefreshToken();
 
         try {
-            if (appConfig.useMockAuth) {
-                const { mockAuthClient } = await import('@/features/auth/api/mockAuthClient');
-                await mockAuthClient.logout();
-                return;
-            }
-
             await runAuthRequest(() => httpClient.post('/api/auth/logout', { refreshToken: refreshToken ?? null }));
         } finally {
             clearSession();

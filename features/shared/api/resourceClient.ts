@@ -1,7 +1,6 @@
 import { AxiosResponse } from 'axios';
 import { httpClient } from '@/lib/http/httpClient';
 import { mapApiError } from '@/lib/http/apiError';
-import { appConfig } from '@/config/app';
 import { ApiError, ApiResult, PagedResult } from '@/types/erp';
 import { cleanQueryParams, sanitizePayload, toTermQueryParams } from '@/lib/http/requestUtils';
 import { ResourceAction, ResourceDefinition, ResourceQuery, ResourceSavePayload } from '@/features/shared/types/resource.types';
@@ -122,26 +121,4 @@ const createAxiosResourceClient = (definition: ResourceDefinition): ResourceClie
     }
 });
 
-const createMockProxyClient = (definition: ResourceDefinition): ResourceClient => ({
-    async list(query: ResourceQuery = {}) {
-        const { createMockResourceClient } = await import('@/features/shared/api/resourceMockClient');
-        return createMockResourceClient(definition).list(query);
-    },
-
-    async get(id: string) {
-        const { createMockResourceClient } = await import('@/features/shared/api/resourceMockClient');
-        return createMockResourceClient(definition).get(id);
-    },
-
-    async save(payload: ResourceSavePayload) {
-        const { createMockResourceClient } = await import('@/features/shared/api/resourceMockClient');
-        return createMockResourceClient(definition).save(payload);
-    },
-
-    async applyAction(id: string, action: Pick<ResourceAction, 'key' | 'apiAction'>, reason?: string) {
-        const { createMockResourceClient } = await import('@/features/shared/api/resourceMockClient');
-        return createMockResourceClient(definition).applyAction(id, action, reason);
-    }
-});
-
-export const createResourceClient = (definition: ResourceDefinition): ResourceClient => (appConfig.useMockApi ? createMockProxyClient(definition) : createAxiosResourceClient(definition));
+export const createResourceClient = (definition: ResourceDefinition): ResourceClient => createAxiosResourceClient(definition);

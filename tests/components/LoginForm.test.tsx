@@ -22,11 +22,9 @@ vi.mock('next/image', () => ({
 vi.mock('@/config/app', () => ({
     appConfig: {
         name: 'logosoft',
-        version: '1.11.0a2',
+        version: '1.11.0a7',
         env: 'production',
-        apiUrl: 'http://localhost:8080',
-        useMockAuth: false,
-        useMockApi: false
+        apiUrl: 'http://localhost:8080'
     }
 }));
 

@@ -197,6 +197,39 @@ export const mockApiRoutes = async (page: Page) => {
         const url = new URL(request.url());
         const path = url.pathname;
 
+        if (path === '/api/auth/login') return route.fulfill(json({
+            accessToken: 'e2e-access-token',
+            refreshToken: 'e2e-refresh-token',
+            accessTokenExpiraEm: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+            refreshTokenExpiraEm: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+            usuario: {
+                id: 'e2e-user-id',
+                nome: 'Administrador E2E',
+                email: 'admin@logosoft.local',
+                empresaId,
+                filialId,
+                permissoes: ADMIN_PERMISSIONS
+            },
+            user: {
+                id: 'e2e-user-id',
+                nome: 'Administrador E2E',
+                email: 'admin@logosoft.local',
+                empresaId,
+                filialId,
+                permissoes: ADMIN_PERMISSIONS
+            },
+            permissoes: ADMIN_PERMISSIONS
+        }));
+        if (path === '/api/auth/refresh') return route.fulfill(json({
+            accessToken: 'e2e-access-token-renovado',
+            refreshToken: 'e2e-refresh-token-renovado',
+            accessTokenExpiraEm: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+            refreshTokenExpiraEm: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+            permissoes: ADMIN_PERMISSIONS
+        }));
+        if (path === '/api/auth/logout') return route.fulfill(json({ success: true }));
         if (path === '/api/health') return route.fulfill(json({ status: 'ok' }));
         if (path.includes('/api/administracao/empresas')) return route.fulfill(json(method === 'GET' ? empresas : empresas[0]));
         if (path.includes('/api/administracao/filiais')) return route.fulfill(json(method === 'GET' ? filiais : filiais[0]));

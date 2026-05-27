@@ -2,12 +2,18 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { normalizeRefreshSession } from '@/features/auth/api/authResponseMapper';
 import { clearSession, readSession, updateTokens, writeSession } from '@/lib/auth/sessionStorage';
 
+const futureIso = (days: number) => new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+const oldAccessExpiresAt = futureIso(1);
+const oldRefreshExpiresAt = futureIso(7);
+const newAccessExpiresAt = futureIso(2);
+const newRefreshExpiresAt = futureIso(8);
+
 const baseSession = {
     accessToken: 'old-token',
-    accessTokenExpiraEm: '2026-05-05T20:30:00+00:00',
+    accessTokenExpiraEm: oldAccessExpiresAt,
     refreshToken: 'old-refresh',
-    refreshTokenExpiraEm: '2026-05-12T20:15:00+00:00',
-    expiresAt: '2026-05-05T20:30:00+00:00',
+    refreshTokenExpiraEm: oldRefreshExpiresAt,
+    expiresAt: oldAccessExpiresAt,
     user: {
         id: '33333333-3333-3333-3333-333333333333',
         nome: 'Manager',
@@ -26,18 +32,18 @@ describe('refresh de sessão', () => {
     it('normaliza o response real do endpoint /api/auth/refresh', () => {
         const refresh = normalizeRefreshSession({
             accessToken: 'novo-jwt',
-            accessTokenExpiraEm: '2026-05-05T21:00:00+00:00',
+            accessTokenExpiraEm: newAccessExpiresAt,
             refreshToken: 'novo-refresh-token',
-            refreshTokenExpiraEm: '2026-05-12T20:45:00+00:00',
+            refreshTokenExpiraEm: newRefreshExpiresAt,
             permissoes: ['PRODUTOS_CONSULTAR']
         });
 
         expect(refresh).toEqual({
             accessToken: 'novo-jwt',
-            accessTokenExpiraEm: '2026-05-05T21:00:00+00:00',
+            accessTokenExpiraEm: newAccessExpiresAt,
             refreshToken: 'novo-refresh-token',
-            refreshTokenExpiraEm: '2026-05-12T20:45:00+00:00',
-            expiresAt: '2026-05-05T21:00:00+00:00',
+            refreshTokenExpiraEm: newRefreshExpiresAt,
+            expiresAt: newAccessExpiresAt,
             permissoes: ['PRODUTOS_CONSULTAR']
         });
     });
@@ -47,9 +53,9 @@ describe('refresh de sessão', () => {
         updateTokens(
             {
                 accessToken: 'novo-jwt',
-                accessTokenExpiraEm: '2026-05-05T21:00:00+00:00',
+                accessTokenExpiraEm: newAccessExpiresAt,
                 refreshToken: 'novo-refresh-token',
-                refreshTokenExpiraEm: '2026-05-12T20:45:00+00:00'
+                refreshTokenExpiraEm: newRefreshExpiresAt
             },
             ['PRODUTOS_CONSULTAR']
         );

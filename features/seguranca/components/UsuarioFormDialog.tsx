@@ -87,7 +87,11 @@ export const UsuarioFormDialog = ({ visible, loading, onHide, onSubmit }: Usuari
                     <label htmlFor="senha" className="font-medium">
                         Senha inicial
                     </label>
-                    <Controller name="senha" control={control} render={({ field }) => <Password {...field} id="senha" inputClassName="w-full" className={classNames('w-full', { 'p-invalid': errors.senha })} feedback toggleMask />} />
+                    <Controller
+                        name="senha"
+                        control={control}
+                        render={({ field }) => <Password {...field} inputId="senha" id="senha-wrapper" inputClassName="w-full" className={classNames('w-full', { 'p-invalid': errors.senha })} feedback toggleMask />}
+                    />
                     <FieldError message={errors.senha?.message} />
                 </div>
 
@@ -103,7 +107,11 @@ export const UsuarioFormDialog = ({ visible, loading, onHide, onSubmit }: Usuari
                     <label htmlFor="filialId" className="font-medium">
                         Filial
                     </label>
-                    <Controller name="filialId" control={control} render={({ field }) => <FilialSelect id="filialId" empresaId={empresaId || null} value={field.value || null} disabled={!empresaId} onChange={(value) => field.onChange(value ?? '')} />} />
+                    <Controller
+                        name="filialId"
+                        control={control}
+                        render={({ field }) => <FilialSelect id="filialId" empresaId={empresaId || null} value={field.value || null} disabled={!empresaId} onChange={(value) => field.onChange(value ?? '')} />}
+                    />
                     <small className="text-color-secondary">Opcional. Pesquise pelo nome; o vínculo correto será enviado automaticamente.</small>
                     <FieldError message={errors.filialId?.message} />
                 </div>

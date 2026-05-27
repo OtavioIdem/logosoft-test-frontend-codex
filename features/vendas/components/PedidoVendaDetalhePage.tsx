@@ -22,7 +22,9 @@ import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { AprovarPedidoVendaDialog, FaturarPedidoVendaDialog } from '@/features/vendas/components/PedidoVendaActionDialogs';
 import { PedidoVendaFormDialog } from '@/features/vendas/components/PedidoVendaFormDialog';
 import { PedidoVendaItemDialog } from '@/features/vendas/components/PedidoVendaItemDialog';
+import { GerarNotaFiscalPedidoVendaDialog } from '@/features/fiscal/components/FiscalActionDialogs';
 import { usePedidoVenda, usePedidoVendaMutations } from '@/features/vendas/hooks/useVendasResources';
+import { useFiscalMutations } from '@/features/fiscal/hooks/useFiscalResources';
 import { useClientes } from '@/features/clientes/hooks/useClientesResources';
 import { usePessoas } from '@/features/pessoas/hooks/usePessoasResources';
 import { useProdutos } from '@/features/produtos/hooks/useProdutosResources';
@@ -110,12 +112,14 @@ export const PedidoVendaDetalhePage = ({ pedidoId }: { pedidoId?: string }) => {
     const isNovo = !pedidoId;
     const pedidoQuery = usePedidoVenda(pedidoId);
     const mutations = usePedidoVendaMutations();
+    const fiscalMutations = useFiscalMutations();
     const [formVisible, setFormVisible] = useState(isNovo);
     const [itemDialog, setItemDialog] = useState<ItemPedidoVendaResponse | null | 'novo'>(null);
     const [removeItem, setRemoveItem] = useState<ItemPedidoVendaResponse | null>(null);
     const [cancelarVisible, setCancelarVisible] = useState(false);
     const [aprovarVisible, setAprovarVisible] = useState(false);
     const [faturarVisible, setFaturarVisible] = useState(false);
+    const [gerarNotaFiscalVisible, setGerarNotaFiscalVisible] = useState(false);
     const [first, setFirst] = useState(0);
     const [rows, setRows] = useState(10);
 
@@ -201,6 +205,20 @@ export const PedidoVendaDetalhePage = ({ pedidoId }: { pedidoId?: string }) => {
         }
     };
 
+
+    const gerarNotaFiscal = async (values: unknown) => {
+        if (!pedido) return;
+        try {
+            const result = await fiscalMutations.gerarNotaPedidoMutation.mutateAsync(values);
+            toast.success('Nota fiscal gerada', 'Nota fiscal criada em rascunho a partir do pedido de venda.');
+            setGerarNotaFiscalVisible(false);
+            router.push(`/fiscal/notas/${result.notaFiscal.id}`);
+        } catch (error) {
+            toast.error('Erro ao gerar nota fiscal', error instanceof Error ? error.message : 'Não foi possível gerar a nota fiscal.');
+            throw error;
+        }
+    };
+
     const faturar = async (values: FaturarPedidoVendaRequest) => {
         if (!pedido) return;
         try {
@@ -220,6 +238,7 @@ export const PedidoVendaDetalhePage = ({ pedidoId }: { pedidoId?: string }) => {
             {!isNovo && pedido ? <PermissionGuard permission="VENDAS_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Enviar aprovação" icon="pi pi-send" disabled={disabled || !pedidoPodeEnviar(pedido) || mutations.enviarMutation.isPending} loading={mutations.enviarMutation.isPending} onClick={enviar} />}</PermissionGuard> : null}
             {!isNovo && pedido ? <PermissionGuard permission="VENDAS_APROVAR" mode="disable">{({ disabled }) => <Button label="Aprovar" icon="pi pi-check" severity="success" disabled={disabled || !pedidoPodeAprovar(pedido)} onClick={() => setAprovarVisible(true)} />}</PermissionGuard> : null}
             {!isNovo && pedido ? <PermissionGuard permission="VENDAS_FATURAR" mode="disable">{({ disabled }) => <Button label="Faturar" icon="pi pi-dollar" severity="warning" disabled={disabled || !pedidoPodeFaturar(pedido)} onClick={() => setFaturarVisible(true)} />}</PermissionGuard> : null}
+            {!isNovo && pedido ? <PermissionGuard permission="FISCAL_EMITIR" mode="disable">{({ disabled }) => <Button label="Gerar NF" icon="pi pi-file" severity="help" disabled={disabled || !pedidoPodeFaturar(pedido)} onClick={() => setGerarNotaFiscalVisible(true)} />}</PermissionGuard> : null}
             {!isNovo && pedido ? <PermissionGuard permission="VENDAS_CANCELAR" mode="disable">{({ disabled }) => <Button label="Cancelar" icon="pi pi-ban" severity="danger" outlined disabled={disabled || !pedidoPodeCancelar(pedido)} onClick={() => setCancelarVisible(true)} />}</PermissionGuard> : null}
         </div>
     );
@@ -283,6 +302,7 @@ export const PedidoVendaDetalhePage = ({ pedidoId }: { pedidoId?: string }) => {
             <ReasonDialog visible={cancelarVisible} title="Motivo do cancelamento" confirmLabel="Cancelar pedido" loading={mutations.cancelarMutation.isPending} onHide={() => setCancelarVisible(false)} onConfirm={cancelar} />
             <AprovarPedidoVendaDialog visible={aprovarVisible} loading={mutations.aprovarMutation.isPending} onHide={() => setAprovarVisible(false)} onSubmit={aprovar} />
             <FaturarPedidoVendaDialog visible={faturarVisible} loading={mutations.faturarMutation.isPending} onHide={() => setFaturarVisible(false)} onSubmit={faturar} />
+            <GerarNotaFiscalPedidoVendaDialog visible={gerarNotaFiscalVisible} loading={fiscalMutations.gerarNotaPedidoMutation.isPending} onHide={() => setGerarNotaFiscalVisible(false)} onSubmit={gerarNotaFiscal} pedidoVendaId={pedido?.id} />
         </>
     );
 };
