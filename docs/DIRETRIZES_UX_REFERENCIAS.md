@@ -54,3 +54,13 @@ Para listas grandes, a evolução esperada é paginação server-side ou endpoin
 - limpar o valor dependente ao trocar a entidade pai;
 - mostrar estado de carregamento no dropdown;
 - nunca orientar o usuário a copiar ou digitar GUID manualmente.
+
+## Revisão v1.11.0a8b12
+
+A revisão de manutenção reforça que:
+
+- selects de empresa e filial exibem carregamento quando a API está consultando opções;
+- selects remotos devem usar mensagem de vazio contextual, evitando orientar digitação de ID;
+- fluxos fiscais com referência recebida do contexto devem mostrar mensagem operacional, não campo editável de GUID;
+- erros retornados pela API devem preservar `code`, `status` e `traceId` quando disponíveis, especialmente em operações fiscais auditadas;
+- novas telas devem continuar passando por `validate:source` e por verificação de trailing whitespace antes de commit.

@@ -37,7 +37,8 @@ export const SearchSelect = <TValue extends string | number | boolean | null = s
         showClear
         filterBy="label"
         dropdownIcon={loading ? 'pi pi-spin pi-spinner' : undefined}
-        emptyMessage={emptyMessage ?? 'Nenhum registro encontrado.'}
+        emptyMessage={loading ? 'Buscando registros...' : emptyMessage ?? 'Nenhum registro encontrado.'}
+        panelFooterTemplate={loading ? <div className="px-3 py-2 text-sm text-color-secondary"><i className="pi pi-spin pi-spinner mr-2" />Buscando na API...</div> : undefined}
         filterPlaceholder={filterPlaceholder ?? 'Digite para buscar'}
         resetFilterOnHide
         placeholder={placeholder ?? 'Selecione'}

@@ -15,6 +15,8 @@ export const FilialSelect = ({ id = 'filialId', empresaId, value, onChange, disa
             onChange={onChange}
             entityName="filial"
             disabled={disabled || !empresaId || filiaisQuery.isLoading}
+            loading={filiaisQuery.isFetching}
+            emptyMessage={empresaId ? 'Nenhuma filial disponível para a empresa selecionada.' : 'Selecione a empresa antes da filial.'}
         />
     );
 };

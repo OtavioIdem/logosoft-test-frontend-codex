@@ -14,6 +14,8 @@ export const EmpresaSelect = ({ id = 'empresaId', value, onChange, disabled, req
             onChange={onChange}
             entityName={required ? 'empresa obrigatória' : 'empresa'}
             disabled={disabled || empresasQuery.isLoading}
+            loading={empresasQuery.isFetching}
+            emptyMessage="Nenhuma empresa disponível para o usuário logado."
         />
     );
 };

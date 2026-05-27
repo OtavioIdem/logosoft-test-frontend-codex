@@ -8,6 +8,7 @@ import { Dropdown } from 'primereact/dropdown';
 import { InputNumber } from 'primereact/inputnumber';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { InputText } from 'primereact/inputtext';
+import { Message } from 'primereact/message';
 import { EntitySelect } from '@/components/forms/EntitySelect';
 import { EmpresaSelect } from '@/components/forms/EmpresaSelect';
 import { FilialSelect } from '@/components/forms/FilialSelect';
@@ -48,6 +49,12 @@ const TextAreaField = ({ label, value, rows = 4, onChange, hint }: { label: stri
         <label className="font-medium block mb-2">{label}</label>
         <InputTextarea value={value} rows={rows} className="w-full" onChange={(event) => onChange(event.target.value)} />
         {hint ? <small className="text-color-secondary block mt-1 line-height-3">{hint}</small> : null}
+    </div>
+);
+
+const ReferencePolicyMessage = () => (
+    <div className="field col-12">
+        <Message severity="info" className="w-full" text="Referências como empresa, filial, pessoa, pedido, produto e condição de pagamento devem ser selecionadas em listas carregadas da API. Não digite GUID manualmente." />
     </div>
 );
 
@@ -105,6 +112,7 @@ export const CriarNotaFiscalDialog = ({ visible, loading, onHide, onSubmit }: Ba
     return (
         <Dialog header="Nova nota fiscal manual" visible={visible} modal style={{ width: '56rem' }} onHide={onHide} footer={footer('criar-nota-fiscal-form', loading, onHide, 'Criar nota')}>
             <form id="criar-nota-fiscal-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
+                <ReferencePolicyMessage />
                 <Field label="Empresa"><EmpresaSelect value={values.empresaId || null} required onChange={(empresaId) => setValues((v) => ({ ...v, empresaId: empresaId ?? '', filialId: '', pessoaId: '' }))} /></Field>
                 <Field label="Filial"><FilialSelect empresaId={values.empresaId || null} value={values.filialId || null} onChange={(filialId) => setValues((v) => ({ ...v, filialId: filialId ?? '', pessoaId: '' }))} /></Field>
                 <Field label="Tipo documento"><Dropdown value={values.tipoDocumento} options={tipoDocumentoFiscalOptions} onChange={(e) => setValues((v) => ({ ...v, tipoDocumento: e.value }))} /></Field>
@@ -146,6 +154,7 @@ export const GerarNotaFiscalPedidoVendaDialog = ({ visible, loading, onHide, onS
     return (
         <Dialog header="Gerar nota fiscal de pedido de venda" visible={visible} modal style={{ width: '52rem' }} onHide={onHide} footer={footer('gerar-nf-pedido-form', loading, onHide, 'Gerar NF')}>
             <form id="gerar-nf-pedido-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
+                <ReferencePolicyMessage />
                 {!pedidoVendaId ? (
                     <>
                         <Field label="Empresa"><EmpresaSelect value={values.empresaId || null} required onChange={(empresaId) => setValues((v) => ({ ...v, empresaId: empresaId ?? '', filialId: '', pedidoVendaId: '' }))} /></Field>
@@ -153,7 +162,9 @@ export const GerarNotaFiscalPedidoVendaDialog = ({ visible, loading, onHide, onS
                         <Field label="Pedido aprovado"><EntitySelect entityName="pedido aprovado" value={values.pedidoVendaId || null} options={pedidosOptions} disabled={!values.empresaId || pedidosQuery.isLoading} loading={pedidosQuery.isFetching} onSearch={setPedidoSearch} onChange={(pedidoId) => setValues((v) => ({ ...v, pedidoVendaId: pedidoId ?? '' }))} /></Field>
                     </>
                 ) : (
-                    <Field label="Pedido de venda"><InputText value={values.pedidoVendaId} disabled /></Field>
+                    <div className="field col-12">
+                        <Message severity="info" className="w-full" text="Pedido de venda recebido pelo contexto da tela anterior; não há digitação manual de identificador neste fluxo." />
+                    </div>
                 )}
                 <Field label="Tipo documento"><Dropdown value={values.tipoDocumento} options={tipoDocumentoFiscalOptions} onChange={(e) => setValues((v) => ({ ...v, tipoDocumento: e.value }))} /></Field>
                 <Field label="Série"><InputText value={values.serie} onChange={(e) => setValues((v) => ({ ...v, serie: e.target.value }))} /></Field>
@@ -195,6 +206,7 @@ export const ItemNotaFiscalDialog = ({ visible, loading, onHide, onSubmit, empre
     return (
         <Dialog header="Adicionar item fiscal" visible={visible} modal style={{ width: '56rem' }} onHide={onHide} footer={footer('item-nota-fiscal-form', loading, onHide, 'Adicionar item')}>
             <form id="item-nota-fiscal-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
+                <ReferencePolicyMessage />
                 <Field label="Produto" hint="Seleção carregada da API de produtos. Código, descrição, NCM e preço são preenchidos como sugestão operacional."><EntitySelect entityName="produto" value={values.produtoId || null} options={produtosOptions} disabled={produtosQuery.isLoading} loading={produtosQuery.isFetching} onSearch={setProdutoSearch} onChange={selecionarProduto} /></Field>
                 <Field label="Código"><InputText value={values.codigoItem} onChange={(e) => setValues((v) => ({ ...v, codigoItem: e.target.value }))} /></Field>
                 <Field label="Descrição"><InputText value={values.descricao} onChange={(e) => setValues((v) => ({ ...v, descricao: e.target.value }))} /></Field>
@@ -217,7 +229,7 @@ export const ImpostoNotaFiscalDialog = ({ visible, loading, onHide, onSubmit, it
     return (
         <Dialog header="Adicionar imposto parametrizado" visible={visible} modal style={{ width: '52rem' }} onHide={onHide} footer={footer('imposto-nota-fiscal-form', loading, onHide, 'Adicionar imposto')}>
             <form id="imposto-nota-fiscal-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
-                <Field label="Item vinculado"><Dropdown value={values.itemNotaFiscalId} options={itemOptions} onChange={(e) => setValues((v) => ({ ...v, itemNotaFiscalId: e.value }))} /></Field>
+                <Field label="Item vinculado" hint="Lista derivada dos itens já carregados no detalhe da nota; não digite o ID do item."><Dropdown value={values.itemNotaFiscalId} options={itemOptions} onChange={(e) => setValues((v) => ({ ...v, itemNotaFiscalId: e.value }))} /></Field>
                 <Field label="Imposto"><InputText value={values.nome} onChange={(e) => setValues((v) => ({ ...v, nome: e.target.value }))} /></Field>
                 <Field label="CST/CSOSN"><InputText value={values.cstCsosn} onChange={(e) => setValues((v) => ({ ...v, cstCsosn: e.target.value }))} /></Field>
                 <Field label="Base cálculo"><InputNumber value={values.baseCalculo} min={0} mode="currency" currency="BRL" locale="pt-BR" onValueChange={(e) => setValues((v) => ({ ...v, baseCalculo: Number(e.value ?? 0) }))} /></Field>
@@ -386,7 +398,7 @@ export const ReprocessarSefazDialog = ({ visible, loading, onHide, onSubmit, log
                 <Field label="UF autorizadora"><InputText value={values.ufAutorizadora} maxLength={2} onChange={(e) => setValues((v) => ({ ...v, ufAutorizadora: e.target.value.toUpperCase() }))} /></Field>
                 <Field label="Serviço"><Dropdown value={values.servico} options={servicoTransmissaoFiscalOptions} onChange={(e) => setValues((v) => ({ ...v, servico: e.value }))} /></Field>
                 <Field label="Schema set"><InputText value={values.schemaSetName} onChange={(e) => setValues((v) => ({ ...v, schemaSetName: e.target.value }))} /></Field>
-                <Field label="Correlation ID original"><InputText value={values.correlationIdOriginal} onChange={(e) => setValues((v) => ({ ...v, correlationIdOriginal: e.target.value }))} /></Field>
+                <Field label="Correlation ID original" hint="Preenchido automaticamente ao selecionar um log reprocessável; edite somente se o backend solicitar reprocessamento por correlation ID."><InputText value={values.correlationIdOriginal} onChange={(e) => setValues((v) => ({ ...v, correlationIdOriginal: e.target.value }))} /></Field>
                 <Field label="Novo correlation ID"><InputText value={values.correlationId} onChange={(e) => setValues((v) => ({ ...v, correlationId: e.target.value }))} /></Field>
                 <div className="field col-12 flex align-items-center gap-2"><Checkbox inputId="validarSchemaReprocessar" checked={values.validarSchemaAntesTransmissao} onChange={(e) => setValues((v) => ({ ...v, validarSchemaAntesTransmissao: Boolean(e.checked) }))} /><label htmlFor="validarSchemaReprocessar">Validar schema antes da transmissão</label></div>
                 <TextAreaField label="Motivo" value={values.motivo} onChange={(motivo) => setValues((v) => ({ ...v, motivo }))} />

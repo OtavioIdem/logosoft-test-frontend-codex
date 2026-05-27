@@ -13,12 +13,13 @@ import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmpresaFilialFilter } from '@/components/forms/EmpresaFilialFilter';
+import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { LoadingState } from '@/components/feedback/LoadingState';
-import { formatFiscalApiError } from '@/features/fiscal/api/fiscalApi';
 import { useFiscalMutations, useHistoricoContingenciaFiscal, useHistoricoStatusServicoFiscal, useObservabilidadeFiscal } from '@/features/fiscal/hooks/useFiscalResources';
 import { LogIntegracaoFiscalResponse, StatusServicoSefazResponse } from '@/features/fiscal/types/fiscal.types';
 import { formatFiscalDate, gerarCorrelationId, maskFiscalSensitiveText, tipoDocumentoFiscalOptions } from '@/features/fiscal/components/fiscalUiUtils';
-import { TipoDocumentoFiscal } from '@/types/erp';
+import { mapApiError } from '@/lib/http/apiError';
+import { ApiError, TipoDocumentoFiscal } from '@/types/erp';
 
 const statusIntegracaoLabel = (status?: number | null) => {
     const labels: Record<number, string> = {
@@ -114,7 +115,7 @@ export const ObservabilidadeFiscalPage = () => {
     const [somenteReprocessaveis, setSomenteReprocessaveis] = useState<boolean | null>(null);
     const [somenteComDadoMascarado, setSomenteComDadoMascarado] = useState<boolean | null>(null);
     const [statusServicoResult, setStatusServicoResult] = useState<StatusServicoSefazResponse | null>(null);
-    const [statusServicoError, setStatusServicoError] = useState<string | null>(null);
+    const [statusServicoError, setStatusServicoError] = useState<ApiError | null>(null);
     const [statusServicoForm, setStatusServicoForm] = useState({
         tipoDocumento: TipoDocumentoFiscal.NFe,
         ufAutorizadora: 'SP',
@@ -171,7 +172,7 @@ export const ObservabilidadeFiscalPage = () => {
             setStatusServicoResult(result);
             setStatusServicoForm((current) => ({ ...current, correlationId: gerarCorrelationId('status-servico') }));
         } catch (error) {
-            setStatusServicoError(formatFiscalApiError(error, 'Não foi possível consultar o status de serviço fiscal.'));
+            setStatusServicoError(mapApiError(error));
         }
     };
 
@@ -199,7 +200,7 @@ export const ObservabilidadeFiscalPage = () => {
             </Card>
 
             {!empresaId ? <Message className="w-full mb-4" severity="info" text="Selecione a empresa para consultar a observabilidade fiscal." /> : null}
-            {observabilidadeQuery.isError ? <Message className="w-full mb-4" severity="error" text="Não foi possível consultar a observabilidade fiscal." /> : null}
+            {observabilidadeQuery.error ? <ApiErrorPanel error={mapApiError(observabilidadeQuery.error)} title="Não foi possível consultar a observabilidade fiscal." /> : null}
             {observabilidadeQuery.isLoading && empresaId ? <LoadingState variant="cards" /> : null}
 
             <Card title="Status de serviço fiscal" className="mb-4">
@@ -233,7 +234,7 @@ export const ObservabilidadeFiscalPage = () => {
                         <Button type="button" label="Novo correlation ID" icon="pi pi-refresh" severity="secondary" onClick={() => setStatusServicoForm((current) => ({ ...current, correlationId: gerarCorrelationId('status-servico') }))} />
                     </div>
                 </form>
-                {statusServicoError ? <Message className="w-full mt-3" severity="error" text={statusServicoError} /> : null}
+                {statusServicoError ? <div className="mt-3"><ApiErrorPanel error={statusServicoError} title="Não foi possível consultar o status de serviço fiscal." /></div> : null}
                 {statusServicoResult ? <div className="mt-3"><StatusServicoResult result={statusServicoResult} /></div> : null}
             </Card>
 
