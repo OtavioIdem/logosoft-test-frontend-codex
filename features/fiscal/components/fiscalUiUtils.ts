@@ -1,5 +1,5 @@
 import { OrigemNotaFiscal, SelectOption, StatusNotaFiscal, TipoDocumentoFiscal, TipoEventoFiscal, TipoOperacaoFiscal, TipoServicoTransmissaoFiscal, TipoXmlFiscal } from '@/types/erp';
-import { AcoesResumoFiscalResponse, NotaFiscalResponse, ResumoOperacionalNotaFiscalResponse, WorkflowOperacionalNotaFiscalResponse } from '@/features/fiscal/types/fiscal.types';
+import { AcaoWorkflowFiscalResponse, AcoesResumoFiscalResponse, NotaFiscalResponse, ResumoOperacionalNotaFiscalResponse, WorkflowOperacionalNotaFiscalResponse } from '@/features/fiscal/types/fiscal.types';
 
 export const formatFiscalMoney = (value?: number | null) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value ?? 0));
 
@@ -121,11 +121,60 @@ export const tipoEventoFiscalLabel = (value?: number | string | null) => {
 const acaoResumo = (resumo?: ResumoOperacionalNotaFiscalResponse | null): AcoesResumoFiscalResponse | null => resumo?.acoes ?? null;
 const normalizarCodigoAcao = (codigo?: string | null) => (codigo ?? '').trim().toUpperCase();
 
+export type FiscalWorkflowActionState = {
+    habilitada: boolean;
+    motivoBloqueio?: string | null;
+    acao?: AcaoWorkflowFiscalResponse | null;
+    fonte: 'workflow' | 'fallback' | 'workflow-ausente';
+};
+
+const findWorkflowAction = (workflow: WorkflowOperacionalNotaFiscalResponse | null | undefined, codigos: string[]) => {
+    const codigosNormalizados = new Set(codigos.map(normalizarCodigoAcao));
+    return workflow?.proximasAcoes?.find((item) => codigosNormalizados.has(normalizarCodigoAcao(item.codigo))) ?? null;
+};
+
 export const workflowAcaoHabilitada = (workflow: WorkflowOperacionalNotaFiscalResponse | null | undefined, codigos: string[]): boolean | null => {
     if (!workflow) return null;
-    const codigosNormalizados = new Set(codigos.map(normalizarCodigoAcao));
-    const acao = workflow.proximasAcoes?.find((item) => codigosNormalizados.has(normalizarCodigoAcao(item.codigo)));
+    const acao = findWorkflowAction(workflow, codigos);
     return acao ? Boolean(acao.habilitada) : false;
+};
+
+export const resolveFiscalWorkflowActionState = (
+    workflow: WorkflowOperacionalNotaFiscalResponse | null | undefined,
+    codigos: string[],
+    fallbackHabilitada: boolean,
+    fallbackMotivoBloqueio = 'Ação bloqueada pelas regras operacionais retornadas pelo backend.'
+): FiscalWorkflowActionState => {
+    if (!workflow) {
+        return {
+            habilitada: fallbackHabilitada,
+            motivoBloqueio: fallbackHabilitada ? null : fallbackMotivoBloqueio,
+            acao: null,
+            fonte: 'workflow-ausente'
+        };
+    }
+
+    const acao = findWorkflowAction(workflow, codigos);
+    if (acao) {
+        return {
+            habilitada: Boolean(acao.habilitada),
+            motivoBloqueio: acao.habilitada ? null : acao.motivoBloqueio ?? fallbackMotivoBloqueio,
+            acao,
+            fonte: 'workflow'
+        };
+    }
+
+    return {
+        habilitada: fallbackHabilitada,
+        motivoBloqueio: fallbackHabilitada ? null : fallbackMotivoBloqueio,
+        acao: null,
+        fonte: 'fallback'
+    };
+};
+
+export const fiscalActionDisabledReason = (permissionDisabled: boolean, actionState: FiscalWorkflowActionState, permissao?: string) => {
+    if (permissionDisabled) return permissao ? `Permissão necessária: ${permissao}.` : 'Permissão necessária para executar esta ação.';
+    return actionState.habilitada ? undefined : actionState.motivoBloqueio ?? 'Ação indisponível no workflow operacional atual.';
 };
 
 export const notaPodeEditarItens = (nota?: NotaFiscalResponse | null) => [StatusNotaFiscal.Rascunho, StatusNotaFiscal.Validada].includes(Number(nota?.statusFiscal));
@@ -140,6 +189,8 @@ export const notaPodeCartaCorrecao = (nota?: NotaFiscalResponse | null, resumo?:
 export const notaPodeGerarDanfe = (nota?: NotaFiscalResponse | null, resumo?: ResumoOperacionalNotaFiscalResponse | null) => acaoResumo(resumo)?.podeGerarDanfe ?? Number(nota?.statusFiscal) === StatusNotaFiscal.Autorizada;
 export const notaPodeBaixarEstoque = (resumo?: ResumoOperacionalNotaFiscalResponse | null) => Boolean(resumo?.acoes?.podeBaixarEstoque);
 export const notaPodeGerarContaReceber = (resumo?: ResumoOperacionalNotaFiscalResponse | null) => Boolean(resumo?.acoes?.podeGerarContaReceber);
+export const notaPodeRegistrarRejeicao = (nota?: NotaFiscalResponse | null, workflow?: WorkflowOperacionalNotaFiscalResponse | null) =>
+    workflowAcaoHabilitada(workflow, ['REGISTRAR_REJEICAO', 'REJEICAO']) ?? Number(nota?.statusFiscal) === StatusNotaFiscal.Transmitida;
 export const notaPodeConsultarProtocolo = (nota?: NotaFiscalResponse | null, workflow?: WorkflowOperacionalNotaFiscalResponse | null) =>
     workflowAcaoHabilitada(workflow, ['CONSULTAR_PROTOCOLO', 'CONSULTAR_RETORNO_AUTORIZACAO']) ?? [StatusNotaFiscal.Transmitida, StatusNotaFiscal.Rejeitada].includes(Number(nota?.statusFiscal));
 export const notaPodeHabilitarContingencia = (nota?: NotaFiscalResponse | null, workflow?: WorkflowOperacionalNotaFiscalResponse | null) =>
@@ -265,8 +316,24 @@ export const servicoTransmissaoFiscalOptions: SelectOption<number>[] = [
     { label: 'Status serviço', value: TipoServicoTransmissaoFiscal.StatusServico }
 ];
 
-export const gerarCorrelationId = (fluxo: string) =>
-    `front-${fluxo}-${new Date()
+const sanitizeCorrelationSegment = (value?: string | null) =>
+    (value ?? '')
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 48);
+
+export const createFiscalCorrelationId = (fluxo: string, notaFiscalId?: string | null) => {
+    const fluxoSeguro = sanitizeCorrelationSegment(fluxo) || 'acao-fiscal';
+    const notaSegment = sanitizeCorrelationSegment(notaFiscalId)?.slice(0, 8);
+    const timestamp = new Date()
         .toISOString()
         .replace(/[-:.TZ]/g, '')
-        .slice(0, 14)}-${Math.random().toString(36).slice(2, 8)}`;
+        .slice(0, 14);
+    const random = Math.random().toString(36).slice(2, 8);
+
+    return ['front', fluxoSeguro, notaSegment, timestamp, random].filter(Boolean).join('-');
+};
+
+export const gerarCorrelationId = createFiscalCorrelationId;

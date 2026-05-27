@@ -90,3 +90,11 @@ Essa regra evita consultar a listagem fiscal com uma pessoa pertencente a outro 
 - Quando o backend retornar apenas o vínculo técnico, a UI deve mostrar uma mensagem operacional, como `Empresa vinculada` ou `Pedido de venda com vínculo operacional`.
 - O ID continua sendo usado internamente para payloads, rotas e chamadas de API, mas não deve ser apresentado como informação principal para o operador.
 - Tabelas fiscais devem evitar colunas duplicadas e priorizar campos operacionais úteis para conferência.
+
+## v1.11.0a8b17 — ações fiscais por workflow e permissões
+
+- Botões fiscais críticos devem combinar permissão visual, flags do resumo operacional e próxima ação do workflow quando disponível.
+- Quando o backend retornar `motivoBloqueio`, a tela deve preservar esse motivo como orientação operacional para o usuário.
+- Registro de rejeição técnica não deve ficar disponível por permissão isolada; deve depender do workflow ou do status fiscal compatível.
+- Operações críticas devem usar `correlationId` criado por helper fiscal central, com prefixo do fluxo e tentativa única.
+- O frontend continua sem decidir regra fiscal legal; ele apenas reflete o contrato operacional retornado pelo backend.

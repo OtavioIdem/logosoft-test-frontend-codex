@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { OrigemNotaFiscal, StatusNotaFiscal, TipoDocumentoFiscal, TipoOperacaoFiscal } from '@/types/erp';
 import {
+    createFiscalCorrelationId,
+    fiscalActionDisabledReason,
     fiscalOrigemContextLabel,
     fiscalReferenceContextLabel,
     maskFiscalSensitiveText,
@@ -8,11 +10,14 @@ import {
     notaPodeCancelar,
     notaPodeEditarItens,
     notaPodeGerarDanfe,
+    notaPodeConsultarProtocolo,
+    notaPodeRegistrarRejeicao,
     notaPodeTransmitir,
     notaPodeValidar,
     origemNotaFiscalLabel,
     resetFiltrosFiscaisPorEmpresa,
     resetFiltrosFiscaisPorFilial,
+    resolveFiscalWorkflowActionState,
     statusNotaFiscalLabel
 } from '@/features/fiscal/components/fiscalUiUtils';
 import { NotaFiscalResponse } from '@/features/fiscal/types/fiscal.types';
@@ -109,6 +114,51 @@ describe('regras visuais fiscais', () => {
         expect(fiscalReferenceContextLabel('Filial', null)).toBe('-');
         expect(fiscalOrigemContextLabel(OrigemNotaFiscal.PedidoVenda, '22222222-2222-2222-2222-222222222222')).toBe('Pedido de venda com vínculo operacional');
         expect(fiscalOrigemContextLabel(OrigemNotaFiscal.Manual, null)).toBe('Manual');
+    });
+
+
+
+    it('bloqueia ação fiscal quando workflow retorna motivo de bloqueio', () => {
+        const workflow = {
+            notaFiscalId: baseNota.id,
+            empresaId: baseNota.empresaId,
+            filialId: null,
+            tipoDocumento: baseNota.tipoDocumento,
+            statusFiscal: StatusNotaFiscal.Transmitida,
+            etapaAtual: 'Transmitida',
+            ordemEtapaAtual: 5,
+            percentualConcluido: 50,
+            resumo: null,
+            etapas: [],
+            proximasAcoes: [
+                {
+                    codigo: 'CONSULTAR_PROTOCOLO',
+                    nome: 'Consultar protocolo',
+                    habilitada: false,
+                    motivoBloqueio: 'Aguardando retorno do autorizador.'
+                }
+            ],
+            bloqueios: [],
+            alertas: []
+        };
+        const transmitida = { ...baseNota, statusFiscal: StatusNotaFiscal.Transmitida };
+        const state = resolveFiscalWorkflowActionState(workflow, ['CONSULTAR_PROTOCOLO'], true);
+
+        expect(state.habilitada).toBe(false);
+        expect(state.motivoBloqueio).toBe('Aguardando retorno do autorizador.');
+        expect(fiscalActionDisabledReason(false, state)).toBe('Aguardando retorno do autorizador.');
+        expect(notaPodeConsultarProtocolo(transmitida, workflow)).toBe(false);
+    });
+
+    it('limita registro de rejeição técnica ao workflow ou status transmitido', () => {
+        expect(notaPodeRegistrarRejeicao(baseNota)).toBe(false);
+        expect(notaPodeRegistrarRejeicao({ ...baseNota, statusFiscal: StatusNotaFiscal.Transmitida })).toBe(true);
+    });
+
+    it('gera correlationId fiscal padronizado com tentativa única e referência opcional', () => {
+        const correlationId = createFiscalCorrelationId('Transmitir SEFAZ', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa');
+
+        expect(correlationId).toMatch(/^front-transmitir-sefaz-aaaaaaaa-\d{14}-[a-z0-9]{6}$/);
     });
 
     it('mascara payload fiscal sensível na observabilidade', () => {

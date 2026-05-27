@@ -43,14 +43,17 @@ import {
     notaPodeCancelar,
     notaPodeCartaCorrecao,
     notaPodeEditarItens,
+    fiscalActionDisabledReason,
     notaPodeBaixarEstoque,
     notaPodeGerarContaReceber,
     notaPodeConsultarProtocolo,
     notaPodeGerarDanfe,
     notaPodeHabilitarContingencia,
     notaPodeGerarXml,
+    notaPodeRegistrarRejeicao,
     notaPodeTransmitir,
     notaPodeValidar,
+    resolveFiscalWorkflowActionState,
     statusNotaFiscalLabel,
     statusNotaFiscalTagValue,
     tipoDocumentoFiscalLabel,
@@ -103,6 +106,23 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
     const [logReprocessamento, setLogReprocessamento] = useState<LogIntegracaoFiscalResponse | null>(null);
 
     const bloqueios = useMemo(() => notaFiscalBloqueiosVisuais(nota), [nota]);
+    const actionStates = useMemo(
+        () => ({
+            validar: resolveFiscalWorkflowActionState(workflow, ['VALIDAR'], notaPodeValidar(nota, resumo)),
+            gerarXml: resolveFiscalWorkflowActionState(workflow, ['GERAR_XML_ENVIO'], notaPodeGerarXml(nota, resumo)),
+            assinarXml: resolveFiscalWorkflowActionState(workflow, ['ASSINAR_XML_ENVIO'], notaPodeAssinarXml(nota, resumo)),
+            transmitir: resolveFiscalWorkflowActionState(workflow, ['TRANSMITIR_SEFAZ'], notaPodeTransmitir(nota, resumo)),
+            registrarRejeicao: resolveFiscalWorkflowActionState(workflow, ['REGISTRAR_REJEICAO', 'REJEICAO'], notaPodeRegistrarRejeicao(nota, workflow), 'Rejeição técnica só deve ser registrada quando o backend/workflow indicar que a nota comporta esse evento.'),
+            cancelar: resolveFiscalWorkflowActionState(workflow, ['CANCELAR', 'CANCELAR_SEFAZ', 'CANCELAMENTO'], notaPodeCancelar(nota, resumo)),
+            cartaCorrecao: resolveFiscalWorkflowActionState(workflow, ['CARTA_CORRECAO', 'EMITIR_CARTA_CORRECAO'], notaPodeCartaCorrecao(nota, resumo)),
+            consultarProtocolo: resolveFiscalWorkflowActionState(workflow, ['CONSULTAR_PROTOCOLO', 'CONSULTAR_RETORNO_AUTORIZACAO'], notaPodeConsultarProtocolo(nota, workflow)),
+            contingencia: resolveFiscalWorkflowActionState(workflow, ['HABILITAR_CONTINGENCIA', 'CONTINGENCIA', 'AVALIAR_CONTINGENCIA'], notaPodeHabilitarContingencia(nota, workflow)),
+            baixarEstoque: resolveFiscalWorkflowActionState(workflow, ['BAIXAR_ESTOQUE'], notaPodeBaixarEstoque(resumo)),
+            gerarFinanceiro: resolveFiscalWorkflowActionState(workflow, ['GERAR_CONTA_RECEBER', 'FINANCEIRO'], notaPodeGerarContaReceber(resumo)),
+            danfe: resolveFiscalWorkflowActionState(workflow, ['GERAR_DANFE', 'DANFE'], notaPodeGerarDanfe(nota, resumo))
+        }),
+        [nota, resumo, workflow]
+    );
 
     if (!hasPermission('FISCAL_CONSULTAR')) return <UnauthorizedState description="Detalhe fiscal exige FISCAL_CONSULTAR." />;
 
@@ -150,10 +170,10 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
             <Button label="Atualizar" icon="pi pi-refresh" outlined onClick={() => { notaQuery.refetch(); resumoQuery.refetch(); workflowQuery.refetch(); integracoesQuery.refetch(); }} loading={notaQuery.isFetching || resumoQuery.isFetching || workflowQuery.isFetching || integracoesQuery.isFetching} />
             <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Item" icon="pi pi-plus" disabled={disabled || !notaPodeEditarItens(nota)} onClick={() => setDialog('item')} />}</PermissionGuard>
             <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Imposto" icon="pi pi-percentage" disabled={disabled || !notaPodeEditarItens(nota)} onClick={() => setDialog('imposto')} />}</PermissionGuard>
-            <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Validar" icon="pi pi-check-circle" severity="success" disabled={disabled || !notaPodeValidar(nota, resumo)} loading={mutations.validarMutation.isPending} onClick={() => run('Validação fiscal', () => mutations.validarMutation.mutateAsync(notaId), 'Nota validada tecnicamente.')} />}</PermissionGuard>
-            <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Gerar XML" icon="pi pi-code" disabled={disabled || !notaPodeGerarXml(nota, resumo)} onClick={() => setDialog('gerarXml')} />}</PermissionGuard>
-            <PermissionGuard permission="FISCAL_EMITIR" mode="disable">{({ disabled }) => <Button label="Assinar" icon="pi pi-lock" disabled={disabled || !notaPodeAssinarXml(nota, resumo)} onClick={() => setDialog('assinarXml')} />}</PermissionGuard>
-            <PermissionGuard permission="FISCAL_EMITIR" mode="disable">{({ disabled }) => <Button label="Transmitir" icon="pi pi-send" severity="warning" disabled={disabled || !notaPodeTransmitir(nota, resumo)} onClick={() => setDialog('transmitir')} />}</PermissionGuard>
+            <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Validar" icon="pi pi-check-circle" severity="success" disabled={disabled || !actionStates.validar.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.validar, 'FISCAL_GERENCIAR')} loading={mutations.validarMutation.isPending} onClick={() => run('Validação fiscal', () => mutations.validarMutation.mutateAsync(notaId), 'Nota validada tecnicamente.')} />}</PermissionGuard>
+            <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Gerar XML" icon="pi pi-code" disabled={disabled || !actionStates.gerarXml.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.gerarXml, 'FISCAL_GERENCIAR')} onClick={() => setDialog('gerarXml')} />}</PermissionGuard>
+            <PermissionGuard permission="FISCAL_EMITIR" mode="disable">{({ disabled }) => <Button label="Assinar" icon="pi pi-lock" disabled={disabled || !actionStates.assinarXml.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.assinarXml, 'FISCAL_EMITIR')} onClick={() => setDialog('assinarXml')} />}</PermissionGuard>
+            <PermissionGuard permission="FISCAL_EMITIR" mode="disable">{({ disabled }) => <Button label="Transmitir" icon="pi pi-send" severity="warning" disabled={disabled || !actionStates.transmitir.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.transmitir, 'FISCAL_EMITIR')} onClick={() => setDialog('transmitir')} />}</PermissionGuard>
         </div>
     );
 
@@ -205,15 +225,15 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
                             <Card title="Ações autorizadas" className="mb-3">
                                 <div className="flex flex-column gap-2">
                                     <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Armazenar XML" icon="pi pi-save" outlined disabled={disabled} onClick={() => setDialog('armazenarXml')} />}</PermissionGuard>
-                                    <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Registrar rejeição" icon="pi pi-exclamation-triangle" outlined disabled={disabled} onClick={() => setDialog('rejeicao')} />}</PermissionGuard>
-                                    <PermissionGuard permission="FISCAL_CANCELAR" mode="disable">{({ disabled }) => <Button label="Cancelar local" icon="pi pi-ban" severity="danger" outlined disabled={disabled || !notaPodeCancelar(nota, resumo)} onClick={() => setDialog('cancelarLocal')} />}</PermissionGuard>
-                                    <PermissionGuard permission="FISCAL_CANCELAR" mode="disable">{({ disabled }) => <Button label="Cancelar SEFAZ" icon="pi pi-cloud-upload" severity="danger" disabled={disabled || !notaPodeCancelar(nota, resumo)} onClick={() => setDialog('cancelarSefaz')} />}</PermissionGuard>
-                                    <PermissionGuard permission="FISCAL_CARTA_CORRECAO" mode="disable">{({ disabled }) => <Button label="Carta correção" icon="pi pi-file-edit" disabled={disabled || !notaPodeCartaCorrecao(nota, resumo)} onClick={() => setDialog('cce')} />}</PermissionGuard>
-                                    <PermissionGuard permission="FISCAL_EMITIR" mode="disable">{({ disabled }) => <Button label="Consultar protocolo" icon="pi pi-search" outlined disabled={disabled || !notaPodeConsultarProtocolo(nota, workflow)} onClick={() => setDialog('consultarProtocolo')} />}</PermissionGuard>
-                                    <PermissionGuard permission="FISCAL_EMITIR" mode="disable">{({ disabled }) => <Button label="Contingência" icon="pi pi-exclamation-circle" outlined disabled={disabled || !notaPodeHabilitarContingencia(nota, workflow)} onClick={() => setDialog('contingencia')} />}</PermissionGuard>
-                                    <PermissionGuard permission="ESTOQUE_MOVIMENTAR" mode="disable">{({ disabled }) => <Button label="Baixar estoque" icon="pi pi-box" outlined disabled={disabled || !notaPodeBaixarEstoque(resumo)} onClick={() => setDialog('baixarEstoque')} />}</PermissionGuard>
-                                    <PermissionGuard permission="FINANCEIRO_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Gerar financeiro" icon="pi pi-dollar" outlined disabled={disabled || !notaPodeGerarContaReceber(resumo)} onClick={() => setDialog('gerarFinanceiro')} />}</PermissionGuard>
-                                    <PermissionGuard permission="FISCAL_EMITIR" mode="disable">{({ disabled }) => <Button label="Gerar DANFE" icon="pi pi-file-pdf" disabled={disabled || !notaPodeGerarDanfe(nota, resumo)} onClick={() => setDialog('danfe')} />}</PermissionGuard>
+                                    <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Registrar rejeição" icon="pi pi-exclamation-triangle" outlined disabled={disabled || !actionStates.registrarRejeicao.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.registrarRejeicao, 'FISCAL_GERENCIAR')} onClick={() => setDialog('rejeicao')} />}</PermissionGuard>
+                                    <PermissionGuard permission="FISCAL_CANCELAR" mode="disable">{({ disabled }) => <Button label="Cancelar local" icon="pi pi-ban" severity="danger" outlined disabled={disabled || !actionStates.cancelar.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.cancelar, 'FISCAL_CANCELAR')} onClick={() => setDialog('cancelarLocal')} />}</PermissionGuard>
+                                    <PermissionGuard permission="FISCAL_CANCELAR" mode="disable">{({ disabled }) => <Button label="Cancelar SEFAZ" icon="pi pi-cloud-upload" severity="danger" disabled={disabled || !actionStates.cancelar.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.cancelar, 'FISCAL_CANCELAR')} onClick={() => setDialog('cancelarSefaz')} />}</PermissionGuard>
+                                    <PermissionGuard permission="FISCAL_CARTA_CORRECAO" mode="disable">{({ disabled }) => <Button label="Carta correção" icon="pi pi-file-edit" disabled={disabled || !actionStates.cartaCorrecao.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.cartaCorrecao, 'FISCAL_CARTA_CORRECAO')} onClick={() => setDialog('cce')} />}</PermissionGuard>
+                                    <PermissionGuard permission="FISCAL_EMITIR" mode="disable">{({ disabled }) => <Button label="Consultar protocolo" icon="pi pi-search" outlined disabled={disabled || !actionStates.consultarProtocolo.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.consultarProtocolo, 'FISCAL_EMITIR')} onClick={() => setDialog('consultarProtocolo')} />}</PermissionGuard>
+                                    <PermissionGuard permission="FISCAL_EMITIR" mode="disable">{({ disabled }) => <Button label="Contingência" icon="pi pi-exclamation-circle" outlined disabled={disabled || !actionStates.contingencia.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.contingencia, 'FISCAL_EMITIR')} onClick={() => setDialog('contingencia')} />}</PermissionGuard>
+                                    <PermissionGuard permission="ESTOQUE_MOVIMENTAR" mode="disable">{({ disabled }) => <Button label="Baixar estoque" icon="pi pi-box" outlined disabled={disabled || !actionStates.baixarEstoque.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.baixarEstoque, 'ESTOQUE_MOVIMENTAR')} onClick={() => setDialog('baixarEstoque')} />}</PermissionGuard>
+                                    <PermissionGuard permission="FINANCEIRO_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Gerar financeiro" icon="pi pi-dollar" outlined disabled={disabled || !actionStates.gerarFinanceiro.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.gerarFinanceiro, 'FINANCEIRO_GERENCIAR')} onClick={() => setDialog('gerarFinanceiro')} />}</PermissionGuard>
+                                    <PermissionGuard permission="FISCAL_EMITIR" mode="disable">{({ disabled }) => <Button label="Gerar DANFE" icon="pi pi-file-pdf" disabled={disabled || !actionStates.danfe.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.danfe, 'FISCAL_EMITIR')} onClick={() => setDialog('danfe')} />}</PermissionGuard>
                                     {ultimoDocumento ? <Button label="Baixar último documento" icon="pi pi-download" severity="success" outlined onClick={baixarDocumento} /> : null}
                                 </div>
                             </Card>
