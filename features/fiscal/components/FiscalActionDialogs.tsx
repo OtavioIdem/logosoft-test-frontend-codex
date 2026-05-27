@@ -16,6 +16,7 @@ import { PessoaResponse } from '@/features/pessoas/types/pessoas.types';
 import { useProdutos } from '@/features/produtos/hooks/useProdutosResources';
 import { ProdutoResponse } from '@/features/produtos/types/produtos.types';
 import { useCondicoesPagamentoOptions } from '@/features/financeiro/hooks/useFinanceiroResources';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { usePedidosVenda } from '@/features/vendas/hooks/useVendasResources';
 import { PedidoVendaResponse } from '@/features/vendas/types/vendas.types';
 import { FormatoDocumentoAuxiliarFiscal, OrigemNotaFiscal, StatusPedidoVenda, TipoContingenciaFiscal, TipoDocumentoFiscal, TipoOperacaoFiscal, TipoServicoTransmissaoFiscal, TipoXmlFiscal } from '@/types/erp';
@@ -92,7 +93,9 @@ export const CriarNotaFiscalDialog = ({ visible, loading, onHide, onSubmit }: Ba
         pessoaId: '',
         observacao: ''
     });
-    const pessoasQuery = usePessoas({ empresaId: values.empresaId || null, filialId: values.filialId || null });
+    const [pessoaSearch, setPessoaSearch] = useState('');
+    const pessoaSearchTerm = useDebouncedValue(pessoaSearch.trim());
+    const pessoasQuery = usePessoas({ empresaId: values.empresaId || null, filialId: values.filialId || null, termo: pessoaSearchTerm || null });
     const pessoasOptions = useMemo(() => pessoaOptions(pessoasQuery.data ?? []), [pessoasQuery.data]);
 
     useEffect(() => {
@@ -108,7 +111,7 @@ export const CriarNotaFiscalDialog = ({ visible, loading, onHide, onSubmit }: Ba
                 <Field label="Operação"><Dropdown value={values.tipoOperacao} options={tipoOperacaoFiscalOptions} onChange={(e) => setValues((v) => ({ ...v, tipoOperacao: e.value }))} /></Field>
                 <Field label="Série"><InputText value={values.serie} onChange={(e) => setValues((v) => ({ ...v, serie: e.target.value }))} /></Field>
                 <Field label="Número"><InputText value={values.numero} onChange={(e) => setValues((v) => ({ ...v, numero: e.target.value }))} /></Field>
-                <Field label="Pessoa/cliente" hint="Seleção carregada da API de Pessoas; o backend valida se a pessoa pode ser usada na nota."><EntitySelect entityName="pessoa" value={values.pessoaId || null} options={pessoasOptions} disabled={!values.empresaId || pessoasQuery.isLoading} onChange={(pessoaId) => setValues((v) => ({ ...v, pessoaId: pessoaId ?? '' }))} /></Field>
+                <Field label="Pessoa/cliente" hint="Seleção carregada da API de Pessoas; o backend valida se a pessoa pode ser usada na nota."><EntitySelect entityName="pessoa" value={values.pessoaId || null} options={pessoasOptions} disabled={!values.empresaId || pessoasQuery.isLoading} loading={pessoasQuery.isFetching} onSearch={setPessoaSearch} onChange={(pessoaId) => setValues((v) => ({ ...v, pessoaId: pessoaId ?? '' }))} /></Field>
                 <Field label="Natureza de operação" hint="Ainda sem endpoint operacional no backend; deixe vazio até parametrização fiscal oficial."><InputText value={values.naturezaOperacaoId} disabled placeholder="Parametrização fiscal futura" onChange={(e) => setValues((v) => ({ ...v, naturezaOperacaoId: e.target.value }))} /></Field>
                 <TextAreaField label="Observação" value={values.observacao} onChange={(observacao) => setValues((v) => ({ ...v, observacao }))} />
                 <button type="submit" className="hidden" />
@@ -131,7 +134,9 @@ export const GerarNotaFiscalPedidoVendaDialog = ({ visible, loading, onHide, onS
         validarDadosFiscaisProduto: true,
         observacao: 'Gerada a partir do pedido de venda.'
     });
-    const pedidosQuery = usePedidosVenda({ empresaId: values.empresaId || null, filialId: values.filialId || null, status: StatusPedidoVenda.Aprovado });
+    const [pedidoSearch, setPedidoSearch] = useState('');
+    const pedidoSearchTerm = useDebouncedValue(pedidoSearch.trim());
+    const pedidosQuery = usePedidosVenda({ empresaId: values.empresaId || null, filialId: values.filialId || null, status: StatusPedidoVenda.Aprovado, termo: pedidoSearchTerm || null });
     const pedidosOptions = useMemo(() => pedidoVendaOptions(pedidosQuery.data ?? []), [pedidosQuery.data]);
 
     useEffect(() => {
@@ -145,7 +150,7 @@ export const GerarNotaFiscalPedidoVendaDialog = ({ visible, loading, onHide, onS
                     <>
                         <Field label="Empresa"><EmpresaSelect value={values.empresaId || null} required onChange={(empresaId) => setValues((v) => ({ ...v, empresaId: empresaId ?? '', filialId: '', pedidoVendaId: '' }))} /></Field>
                         <Field label="Filial"><FilialSelect empresaId={values.empresaId || null} value={values.filialId || null} onChange={(filialId) => setValues((v) => ({ ...v, filialId: filialId ?? '', pedidoVendaId: '' }))} /></Field>
-                        <Field label="Pedido aprovado"><EntitySelect entityName="pedido aprovado" value={values.pedidoVendaId || null} options={pedidosOptions} disabled={!values.empresaId || pedidosQuery.isLoading} onChange={(pedidoId) => setValues((v) => ({ ...v, pedidoVendaId: pedidoId ?? '' }))} /></Field>
+                        <Field label="Pedido aprovado"><EntitySelect entityName="pedido aprovado" value={values.pedidoVendaId || null} options={pedidosOptions} disabled={!values.empresaId || pedidosQuery.isLoading} loading={pedidosQuery.isFetching} onSearch={setPedidoSearch} onChange={(pedidoId) => setValues((v) => ({ ...v, pedidoVendaId: pedidoId ?? '' }))} /></Field>
                     </>
                 ) : (
                     <Field label="Pedido de venda"><InputText value={values.pedidoVendaId} disabled /></Field>
@@ -169,7 +174,9 @@ export const GerarNotaFiscalPedidoVendaDialog = ({ visible, loading, onHide, onS
 
 export const ItemNotaFiscalDialog = ({ visible, loading, onHide, onSubmit, empresaId, filialId }: BaseDialogProps<Record<string, unknown>> & FiscalReferenceScope) => {
     const [values, setValues] = useState({ produtoId: '', codigoItem: '', descricao: '', ncm: '', cfop: '5102', unidadeComercial: 'UN', quantidade: 1, valorUnitario: 0, valorDesconto: 0, observacao: '' });
-    const produtosQuery = useProdutos({ empresaId: empresaId ?? null, filialId: filialId ?? null });
+    const [produtoSearch, setProdutoSearch] = useState('');
+    const produtoSearchTerm = useDebouncedValue(produtoSearch.trim());
+    const produtosQuery = useProdutos({ empresaId: empresaId ?? null, filialId: filialId ?? null, termo: produtoSearchTerm || null });
     const produtos = produtosQuery.data ?? [];
     const produtosOptions = useMemo(() => produtoOptions(produtos), [produtos]);
 
@@ -188,7 +195,7 @@ export const ItemNotaFiscalDialog = ({ visible, loading, onHide, onSubmit, empre
     return (
         <Dialog header="Adicionar item fiscal" visible={visible} modal style={{ width: '56rem' }} onHide={onHide} footer={footer('item-nota-fiscal-form', loading, onHide, 'Adicionar item')}>
             <form id="item-nota-fiscal-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
-                <Field label="Produto" hint="Seleção carregada da API de produtos. Código, descrição, NCM e preço são preenchidos como sugestão operacional."><EntitySelect entityName="produto" value={values.produtoId || null} options={produtosOptions} disabled={produtosQuery.isLoading} onChange={selecionarProduto} /></Field>
+                <Field label="Produto" hint="Seleção carregada da API de produtos. Código, descrição, NCM e preço são preenchidos como sugestão operacional."><EntitySelect entityName="produto" value={values.produtoId || null} options={produtosOptions} disabled={produtosQuery.isLoading} loading={produtosQuery.isFetching} onSearch={setProdutoSearch} onChange={selecionarProduto} /></Field>
                 <Field label="Código"><InputText value={values.codigoItem} onChange={(e) => setValues((v) => ({ ...v, codigoItem: e.target.value }))} /></Field>
                 <Field label="Descrição"><InputText value={values.descricao} onChange={(e) => setValues((v) => ({ ...v, descricao: e.target.value }))} /></Field>
                 <Field label="NCM"><InputText value={values.ncm} onChange={(e) => setValues((v) => ({ ...v, ncm: e.target.value }))} /></Field>
@@ -458,7 +465,7 @@ export const GerarContaReceberDialog = ({ visible, loading, onHide, onSubmit, do
             <form id="gerar-conta-receber-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
                 <Field label="Primeiro vencimento"><InputText type="datetime-local" value={values.primeiraDataVencimento.slice(0, 16)} onChange={(e) => setValues((v) => ({ ...v, primeiraDataVencimento: e.target.value }))} /></Field>
                 <Field label="Documento"><InputText value={values.documento} onChange={(e) => setValues((v) => ({ ...v, documento: e.target.value }))} /></Field>
-                <Field label="Condição de pagamento" hint="Opcional. Selecione uma condição carregada da API; não digite IDs manualmente."><EntitySelect entityName="condição de pagamento" value={values.condicaoPagamentoId || null} options={condicoesQuery.options} disabled={!empresaId || loading || condicoesQuery.isLoading} onChange={(condicaoPagamentoId) => setValues((v) => ({ ...v, condicaoPagamentoId: condicaoPagamentoId ?? '' }))} /></Field>
+                <Field label="Condição de pagamento" hint="Opcional. Selecione uma condição carregada da API; não digite IDs manualmente."><EntitySelect entityName="condição de pagamento" value={values.condicaoPagamentoId || null} options={condicoesQuery.options} disabled={!empresaId || loading || condicoesQuery.isLoading} loading={condicoesQuery.isFetching} onChange={(condicaoPagamentoId) => setValues((v) => ({ ...v, condicaoPagamentoId: condicaoPagamentoId ?? '' }))} /></Field>
                 <Field label="Correlation ID"><InputText value={values.correlationId} onChange={(e) => setValues((v) => ({ ...v, correlationId: e.target.value }))} /></Field>
                 <TextAreaField label="Observação" value={values.observacao} onChange={(observacao) => setValues((v) => ({ ...v, observacao }))} />
                 <button type="submit" className="hidden" />

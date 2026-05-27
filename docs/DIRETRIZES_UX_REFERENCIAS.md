@@ -43,3 +43,14 @@ Exemplos de vínculos:
 
 - A geração de conta a receber no detalhe fiscal deixou de aceitar `condicaoPagamentoId` digitado manualmente.
 - O campo agora usa select pesquisável carregado por `GET /api/financeiro/condicoes-pagamento` via hook financeiro existente.
+
+## Busca server-side e paginação
+
+Quando o endpoint aceitar filtro textual, como `termo`, o select deve enviar a busca para a API usando debounce. O filtro local do componente pode continuar existindo apenas como apoio visual sobre os itens retornados.
+
+Para listas grandes, a evolução esperada é paginação server-side ou endpoint específico de lookup. Enquanto o backend retornar lista simples, o frontend deve pelo menos:
+
+- limitar a busca ao escopo de empresa/filial selecionado;
+- limpar o valor dependente ao trocar a entidade pai;
+- mostrar estado de carregamento no dropdown;
+- nunca orientar o usuário a copiar ou digitar GUID manualmente.
