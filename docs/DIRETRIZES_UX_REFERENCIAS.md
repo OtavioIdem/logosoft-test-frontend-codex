@@ -98,3 +98,17 @@ Essa regra evita consultar a listagem fiscal com uma pessoa pertencente a outro 
 - Registro de rejeição técnica não deve ficar disponível por permissão isolada; deve depender do workflow ou do status fiscal compatível.
 - Operações críticas devem usar `correlationId` criado por helper fiscal central, com prefixo do fluxo e tentativa única.
 - O frontend continua sem decidir regra fiscal legal; ele apenas reflete o contrato operacional retornado pelo backend.
+
+## v1.11.0a8b18 — inutilização fiscal operacional
+
+- A tela dedicada de inutilização fiscal deve usar `EmpresaSelect` e `FilialSelect`; empresa e filial nunca devem ser digitadas como GUID.
+- `correlationId` deve ser gerado pelo frontend por tentativa e exibido como leitura, com ação de regenerar quando necessário.
+- A validação local deve bloquear payload incompleto antes da chamada ao backend, mas a decisão fiscal oficial continua no domínio/backend.
+- Erros de API e validação devem ser exibidos com `ApiErrorPanel`, preservando `code`, `status`, `traceId` e erros por campo.
+- XML assinado pode ser informado pelo operador quando o contrato exigir, mas XML completo não deve ser exibido em logs, observabilidade ou mensagens de erro.
+
+## v1.11.0a8b19 — correção de correlationId em payload sanitizado
+
+- `correlationId` não deve ser tratado como referência técnica/GUID.
+- Sanitização de payload deve preservar `correlationId` textual gerado pelo frontend.
+- Operações fiscais críticas continuam obrigadas a enviar identificador de tentativa para auditoria/idempotência quando previsto no contrato.

@@ -102,7 +102,14 @@ export const useFiscalMutations = () => {
     const gerarDanfeMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.gerarDanfe(id, values), onSuccess: (result) => invalidateNota(result.notaFiscalId) });
     const baixarEstoqueMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.baixarEstoque(id, values), onSuccess: (result) => invalidateNota(result.notaFiscalId) });
     const gerarContaReceberMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.gerarContaReceber(id, values), onSuccess: (result) => invalidateNota(result.notaFiscalId) });
-    const inutilizarMutation = useMutation({ mutationFn: (values: unknown) => fiscalApi.inutilizarNumeracao(values) });
+    const inutilizarMutation = useMutation({
+        mutationFn: (values: unknown) => fiscalApi.inutilizarNumeracao(values),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['fiscal', 'observabilidade'] });
+            queryClient.invalidateQueries({ queryKey: ['fiscal', 'sefaz'] });
+            queryClient.invalidateQueries({ queryKey: ['fiscal', 'notas-fiscais'] });
+        }
+    });
     const exportarCsvMutation = useMutation({ mutationFn: (values: Parameters<typeof fiscalApi.exportarNotasCsv>[0]) => fiscalApi.exportarNotasCsv(values) });
 
     return {

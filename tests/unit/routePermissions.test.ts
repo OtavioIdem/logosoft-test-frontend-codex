@@ -12,6 +12,11 @@ describe('route permission rules', () => {
         expect(findRoutePermissionRule('/auditoria/eventos')?.anyOf).toEqual(['AUDITORIA_CONSULTAR']);
     });
 
+
+    it('protege inutilizações fiscais por permissão específica', () => {
+        expect(findRoutePermissionRule('/fiscal/inutilizacoes')?.anyOf).toEqual(['FISCAL_INUTILIZAR']);
+    });
+
     it('não exige permissão granular para dashboard autenticado', () => {
         expect(findRoutePermissionRule('/dashboard')).toBeUndefined();
     });

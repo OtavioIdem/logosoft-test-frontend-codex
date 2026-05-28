@@ -135,12 +135,43 @@ describe('payloads fiscais', () => {
         });
     });
 
-    it('normaliza transmissão e bloqueia inutilização com faixa inválida', () => {
+    it('normaliza transmissão e contrato de inutilização fiscal', () => {
         expect(buildTransmitirSefazPayload({ ufAutorizadora: 'sp', servico: TipoServicoTransmissaoFiscal.Autorizacao, xmlEnvioAssinado: '', validarSchemaAntesTransmissao: false, schemaSetName: 'NFe-4.00', correlationId: '' })).toMatchObject({
             ufAutorizadora: 'SP',
             xmlEnvioAssinado: null,
             correlationId: null
         });
+
+        expect(
+            buildInutilizarNumeracaoPayload({
+                empresaId,
+                filialId: '',
+                tipoDocumento: TipoDocumentoFiscal.NFe,
+                serie: '1',
+                numeroInicial: 10,
+                numeroFinal: 11,
+                motivo: 'Quebra de sequência numérica válida',
+                ufAutorizadora: 'sp',
+                xmlInutilizacaoAssinado: '<inutNFe />',
+                validarSchemaAntesTransmissao: true,
+                schemaSetName: '',
+                correlationId: 'front-inutilizacao-001'
+            })
+        ).toEqual({
+            empresaId,
+            filialId: null,
+            tipoDocumento: TipoDocumentoFiscal.NFe,
+            serie: '1',
+            numeroInicial: 10,
+            numeroFinal: 11,
+            motivo: 'Quebra de sequência numérica válida',
+            ufAutorizadora: 'SP',
+            xmlInutilizacaoAssinado: '<inutNFe />',
+            validarSchemaAntesTransmissao: true,
+            schemaSetName: null,
+            correlationId: 'front-inutilizacao-001'
+        });
+
         expect(() =>
             buildInutilizarNumeracaoPayload({
                 empresaId,
