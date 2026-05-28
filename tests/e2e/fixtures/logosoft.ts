@@ -43,7 +43,14 @@ export const ADMIN_PERMISSIONS = [
     'COMPRAS_GERENCIAR',
     'COMPRAS_APROVAR',
     'COMPRAS_CANCELAR',
-    'COMPRAS_RECEBER'
+    'COMPRAS_RECEBER',
+    'FISCAL_CONSULTAR',
+    'FISCAL_GERENCIAR',
+    'FISCAL_EMITIR',
+    'FISCAL_EXPORTAR',
+    'FISCAL_CANCELAR',
+    'FISCAL_INUTILIZAR',
+    'FISCAL_CARTA_CORRECAO'
 ];
 
 export const CONSULTA_PERMISSIONS = [
@@ -56,6 +63,7 @@ export const CONSULTA_PERMISSIONS = [
     'VENDAS_CONSULTAR',
     'FINANCEIRO_CONSULTAR',
     'COMPRAS_CONSULTAR',
+    'FISCAL_CONSULTAR',
     'AUDITORIA_CONSULTAR'
 ];
 
@@ -190,7 +198,214 @@ const contasReceber = [{ id: 'cr-1', codigo: 'CR-PV-001', cliente: 'Cliente demo
 const contasPagar = [{ id: 'cp-1', codigo: 'CP-PC-001', fornecedor: 'Fornecedor base SA', fornecedorId, valorTotal: 800, saldo: 800, status: 'ABERTO', statusConta: 1, origem: 'Pedido compra PC-001' }];
 const auditoria = [{ id: 'aud-1', modulo: 'Vendas', entidade: 'PedidoVenda', entidadeId: pedidoVenda.id, acao: 1, descricao: 'Pedido de venda criado', usuario: 'Administrador E2E', usuarioId: 'e2e-user-id', empresaId, filialId, criadoEm: '2026-05-08T12:00:00.000Z' }];
 
+const notaFiscalId = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+const documentoAuxiliarId = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+const chaveAcessoFiscal = '35260500000000000100550010000001001000001000';
+const protocoloFiscal = '135260000000001';
+
+const createFiscalNote = (overrides: Record<string, unknown> = {}) => ({
+    id: notaFiscalId,
+    empresaId,
+    filialId,
+    tipoDocumento: 1,
+    tipoOperacao: 1,
+    origem: 2,
+    origemId: pedidoVenda.id,
+    pessoaId,
+    serie: '1',
+    numero: '900001',
+    chaveAcesso: null,
+    protocoloAutorizacao: null,
+    dataEmissao: '2026-05-08T12:00:00.000Z',
+    autorizadaEm: null,
+    canceladaEm: null,
+    statusFiscal: 1,
+    valorProdutos: 251,
+    valorDesconto: 0,
+    valorTotal: 251,
+    codigoRejeicao: null,
+    mensagemRejeicao: null,
+    motivoCancelamento: null,
+    observacao: 'Nota fiscal E2E gerada de pedido de venda.',
+    itens: [
+        {
+            id: 'nf-item-1',
+            sequencia: 1,
+            produtoId,
+            codigoItem: 'PROD-001',
+            descricao: 'Produto demonstração',
+            ncm: '01012100',
+            cfop: '5102',
+            unidadeComercial: 'UN',
+            quantidade: 2,
+            valorUnitario: 125.5,
+            valorBruto: 251,
+            valorDesconto: 0,
+            valorTotal: 251,
+            observacao: null
+        }
+    ],
+    impostos: [
+        {
+            id: 'nf-imposto-1',
+            itemNotaFiscalId: 'nf-item-1',
+            nome: 'ICMS',
+            cstCsosn: '102',
+            baseCalculo: 251,
+            aliquota: 0,
+            valor: 0,
+            observacao: 'Parametrizado para teste E2E.'
+        }
+    ],
+    xmls: [],
+    eventos: [{ id: 'nf-evento-criacao', tipo: 1, codigo: 'CRIACAO', descricao: 'Nota fiscal criada para E2E', protocolo: null, dataEvento: '2026-05-08T12:00:00.000Z', usuarioId: 'e2e-user-id' }],
+    ...overrides
+});
+
+const fiscalListResponse = (notaFiscal: Record<string, any>, estoqueBaixado: boolean, contaReceberGerada: boolean, possuiDanfe: boolean) => ({
+    items: [
+        {
+            id: notaFiscal.id,
+            empresaId,
+            filialId,
+            tipoDocumento: notaFiscal.tipoDocumento,
+            tipoOperacao: notaFiscal.tipoOperacao,
+            statusFiscal: notaFiscal.statusFiscal,
+            origem: notaFiscal.origem,
+            origemId: notaFiscal.origemId,
+            pessoaId: notaFiscal.pessoaId,
+            serie: notaFiscal.serie,
+            numero: notaFiscal.numero,
+            chaveAcesso: notaFiscal.chaveAcesso,
+            protocoloAutorizacao: notaFiscal.protocoloAutorizacao,
+            dataEmissao: notaFiscal.dataEmissao,
+            autorizadaEm: notaFiscal.autorizadaEm,
+            canceladaEm: notaFiscal.canceladaEm,
+            valorTotal: notaFiscal.valorTotal,
+            possuiXmlEnvio: notaFiscal.xmls.some((xml: Record<string, unknown>) => Number(xml.tipo) === 1),
+            possuiXmlAutorizado: notaFiscal.xmls.some((xml: Record<string, unknown>) => Number(xml.tipo) === 2),
+            possuiDanfe,
+            estoqueAplicavel: true,
+            estoqueBaixado,
+            estoquePendente: Number(notaFiscal.statusFiscal) === 5 && !estoqueBaixado,
+            financeiroAplicavel: true,
+            contaReceberGerada,
+            financeiroPendente: Number(notaFiscal.statusFiscal) === 5 && estoqueBaixado && !contaReceberGerada,
+            acaoPrincipalCodigo: Number(notaFiscal.statusFiscal) === 5 ? 'POS_AUTORIZACAO' : 'CONSULTAR',
+            acaoPrincipalNome: Number(notaFiscal.statusFiscal) === 5 ? 'Pós-autorização' : 'Consultar nota fiscal',
+            acaoPrincipalMetodoHttp: 'GET',
+            acaoPrincipalEndpoint: `/api/fiscal/notas-fiscais/${notaFiscal.id}`,
+            acaoPrincipalPermissao: 'FISCAL_CONSULTAR',
+            alertas: []
+        }
+    ],
+    page: 1,
+    pageSize: 20,
+    totalItems: 1,
+    totalPages: 1,
+    hasPreviousPage: false,
+    hasNextPage: false
+});
+
 export const mockApiRoutes = async (page: Page) => {
+    let notaFiscal: Record<string, any> = createFiscalNote();
+    let estoqueBaixado = false;
+    let contaReceberGerada = false;
+    let documentoAuxiliar: Record<string, unknown> | null = null;
+    const fiscalLogs: Record<string, unknown>[] = [];
+
+    const appendFiscalLog = (operacao: string, statusIntegracao: number, mensagem: string, podeReprocessar = false) => {
+        fiscalLogs.unshift({
+            id: `log-${fiscalLogs.length + 1}`,
+            empresaId,
+            filialId,
+            notaFiscalId: notaFiscal.id,
+            operacao,
+            statusIntegracao,
+            correlationId: `e2e-${operacao.toLowerCase()}-${fiscalLogs.length + 1}`,
+            payloadResumo: 'xml=[XML_MASKED]; token=[MASKED]; senha=[MASKED]',
+            mensagem,
+            registradoEm: new Date().toISOString(),
+            podeReprocessar,
+            contemDadoSensivelOcultado: true
+        });
+    };
+
+    const resumoFiscal = () => ({
+        notaFiscalId: notaFiscal.id,
+        empresaId,
+        filialId,
+        tipoDocumento: notaFiscal.tipoDocumento,
+        serie: notaFiscal.serie,
+        numero: notaFiscal.numero,
+        statusFiscal: notaFiscal.statusFiscal,
+        origem: notaFiscal.origem,
+        origemId: notaFiscal.origemId,
+        possuiXmlEnvio: notaFiscal.xmls.some((xml: Record<string, unknown>) => Number(xml.tipo) === 1),
+        possuiXmlAutorizado: notaFiscal.xmls.some((xml: Record<string, unknown>) => Number(xml.tipo) === 2),
+        possuiDanfe: Boolean(documentoAuxiliar),
+        pedidoVenda: { id: pedidoVenda.id, numero: pedidoVenda.numero, status: 5, clienteId, valorTotal: pedidoVenda.valorTotal, faturadoEm: '2026-05-08T12:00:00.000Z' },
+        estoque: { aplicavel: true, baixado: estoqueBaixado, itensPendentes: estoqueBaixado ? 0 : 1, quantidadePendente: estoqueBaixado ? 0 : 2, sequenciasPendentes: estoqueBaixado ? [] : [1] },
+        financeiro: { aplicavel: true, contaReceberGerada, contaReceberId: contaReceberGerada ? 'cr-fiscal-1' : null, status: contaReceberGerada ? 1 : null, valorOriginal: contaReceberGerada ? notaFiscal.valorTotal : null, valorSaldo: contaReceberGerada ? notaFiscal.valorTotal : null },
+        acoes: {
+            podeValidar: Number(notaFiscal.statusFiscal) === 1 && notaFiscal.itens.length > 0,
+            podeGerarXmlEnvio: [1, 2].includes(Number(notaFiscal.statusFiscal)) && !notaFiscal.xmls.some((xml: Record<string, unknown>) => Number(xml.tipo) === 1),
+            podeAssinarXmlEnvio: Number(notaFiscal.statusFiscal) === 2 && notaFiscal.xmls.some((xml: Record<string, unknown>) => Number(xml.tipo) === 1),
+            podeTransmitirSefaz: Number(notaFiscal.statusFiscal) === 3,
+            podeGerarDanfe: Number(notaFiscal.statusFiscal) === 5 && notaFiscal.xmls.some((xml: Record<string, unknown>) => Number(xml.tipo) === 2) && !documentoAuxiliar,
+            podeBaixarEstoque: Number(notaFiscal.statusFiscal) === 5 && !estoqueBaixado,
+            podeGerarContaReceber: Number(notaFiscal.statusFiscal) === 5 && estoqueBaixado && !contaReceberGerada,
+            podeCancelar: Number(notaFiscal.statusFiscal) === 5,
+            podeEmitirCartaCorrecao: Number(notaFiscal.statusFiscal) === 5
+        },
+        alertas: documentoAuxiliar ? [] : Number(notaFiscal.statusFiscal) === 5 ? ['DANFE pendente.'] : []
+    });
+
+    const workflowFiscal = () => {
+        const resumo = resumoFiscal();
+        const makeAction = (codigo: string, nome: string, permissao: string, habilitada: boolean) => ({
+            codigo,
+            nome,
+            metodoHttp: 'POST',
+            endpoint: `/api/fiscal/notas-fiscais/${notaFiscal.id}`,
+            permissao,
+            habilitada,
+            motivoBloqueio: habilitada ? null : 'Ação bloqueada pelo estado operacional atual.',
+            payloadReferencia: codigo
+        });
+        const proximasAcoes = [
+            makeAction('VALIDAR', 'Validar nota', 'FISCAL_GERENCIAR', resumo.acoes.podeValidar),
+            makeAction('GERAR_XML_ENVIO', 'Gerar XML de envio', 'FISCAL_GERENCIAR', resumo.acoes.podeGerarXmlEnvio),
+            makeAction('ASSINAR_XML_ENVIO', 'Assinar XML de envio', 'FISCAL_EMITIR', resumo.acoes.podeAssinarXmlEnvio),
+            makeAction('TRANSMITIR_SEFAZ', 'Transmitir SEFAZ', 'FISCAL_EMITIR', resumo.acoes.podeTransmitirSefaz),
+            makeAction('GERAR_DANFE', 'Gerar DANFE', 'FISCAL_EMITIR', resumo.acoes.podeGerarDanfe),
+            makeAction('BAIXAR_ESTOQUE', 'Baixar estoque', 'ESTOQUE_MOVIMENTAR', resumo.acoes.podeBaixarEstoque),
+            makeAction('GERAR_CONTA_RECEBER', 'Gerar conta a receber', 'FINANCEIRO_GERENCIAR', resumo.acoes.podeGerarContaReceber)
+        ].filter((acao) => acao.habilitada);
+        return {
+            notaFiscalId: notaFiscal.id,
+            empresaId,
+            filialId,
+            tipoDocumento: notaFiscal.tipoDocumento,
+            statusFiscal: notaFiscal.statusFiscal,
+            etapaAtual: Number(notaFiscal.statusFiscal) === 5 ? 'Autorizada' : Number(notaFiscal.statusFiscal) === 3 ? 'Assinada' : Number(notaFiscal.statusFiscal) === 2 ? 'Validada' : 'Rascunho',
+            ordemEtapaAtual: Number(notaFiscal.statusFiscal),
+            percentualConcluido: Number(notaFiscal.statusFiscal) === 5 ? 75 : Number(notaFiscal.statusFiscal) * 15,
+            resumo: {},
+            etapas: [
+                { ordem: 1, codigo: 'CRIACAO', nome: 'Nota fiscal criada ou gerada', status: 'Concluida', obrigatoria: true, metodoHttp: 'GET', endpoint: `/api/fiscal/notas-fiscais/${notaFiscal.id}`, permissao: 'FISCAL_CONSULTAR', motivoBloqueio: null },
+                { ordem: 2, codigo: 'VALIDACAO', nome: 'Validar dados da nota', status: Number(notaFiscal.statusFiscal) >= 2 ? 'Concluida' : 'Disponivel', obrigatoria: true, metodoHttp: 'POST', endpoint: `/api/fiscal/notas-fiscais/${notaFiscal.id}/validar`, permissao: 'FISCAL_GERENCIAR', motivoBloqueio: null },
+                { ordem: 3, codigo: 'XML_ENVIO', nome: 'Gerar XML de envio', status: resumo.possuiXmlEnvio ? 'Concluida' : Number(notaFiscal.statusFiscal) >= 2 ? 'Disponivel' : 'Bloqueada', obrigatoria: true, metodoHttp: 'POST', endpoint: `/api/fiscal/notas-fiscais/${notaFiscal.id}/gerar-xml-envio`, permissao: 'FISCAL_GERENCIAR', motivoBloqueio: null },
+                { ordem: 4, codigo: 'ASSINATURA', nome: 'Assinar XML de envio', status: Number(notaFiscal.statusFiscal) >= 3 ? 'Concluida' : resumo.possuiXmlEnvio ? 'Disponivel' : 'Bloqueada', obrigatoria: true, metodoHttp: 'POST', endpoint: `/api/fiscal/notas-fiscais/${notaFiscal.id}/assinar-xml-envio`, permissao: 'FISCAL_EMITIR', motivoBloqueio: null },
+                { ordem: 5, codigo: 'TRANSMISSAO_SEFAZ', nome: 'Transmitir/autorizar na SEFAZ', status: Number(notaFiscal.statusFiscal) >= 5 ? 'Concluida' : Number(notaFiscal.statusFiscal) === 3 ? 'Disponivel' : 'Bloqueada', obrigatoria: true, metodoHttp: 'POST', endpoint: `/api/fiscal/notas-fiscais/${notaFiscal.id}/transmitir-sefaz`, permissao: 'FISCAL_EMITIR', motivoBloqueio: null },
+                { ordem: 6, codigo: 'DANFE', nome: 'Gerar DANFE', status: documentoAuxiliar ? 'Concluida' : resumo.acoes.podeGerarDanfe ? 'Disponivel' : 'Bloqueada', obrigatoria: true, metodoHttp: 'POST', endpoint: `/api/fiscal/notas-fiscais/${notaFiscal.id}/danfe`, permissao: 'FISCAL_EMITIR', motivoBloqueio: null }
+            ],
+            proximasAcoes,
+            bloqueios: [],
+            alertas: resumo.alertas
+        };
+    };
+
     await page.route('**/api/**', async (route) => {
         const request = route.request();
         const method = request.method();
@@ -233,6 +448,98 @@ export const mockApiRoutes = async (page: Page) => {
         if (path === '/api/health') return route.fulfill(json({ status: 'ok' }));
         if (path.includes('/api/administracao/empresas')) return route.fulfill(json(method === 'GET' ? empresas : empresas[0]));
         if (path.includes('/api/administracao/filiais')) return route.fulfill(json(method === 'GET' ? filiais : filiais[0]));
+
+        if (path === '/api/fiscal/notas-fiscais' && method === 'GET') return route.fulfill(json(fiscalListResponse(notaFiscal, estoqueBaixado, contaReceberGerada, Boolean(documentoAuxiliar))));
+        if (path === '/api/fiscal/notas-fiscais/exportacoes/csv' && method === 'GET') return route.fulfill({
+            status: 200,
+            contentType: 'text/csv',
+            headers: { 'content-disposition': 'attachment; filename="notas-fiscais-e2e.csv"' },
+            body: 'serie,numero,statusFiscal\n1,900001,5\n'
+        });
+        if (path === '/api/fiscal/notas-fiscais/gerar-de-pedido-venda' && method === 'POST') {
+            const body = request.postDataJSON() as Record<string, unknown>;
+            notaFiscal = createFiscalNote({ numero: body.numero ?? '900001', serie: body.serie ?? '1' });
+            estoqueBaixado = false;
+            contaReceberGerada = false;
+            documentoAuxiliar = null;
+            fiscalLogs.length = 0;
+            appendFiscalLog('GerarNotaPedidoVenda', 2, 'Nota fiscal gerada a partir de pedido de venda.');
+            return route.fulfill(json({ notaFiscal, pedidoVendaId: pedidoVenda.id, numeroPedidoVenda: pedidoVenda.numero, alertas: [] }));
+        }
+        if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}` && method === 'GET') return route.fulfill(json(notaFiscal));
+        if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}/resumo-operacional` && method === 'GET') return route.fulfill(json(resumoFiscal()));
+        if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}/workflow-operacional` && method === 'GET') return route.fulfill(json(workflowFiscal()));
+        if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}/integracoes` && method === 'GET') return route.fulfill(json(fiscalLogs));
+        if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}/validar` && method === 'POST') {
+            notaFiscal = { ...notaFiscal, statusFiscal: 2, eventos: [...notaFiscal.eventos, { id: 'nf-evento-validacao', tipo: 2, codigo: 'VALIDADA', descricao: 'Nota validada no E2E', protocolo: null, dataEvento: new Date().toISOString(), usuarioId: 'e2e-user-id' }] };
+            appendFiscalLog('ValidacaoFiscal', 2, 'Nota fiscal validada.');
+            return route.fulfill(json(notaFiscal));
+        }
+        if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}/gerar-xml-envio` && method === 'POST') {
+            notaFiscal = { ...notaFiscal, xmls: [...notaFiscal.xmls, { id: 'xml-envio-1', tipo: 1, hashSha256: 'hash-envio-e2e', protocolo: null, chaveAcesso: null, armazenadoEm: new Date().toISOString() }] };
+            appendFiscalLog('GerarXmlEnvio', 2, 'XML de envio gerado.');
+            return route.fulfill(json({ notaFiscalId: notaFiscal.id, tipoDocumento: 1, statusFiscal: notaFiscal.statusFiscal, tipoXml: 1, conteudoXml: '<NFe><infNFe Id="e2e" /></NFe>', schemaSetName: 'NFe-4.00', schemaValidado: false, armazenado: true, alertas: [] }));
+        }
+        if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}/assinar-xml-envio` && method === 'POST') {
+            notaFiscal = { ...notaFiscal, statusFiscal: 3, eventos: [...notaFiscal.eventos, { id: 'nf-evento-assinatura', tipo: 3, codigo: 'ASSINADA', descricao: 'XML assinado no E2E', protocolo: null, dataEvento: new Date().toISOString(), usuarioId: 'e2e-user-id' }] };
+            appendFiscalLog('AssinarXmlEnvio', 2, 'XML de envio assinado.');
+            return route.fulfill(json({ notaFiscalId: notaFiscal.id, tipoDocumento: 1, statusFiscal: 3, tipoXml: 1, conteudoXml: '<NFe assinatura="mock" />', schemaSetName: 'NFe-4.00', schemaValidado: false, armazenado: true, alertas: [] }));
+        }
+        if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}/transmitir-sefaz` && method === 'POST') {
+            notaFiscal = {
+                ...notaFiscal,
+                statusFiscal: 5,
+                chaveAcesso: chaveAcessoFiscal,
+                protocoloAutorizacao: protocoloFiscal,
+                autorizadaEm: new Date().toISOString(),
+                xmls: [...notaFiscal.xmls, { id: 'xml-autorizado-1', tipo: 2, hashSha256: 'hash-autorizado-e2e', protocolo: protocoloFiscal, chaveAcesso: chaveAcessoFiscal, armazenadoEm: new Date().toISOString() }],
+                eventos: [...notaFiscal.eventos, { id: 'nf-evento-autorizacao', tipo: 5, codigo: '100', descricao: 'Autorizado no E2E mockado', protocolo: protocoloFiscal, dataEvento: new Date().toISOString(), usuarioId: 'e2e-user-id' }]
+            };
+            appendFiscalLog('NFeAutorizacao', 2, 'Autorização mockada concluída.');
+            return route.fulfill(json({ notaFiscalId: notaFiscal.id, statusFiscal: 5, comunicacaoOk: true, autorizada: true, codigoStatus: '100', motivo: 'Autorizado', protocolo: protocoloFiscal, chaveAcesso: chaveAcessoFiscal, deveReprocessar: false }));
+        }
+        if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}/danfe` && method === 'POST') {
+            documentoAuxiliar = { id: documentoAuxiliarId, notaFiscalId: notaFiscal.id, tipo: 1, formato: 2, nomeArquivo: 'danfe-1-900001.html', contentType: 'text/html', hashSha256: 'hash-danfe-e2e', tamanhoBytes: 12345, geradoEm: new Date().toISOString(), geradoPor: 'e2e-user-id', alertas: [] };
+            appendFiscalLog('GerarDanfe', 2, 'Documento auxiliar gerado.');
+            return route.fulfill(json(documentoAuxiliar));
+        }
+        if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}/baixar-estoque` && method === 'POST') {
+            estoqueBaixado = true;
+            appendFiscalLog('BaixarEstoqueFiscal', 2, 'Estoque baixado pela nota fiscal.');
+            return route.fulfill(json({ notaFiscalId: notaFiscal.id, pedidoVendaId: pedidoVenda.id, statusFiscal: 5, quantidadeTotalBaixada: 2, itens: [{ pedidoVendaItemId: 'pv-item-1', produtoId, reservaEstoqueId: 'res-1', movimentoEstoqueId: 'mov-fiscal-1', quantidadeBaixada: 2 }], alertas: [] }));
+        }
+        if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}/gerar-conta-receber` && method === 'POST') {
+            contaReceberGerada = true;
+            appendFiscalLog('GerarContaReceberFiscal', 2, 'Conta a receber gerada pela nota fiscal.');
+            return route.fulfill(json({ notaFiscalId: notaFiscal.id, pedidoVendaId: pedidoVenda.id, contaReceberId: 'cr-fiscal-1', documento: 'NF-900001', origem: 2, origemId: notaFiscal.id, valorOriginal: 251, valorSaldo: 251, status: 1, jaExistia: false, parcelas: [{ id: 'parcela-fiscal-1', numero: 1, vencimento: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), valorOriginal: 251, valorSaldo: 251, status: 1 }], alertas: [] }));
+        }
+        if (path === `/api/fiscal/notas-fiscais/documentos-auxiliares/${documentoAuxiliarId}/download` && method === 'GET') return route.fulfill({
+            status: 200,
+            contentType: 'text/html',
+            headers: { 'content-disposition': 'attachment; filename="danfe-1-900001.html"' },
+            body: '<html><body>DANFE E2E</body></html>'
+        });
+        if (path === '/api/fiscal/observabilidade/integracoes' && method === 'GET') return route.fulfill(json({
+            empresaId,
+            filialId,
+            geradoEm: new Date().toISOString(),
+            registradoApos: null,
+            totalLogsAnalisados: fiscalLogs.length,
+            totalSucesso: fiscalLogs.filter((log) => Number(log.statusIntegracao) === 2).length,
+            totalFalha: fiscalLogs.filter((log) => Number(log.statusIntegracao) === 3).length,
+            totalReprocessamento: fiscalLogs.filter((log) => Number(log.statusIntegracao) === 4).length,
+            totalPendente: fiscalLogs.filter((log) => Number(log.statusIntegracao) === 1).length,
+            ultimoRegistroEm: fiscalLogs[0]?.registradoEm ?? null,
+            possuiFalhaRecente: false,
+            possuiPendenciaRecente: false,
+            operacoesComFalha: [],
+            alertas: ['Payload fiscal sensível mascarado no mock E2E.'],
+            logsRecentes: fiscalLogs
+        }));
+        if (path === '/api/fiscal/sefaz/status-servico' && method === 'POST') return route.fulfill(json({ empresaId, filialId, tipoDocumento: 1, ambiente: 1, ufAutorizadora: 'SP', comunicacaoOk: true, disponivel: true, codigoStatus: '107', motivo: 'Serviço em operação', deveReprocessar: false, consultadoEm: new Date().toISOString(), alertas: [] }));
+        if (path === '/api/fiscal/sefaz/status-servico/historico' && method === 'GET') return route.fulfill(json(fiscalLogs.filter((log) => String(log.operacao).includes('Status'))));
+        if (path === '/api/fiscal/sefaz/contingencia/historico' && method === 'GET') return route.fulfill(json(fiscalLogs.filter((log) => String(log.operacao).includes('Contingencia'))));
+        if (path === '/api/fiscal/sefaz/contingencia/avaliar' && method === 'POST') return route.fulfill(json({ notaFiscalId: null, empresaId, filialId, tipoDocumento: 1, ambiente: 1, ufAutorizadora: 'SP', tipoContingencia: 99, permitida: true, statusServicoIndisponivelDetectado: true, codigoStatusServico: '108', motivoStatusServico: 'Serviço paralisado momentaneamente', motivoOperacional: 'Avaliação operacional E2E.', avaliadaEm: new Date().toISOString(), alertas: [] }));
         if (method !== 'GET') {
             let body: Record<string, unknown> = {};
             try {
