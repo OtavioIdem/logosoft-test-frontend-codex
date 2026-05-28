@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { OrigemNotaFiscal, StatusNotaFiscal, TipoDocumentoFiscal, TipoOperacaoFiscal } from '@/types/erp';
+import { FormatoDocumentoAuxiliarFiscal, OrigemNotaFiscal, StatusNotaFiscal, TipoContingenciaFiscal, TipoDocumentoAuxiliarFiscal, TipoDocumentoFiscal, TipoOperacaoFiscal } from '@/types/erp';
 import {
     createFiscalCorrelationId,
+    formatoDocumentoAuxiliarFiscalLabel,
     fiscalActionDisabledReason,
     fiscalOrigemContextLabel,
     fiscalReferenceContextLabel,
     maskFiscalSensitiveText,
+    tipoContingenciaFiscalLabel,
+    tipoDocumentoAuxiliarFiscalLabel,
     notaFiscalBloqueiosVisuais,
     notaPodeCancelar,
     notaPodeEditarItens,
@@ -108,15 +111,12 @@ describe('regras visuais fiscais', () => {
         });
     });
 
-
     it('representa vínculos fiscais sem expor identificadores técnicos no detalhe', () => {
         expect(fiscalReferenceContextLabel('Empresa', '11111111-1111-1111-1111-111111111111')).toBe('Empresa vinculada');
         expect(fiscalReferenceContextLabel('Filial', null)).toBe('-');
         expect(fiscalOrigemContextLabel(OrigemNotaFiscal.PedidoVenda, '22222222-2222-2222-2222-222222222222')).toBe('Pedido de venda com vínculo operacional');
         expect(fiscalOrigemContextLabel(OrigemNotaFiscal.Manual, null)).toBe('Manual');
     });
-
-
 
     it('bloqueia ação fiscal quando workflow retorna motivo de bloqueio', () => {
         const workflow = {
@@ -153,6 +153,12 @@ describe('regras visuais fiscais', () => {
     it('limita registro de rejeição técnica ao workflow ou status transmitido', () => {
         expect(notaPodeRegistrarRejeicao(baseNota)).toBe(false);
         expect(notaPodeRegistrarRejeicao({ ...baseNota, statusFiscal: StatusNotaFiscal.Transmitida })).toBe(true);
+    });
+
+    it('rotula documentos auxiliares e contingência sem expor enums crus', () => {
+        expect(tipoDocumentoAuxiliarFiscalLabel(TipoDocumentoAuxiliarFiscal.Danfe)).toBe('DANFE');
+        expect(formatoDocumentoAuxiliarFiscalLabel(FormatoDocumentoAuxiliarFiscal.Html)).toBe('HTML');
+        expect(tipoContingenciaFiscalLabel(TipoContingenciaFiscal.OperacionalInterna)).toBe('Operacional interna');
     });
 
     it('gera correlationId fiscal padronizado com tentativa única e referência opcional', () => {

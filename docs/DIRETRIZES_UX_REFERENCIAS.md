@@ -112,3 +112,13 @@ Essa regra evita consultar a listagem fiscal com uma pessoa pertencente a outro 
 - `correlationId` não deve ser tratado como referência técnica/GUID.
 - Sanitização de payload deve preservar `correlationId` textual gerado pelo frontend.
 - Operações fiscais críticas continuam obrigadas a enviar identificador de tentativa para auditoria/idempotência quando previsto no contrato.
+
+## v1.11.0a8b20 — painéis fiscais operacionais e segurança de payload
+
+- Detalhes fiscais devem separar abas de workflow, integrações, itens, impostos, XMLs, eventos e documentos auxiliares.
+- A aba de XMLs deve exibir somente metadados, como tipo, hash, protocolo, chave e data de armazenamento.
+- A aba de integrações deve mascarar defensivamente XML, token, senha, certificado, segredo e payload técnico sensível.
+- Reprocessamento fiscal deve partir de log elegível, manter correlationId original ou logIntegracaoFiscalId, gerar novo correlationId e exigir motivo.
+- Status de serviço e contingência fiscal devem usar empresa/filial selecionadas por API e não aceitar GUID manual.
+- Documento auxiliar deve ser tratado por metadados e download protegido; o conteúdo do arquivo não deve ser exibido em tela.
+- Antes de E2E fiscal, telas críticas devem possuir testes de componente para painéis de documento, payload mascarado, status e contingência.

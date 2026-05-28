@@ -11,6 +11,7 @@ import { TabPanel, TabView } from 'primereact/tabview';
 import { Tag } from 'primereact/tag';
 import { PageHeader } from '@/components/common/PageHeader';
 import { StatusTag } from '@/components/data/StatusTag';
+import { FiscalDocumentosAuxiliaresPanel, FiscalIntegracoesTable } from '@/features/fiscal/components/FiscalOperationalPanels';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
@@ -147,14 +148,15 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
     const baixarEstoque = (values: unknown) => run('Baixa de estoque', async () => { await mutations.baixarEstoqueMutation.mutateAsync({ id: notaId, values }); }, 'Baixa de estoque processada.');
     const gerarContaReceber = (values: unknown) => run('Financeiro fiscal', async () => { await mutations.gerarContaReceberMutation.mutateAsync({ id: notaId, values }); }, 'Conta a receber gerada ou conciliada.');
 
-    const baixarDocumento = async () => {
-        if (!ultimoDocumento) return;
+    const documentosAuxiliares = useMemo(() => (ultimoDocumento ? [ultimoDocumento] : []), [ultimoDocumento]);
+
+    const baixarDocumento = async (documento: DocumentoAuxiliarFiscalResponse) => {
         try {
-            const arquivo = await fiscalApi.baixarDocumentoAuxiliar(ultimoDocumento.id);
+            const arquivo = await fiscalApi.baixarDocumentoAuxiliar(documento.id);
             const url = URL.createObjectURL(arquivo.blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = arquivo.filename ?? ultimoDocumento.nomeArquivo;
+            link.download = arquivo.filename;
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -182,6 +184,9 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
             <PageHeader title={nota ? `Nota fiscal ${nota.serie}/${nota.numero}` : 'Nota fiscal'} description="Detalhe técnico fiscal, pipeline XML, eventos e documentos auxiliares." actions={headerActions} />
             {notaQuery.isLoading ? <LoadingState variant="detail" /> : null}
             {notaQuery.error ? <ApiErrorPanel error={mapApiError(notaQuery.error)} /> : null}
+            {resumoQuery.error ? <ApiErrorPanel error={mapApiError(resumoQuery.error)} title="Não foi possível carregar o resumo operacional fiscal." /> : null}
+            {workflowQuery.error ? <ApiErrorPanel error={mapApiError(workflowQuery.error)} title="Não foi possível carregar o workflow operacional fiscal." /> : null}
+            {integracoesQuery.error ? <ApiErrorPanel error={mapApiError(integracoesQuery.error)} title="Não foi possível carregar os logs de integração fiscal." /> : null}
             {nota ? (
                 <>
                     <ResponsePanel xml={ultimoXml} transmissao={ultimaTransmissao} documento={ultimoDocumento} />
@@ -234,7 +239,7 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
                                     <PermissionGuard permission="ESTOQUE_MOVIMENTAR" mode="disable">{({ disabled }) => <Button label="Baixar estoque" icon="pi pi-box" outlined disabled={disabled || !actionStates.baixarEstoque.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.baixarEstoque, 'ESTOQUE_MOVIMENTAR')} onClick={() => setDialog('baixarEstoque')} />}</PermissionGuard>
                                     <PermissionGuard permission="FINANCEIRO_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Gerar financeiro" icon="pi pi-dollar" outlined disabled={disabled || !actionStates.gerarFinanceiro.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.gerarFinanceiro, 'FINANCEIRO_GERENCIAR')} onClick={() => setDialog('gerarFinanceiro')} />}</PermissionGuard>
                                     <PermissionGuard permission="FISCAL_EMITIR" mode="disable">{({ disabled }) => <Button label="Gerar DANFE" icon="pi pi-file-pdf" disabled={disabled || !actionStates.danfe.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.danfe, 'FISCAL_EMITIR')} onClick={() => setDialog('danfe')} />}</PermissionGuard>
-                                    {ultimoDocumento ? <Button label="Baixar último documento" icon="pi pi-download" severity="success" outlined onClick={baixarDocumento} /> : null}
+                                    {ultimoDocumento ? <Button label="Baixar último documento" icon="pi pi-download" severity="success" outlined onClick={() => baixarDocumento(ultimoDocumento)} /> : null}
                                 </div>
                             </Card>
                         </div>
@@ -262,15 +267,15 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
                             ) : <Message severity="info" className="w-full" text="Workflow operacional não carregado." />}
                         </TabPanel>
                         <TabPanel header={`Integrações (${integracoes.length})`}>
-                            <DataTable value={integracoes} emptyMessage="Nenhum log de integração fiscal." size="small" paginator rows={10}>
-                                <Column field="operacao" header="Operação" />
-                                <Column field="statusIntegracao" header="Status" />
-                                <Column field="correlationId" header="Correlation ID" />
-                                <Column field="mensagem" header="Mensagem" />
-                                <Column header="Registrado em" body={(row: LogIntegracaoFiscalResponse) => formatFiscalDate(row.registradoEm)} />
-                                <Column header="Sensível mascarado" body={(row: LogIntegracaoFiscalResponse) => row.contemDadoSensivelOcultado ? 'Sim' : 'Não'} />
-                                <Column header="Ação" body={(row: LogIntegracaoFiscalResponse) => row.podeReprocessar ? <PermissionGuard permission="FISCAL_EMITIR" mode="disable">{({ disabled }) => <Button label="Reprocessar" icon="pi pi-refresh" size="small" outlined disabled={disabled} onClick={() => { setLogReprocessamento(row); setDialog('reprocessar'); }} />}</PermissionGuard> : '-'} />
-                            </DataTable>
+                            <Message severity="info" className="w-full mb-3" text="Logs fiscais devem permanecer sanitizados. XML completo, token, senha, certificado e payload técnico não devem aparecer na tela." />
+                            <FiscalIntegracoesTable
+                                logs={integracoes}
+                                loading={integracoesQuery.isFetching}
+                                onReprocessar={(row) => {
+                                    setLogReprocessamento(row);
+                                    setDialog('reprocessar');
+                                }}
+                            />
                         </TabPanel>
                         <TabPanel header={`Itens (${nota.itens?.length ?? 0})`}>
                             <DataTable value={nota.itens ?? []} emptyMessage="Nenhum item fiscal." size="small" paginator rows={10}>
@@ -296,6 +301,7 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
                             </DataTable>
                         </TabPanel>
                         <TabPanel header={`XMLs (${nota.xmls?.length ?? 0})`}>
+                            <Message severity="info" className="w-full mb-3" text="Esta aba exibe somente metadados de XML. O conteúdo XML completo não deve ser carregado ou exibido no detalhe fiscal." />
                             <DataTable value={nota.xmls ?? []} emptyMessage="Nenhum XML armazenado." size="small" paginator rows={10}>
                                 <Column header="Tipo" body={(row) => tipoXmlFiscalLabel(row.tipo)} />
                                 <Column field="hashSha256" header="Hash SHA-256" />
@@ -305,6 +311,7 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
                             </DataTable>
                         </TabPanel>
                         <TabPanel header={`Eventos (${nota.eventos?.length ?? 0})`}>
+                            <Message severity="info" className="w-full mb-3" text="Eventos fiscais representam histórico operacional/status. Alterações legais e prazos devem ser validados pelo backend e por especialista fiscal." />
                             <DataTable value={nota.eventos ?? []} emptyMessage="Nenhum evento fiscal." size="small" paginator rows={10}>
                                 <Column header="Tipo" body={(row) => tipoEventoFiscalLabel(row.tipo)} />
                                 <Column field="codigo" header="Código" />
@@ -312,6 +319,9 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
                                 <Column field="protocolo" header="Protocolo" />
                                 <Column header="Data" body={(row) => formatFiscalDate(row.dataEvento)} />
                             </DataTable>
+                        </TabPanel>
+                        <TabPanel header={`Documentos auxiliares (${documentosAuxiliares.length})`}>
+                            <FiscalDocumentosAuxiliaresPanel documentos={documentosAuxiliares} possuiDanfe={resumo?.possuiDanfe} onDownload={baixarDocumento} />
                         </TabPanel>
                     </TabView>
 
@@ -327,7 +337,7 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
                     <CartaCorrecaoDialog visible={dialog === 'cce'} loading={mutations.cartaCorrecaoMutation.isPending} onHide={() => setDialog(null)} onSubmit={(values) => run('Carta de correção', () => mutations.cartaCorrecaoMutation.mutateAsync({ id: notaId, values }), 'Carta de correção emitida.')} />
                     <ConsultarProtocoloDialog visible={dialog === 'consultarProtocolo'} loading={mutations.consultarProtocoloMutation.isPending} onHide={() => setDialog(null)} onSubmit={consultarProtocolo} />
                     <HabilitarContingenciaDialog visible={dialog === 'contingencia'} loading={mutations.habilitarContingenciaMutation.isPending} onHide={() => setDialog(null)} onSubmit={habilitarContingencia} />
-                    <ReprocessarSefazDialog visible={dialog === 'reprocessar'} loading={mutations.reprocessarMutation.isPending} onHide={() => setDialog(null)} onSubmit={reprocessar} logIntegracaoFiscalId={logReprocessamento?.id} correlationIdOriginal={logReprocessamento?.correlationId} />
+                    <ReprocessarSefazDialog visible={dialog === 'reprocessar'} loading={mutations.reprocessarMutation.isPending} onHide={() => setDialog(null)} onSubmit={reprocessar} logIntegracaoFiscalId={logReprocessamento?.id} correlationIdOriginal={logReprocessamento?.correlationId} mensagemFalha={logReprocessamento?.mensagem} payloadResumo={logReprocessamento?.payloadResumo} />
                     <BaixarEstoqueDialog visible={dialog === 'baixarEstoque'} loading={mutations.baixarEstoqueMutation.isPending} onHide={() => setDialog(null)} onSubmit={baixarEstoque} documento={`NF-${nota.numero}`} />
                     <GerarContaReceberDialog visible={dialog === 'gerarFinanceiro'} loading={mutations.gerarContaReceberMutation.isPending} onHide={() => setDialog(null)} onSubmit={gerarContaReceber} documento={`NF-${nota.numero}`} empresaId={nota.empresaId} filialId={nota.filialId} />
                     <DanfeDialog visible={dialog === 'danfe'} loading={mutations.gerarDanfeMutation.isPending} onHide={() => setDialog(null)} onSubmit={gerarDanfe} />

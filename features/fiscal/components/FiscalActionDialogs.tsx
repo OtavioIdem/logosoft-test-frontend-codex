@@ -22,7 +22,7 @@ import { usePedidosVenda } from '@/features/vendas/hooks/useVendasResources';
 import { PedidoVendaResponse } from '@/features/vendas/types/vendas.types';
 import { FormatoDocumentoAuxiliarFiscal, OrigemNotaFiscal, StatusPedidoVenda, TipoContingenciaFiscal, TipoDocumentoFiscal, TipoOperacaoFiscal, TipoServicoTransmissaoFiscal, TipoXmlFiscal } from '@/types/erp';
 import { ItemNotaFiscalResponse } from '@/features/fiscal/types/fiscal.types';
-import { gerarCorrelationId, servicoTransmissaoFiscalOptions, tipoDocumentoFiscalOptions, tipoOperacaoFiscalOptions } from '@/features/fiscal/components/fiscalUiUtils';
+import { gerarCorrelationId, maskFiscalSensitiveText, servicoTransmissaoFiscalOptions, tipoDocumentoFiscalOptions, tipoOperacaoFiscalOptions } from '@/features/fiscal/components/fiscalUiUtils';
 
 type BaseDialogProps<T> = {
     visible: boolean;
@@ -387,7 +387,7 @@ export const DanfeDialog = ({ visible, loading, onHide, onSubmit }: BaseDialogPr
 };
 
 
-export const ReprocessarSefazDialog = ({ visible, loading, onHide, onSubmit, logIntegracaoFiscalId, correlationIdOriginal }: BaseDialogProps<Record<string, unknown>> & { logIntegracaoFiscalId?: string | null; correlationIdOriginal?: string | null }) => {
+export const ReprocessarSefazDialog = ({ visible, loading, onHide, onSubmit, logIntegracaoFiscalId, correlationIdOriginal, mensagemFalha, payloadResumo }: BaseDialogProps<Record<string, unknown>> & { logIntegracaoFiscalId?: string | null; correlationIdOriginal?: string | null; mensagemFalha?: string | null; payloadResumo?: string | null }) => {
     const [values, setValues] = useState({ ufAutorizadora: 'SP', servico: TipoServicoTransmissaoFiscal.Autorizacao, xmlEnvioAssinado: '', validarSchemaAntesTransmissao: false, schemaSetName: 'NFe-4.00', logIntegracaoFiscalId: logIntegracaoFiscalId ?? '', correlationIdOriginal: correlationIdOriginal ?? '', correlationId: gerarCorrelationId('reprocessamento'), motivo: '' });
     useEffect(() => {
         if (visible) setValues((v) => ({ ...v, logIntegracaoFiscalId: logIntegracaoFiscalId ?? '', correlationIdOriginal: correlationIdOriginal ?? '', correlationId: gerarCorrelationId('reprocessamento') }));
@@ -395,10 +395,16 @@ export const ReprocessarSefazDialog = ({ visible, loading, onHide, onSubmit, log
     return (
         <Dialog header="Reprocessar transmissão SEFAZ" visible={visible} modal style={{ width: '54rem' }} onHide={onHide} footer={footer('reprocessar-sefaz-form', loading, onHide, 'Reprocessar')}>
             <form id="reprocessar-sefaz-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
+                <div className="field col-12">
+                    <Message severity="warn" className="w-full" text="Reprocessamento deve ser usado somente para falha técnica/log elegível. O backend continua responsável por idempotência, auditoria e regra fiscal." />
+                </div>
+                {mensagemFalha ? <div className="field col-12"><Message severity="info" className="w-full" text={`Falha original: ${mensagemFalha}`} /></div> : null}
+                {payloadResumo ? <div className="field col-12"><small className="text-color-secondary block mb-1">Payload original sanitizado</small><div className="surface-100 border-round p-2 text-sm line-height-3">{maskFiscalSensitiveText(payloadResumo)}</div></div> : null}
+                {logIntegracaoFiscalId ? <div className="field col-12"><Message severity="info" className="w-full" text="Log de integração selecionado para reprocessamento. O identificador técnico será enviado ao backend sem digitação manual." /></div> : null}
                 <Field label="UF autorizadora"><InputText value={values.ufAutorizadora} maxLength={2} onChange={(e) => setValues((v) => ({ ...v, ufAutorizadora: e.target.value.toUpperCase() }))} /></Field>
                 <Field label="Serviço"><Dropdown value={values.servico} options={servicoTransmissaoFiscalOptions} onChange={(e) => setValues((v) => ({ ...v, servico: e.value }))} /></Field>
                 <Field label="Schema set"><InputText value={values.schemaSetName} onChange={(e) => setValues((v) => ({ ...v, schemaSetName: e.target.value }))} /></Field>
-                <Field label="Correlation ID original" hint="Preenchido automaticamente ao selecionar um log reprocessável; edite somente se o backend solicitar reprocessamento por correlation ID."><InputText value={values.correlationIdOriginal} onChange={(e) => setValues((v) => ({ ...v, correlationIdOriginal: e.target.value }))} /></Field>
+                <Field label="Correlation ID original" hint="Preenchido automaticamente ao selecionar um log reprocessável; edite somente se o backend solicitar reprocessamento por correlation ID."><InputText value={values.correlationIdOriginal} disabled={Boolean(correlationIdOriginal)} onChange={(e) => setValues((v) => ({ ...v, correlationIdOriginal: e.target.value }))} /></Field>
                 <Field label="Novo correlation ID"><InputText value={values.correlationId} onChange={(e) => setValues((v) => ({ ...v, correlationId: e.target.value }))} /></Field>
                 <div className="field col-12 flex align-items-center gap-2"><Checkbox inputId="validarSchemaReprocessar" checked={values.validarSchemaAntesTransmissao} onChange={(e) => setValues((v) => ({ ...v, validarSchemaAntesTransmissao: Boolean(e.checked) }))} /><label htmlFor="validarSchemaReprocessar">Validar schema antes da transmissão</label></div>
                 <TextAreaField label="Motivo" value={values.motivo} onChange={(motivo) => setValues((v) => ({ ...v, motivo }))} />

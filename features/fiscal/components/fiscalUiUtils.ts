@@ -1,4 +1,4 @@
-import { OrigemNotaFiscal, SelectOption, StatusNotaFiscal, TipoDocumentoFiscal, TipoEventoFiscal, TipoOperacaoFiscal, TipoServicoTransmissaoFiscal, TipoXmlFiscal } from '@/types/erp';
+import { FormatoDocumentoAuxiliarFiscal, OrigemNotaFiscal, SelectOption, StatusNotaFiscal, TipoContingenciaFiscal, TipoDocumentoAuxiliarFiscal, TipoDocumentoFiscal, TipoEventoFiscal, TipoOperacaoFiscal, TipoServicoTransmissaoFiscal, TipoXmlFiscal } from '@/types/erp';
 import { AcaoWorkflowFiscalResponse, AcoesResumoFiscalResponse, NotaFiscalResponse, ResumoOperacionalNotaFiscalResponse, WorkflowOperacionalNotaFiscalResponse } from '@/features/fiscal/types/fiscal.types';
 
 export const formatFiscalMoney = (value?: number | null) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value ?? 0));
@@ -63,7 +63,6 @@ export const statusNotaFiscalLabel = (value?: number | string | null) => {
     return labels[Number(value)] ?? String(value ?? '-');
 };
 
-
 export const fiscalReferenceContextLabel = (entityName: string, value?: string | null) => (value ? `${entityName} vinculada` : '-');
 
 export const fiscalOrigemContextLabel = (origem?: number | string | null, origemId?: string | null) => {
@@ -114,6 +113,34 @@ export const tipoEventoFiscalLabel = (value?: number | string | null) => {
         [TipoEventoFiscal.ErroIntegracao]: 'Erro de integração',
         [TipoEventoFiscal.CorrecaoRascunho]: 'Correção de rascunho',
         [TipoEventoFiscal.Contingencia]: 'Contingência'
+    };
+    return labels[Number(value)] ?? String(value ?? '-');
+};
+
+export const tipoDocumentoAuxiliarFiscalLabel = (value?: number | string | null) => {
+    const labels: Record<number, string> = {
+        [TipoDocumentoAuxiliarFiscal.Danfe]: 'DANFE',
+        [TipoDocumentoAuxiliarFiscal.Dacte]: 'DACTE',
+        [TipoDocumentoAuxiliarFiscal.Damdfe]: 'DAMDFE',
+        [TipoDocumentoAuxiliarFiscal.Outros]: 'Outro documento auxiliar'
+    };
+    return labels[Number(value)] ?? String(value ?? '-');
+};
+
+export const formatoDocumentoAuxiliarFiscalLabel = (value?: number | string | null) => {
+    const labels: Record<number, string> = {
+        [FormatoDocumentoAuxiliarFiscal.Pdf]: 'PDF',
+        [FormatoDocumentoAuxiliarFiscal.Html]: 'HTML'
+    };
+    return labels[Number(value)] ?? String(value ?? '-');
+};
+
+export const tipoContingenciaFiscalLabel = (value?: number | string | null) => {
+    const labels: Record<number, string> = {
+        [TipoContingenciaFiscal.Svc]: 'SVC',
+        [TipoContingenciaFiscal.Epec]: 'EPEC',
+        [TipoContingenciaFiscal.OfflineNfce]: 'Offline NFC-e',
+        [TipoContingenciaFiscal.OperacionalInterna]: 'Operacional interna'
     };
     return labels[Number(value)] ?? String(value ?? '-');
 };

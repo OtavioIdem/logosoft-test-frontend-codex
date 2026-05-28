@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Checkbox } from 'primereact/checkbox';
@@ -16,10 +17,11 @@ import { EmpresaFilialFilter } from '@/components/forms/EmpresaFilialFilter';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { useFiscalMutations, useHistoricoContingenciaFiscal, useHistoricoStatusServicoFiscal, useObservabilidadeFiscal } from '@/features/fiscal/hooks/useFiscalResources';
-import { LogIntegracaoFiscalResponse, StatusServicoSefazResponse } from '@/features/fiscal/types/fiscal.types';
+import { ContingenciaFiscalResponse, LogIntegracaoFiscalResponse, StatusServicoSefazResponse } from '@/features/fiscal/types/fiscal.types';
 import { formatFiscalDate, gerarCorrelationId, maskFiscalSensitiveText, tipoDocumentoFiscalOptions } from '@/features/fiscal/components/fiscalUiUtils';
+import { ContingenciaResultPanel } from '@/features/fiscal/components/FiscalOperationalPanels';
 import { mapApiError } from '@/lib/http/apiError';
-import { ApiError, TipoDocumentoFiscal } from '@/types/erp';
+import { ApiError, TipoContingenciaFiscal, TipoDocumentoFiscal } from '@/types/erp';
 
 const statusIntegracaoLabel = (status?: number | null) => {
     const labels: Record<number, string> = {
@@ -106,6 +108,7 @@ const HistoricoLogsTable = ({ title, logs, loading }: { title: string; logs: Log
 );
 
 export const ObservabilidadeFiscalPage = () => {
+    const router = useRouter();
     const [empresaId, setEmpresaId] = useState<string | null>(null);
     const [filialId, setFilialId] = useState<string | null>(null);
     const [registradoApos, setRegistradoApos] = useState<string>('');
@@ -116,6 +119,8 @@ export const ObservabilidadeFiscalPage = () => {
     const [somenteComDadoMascarado, setSomenteComDadoMascarado] = useState<boolean | null>(null);
     const [statusServicoResult, setStatusServicoResult] = useState<StatusServicoSefazResponse | null>(null);
     const [statusServicoError, setStatusServicoError] = useState<ApiError | null>(null);
+    const [contingenciaResult, setContingenciaResult] = useState<ContingenciaFiscalResponse | null>(null);
+    const [contingenciaError, setContingenciaError] = useState<ApiError | null>(null);
     const [statusServicoForm, setStatusServicoForm] = useState({
         tipoDocumento: TipoDocumentoFiscal.NFe,
         ufAutorizadora: 'SP',
@@ -123,6 +128,15 @@ export const ObservabilidadeFiscalPage = () => {
         validarSchemaAntesConsulta: false,
         schemaSetName: 'nfe-vigente',
         correlationId: gerarCorrelationId('status-servico')
+    });
+    const [contingenciaForm, setContingenciaForm] = useState({
+        tipoDocumento: TipoDocumentoFiscal.NFe,
+        ufAutorizadora: 'SP',
+        tipoContingencia: TipoContingenciaFiscal.OperacionalInterna,
+        motivo: 'Avaliação operacional de contingência fiscal.',
+        exigirStatusServicoIndisponivelRecente: true,
+        janelaStatusServicoMinutos: 30,
+        correlationId: gerarCorrelationId('contingencia-avaliar')
     });
 
     const query = useMemo(
@@ -173,6 +187,30 @@ export const ObservabilidadeFiscalPage = () => {
             setStatusServicoForm((current) => ({ ...current, correlationId: gerarCorrelationId('status-servico') }));
         } catch (error) {
             setStatusServicoError(mapApiError(error));
+        }
+    };
+
+
+    const handleContingenciaSubmit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!empresaId) return;
+        setContingenciaError(null);
+        try {
+            const result = await fiscalMutations.avaliarContingenciaMutation.mutateAsync({
+                empresaId,
+                filialId,
+                tipoDocumento: contingenciaForm.tipoDocumento,
+                ufAutorizadora: contingenciaForm.ufAutorizadora,
+                tipoContingencia: contingenciaForm.tipoContingencia,
+                motivo: contingenciaForm.motivo,
+                exigirStatusServicoIndisponivelRecente: contingenciaForm.exigirStatusServicoIndisponivelRecente,
+                janelaStatusServicoMinutos: contingenciaForm.janelaStatusServicoMinutos,
+                correlationId: contingenciaForm.correlationId
+            });
+            setContingenciaResult(result);
+            setContingenciaForm((current) => ({ ...current, correlationId: gerarCorrelationId('contingencia-avaliar') }));
+        } catch (error) {
+            setContingenciaError(mapApiError(error));
         }
     };
 
@@ -238,6 +276,45 @@ export const ObservabilidadeFiscalPage = () => {
                 {statusServicoResult ? <div className="mt-3"><StatusServicoResult result={statusServicoResult} /></div> : null}
             </Card>
 
+            <Card title="Avaliação de contingência fiscal" className="mb-4">
+                <form className="grid formgrid p-fluid" onSubmit={handleContingenciaSubmit}>
+                    <div className="field col-12 md:col-3">
+                        <label htmlFor="contingenciaTipoDocumento" className="font-medium">Documento</label>
+                        <Dropdown inputId="contingenciaTipoDocumento" value={contingenciaForm.tipoDocumento} options={tipoDocumentoFiscalOptions} onChange={(event) => setContingenciaForm((current) => ({ ...current, tipoDocumento: event.value }))} />
+                    </div>
+                    <div className="field col-12 md:col-2">
+                        <label htmlFor="contingenciaUf" className="font-medium">UF autorizadora</label>
+                        <InputText id="contingenciaUf" value={contingenciaForm.ufAutorizadora} maxLength={2} onChange={(event) => setContingenciaForm((current) => ({ ...current, ufAutorizadora: event.target.value.toUpperCase() }))} />
+                    </div>
+                    <div className="field col-12 md:col-3">
+                        <label htmlFor="contingenciaTipo" className="font-medium">Tipo contingência</label>
+                        <Dropdown inputId="contingenciaTipo" value={contingenciaForm.tipoContingencia} options={[{ label: 'SVC', value: TipoContingenciaFiscal.Svc }, { label: 'EPEC', value: TipoContingenciaFiscal.Epec }, { label: 'Offline NFC-e', value: TipoContingenciaFiscal.OfflineNfce }, { label: 'Operacional interna', value: TipoContingenciaFiscal.OperacionalInterna }]} onChange={(event) => setContingenciaForm((current) => ({ ...current, tipoContingencia: event.value }))} />
+                    </div>
+                    <div className="field col-12 md:col-4">
+                        <label htmlFor="contingenciaCorrelation" className="font-medium">Correlation ID</label>
+                        <InputText id="contingenciaCorrelation" value={contingenciaForm.correlationId} onChange={(event) => setContingenciaForm((current) => ({ ...current, correlationId: event.target.value }))} />
+                    </div>
+                    <div className="field col-12 md:col-3">
+                        <label htmlFor="janelaContingencia" className="font-medium">Janela status serviço</label>
+                        <InputNumber inputId="janelaContingencia" value={contingenciaForm.janelaStatusServicoMinutos} min={1} max={240} suffix=" min" onValueChange={(event) => setContingenciaForm((current) => ({ ...current, janelaStatusServicoMinutos: Number(event.value ?? 30) }))} />
+                    </div>
+                    <div className="field col-12 md:col-9">
+                        <label htmlFor="motivoContingencia" className="font-medium">Motivo operacional</label>
+                        <InputText id="motivoContingencia" value={contingenciaForm.motivo} onChange={(event) => setContingenciaForm((current) => ({ ...current, motivo: event.target.value }))} />
+                    </div>
+                    <div className="field col-12 flex align-items-center gap-2">
+                        <Checkbox inputId="exigirStatusIndisponivel" checked={contingenciaForm.exigirStatusServicoIndisponivelRecente} onChange={(event) => setContingenciaForm((current) => ({ ...current, exigirStatusServicoIndisponivelRecente: Boolean(event.checked) }))} />
+                        <label htmlFor="exigirStatusIndisponivel">Exigir status de serviço indisponível recente</label>
+                    </div>
+                    <div className="field col-12 flex gap-2">
+                        <Button type="submit" label="Avaliar contingência" icon="pi pi-send" disabled={!empresaId} loading={fiscalMutations.avaliarContingenciaMutation.isPending} />
+                        <Button type="button" label="Novo correlation ID" icon="pi pi-refresh" severity="secondary" onClick={() => setContingenciaForm((current) => ({ ...current, correlationId: gerarCorrelationId('contingencia-avaliar') }))} />
+                    </div>
+                </form>
+                {contingenciaError ? <div className="mt-3"><ApiErrorPanel error={contingenciaError} title="Não foi possível avaliar contingência fiscal." /></div> : null}
+                {contingenciaResult ? <div className="mt-3"><ContingenciaResultPanel result={contingenciaResult} /></div> : null}
+            </Card>
+
             {observabilidade ? (
                 <>
                     <div className="grid mb-4">
@@ -279,6 +356,7 @@ export const ObservabilidadeFiscalPage = () => {
                             <Column header="Mensagem" field="mensagem" />
                             <Column header="Payload sanitizado" body={(log: LogIntegracaoFiscalResponse) => <PayloadResumo log={log} />} />
                             <Column header="Registrado em" body={(log: LogIntegracaoFiscalResponse) => formatFiscalDate(log.registradoEm)} />
+                            <Column header="Nota" body={(log: LogIntegracaoFiscalResponse) => (log.notaFiscalId ? <Button type="button" label="Abrir" icon="pi pi-external-link" size="small" text onClick={() => router.push(`/fiscal/notas/${log.notaFiscalId}`)} /> : '-')} />
                             <Column header="Reprocessar" body={(log: LogIntegracaoFiscalResponse) => (log.podeReprocessar ? <Tag severity="warning" value="Permitido" /> : <Tag value="Não" />)} />
                             <Column header="Dado sensível" body={(log: LogIntegracaoFiscalResponse) => (log.contemDadoSensivelOcultado ? <Tag severity="info" value="Mascarado" /> : <Tag value="-" />)} />
                         </DataTable>
