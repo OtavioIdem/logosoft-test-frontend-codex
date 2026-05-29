@@ -1,7 +1,7 @@
 {
     "name": "logosoft-frontend",
-    "version": "1.11.0-a.8.b23.c1",
-    "logosoftVersion": "1.11.0a8b23.c1",
+    "version": "1.11.0-a.8.b24.c1",
+    "logosoftVersion": "1.11.0a8b24.c1",
     "private": true,
     "scripts": {
         "dev": "next dev",
@@ -20,7 +20,8 @@
         "test:e2e:critical": "playwright test tests/e2e/auth.spec.ts tests/e2e/logosoft-critical-flows.spec.ts",
         "test:e2e:ui": "playwright test --ui",
         "test:e2e:fiscal": "playwright test tests/e2e/fiscal.spec.ts",
-        "test:contract:fiscal": "playwright test --config=playwright.contract.config.ts"
+        "test:contract:fiscal": "playwright test --config=playwright.contract.config.ts",
+        "test:e2e:fiscal:backend": "playwright test --config=playwright.backend-e2e.config.ts"
     },
     "dependencies": {
         "@hookform/resolvers": "^3.9.0",

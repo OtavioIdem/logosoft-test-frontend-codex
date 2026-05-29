@@ -1,6 +1,6 @@
 # Contrato Fiscal Oficial — Logosoft Frontend
 
-**Versão frontend:** 1.11.0a8b23.c1
+**Versão frontend:** 1.11.0a8b24.c1
 **Base técnica backend:** documentação fiscal v1.10.0a18
 **Escopo:** contrato de integração frontend/backend para telas fiscais operacionais de Nota Fiscal.
 
