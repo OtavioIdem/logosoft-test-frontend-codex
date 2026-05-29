@@ -211,6 +211,20 @@ if (!sessionStorage.includes('SESSION_MAX_AGE_MS = 5 * 60 * 60 * 1000') || !sess
     failures.push('lib/auth/sessionStorage.ts: política de sessão deve manter 5 horas máximas e 30 minutos de inatividade');
 }
 
+
+const fiscalProductionReviewFiles = [
+    'docs/FISCAL_FRONTEND_PRODUCTION_REVIEW.md',
+    'scripts/validate-fiscal-production.mjs',
+    'tests/unit/fiscalProductionReadiness.test.ts'
+];
+for (const fiscalProductionReviewFile of fiscalProductionReviewFiles) {
+    try {
+        statSync(join(root, fiscalProductionReviewFile));
+    } catch {
+        failures.push(`${fiscalProductionReviewFile}: revisão final de produção fiscal obrigatória ausente`);
+    }
+}
+
 const fiscalImplementationPaths = [
     'app/(main)/fiscal',
     'app/(main)/nota-fiscal',

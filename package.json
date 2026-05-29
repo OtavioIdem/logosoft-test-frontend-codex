@@ -1,7 +1,7 @@
 {
     "name": "logosoft-frontend",
-    "version": "1.11.0-a.8.b24.c1",
-    "logosoftVersion": "1.11.0a8b24.c1",
+    "version": "1.11.0-a.8.b25",
+    "logosoftVersion": "1.11.0a8b25",
     "private": true,
     "scripts": {
         "dev": "next dev",
@@ -21,7 +21,8 @@
         "test:e2e:ui": "playwright test --ui",
         "test:e2e:fiscal": "playwright test tests/e2e/fiscal.spec.ts",
         "test:contract:fiscal": "playwright test --config=playwright.contract.config.ts",
-        "test:e2e:fiscal:backend": "playwright test --config=playwright.backend-e2e.config.ts"
+        "test:e2e:fiscal:backend": "playwright test --config=playwright.backend-e2e.config.ts",
+        "validate:fiscal:production": "node scripts/validate-fiscal-production.mjs"
     },
     "dependencies": {
         "@hookform/resolvers": "^3.9.0",

@@ -1,6 +1,6 @@
 # Contrato Fiscal Oficial — Logosoft Frontend
 
-**Versão frontend:** 1.11.0a8b24.c1
+**Versão frontend:** 1.11.0a8b25
 **Base técnica backend:** documentação fiscal v1.10.0a18
 **Escopo:** contrato de integração frontend/backend para telas fiscais operacionais de Nota Fiscal.
 
@@ -2399,3 +2399,48 @@ O ponto mais importante para a tela fiscal é que o backend já fornece:
 - exportação auditada.
 
 O frontend deve ser construído como uma interface operacional guiada pelo backend, evitando duplicar regra fiscal ou criar validações legais próprias.
+
+
+---
+
+## 43. Revisão final de produção do frontend fiscal — v1.11.0a8b25
+
+A revisão final de produção do frontend fiscal consolida os gates mínimos antes de tratar o módulo como operacionalmente fechável no frontend.
+
+### 43.1 Gates obrigatórios antes de commit
+
+Executar, nesta ordem:
+
+```bash
+npm install
+npm run validate:source
+npm run validate:fiscal:production
+npm run typecheck
+npm run lint
+npm run test:unit
+npm run build
+npm run test:e2e:fiscal
+npm run test:contract:fiscal
+npm run test:e2e:fiscal:backend
+git diff --check
+git diff --cached --check
+```
+
+Quando o contrato real ou E2E backend real forem executados, fornecer variáveis de opt-in e credenciais de ambiente controlado. Sem variáveis, essas suítes podem ficar como skipped, desde que o skip seja explícito.
+
+### 43.2 Critérios de prontidão visual
+
+- Rotas fiscais protegidas por permissão.
+- Ações críticas guiadas por `resumo.acoes` e `workflow.proximasAcoes`.
+- `motivoBloqueio`, `bloqueios` e `alertas` exibidos quando retornados.
+- `correlationId` gerado por tentativa operacional.
+- Listagens fiscais leves sem XML completo ou payload técnico.
+- Detalhe fiscal exibindo XMLs apenas como metadados.
+- Observabilidade com payload mascarado defensivamente.
+- Exportação CSV auditada com motivo obrigatório.
+- Empresa, filial, pessoa, pedido, produto e condição de pagamento por select/API.
+- Nenhum identificador técnico deve ser solicitado por digitação manual quando representar entidade do ERP.
+
+### 43.3 Limites explícitos
+
+Esta revisão não transforma o frontend em validador fiscal legal. O backend/domínio continua responsável pelas regras oficiais, permissões, auditoria, transação e validação de workflow. Também não declara prontos NFS-e real por município, CT-e/MDF-e real, SPED, apuração fiscal, certificado produtivo definitivo ou cálculo tributário oficial.

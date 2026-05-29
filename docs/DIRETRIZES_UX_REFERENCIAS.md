@@ -122,3 +122,11 @@ Essa regra evita consultar a listagem fiscal com uma pessoa pertencente a outro 
 - Status de serviço e contingência fiscal devem usar empresa/filial selecionadas por API e não aceitar GUID manual.
 - Documento auxiliar deve ser tratado por metadados e download protegido; o conteúdo do arquivo não deve ser exibido em tela.
 - Antes de E2E fiscal, telas críticas devem possuir testes de componente para painéis de documento, payload mascarado, status e contingência.
+
+## v1.11.0a8b25 — revisão final de produção fiscal
+
+- Toda nova tela fiscal deve passar por `validate:source`, `validate:fiscal:production`, typecheck, lint, testes unitários, build e gates de whitespace.
+- Testes E2E fiscais devem usar seletores escopados e sem busca global por texto reutilizável na tela.
+- Contratos reais/controlados devem ser opt-in e não devem executar operação mutável sem variável explícita.
+- Observabilidade, integrações, XMLs e documentos auxiliares devem mostrar apenas metadados ou payload mascarado.
+- A validação de produção do frontend não substitui regras fiscais oficiais do backend/domínio.
