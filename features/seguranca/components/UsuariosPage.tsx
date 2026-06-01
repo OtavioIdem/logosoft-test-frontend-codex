@@ -11,7 +11,6 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { DataTableServer } from '@/components/data/DataTableServer';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { LoadingState } from '@/components/feedback/LoadingState';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
@@ -77,7 +76,6 @@ export const UsuariosPage = () => {
             <Message className="w-full mb-3" severity="info" text="Esta versão implementa listagem e criação conforme contrato v9.8. Alteração, bloqueio, grupos e permissões ficam desabilitados até existirem endpoints oficiais no backend." />
 
             <Card>
-                {usuariosQuery.isLoading ? <LoadingState /> : null}
                 {usuariosQuery.error ? <ApiErrorPanel error={mapApiError(usuariosQuery.error)} /> : null}
 
                 <DataTableServer<UsuarioResponse>

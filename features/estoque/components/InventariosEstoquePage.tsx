@@ -10,7 +10,6 @@ import { DataTableActions } from '@/components/data/DataTableActions';
 import { DataTableServer } from '@/components/data/DataTableServer';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { LoadingState } from '@/components/feedback/LoadingState';
 import { ReasonDialog } from '@/components/feedback/ReasonDialog';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
@@ -95,7 +94,6 @@ export const InventariosEstoquePage = () => {
                 <div className="col-12 md:col-3"><Card><span className="block text-color-secondary mb-2">Itens contados</span><strong className="text-2xl">{resumo.itensContados}</strong></Card></div>
             </div>
             <Card>
-                {inventariosQuery.isLoading ? <LoadingState /> : null}
                 {inventariosQuery.error ? <ApiErrorPanel error={mapApiError(inventariosQuery.error)} /> : null}
                 <DataTableServer<InventarioResponse> value={visibleRecords} totalRecords={records.length} loading={inventariosQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }}>
                     <Column field="codigo" header="Código" />

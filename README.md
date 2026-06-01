@@ -1,8 +1,69 @@
-# logosoft Frontend v1.11.0a3
+# logosoft Frontend v1.11.0a5
 
 Frontend do ERP **logosoft** em **Next.js**, **React**, **TypeScript** e **PrimeReact/Sakai**, consumindo a API real em `http://localhost:8080` por padrão.
 
 Esta aplicação foi construída para operação real de ERP: autenticação, permissões, cadastros, estoque, vendas, financeiro, compras, auditoria, dashboard, validações, dialogs de motivo, feedbacks visuais e integração centralizada via Axios.
+
+## v1.11.0a5 - Busca de telas na sidebar
+
+Versao anterior aplicada: `v1.11.0a4`.
+
+Esta manutencao adiciona uma busca exclusiva para os modulos e telas da sidebar. O objetivo e facilitar a navegacao conforme o ERP crescer, sem alterar a estrutura geral do layout.
+
+### Implementado nesta versao
+
+- Campo "Buscar tela ou modulo" adicionado acima da lista da sidebar.
+- A busca filtra apenas os itens de menu que ja passaram pela validacao de permissao do usuario.
+- O filtro considera nome da tela/modulo e rota, permitindo encontrar itens como `clientes`, `estoque`, `saidas` ou `contas-receber`.
+- A busca ignora acentos para melhorar a experiencia de digitacao.
+- Estado vazio discreto para pesquisas sem resultado.
+- Documentada esta manutencao em `docs/IMPLEMENTACAO_V1_11_0A5.md`.
+
+### Modulos impactados
+
+- Layout/sidebar: `layout/AppMenu.tsx`.
+- Estilo da sidebar: `styles/layout/_menu.scss`.
+
+### Validacao
+
+Executar:
+
+```bash
+npm run validate:source
+npm run build
+```
+
+## v1.11.0a4 - Skeleton loading nas telas operacionais
+
+Versao anterior aplicada: `v1.11.0a3`.
+
+Esta manutencao reduz a sensacao de tela parada durante consultas reais da API. As telas que usam tabelas server-side passam a renderizar skeleton de tabela no primeiro carregamento, mantendo o overlay de loading apenas para atualizacoes com dados ja carregados.
+
+### Implementado nesta versao
+
+- `LoadingState` foi refatorado para suportar variantes `table`, `detail`, `metrics` e `panel`.
+- `DataTableServer` passa a exibir skeleton de tabela automaticamente quando esta carregando e ainda nao ha registros renderizados.
+- Removidos skeletons duplicados das paginas de listagem para centralizar o comportamento no componente de tabela.
+- Detalhes de pedido de venda e pedido de compra passam a usar skeleton de ficha com itens.
+- Dashboard usa skeleton de metricas e painel durante o carregamento inicial.
+- Saldos de estoque mostra skeleton nos cards de resumo antes de exibir valores reais.
+- Documentada esta manutencao em `docs/IMPLEMENTACAO_V1_11_0A4.md`.
+
+### Modulos impactados
+
+- Componentes comuns: `LoadingState` e `DataTableServer`.
+- Dashboard.
+- Administracao, Pessoas, Clientes, Fornecedores, Produtos e Seguranca.
+- Estoque, Vendas, Compras, Financeiro e Auditoria via tabela centralizada.
+
+### Validacao
+
+Executar:
+
+```bash
+npm run validate:source
+npm run build
+```
 
 ## v1.11.0a3 — Auditoria modular de testes e procedimentos
 

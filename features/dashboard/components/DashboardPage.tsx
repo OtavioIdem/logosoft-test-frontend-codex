@@ -5,11 +5,11 @@ import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Divider } from 'primereact/divider';
 import { Message } from 'primereact/message';
-import { Skeleton } from 'primereact/skeleton';
 import { Tag } from 'primereact/tag';
 import { classNames } from 'primereact/utils';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { LoadingState } from '@/components/feedback/LoadingState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
 import { formatAuditoriaDateTime, getAuditoriaActionLabel, getAuditoriaActionSeverity } from '@/features/auditoria/utils/auditoriaDisplay';
 import { useDashboard } from '@/features/dashboard/hooks/useDashboard';
@@ -120,9 +120,7 @@ export const DashboardPage = () => {
                 </div>
             ) : null}
             {dashboardQuery.isLoading ? (
-                <div className="dashboard-metrics-grid">
-                    {[1, 2, 3, 4, 5, 6].map((item) => <Card key={item} className="dashboard-metric-card"><Skeleton height="7rem" /></Card>)}
-                </div>
+                <LoadingState variant="metrics" cards={6} className="mb-3" />
             ) : (
                 <div className="dashboard-metrics-grid">{data?.metrics.map((metric) => <MetricCard key={metric.key} metric={metric} />)}</div>
             )}
@@ -154,7 +152,7 @@ export const DashboardPage = () => {
                 </div>
                 <div className="col-12 lg:col-5">
                     <Card title="Auditoria recente" className="dashboard-audit-panel">
-                        <AuditList items={data?.auditItems ?? []} />
+                        {dashboardQuery.isLoading ? <LoadingState variant="panel" /> : <AuditList items={data?.auditItems ?? []} />}
                     </Card>
                 </div>
             </div>

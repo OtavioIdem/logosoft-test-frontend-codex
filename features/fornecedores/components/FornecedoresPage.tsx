@@ -14,7 +14,6 @@ import { DataTableServer } from '@/components/data/DataTableServer';
 import { StatusTag } from '@/components/data/StatusTag';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { LoadingState } from '@/components/feedback/LoadingState';
 import { ReasonDialog } from '@/components/feedback/ReasonDialog';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
@@ -98,7 +97,6 @@ export const FornecedoresPage = () => {
             <Message className="w-full mb-3" severity="info" text="Fornecedor é vinculado a uma pessoa ativa. O backend valida código único por empresa e bloqueios de alteração quando inativo." />
             <OperationalGovernancePanel title="Governança de fornecedores" description="Resumo dos fornecedores carregados, mantendo foco em status, vínculo com pessoa e impacto em compras/financeiro." records={records} activeLabel="Aptos" inactiveLabel="Restritos" complianceNote="Fornecedor inativo não deve ser usado em novos pedidos de compra; inativação exige motivo e deve permanecer auditável." sensitiveDataNote="Dados cadastrais do fornecedor podem conter informações pessoais e fiscais da pessoa vinculada." />
             <Card>
-                {listQuery.isLoading ? <LoadingState /> : null}
                 {listQuery.error ? <ApiErrorPanel error={mapApiError(listQuery.error)} /> : null}
                 <DataTableServer<FornecedorResponse> value={visibleRecords} totalRecords={records.length} loading={listQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhum fornecedor encontrado.">
                     <Column field="codigo" header="Código" />

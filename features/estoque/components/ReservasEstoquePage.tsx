@@ -10,7 +10,6 @@ import { DataTableActions } from '@/components/data/DataTableActions';
 import { DataTableServer } from '@/components/data/DataTableServer';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { EmptyState } from '@/components/feedback/EmptyState';
-import { LoadingState } from '@/components/feedback/LoadingState';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
 import { BaixarReservaDialog, CancelarReservaDialog, ReservaEstoqueFormDialog } from '@/features/estoque/components/ReservaEstoqueDialogs';
@@ -95,7 +94,6 @@ export const ReservasEstoquePage = () => {
                 <div className="col-12 md:col-3"><Card><span className="block text-color-secondary mb-2">Quantidade reservada</span><strong className="text-2xl">{formatQuantity(resumo.quantidadeReservada)}</strong></Card></div>
             </div>
             <Card>
-                {reservasQuery.isLoading ? <LoadingState /> : null}
                 {reservasQuery.error ? <ApiErrorPanel error={mapApiError(reservasQuery.error)} /> : null}
                 <DataTableServer<ReservaEstoqueResponse> value={visibleRecords} totalRecords={records.length} loading={reservasQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }}>
                     <Column header="Produto" body={(row) => produtoLabelMap.get(row.produtoId) ?? 'Produto não carregado'} />

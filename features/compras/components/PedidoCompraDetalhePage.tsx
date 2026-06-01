@@ -223,7 +223,7 @@ export const PedidoCompraDetalhePage = ({ pedidoId }: { pedidoId?: string }) => 
         <>
             <PageHeader title={isNovo ? 'Novo pedido de compra' : `Pedido ${pedido?.numero ?? ''}`} description="Gerencie cabeçalho, itens, aprovação, cancelamento e recebimento do pedido de compra." actions={headerActions} />
             {isNovo ? <Message severity="info" className="w-full mb-3" text="Crie o cabeçalho do pedido para liberar inclusão de itens, aprovação e recebimento." /> : null}
-            {!isNovo && pedidoQuery.isLoading ? <LoadingState /> : null}
+            {!isNovo && pedidoQuery.isLoading ? <LoadingState variant="detail" /> : null}
             {!isNovo && pedidoQuery.error ? <ApiErrorPanel error={mapApiError(pedidoQuery.error)} /> : null}
             {!isNovo && pedido ? <StatusFlowPanel pedido={pedido} /> : null}
             {!isNovo && pedido ? (

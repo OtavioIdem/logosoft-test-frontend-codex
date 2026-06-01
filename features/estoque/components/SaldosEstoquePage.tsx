@@ -41,14 +41,17 @@ export const SaldosEstoquePage = () => {
         <>
             <PageHeader title="Saldos de estoque" description="Consulta de saldo atual, reservado e disponível por produto e local." actions={<EstoqueFilterBar filters={filters} produtos={produtosQuery.data ?? []} locais={locaisQuery.data ?? []} showProduto showLocal search={localSearch} onSearchChange={(value) => { setFirst(0); setLocalSearch(value); }} onFilterChange={updateFilter} />} />
             <Message className="w-full mb-3" severity="info" text="Saldo é consequência dos movimentos; não há alteração direta pela tela de consulta." />
+            {saldosQuery.isLoading ? (
+                <LoadingState variant="metrics" cards={4} className="mb-3" />
+            ) : (
             <div className="grid mb-3">
                 <div className="col-12 md:col-3"><Card><span className="block text-color-secondary mb-2">Produtos com saldo</span><strong className="text-2xl">{resumo.produtosComSaldo}</strong></Card></div>
                 <div className="col-12 md:col-3"><Card><span className="block text-color-secondary mb-2">Saldo atual</span><strong className="text-2xl">{formatQuantity(resumo.quantidadeAtual)}</strong></Card></div>
                 <div className="col-12 md:col-3"><Card><span className="block text-color-secondary mb-2">Reservado</span><strong className="text-2xl">{formatQuantity(resumo.quantidadeReservada)}</strong></Card></div>
                 <div className="col-12 md:col-3"><Card><span className="block text-color-secondary mb-2">Disponível</span><strong className="text-2xl">{formatQuantity(resumo.quantidadeDisponivel)}</strong><small className="block text-color-secondary mt-2">{resumo.saldosIndisponiveis} saldo(s) sem disponibilidade</small></Card></div>
             </div>
+            )}
             <Card>
-                {saldosQuery.isLoading ? <LoadingState /> : null}
                 {saldosQuery.error ? <ApiErrorPanel error={mapApiError(saldosQuery.error)} /> : null}
                 <DataTableServer<EstoqueSaldoResponse> value={visibleRecords} totalRecords={records.length} loading={saldosQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }}>
                     <Column header="Produto" body={(row) => produtoLabelMap.get(row.produtoId) ?? 'Produto não carregado'} />

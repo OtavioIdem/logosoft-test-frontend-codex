@@ -1,11 +1,47 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
+import { InputText } from 'primereact/inputtext';
 import AppMenuitem from './AppMenuitem';
 import { MenuProvider } from './context/menucontext';
 import { AppMenuItem } from '@/types';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
 
+const normalizeSearchValue = (value?: string) =>
+    (value ?? '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+
+const itemMatchesSearch = (item: AppMenuItem, term: string) => {
+    const searchableText = [item.label, item.to, item.url].filter(Boolean).join(' ');
+    return normalizeSearchValue(searchableText).includes(term);
+};
+
+const filterMenuBySearch = (items: AppMenuItem[], term: string): AppMenuItem[] => {
+    if (!term) {
+        return items;
+    }
+
+    return items
+        .map((item) => {
+            const childMatches = item.items ? filterMenuBySearch(item.items, term) : undefined;
+
+            if (itemMatchesSearch(item, term)) {
+                return item;
+            }
+
+            if (childMatches?.length) {
+                return { ...item, items: childMatches };
+            }
+
+            return null;
+        })
+        .filter((item): item is AppMenuItem => Boolean(item));
+};
+
 const AppMenu = () => {
     const permissions = usePermissions();
+    const [menuSearch, setMenuSearch] = useState('');
 
     const model = useMemo<AppMenuItem[]>(
         () => [
@@ -95,14 +131,32 @@ const AppMenu = () => {
             .map((item) => ({ ...item, items: item.items ? filterMenu(item.items) : undefined }))
             .filter((item) => isVisible(item) && (!item.items || item.items.length > 0));
 
-    const filteredModel = filterMenu(model);
+    const visibleModel = filterMenu(model);
+    const searchTerm = normalizeSearchValue(menuSearch);
+    const filteredModel = filterMenuBySearch(visibleModel, searchTerm);
 
     return (
         <MenuProvider>
+            <div className="layout-menu-search">
+                <span className="p-input-icon-left w-full">
+                    <i className="pi pi-search" aria-hidden="true" />
+                    <InputText
+                        value={menuSearch}
+                        onChange={(event) => setMenuSearch(event.target.value)}
+                        placeholder="Buscar tela ou módulo"
+                        aria-label="Buscar tela ou módulo no menu"
+                        className="w-full"
+                    />
+                </span>
+            </div>
             <ul className="layout-menu">
-                {filteredModel.map((item, i) => {
-                    return !item?.seperator ? <AppMenuitem item={item} root={true} index={i} key={item.label} /> : <li className="menu-separator" key={i}></li>;
-                })}
+                {filteredModel.length > 0 ? (
+                    filteredModel.map((item, i) => {
+                        return !item?.seperator ? <AppMenuitem item={item} root={true} index={i} key={item.label} /> : <li className="menu-separator" key={i}></li>;
+                    })
+                ) : (
+                    <li className="layout-menu-empty">Nenhuma tela encontrada.</li>
+                )}
             </ul>
         </MenuProvider>
     );
