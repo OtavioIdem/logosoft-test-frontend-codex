@@ -1,6 +1,6 @@
 # Contrato Fiscal Oficial — Logosoft Frontend
 
-**Versão frontend:** 1.11.0a8b25
+**Versão frontend:** 1.11.0a8b26.c3
 **Base técnica backend:** documentação fiscal v1.10.0a18
 **Escopo:** contrato de integração frontend/backend para telas fiscais operacionais de Nota Fiscal.
 
@@ -2444,3 +2444,26 @@ Quando o contrato real ou E2E backend real forem executados, fornecer variáveis
 ### 43.3 Limites explícitos
 
 Esta revisão não transforma o frontend em validador fiscal legal. O backend/domínio continua responsável pelas regras oficiais, permissões, auditoria, transação e validação de workflow. Também não declara prontos NFS-e real por município, CT-e/MDF-e real, SPED, apuração fiscal, certificado produtivo definitivo ou cálculo tributário oficial.
+
+## 44. Varredura global contra GUID manual — v1.11.0a8b26.c3
+
+A versão `v1.11.0a8b26.c3` adiciona uma verificação global para impedir regressão de UX em campos que referenciam entidades do ERP.
+
+Regra operacional:
+
+- o usuário não deve digitar manualmente identificadores técnicos como `empresaId`, `filialId`, `clienteId`, `produtoId`, `pedidoVendaId`, `condicaoPagamentoId` ou equivalentes;
+- telas devem usar componentes de seleção, busca ou dropdown alimentados por API;
+- o payload pode continuar enviando o identificador interno, mas a origem visual deve ser uma lista contextual;
+- exceções técnicas só são aceitas em fixtures, testes, schemas, clients de API, documentação, campos ocultos, leitura não editável ou exceções controladas e justificadas no próprio gate.
+
+Gate criado:
+
+```bash
+npm run validate:guid-references
+```
+
+Esse gate também passa a ser executado por `npm run validate:source`.
+
+Ponto crítico:
+
+A verificação automatizada não substitui revisão humana. Ela atua como bloqueio preventivo para casos evidentes de `InputText`/`InputTextarea` editável com campos de referência conhecidos, inclusive quando o campo vem de `Controller name` repassado por `{...field}`. A exceção atual para `LoginForm.tsx::empresaId` existe porque o campo representa o código autorizado de login antes da sessão, não uma seleção operacional de empresa carregada por API.

@@ -1,4 +1,5 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { extname, join, relative } from 'node:path';
 
 const root = process.cwd();
@@ -267,6 +268,13 @@ const clienteDialog = readFileSync(join(root, 'features/clientes/components/Clie
 const fornecedorDialog = readFileSync(join(root, 'features/fornecedores/components/FornecedorFormDialog.tsx'), 'utf8');
 if (!clienteDialog.includes('buildPrivacySafeEntityLabel') || !fornecedorDialog.includes('buildPrivacySafeEntityLabel')) {
     failures.push('Cliente/Fornecedor: selects de pessoa devem usar label minimizado por LGPD');
+}
+
+try {
+    statSync(join(root, 'scripts/validate-guid-references.mjs'));
+    execFileSync(process.execPath, [join(root, 'scripts/validate-guid-references.mjs')], { stdio: 'inherit' });
+} catch {
+    failures.push('scripts/validate-guid-references.mjs: varredura global contra GUID manual falhou ou está ausente');
 }
 
 if (failures.length > 0) {
