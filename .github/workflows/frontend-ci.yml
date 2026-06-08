@@ -1,0 +1,78 @@
+name: LogoSoft Frontend CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  workflow_dispatch:
+
+concurrency:
+  group: logosoft-frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend-gates:
+    name: Gates obrigatórios do frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: true
+      NEXT_TELEMETRY_DISABLED: 1
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_APP_NAME: logosoft
+      NEXT_PUBLIC_APP_ENV: test
+      NEXT_PUBLIC_APP_VERSION: 1.11.0a8b28.c1
+      NEXT_PUBLIC_USE_MOCK_AUTH: 'false'
+      NEXT_PUBLIC_USE_MOCK_API: 'false'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm install
+
+      - name: Validar fontes e gates estruturais
+        run: npm run validate:source
+
+      - name: Validar referências por select/API
+        run: npm run validate:guid-references
+
+      - name: Validar prontidão fiscal de produção
+        run: npm run validate:fiscal:production
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Testes unitários
+        run: npm run test:unit
+
+      - name: Build
+        run: npm run build
+
+      - name: Instalar Chromium do Playwright
+        run: npx playwright install chromium
+
+      - name: E2E fiscal mockado
+        run: npm run test:e2e:fiscal
+
+      - name: Contrato fiscal backend opt-in
+        run: npm run test:contract:fiscal
+
+      - name: E2E fiscal backend opt-in
+        run: npm run test:e2e:fiscal:backend

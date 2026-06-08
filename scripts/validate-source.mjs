@@ -277,6 +277,20 @@ try {
     failures.push('scripts/validate-guid-references.mjs: varredura global contra GUID manual falhou ou está ausente');
 }
 
+try {
+    statSync(join(root, 'scripts/validate-ci-gates.mjs'));
+    execFileSync(process.execPath, [join(root, 'scripts/validate-ci-gates.mjs')], { stdio: 'inherit' });
+} catch {
+    failures.push('scripts/validate-ci-gates.mjs: validação dos gates de CI falhou ou está ausente');
+}
+
+try {
+    statSync(join(root, 'scripts/validate-skills.mjs'));
+    execFileSync(process.execPath, [join(root, 'scripts/validate-skills.mjs')], { stdio: 'inherit' });
+} catch {
+    failures.push('scripts/validate-skills.mjs: validação das skills operacionais falhou ou está ausente');
+}
+
 if (failures.length > 0) {
     process.stderr.write(`Validação de fonte falhou:\n${failures.map((failure) => `- ${failure}`).join('\n')}\n`);
     process.exit(1);

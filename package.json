@@ -1,7 +1,7 @@
 {
     "name": "logosoft-frontend",
-    "version": "1.11.0-a.8.b26.c3",
-    "logosoftVersion": "1.11.0a8b26.c3",
+    "version": "1.11.0-a.8.b28.c1",
+    "logosoftVersion": "1.11.0a8b28.c1",
     "private": true,
     "scripts": {
         "dev": "next dev",
@@ -17,13 +17,16 @@
         "test:component": "vitest run tests/components",
         "validate": "npm run validate:source && npm run typecheck && npm run lint && npm run test",
         "validate:source": "node scripts/validate-source.mjs",
+        "validate:ci": "node scripts/validate-ci-gates.mjs",
         "test:e2e:critical": "playwright test tests/e2e/auth.spec.ts tests/e2e/logosoft-critical-flows.spec.ts",
         "test:e2e:ui": "playwright test --ui",
         "test:e2e:fiscal": "playwright test tests/e2e/fiscal.spec.ts",
         "test:contract:fiscal": "playwright test --config=playwright.contract.config.ts",
         "test:e2e:fiscal:backend": "playwright test --config=playwright.backend-e2e.config.ts",
         "validate:fiscal:production": "node scripts/validate-fiscal-production.mjs",
-        "validate:guid-references": "node scripts/validate-guid-references.mjs"
+        "validate:guid-references": "node scripts/validate-guid-references.mjs",
+        "ci:gates": "npm run validate:source && npm run validate:skills && npm run validate:guid-references && npm run validate:fiscal:production && npm run typecheck && npm run lint && npm run test:unit && npm run build && npx playwright install chromium && npm run test:e2e:fiscal && npm run test:contract:fiscal && npm run test:e2e:fiscal:backend",
+        "validate:skills": "node scripts/validate-skills.mjs"
     },
     "dependencies": {
         "@hookform/resolvers": "^3.9.0",
