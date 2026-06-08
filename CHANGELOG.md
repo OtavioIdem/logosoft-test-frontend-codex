@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.11.0a8b29
+
+- Isolados mocks de autenticação e recursos fora de `features/**/api`, movendo-os para `tests/mocks/**`.
+- Mantido E2E mockado apenas em `tests/e2e/fixtures/logosoft.ts` com interceptação controlada via Playwright.
+- Criado gate `validate:mocks-isolation` e integrado ao `validate:source`, `ci:gates` e GitHub Actions.
+- Atualizado o gate de CI para bloquear variáveis públicas `NEXT_PUBLIC_USE_MOCK_*` no workflow.
+- Adicionado teste unitário de regressão para impedir retorno de arquivos mockados aos diretórios produtivos.
+- Criada documentação `docs/MOCKS_ISOLATION_FRONTEND.md`.
+- Atualizada versão visual/documental para `1.11.0a8b29`.
+
 ## v1.11.0a8b8
 
 - Corrigido mascaramento defensivo de XML fiscal na observabilidade.

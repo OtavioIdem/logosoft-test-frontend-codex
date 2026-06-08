@@ -278,6 +278,13 @@ try {
 }
 
 try {
+    statSync(join(root, 'scripts/validate-mocks-isolation.mjs'));
+    execFileSync(process.execPath, [join(root, 'scripts/validate-mocks-isolation.mjs')], { stdio: 'inherit' });
+} catch {
+    failures.push('scripts/validate-mocks-isolation.mjs: validação do isolamento de mocks falhou ou está ausente');
+}
+
+try {
     statSync(join(root, 'scripts/validate-ci-gates.mjs'));
     execFileSync(process.execPath, [join(root, 'scripts/validate-ci-gates.mjs')], { stdio: 'inherit' });
 } catch {

@@ -28,9 +28,7 @@ jobs:
       NEXT_PUBLIC_API_URL: http://localhost:8080
       NEXT_PUBLIC_APP_NAME: logosoft
       NEXT_PUBLIC_APP_ENV: test
-      NEXT_PUBLIC_APP_VERSION: 1.11.0a8b28.c1
-      NEXT_PUBLIC_USE_MOCK_AUTH: 'false'
-      NEXT_PUBLIC_USE_MOCK_API: 'false'
+      NEXT_PUBLIC_APP_VERSION: 1.11.0a8b29
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -46,6 +44,9 @@ jobs:
 
       - name: Validar fontes e gates estruturais
         run: npm run validate:source
+
+      - name: Validar isolamento de mocks
+        run: npm run validate:mocks-isolation
 
       - name: Validar referências por select/API
         run: npm run validate:guid-references

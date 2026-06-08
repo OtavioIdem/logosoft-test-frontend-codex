@@ -38,16 +38,39 @@ Mocks não podem:
 3. O runtime da aplicação não conhece flags mockadas de produção.
 4. O teste deixa claro que é simulado.
 
+## Estrutura obrigatória após a B29
+
+Mocks não podem permanecer em diretórios produtivos. A estrutura permitida é:
+
+```text
+tests/mocks/
+tests/e2e/fixtures/
+```
+
+Caminhos proibidos:
+
+```text
+features/auth/api/mockAuthClient.ts
+features/shared/api/mockErpStore.ts
+features/shared/api/resourceMockClient.ts
+```
+
 ## Ao encontrar mock em `features/`
 
-Não remover por reflexo. Classificar:
+Bloquear a entrega. Depois classificar:
 
 ```text
 É importado por tela produtiva?
 É usado apenas por teste?
 Existe fallback automático?
 Existe flag de ambiente?
-Existe versão própria para isolar/remover?
+Deve ser movido para tests/mocks ou tests/e2e/fixtures?
 ```
 
-Se a remoção/isolamento não for o escopo atual, preservar o arquivo e registrar dívida técnica.
+Se o mock for necessário para teste, mover para `tests/mocks/` ou fixture Playwright. Se for runtime/fallback, remover a dependência e exigir API real.
+
+## Gate obrigatório
+
+```bash
+npm run validate:mocks-isolation
+```

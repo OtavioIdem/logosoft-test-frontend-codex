@@ -5,7 +5,8 @@
 Verificar:
 
 ```bash
-grep -R "mockAuthClient\|mockErpStore\|resourceMockClient\|NEXT_PUBLIC_USE_MOCK" -n .
+npm run validate:mocks-isolation
+grep -R "mockAuthClient\|mockErpStore\|resourceMockClient\|NEXT_PUBLIC_USE_MOCK" -n app components config features hooks layout lib providers types .github || true
 ```
 
 Bloquear se:
@@ -14,7 +15,17 @@ Bloquear se:
 - mock servir como fallback quando API falha;
 - mock alterar fluxo de autenticação real;
 - mock/store for reescrito fora de escopo;
-- flags mockadas forem usadas em runtime produtivo.
+- mock permanecer em `features/**`, `app/**`, `components/**`, `providers/**`, `lib/**` ou `hooks/**`;
+- flags mockadas forem usadas em runtime produtivo ou no workflow CI.
+
+## Caminhos permitidos após a B29
+
+```text
+tests/mocks/auth/mockAuthClient.ts
+tests/mocks/resources/mockErpStore.ts
+tests/mocks/resources/resourceMockClient.ts
+tests/e2e/fixtures/logosoft.ts
+```
 
 ## GUID manual
 

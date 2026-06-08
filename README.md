@@ -1,8 +1,19 @@
-# logosoft Frontend v1.11.0a5
+# logosoft Frontend v1.11.0a8b29
 
 Frontend do ERP **logosoft** em **Next.js**, **React**, **TypeScript** e **PrimeReact/Sakai**, consumindo a API real em `http://localhost:8080` por padrão.
 
 Esta aplicação foi construída para operação real de ERP: autenticação, permissões, cadastros, estoque, vendas, financeiro, compras, auditoria, dashboard, validações, dialogs de motivo, feedbacks visuais e integração centralizada via Axios.
+
+## v1.11.0a8b29 — Isolamento definitivo de mocks produtivos
+
+A v1.11.0a8b29 move mocks de autenticação e recursos para `tests/mocks/**`, preserva E2E mockado somente em fixtures Playwright e adiciona o gate `validate:mocks-isolation` para impedir retorno de mocks aos diretórios produtivos.
+
+### Validação principal
+
+```bash
+npm run validate:mocks-isolation
+npm run validate:source
+```
 
 ## v1.11.0a5 - Busca de telas na sidebar
 
@@ -436,8 +447,6 @@ Crie `.env.local`:
 NEXT_PUBLIC_API_URL=http://localhost:8080
 NEXT_PUBLIC_APP_NAME=logosoft
 NEXT_PUBLIC_APP_ENV=development
-NEXT_PUBLIC_USE_MOCK_AUTH=false
-NEXT_PUBLIC_USE_MOCK_API=false
 ```
 
 ## Rodando localmente

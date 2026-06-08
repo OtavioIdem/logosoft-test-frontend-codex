@@ -1,5 +1,5 @@
 import { ResourceAction, ResourceDefinition, ResourceQuery, ResourceSavePayload } from '@/features/shared/types/resource.types';
-import { mockErpStore } from '@/features/shared/api/mockErpStore';
+import { mockErpStore } from '@/tests/mocks/resources/mockErpStore';
 
 export const createMockResourceClient = (definition: ResourceDefinition) => ({
     list: (query: ResourceQuery = {}) => mockErpStore.list(definition, query),

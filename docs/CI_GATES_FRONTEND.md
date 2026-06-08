@@ -74,3 +74,7 @@ Os testes que precisam de dados simulados devem continuar usando interceptação
 Esta versão não altera contratos de API, telas, mocks/store, payload fiscal, permissões, regra fiscal, sessão ou fluxo operacional.
 
 A entrega é estrutural: adiciona pipeline, validação do pipeline e documentação operacional da CI.
+
+## Gate de isolamento de mocks
+
+A partir da `v1.11.0a8b29`, o CI também valida que mocks permanecem isolados em `tests/mocks` ou fixtures Playwright, sem retorno para diretórios produtivos.

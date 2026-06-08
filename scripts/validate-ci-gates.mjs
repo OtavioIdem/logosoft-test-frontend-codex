@@ -40,6 +40,7 @@ for (const scriptName of requiredPackageScripts) {
 const requiredCiGatesFragments = [
     'npm run validate:source',
     'npm run validate:skills',
+    'npm run validate:mocks-isolation',
     'npm run validate:guid-references',
     'npm run validate:fiscal:production',
     'npm run typecheck',
@@ -74,6 +75,7 @@ if (existsSync(join(root, workflowPath))) {
         'cache: npm',
         'npm install',
         'npm run validate:source',
+        'npm run validate:mocks-isolation',
         'npm run validate:guid-references',
         'npm run validate:fiscal:production',
         'npm run typecheck',
@@ -91,8 +93,8 @@ if (existsSync(join(root, workflowPath))) {
     }
 
     const workflow = read(workflowPath);
-    if (/NEXT_PUBLIC_USE_MOCK_(AUTH|API):\s*['"]?true['"]?/i.test(workflow)) {
-        failures.push(`${workflowPath}: CI não deve ativar mocks produtivos por variável NEXT_PUBLIC_USE_MOCK_*`);
+    if (/NEXT_PUBLIC_USE_MOCK_(AUTH|API)/i.test(workflow)) {
+        failures.push(`${workflowPath}: CI não deve declarar variáveis NEXT_PUBLIC_USE_MOCK_* após isolamento definitivo de mocks`);
     }
     if (!/node-version-file:\s*\.node-version/.test(workflow)) {
         failures.push(`${workflowPath}: CI deve usar a versão Node controlada pelo repositório`);
