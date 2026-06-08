@@ -72,6 +72,38 @@ LOGOSOFT_CONTRACT_EXPORT_CSV_MOTIVO=Contrato fiscal frontend/backend controlado
 
 A exportação CSV fiscal permanece opt-in porque gera auditoria e pode ter custo operacional.
 
+## Contratos operacionais read-only/controlados
+
+A partir da `v1.11.0a8b31`, o frontend possui uma suíte opt-in para validar contratos reais/controlados de Vendas, Estoque, Financeiro e Auditoria sem executar mutações.
+
+Comando:
+
+```bash
+npm run test:contract:operational
+```
+
+Requisitos mínimos:
+
+```bash
+LOGOSOFT_OPERATIONAL_CONTRACT_API_URL
+LOGOSOFT_OPERATIONAL_CONTRACT_ACCESS_TOKEN
+LOGOSOFT_OPERATIONAL_CONTRACT_EMPRESA_ID
+```
+
+Variáveis opcionais:
+
+```bash
+LOGOSOFT_OPERATIONAL_CONTRACT_FILIAL_ID
+LOGOSOFT_OPERATIONAL_CONTRACT_PEDIDO_VENDA_ID
+LOGOSOFT_OPERATIONAL_CONTRACT_CONTA_RECEBER_ID
+LOGOSOFT_OPERATIONAL_CONTRACT_CONTA_PAGAR_ID
+LOGOSOFT_OPERATIONAL_CONTRACT_ORIGEM_ID
+```
+
+Essa suíte é read-only. Ela não deve aprovar/faturar pedido, baixar estoque, receber/pagar conta, cancelar ou estornar registros.
+
+Documentação específica: `docs/BACKEND_OPERATIONAL_CONTRACTS.md`.
+
 ## E2E fiscal backend mutável/controlado
 
 O E2E fiscal real/controlado cria ou altera estado no backend. Por isso ele só deve rodar quando existir ambiente descartável, pedido de venda preparado e token com permissões controladas.
@@ -111,6 +143,7 @@ PLAYWRIGHT_BACKEND_BASE_URL=http://127.0.0.1:3000
 npm install
 npm run validate:source
 npm run validate:backend-controlled
+npm run validate:operational-contracts
 npm run validate:mocks-isolation
 npm run validate:guid-references
 npm run validate:fiscal:production
@@ -121,6 +154,7 @@ npm run build
 npx playwright install chromium
 npm run test:e2e:fiscal
 npm run test:contract:fiscal
+npm run test:contract:operational
 npm run test:e2e:fiscal:backend
 git diff --check
 git diff --cached --check

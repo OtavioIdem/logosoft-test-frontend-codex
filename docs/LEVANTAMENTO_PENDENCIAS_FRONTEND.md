@@ -1,3 +1,19 @@
+# Atualização B31
+
+A `v1.11.0a8b31` reduz parte das pendências de validação real ao criar contratos operacionais read-only para Vendas, Estoque, Financeiro e Auditoria. Ainda não substitui o E2E mutável integrado; ela valida endpoints e DTOs contra backend controlado quando houver opt-in.
+
+Nova pendência consolidada:
+
+```text
+Executar npm run test:contract:operational contra backend controlado com seeds reais/descartáveis e registrar evidência de contrato por módulo.
+```
+
+Próximo passo funcional recomendado:
+
+```text
+v1.11.0a8b32 — E2E integrado controlado de venda → estoque → fiscal → financeiro → auditoria
+```
+
 # Levantamento de pendências do frontend
 
 ## Escopo do levantamento

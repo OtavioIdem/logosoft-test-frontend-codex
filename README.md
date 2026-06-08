@@ -1,8 +1,38 @@
-# logosoft Frontend v1.11.0a8b30
+# logosoft Frontend v1.11.0a8b31.c1
 
 Frontend do ERP **logosoft** em **Next.js**, **React**, **TypeScript** e **PrimeReact/Sakai**, consumindo a API real em `http://localhost:8080` por padrão.
 
 Esta aplicação foi construída para operação real de ERP: autenticação, permissões, cadastros, estoque, vendas, financeiro, compras, auditoria, dashboard, validações, dialogs de motivo, feedbacks visuais e integração centralizada via Axios.
+
+## v1.11.0a8b31.c1 — Correção de isolamento entre contrato fiscal e operacional
+
+A v1.11.0a8b31.c1 corrige a B31 bloqueada: `npm run test:contract:fiscal` passa a descobrir somente `fiscal-backend.contract.spec.ts`, enquanto `npm run test:contract:operational` permanece dedicado ao contrato operacional. O contrato operacional também deixa de aceitar fallback para variáveis fiscais `LOGOSOFT_CONTRACT_*`, exigindo opt-in explícito por `LOGOSOFT_OPERATIONAL_CONTRACT_*`.
+
+### Validação principal
+
+```bash
+npm run validate:operational-contracts
+npm run test:contract:fiscal
+npm run test:contract:operational
+```
+
+## v1.11.0a8b31 — Contratos reais/controlados por módulo prioritário
+
+A v1.11.0a8b31 adiciona contratos operacionais read-only para Vendas, Estoque, Financeiro e Auditoria. A validação é opt-in, usa backend controlado e não executa mutações como faturar pedido, baixar estoque, receber/pagar conta, cancelar ou estornar.
+
+### Validação principal
+
+```bash
+npm run validate:operational-contracts
+npm run validate:source
+```
+
+Quando houver backend controlado preparado:
+
+```bash
+cp .env.backend-controlled.example .env.backend-controlled.local
+npm run test:contract:operational
+```
 
 ## v1.11.0a8b30 — Validação real/controlada frontend/backend
 

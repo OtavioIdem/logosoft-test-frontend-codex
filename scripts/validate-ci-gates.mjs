@@ -24,12 +24,14 @@ const requiredPackageScripts = [
     'validate:guid-references',
     'validate:fiscal:production',
     'validate:backend-controlled',
+    'validate:operational-contracts',
     'typecheck',
     'lint',
     'test:unit',
     'build',
     'test:e2e:fiscal',
     'test:contract:fiscal',
+    'test:contract:operational',
     'test:e2e:fiscal:backend',
     'ci:gates'
 ];
@@ -43,6 +45,7 @@ const requiredCiGatesFragments = [
     'npm run validate:skills',
     'npm run validate:mocks-isolation',
     'npm run validate:backend-controlled',
+    'npm run validate:operational-contracts',
     'npm run validate:guid-references',
     'npm run validate:fiscal:production',
     'npm run typecheck',
@@ -52,6 +55,7 @@ const requiredCiGatesFragments = [
     'npx playwright install chromium',
     'npm run test:e2e:fiscal',
     'npm run test:contract:fiscal',
+    'npm run test:contract:operational',
     'npm run test:e2e:fiscal:backend'
 ];
 const ciGatesScript = scripts['ci:gates'] ?? '';
@@ -79,6 +83,7 @@ if (existsSync(join(root, workflowPath))) {
         'npm run validate:source',
         'npm run validate:mocks-isolation',
         'npm run validate:backend-controlled',
+    'npm run validate:operational-contracts',
         'npm run validate:guid-references',
         'npm run validate:fiscal:production',
         'npm run typecheck',
@@ -88,6 +93,7 @@ if (existsSync(join(root, workflowPath))) {
         'npx playwright install chromium',
         'npm run test:e2e:fiscal',
         'npm run test:contract:fiscal',
+    'npm run test:contract:operational',
         'npm run test:e2e:fiscal:backend'
     ];
 

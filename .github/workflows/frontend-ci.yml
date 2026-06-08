@@ -28,7 +28,7 @@ jobs:
       NEXT_PUBLIC_API_URL: http://localhost:8080
       NEXT_PUBLIC_APP_NAME: logosoft
       NEXT_PUBLIC_APP_ENV: test
-      NEXT_PUBLIC_APP_VERSION: 1.11.0a8b30
+      NEXT_PUBLIC_APP_VERSION: 1.11.0a8b31.c1
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -50,6 +50,9 @@ jobs:
 
       - name: Validar contrato de ambiente backend controlado
         run: npm run validate:backend-controlled
+
+      - name: Validar contratos operacionais controlados
+        run: npm run validate:operational-contracts
 
       - name: Validar referências por select/API
         run: npm run validate:guid-references
@@ -77,6 +80,9 @@ jobs:
 
       - name: Contrato fiscal backend opt-in
         run: npm run test:contract:fiscal
+
+      - name: Contrato operacional backend opt-in
+        run: npm run test:contract:operational
 
       - name: E2E fiscal backend opt-in
         run: npm run test:e2e:fiscal:backend

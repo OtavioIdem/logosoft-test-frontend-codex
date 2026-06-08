@@ -10,6 +10,7 @@ O markdown condiz com o pacote.
 Os gates obrigatórios passaram.
 Os testes direcionados passaram.
 Os skips opt-in estão justificados.
+O contrato operacional read-only foi executado ou skipped por ausência de ambiente controlado.
 Não há mock produtivo.
 Não há GUID manual indevido.
 Não há exposição de dado sensível.

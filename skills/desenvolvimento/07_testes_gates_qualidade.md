@@ -27,6 +27,7 @@ npm run validate:guid-references
 npm run validate:fiscal:production
 npm run test:e2e:fiscal
 npm run test:contract:fiscal
+npm run test:contract:operational
 npm run test:e2e:fiscal:backend
 ```
 
@@ -40,6 +41,7 @@ npm run validate:ci
 
 ```bash
 npm run validate:backend-controlled
+npm run validate:operational-contracts
 ```
 
 ### Skills

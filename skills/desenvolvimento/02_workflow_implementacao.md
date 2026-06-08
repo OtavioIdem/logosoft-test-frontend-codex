@@ -55,6 +55,7 @@ npm run validate:guid-references
 npm run validate:fiscal:production
 npm run test:e2e:fiscal
 npm run test:contract:fiscal
+npm run test:contract:operational
 npm run test:e2e:fiscal:backend
 npm run validate:skills
 npm run validate:ci

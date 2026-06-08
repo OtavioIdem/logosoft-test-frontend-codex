@@ -1,5 +1,24 @@
 # Changelog
 
+## v1.11.0a8b31.c1
+
+- Corrigido isolamento entre contrato fiscal e contrato operacional.
+- `playwright.contract.config.ts` passa a executar somente `fiscal-backend.contract.spec.ts`.
+- Removido fallback `LOGOSOFT_CONTRACT_*` do contrato operacional, exigindo `LOGOSOFT_OPERATIONAL_CONTRACT_*`.
+- Reforçado `validate-operational-contracts` para bloquear regressão de descoberta cruzada ou dependência operacional em variáveis fiscais.
+- Atualizado teste unitário de regressão para proteger a separação das suítes.
+- Atualizada versão visual/documental para `1.11.0a8b31.c1`.
+
+## v1.11.0a8b31
+
+- Criados contratos operacionais read-only para Vendas, Estoque, Financeiro e Auditoria contra backend real/controlado.
+- Adicionado script `test:contract:operational` com configuração Playwright dedicada.
+- Criado gate `validate:operational-contracts` e integrado ao `validate:source`, `ci:gates` e GitHub Actions.
+- Atualizado `.env.backend-controlled.example` com variáveis operacionais sem segredos reais.
+- Documentada a validação em `docs/BACKEND_OPERATIONAL_CONTRACTS.md`.
+- Adicionado teste unitário para proteger scripts, opt-in e comportamento read-only do contrato operacional.
+- Atualizada versão visual/documental para `1.11.0a8b31`.
+
 ## v1.11.0a8b30
 
 - Preparada validação real/controlada frontend/backend sem reintroduzir mocks produtivos.

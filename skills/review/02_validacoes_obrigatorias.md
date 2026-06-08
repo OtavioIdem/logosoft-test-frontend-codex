@@ -8,6 +8,7 @@ npm run validate:source
 npm run validate:skills
 npm run validate:ci
 npm run validate:backend-controlled
+npm run validate:operational-contracts
 npm run validate:guid-references
 npm run validate:fiscal:production
 npm run typecheck
@@ -24,6 +25,7 @@ git diff --cached --check
 npx playwright install chromium
 npm run test:e2e:fiscal
 npm run test:contract:fiscal
+npm run test:contract:operational
 npm run test:e2e:fiscal:backend
 ```
 
