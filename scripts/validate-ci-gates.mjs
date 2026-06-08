@@ -24,6 +24,7 @@ const requiredPackageScripts = [
     'validate:guid-references',
     'validate:fiscal:production',
     'validate:backend-controlled',
+    'validate:integrated-e2e',
     'validate:operational-contracts',
     'typecheck',
     'lint',
@@ -33,6 +34,7 @@ const requiredPackageScripts = [
     'test:contract:fiscal',
     'test:contract:operational',
     'test:e2e:fiscal:backend',
+    'test:e2e:integrated:backend',
     'ci:gates'
 ];
 
@@ -45,6 +47,7 @@ const requiredCiGatesFragments = [
     'npm run validate:skills',
     'npm run validate:mocks-isolation',
     'npm run validate:backend-controlled',
+    'npm run validate:integrated-e2e',
     'npm run validate:operational-contracts',
     'npm run validate:guid-references',
     'npm run validate:fiscal:production',
@@ -70,6 +73,10 @@ if (playwrightInstallIndex < 0 || fiscalE2eIndex < 0 || playwrightInstallIndex >
     failures.push('package.json: script ci:gates deve instalar Chromium do Playwright antes do E2E fiscal');
 }
 
+if (ciGatesScript.includes('npm run test:e2e:integrated:backend')) {
+    failures.push('package.json: ci:gates não deve executar fluxo mutável integrado automaticamente');
+}
+
 if (existsSync(join(root, workflowPath))) {
     const requiredWorkflowFragments = [
         'pull_request:',
@@ -83,6 +90,7 @@ if (existsSync(join(root, workflowPath))) {
         'npm run validate:source',
         'npm run validate:mocks-isolation',
         'npm run validate:backend-controlled',
+    'npm run validate:integrated-e2e',
     'npm run validate:operational-contracts',
         'npm run validate:guid-references',
         'npm run validate:fiscal:production',
@@ -107,6 +115,13 @@ if (existsSync(join(root, workflowPath))) {
     }
     if (!/node-version-file:\s*\.node-version/.test(workflow)) {
         failures.push(`${workflowPath}: CI deve usar a versão Node controlada pelo repositório`);
+    }
+
+    if (workflow.includes('npm run test:e2e:integrated:backend')) {
+        failures.push(`${workflowPath}: workflow padrão não deve executar fluxo mutável integrado automaticamente`);
+    }
+    if (/LOGOSOFT_INTEGRATED_E2E_ACCESS_TOKEN|LOGOSOFT_INTEGRATED_E2E_RUN:\s*true/i.test(workflow)) {
+        failures.push(`${workflowPath}: CI não deve declarar token nem ativar E2E integrado mutável`);
     }
 }
 

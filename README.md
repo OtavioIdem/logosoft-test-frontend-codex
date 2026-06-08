@@ -1,8 +1,28 @@
-# logosoft Frontend v1.11.0a8b31.c1
+# logosoft Frontend v1.11.0a8b32
 
 Frontend do ERP **logosoft** em **Next.js**, **React**, **TypeScript** e **PrimeReact/Sakai**, consumindo a API real em `http://localhost:8080` por padrão.
 
 Esta aplicação foi construída para operação real de ERP: autenticação, permissões, cadastros, estoque, vendas, financeiro, compras, auditoria, dashboard, validações, dialogs de motivo, feedbacks visuais e integração centralizada via Axios.
+
+
+## v1.11.0a8b32 — E2E integrado controlado
+
+A v1.11.0a8b32 adiciona uma suíte E2E integrada e opt-in para validar, em ambiente controlado, o fluxo venda → fiscal → estoque → financeiro → auditoria. O fluxo é mutável, usa variáveis próprias `LOGOSOFT_INTEGRATED_E2E_*` e não roda automaticamente no CI comum.
+
+### Validação principal
+
+```bash
+npm run validate:integrated-e2e
+npm run validate:source
+```
+
+Quando houver backend descartável/homologação preparado:
+
+```bash
+cp .env.backend-controlled.example .env.backend-controlled.local
+npx playwright install chromium
+npm run test:e2e:integrated:backend
+```
 
 ## v1.11.0a8b31.c1 — Correção de isolamento entre contrato fiscal e operacional
 

@@ -1,5 +1,15 @@
 # Changelog
 
+
+## v1.11.0a8b32
+
+- Criado E2E integrado controlado para venda → fiscal → estoque → financeiro → auditoria.
+- Adicionado `test:e2e:integrated:backend` com Playwright config dedicada e opt-in próprio `LOGOSOFT_INTEGRATED_E2E_*`.
+- Criado gate `validate:integrated-e2e` e integrado ao `validate:source`, `ci:gates` e GitHub Actions sem executar fluxo mutável no CI comum.
+- Atualizado `.env.backend-controlled.example` com variáveis integradas sem segredos reais e execução desligada por padrão.
+- Criada documentação `docs/BACKEND_INTEGRATED_E2E.md` e levantamento `docs/LEVANTAMENTO_PENDENCIAS_FRONTEND_B32.md`.
+- Atualizada versão visual/documental para `1.11.0a8b32`.
+
 ## v1.11.0a8b31.c1
 
 - Corrigido isolamento entre contrato fiscal e contrato operacional.

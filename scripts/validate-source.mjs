@@ -293,6 +293,14 @@ try {
 
 
 
+
+try {
+    statSync(join(root, 'scripts/validate-integrated-e2e.mjs'));
+    execFileSync(process.execPath, [join(root, 'scripts/validate-integrated-e2e.mjs')], { stdio: 'inherit' });
+} catch {
+    failures.push('scripts/validate-integrated-e2e.mjs: validação do E2E integrado controlado falhou ou está ausente');
+}
+
 try {
     statSync(join(root, 'scripts/validate-operational-contracts.mjs'));
     execFileSync(process.execPath, [join(root, 'scripts/validate-operational-contracts.mjs')], { stdio: 'inherit' });
