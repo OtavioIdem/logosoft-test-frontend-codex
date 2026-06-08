@@ -1,8 +1,28 @@
-# logosoft Frontend v1.11.0a8b29
+# logosoft Frontend v1.11.0a8b30
 
 Frontend do ERP **logosoft** em **Next.js**, **React**, **TypeScript** e **PrimeReact/Sakai**, consumindo a API real em `http://localhost:8080` por padrão.
 
 Esta aplicação foi construída para operação real de ERP: autenticação, permissões, cadastros, estoque, vendas, financeiro, compras, auditoria, dashboard, validações, dialogs de motivo, feedbacks visuais e integração centralizada via Axios.
+
+## v1.11.0a8b30 — Validação real/controlada frontend/backend
+
+A v1.11.0a8b30 prepara o frontend para validação contra backend real/controlado sem reintroduzir mocks produtivos. A versão adiciona template seguro de ambiente, documentação de execução controlada, gate `validate:backend-controlled` e levantamento formal do que ainda falta implementar por módulo.
+
+### Validação principal
+
+```bash
+npm run validate:backend-controlled
+npm run validate:source
+```
+
+Quando houver backend controlado preparado:
+
+```bash
+cp .env.backend-controlled.example .env.backend-controlled.local
+npx playwright install chromium
+npm run test:contract:fiscal
+npm run test:e2e:fiscal:backend
+```
 
 ## v1.11.0a8b29 — Isolamento definitivo de mocks produtivos
 

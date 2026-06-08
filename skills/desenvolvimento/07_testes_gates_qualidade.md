@@ -36,6 +36,12 @@ npm run test:e2e:fiscal:backend
 npm run validate:ci
 ```
 
+### Backend controlado
+
+```bash
+npm run validate:backend-controlled
+```
+
 ### Skills
 
 ```bash
@@ -77,4 +83,4 @@ caso documentado de revisão
 
 ## Ambiente
 
-O projeto exige Node 24 e npm 11. Se o ambiente local não atender, documentar validações não executadas e não declarar aprovação completa.
+O projeto exige Node 24 e npm 11. Se o ambiente local não atender, documentar validações não executadas e não declarar aprovação completa. Validações contra backend real/controlado devem usar ambiente de homologação, sandbox ou base descartável; nunca apontar fluxo mutável para produção.

@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.11.0a8b30
+
+- Preparada validação real/controlada frontend/backend sem reintroduzir mocks produtivos.
+- Criado template `.env.backend-controlled.example` sem segredos reais.
+- Criado gate `validate:backend-controlled` e integrado ao `validate:source`, `ci:gates` e GitHub Actions.
+- Reforçado `validate-ci-gates` para exigir o novo gate.
+- Criada documentação `docs/BACKEND_CONTROLLED_VALIDATION.md`.
+- Criado levantamento `docs/LEVANTAMENTO_PENDENCIAS_FRONTEND.md` com pendências por módulo, testes e ambiente.
+- Adicionado teste unitário para proteger o contrato estrutural de backend controlado.
+- Atualizada versão visual/documental para `1.11.0a8b30`.
+
 ## v1.11.0a8b29
 
 - Isolados mocks de autenticação e recursos fora de `features/**/api`, movendo-os para `tests/mocks/**`.

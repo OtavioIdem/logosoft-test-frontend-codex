@@ -291,6 +291,14 @@ try {
     failures.push('scripts/validate-ci-gates.mjs: validação dos gates de CI falhou ou está ausente');
 }
 
+
+try {
+    statSync(join(root, 'scripts/validate-backend-controlled.mjs'));
+    execFileSync(process.execPath, [join(root, 'scripts/validate-backend-controlled.mjs')], { stdio: 'inherit' });
+} catch {
+    failures.push('scripts/validate-backend-controlled.mjs: validação do ambiente backend controlado falhou ou está ausente');
+}
+
 try {
     statSync(join(root, 'scripts/validate-skills.mjs'));
     execFileSync(process.execPath, [join(root, 'scripts/validate-skills.mjs')], { stdio: 'inherit' });
