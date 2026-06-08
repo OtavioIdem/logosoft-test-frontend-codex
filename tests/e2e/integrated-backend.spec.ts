@@ -7,6 +7,8 @@ const refreshToken = process.env.LOGOSOFT_INTEGRATED_E2E_REFRESH_TOKEN ?? 'refre
 const empresaId = process.env.LOGOSOFT_INTEGRATED_E2E_EMPRESA_ID;
 const filialId = process.env.LOGOSOFT_INTEGRATED_E2E_FILIAL_ID ?? null;
 const pedidoVendaId = process.env.LOGOSOFT_INTEGRATED_E2E_PEDIDO_VENDA_ID;
+const seedRunId = process.env.LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID;
+const disposableEnvironmentAck = process.env.LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK === 'true';
 const runIntegratedFlow = process.env.LOGOSOFT_INTEGRATED_E2E_RUN === 'true';
 const ufAutorizadora = (process.env.LOGOSOFT_INTEGRATED_E2E_UF_AUTORIZADORA ?? 'SP').toUpperCase();
 const serieNota = process.env.LOGOSOFT_INTEGRATED_E2E_SERIE_NOTA ?? '1';
@@ -15,7 +17,7 @@ const unidadeComercialPadrao = process.env.LOGOSOFT_INTEGRATED_E2E_UNIDADE_COMER
 const schemaSetName = process.env.LOGOSOFT_INTEGRATED_E2E_SCHEMA_SET_NAME ?? 'NFe-4.00';
 const numeroNota = process.env.LOGOSOFT_INTEGRATED_E2E_NUMERO_NOTA ?? String(Date.now()).slice(-9);
 const primeiraDataVencimento = process.env.LOGOSOFT_INTEGRATED_E2E_PRIMEIRA_DATA_VENCIMENTO ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-const shouldRun = Boolean(runIntegratedFlow && apiUrl && accessToken && empresaId && pedidoVendaId);
+const shouldRun = Boolean(runIntegratedFlow && apiUrl && accessToken && empresaId && pedidoVendaId && seedRunId && disposableEnvironmentAck);
 
 type JsonRecord = Record<string, unknown>;
 
@@ -151,7 +153,7 @@ const assertOperationalSideEffects = async (
 };
 
 test.describe('E2E integrado backend controlado', () => {
-    test.skip(!shouldRun, 'Defina LOGOSOFT_INTEGRATED_E2E_RUN=true, LOGOSOFT_INTEGRATED_E2E_API_URL, LOGOSOFT_INTEGRATED_E2E_ACCESS_TOKEN, LOGOSOFT_INTEGRATED_E2E_EMPRESA_ID e LOGOSOFT_INTEGRATED_E2E_PEDIDO_VENDA_ID para executar este fluxo mutável em ambiente controlado.');
+    test.skip(!shouldRun, 'Defina LOGOSOFT_INTEGRATED_E2E_RUN=true, LOGOSOFT_INTEGRATED_E2E_API_URL, LOGOSOFT_INTEGRATED_E2E_ACCESS_TOKEN, LOGOSOFT_INTEGRATED_E2E_EMPRESA_ID, LOGOSOFT_INTEGRATED_E2E_PEDIDO_VENDA_ID, LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID e LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true para executar este fluxo mutável em ambiente descartável/controlado.');
 
     test('valida venda, fiscal, estoque, financeiro e auditoria em ambiente descartável', async ({ page }) => {
         await writeBackendSession(page);
@@ -179,7 +181,7 @@ test.describe('E2E integrado backend controlado', () => {
                 cfopPadrao,
                 unidadeComercialPadrao,
                 validarDadosFiscaisProduto: true,
-                observacao: `E2E integrado controlado ${numeroNota}`
+                observacao: `E2E integrado controlado ${numeroNota} seed ${seedRunId}`
             }
         });
         await expectOk(gerarNotaResponse, 'Geração de nota fiscal por pedido de venda no E2E integrado');

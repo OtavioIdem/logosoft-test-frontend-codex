@@ -8,6 +8,7 @@ npm run validate:source
 npm run validate:skills
 npm run validate:ci
 npm run validate:backend-controlled
+npm run validate:controlled-seeds
 npm run validate:integrated-e2e
 npm run validate:operational-contracts
 npm run validate:guid-references
@@ -45,7 +46,7 @@ npm run test:component -- tests/components/LoginForm.test.tsx
 
 ## Ambiente opt-in
 
-Testes contract/backend podem ser skipados quando variáveis reais não estiverem configuradas. Esse skip deve aparecer no relatório e não significa validação real de produção. Quando `LOGOSOFT_E2E_RUN_BACKEND_FISCAL=true` estiver ativo, confirmar que o ambiente é controlado, descartável ou homologação, nunca produção. Quando `LOGOSOFT_INTEGRATED_E2E_RUN=true` estiver ativo, confirmar também que o pedido de venda, estoque, fiscal, financeiro e auditoria usam base descartável/controlada.
+Testes contract/backend podem ser skipados quando variáveis reais não estiverem configuradas. Esse skip deve aparecer no relatório e não significa validação real de produção. Quando `LOGOSOFT_E2E_RUN_BACKEND_FISCAL=true` estiver ativo, confirmar que o ambiente é controlado, descartável ou homologação, nunca produção. Quando `LOGOSOFT_INTEGRATED_E2E_RUN=true` estiver ativo, confirmar também `LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID`, `LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true` e que pedido de venda, estoque, fiscal, financeiro e auditoria usam base descartável/controlada.
 
 ## Falhas automáticas
 

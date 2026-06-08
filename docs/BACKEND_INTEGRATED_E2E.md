@@ -180,3 +180,25 @@ A versão pode ser aprovada estruturalmente quando:
 6. o ambiente controlado confirma venda, fiscal, estoque, financeiro e auditoria.
 
 Execução skipped sem variáveis não significa validação real do fluxo. Significa apenas que o opt-in de segurança funcionou.
+
+## Complemento B33 — seeds controladas
+
+A partir da B33, o E2E integrado mutável exige rastreio explícito de seed e confirmação de ambiente descartável.
+
+Variáveis adicionais obrigatórias:
+
+```bash
+LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID=<identificador-da-seed>
+LOGOSOFT_INTEGRATED_E2E_SEED_FILE=tests/seeds/integrated-e2e.controlled-seed.example.json
+LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true
+```
+
+O arquivo versionado `tests/seeds/integrated-e2e.controlled-seed.example.json` é apenas um template seguro. Ele não executa seed no backend e não deve conter token, JWT, certificado, senha ou segredo.
+
+Sem `LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true`, a suíte integrada deve permanecer skipped mesmo que exista token e pedido de venda preenchido.
+
+A documentação detalhada está em:
+
+```text
+docs/CONTROLLED_SEEDS_INTEGRATED_E2E.md
+```

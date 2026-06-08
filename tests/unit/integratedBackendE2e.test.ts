@@ -14,6 +14,8 @@ describe('integrated backend E2E', () => {
         expect(spec).toContain('LOGOSOFT_INTEGRATED_E2E_ACCESS_TOKEN');
         expect(spec).toContain('LOGOSOFT_INTEGRATED_E2E_EMPRESA_ID');
         expect(spec).toContain('LOGOSOFT_INTEGRATED_E2E_PEDIDO_VENDA_ID');
+        expect(spec).toContain('LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID');
+        expect(spec).toContain("LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK === 'true'");
         expect(spec).toContain('test.skip(!shouldRun');
         expect(spec).toContain('/api/vendas/pedidos');
         expect(spec).toContain('/api/fiscal/notas-fiscais/gerar-de-pedido-venda');
@@ -52,6 +54,9 @@ describe('integrated backend E2E', () => {
         expect(envExample).toContain('LOGOSOFT_INTEGRATED_E2E_ACCESS_TOKEN=');
         expect(envExample).toContain('LOGOSOFT_INTEGRATED_E2E_EMPRESA_ID=');
         expect(envExample).toContain('LOGOSOFT_INTEGRATED_E2E_PEDIDO_VENDA_ID=');
+        expect(envExample).toContain('LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID=LOGOSOFT-E2E-CONTROLADO-EXEMPLO');
+        expect(envExample).toContain('LOGOSOFT_INTEGRATED_E2E_SEED_FILE=tests/seeds/integrated-e2e.controlled-seed.example.json');
+        expect(envExample).toContain('LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=false');
         expect(envExample).not.toMatch(/Bearer\s+[A-Za-z0-9._-]+/i);
         expect(envExample).not.toMatch(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/);
         expect(envExample).not.toContain('sk-');

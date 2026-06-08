@@ -294,6 +294,14 @@ try {
 
 
 
+
+try {
+    statSync(join(root, 'scripts/validate-controlled-seeds.mjs'));
+    execFileSync(process.execPath, [join(root, 'scripts/validate-controlled-seeds.mjs')], { stdio: 'inherit' });
+} catch {
+    failures.push('scripts/validate-controlled-seeds.mjs: validação de seeds controladas falhou ou está ausente');
+}
+
 try {
     statSync(join(root, 'scripts/validate-integrated-e2e.mjs'));
     execFileSync(process.execPath, [join(root, 'scripts/validate-integrated-e2e.mjs')], { stdio: 'inherit' });

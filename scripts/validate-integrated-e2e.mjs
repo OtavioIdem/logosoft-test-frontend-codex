@@ -17,6 +17,8 @@ const requiredFiles = [
     ['tests/unit/integratedBackendE2e.test.ts', 'teste unitário de regressão do E2E integrado obrigatório ausente'],
     ['docs/BACKEND_INTEGRATED_E2E.md', 'documentação do E2E integrado controlado obrigatória ausente'],
     ['docs/IMPLEMENTACAO_V1_11_0A8B32.md', 'markdown de implementação da B32 obrigatório ausente'],
+    ['docs/CONTROLLED_SEEDS_INTEGRATED_E2E.md', 'documentação de seeds controladas obrigatória ausente'],
+    ['tests/seeds/integrated-e2e.controlled-seed.example.json', 'template de seed controlado obrigatório ausente'],
     ['.env.backend-controlled.example', 'template de ambiente controlado obrigatório ausente']
 ];
 
@@ -32,6 +34,8 @@ if (existsSync(join(root, 'tests/e2e/integrated-backend.spec.ts'))) {
         'LOGOSOFT_INTEGRATED_E2E_ACCESS_TOKEN',
         'LOGOSOFT_INTEGRATED_E2E_EMPRESA_ID',
         'LOGOSOFT_INTEGRATED_E2E_PEDIDO_VENDA_ID',
+        'LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID',
+        "LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK === 'true'",
         'test.skip(!shouldRun',
         '/api/vendas/pedidos',
         '/api/fiscal/notas-fiscais/gerar-de-pedido-venda',
@@ -102,7 +106,10 @@ if (existsSync(join(root, '.env.backend-controlled.example'))) {
         'LOGOSOFT_INTEGRATED_E2E_API_URL=http://localhost:8080',
         'LOGOSOFT_INTEGRATED_E2E_ACCESS_TOKEN=',
         'LOGOSOFT_INTEGRATED_E2E_EMPRESA_ID=',
-        'LOGOSOFT_INTEGRATED_E2E_PEDIDO_VENDA_ID='
+        'LOGOSOFT_INTEGRATED_E2E_PEDIDO_VENDA_ID=',
+        'LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID=LOGOSOFT-E2E-CONTROLADO-EXEMPLO',
+        'LOGOSOFT_INTEGRATED_E2E_SEED_FILE=tests/seeds/integrated-e2e.controlled-seed.example.json',
+        'LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=false'
     ];
 
     for (const fragment of requiredEnvFragments) {
@@ -114,6 +121,7 @@ if (existsSync(join(root, '.env.backend-controlled.example'))) {
 }
 
 requireIncludes('scripts/validate-source.mjs', 'scripts/validate-integrated-e2e.mjs', 'validate:source deve executar validate-integrated-e2e');
+requireIncludes('scripts/validate-source.mjs', 'scripts/validate-controlled-seeds.mjs', 'validate:source deve executar validate-controlled-seeds');
 
 if (failures.length > 0) {
     process.stderr.write(`Validação do E2E integrado controlado falhou:\n${failures.map((failure) => `- ${failure}`).join('\n')}\n`);

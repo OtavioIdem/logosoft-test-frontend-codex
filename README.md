@@ -1,8 +1,29 @@
-# logosoft Frontend v1.11.0a8b32
+# logosoft Frontend v1.11.0a8b33
 
 Frontend do ERP **logosoft** em **Next.js**, **React**, **TypeScript** e **PrimeReact/Sakai**, consumindo a API real em `http://localhost:8080` por padrão.
 
 Esta aplicação foi construída para operação real de ERP: autenticação, permissões, cadastros, estoque, vendas, financeiro, compras, auditoria, dashboard, validações, dialogs de motivo, feedbacks visuais e integração centralizada via Axios.
+
+## v1.11.0a8b33 — Seeds controladas para E2E integrado
+
+A v1.11.0a8b33 prepara o E2E integrado para rodar somente com dados previsíveis, rastreáveis e descartáveis. A versão adiciona template de seed, documentação e gate `validate:controlled-seeds`, sem criar seed real no backend e sem executar fluxo mutável no CI comum.
+
+### Validação principal
+
+```bash
+npm run validate:controlled-seeds
+npm run validate:integrated-e2e
+npm run validate:source
+```
+
+Quando houver backend descartável/homologação preparado:
+
+```bash
+cp .env.backend-controlled.example .env.backend-controlled.local
+# preencher LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID e LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true somente localmente
+npx playwright install chromium
+npm run test:e2e:integrated:backend
+```
 
 
 ## v1.11.0a8b32 — E2E integrado controlado

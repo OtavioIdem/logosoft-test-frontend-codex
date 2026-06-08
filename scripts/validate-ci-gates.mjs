@@ -24,6 +24,7 @@ const requiredPackageScripts = [
     'validate:guid-references',
     'validate:fiscal:production',
     'validate:backend-controlled',
+    'validate:controlled-seeds',
     'validate:integrated-e2e',
     'validate:operational-contracts',
     'typecheck',
@@ -47,6 +48,7 @@ const requiredCiGatesFragments = [
     'npm run validate:skills',
     'npm run validate:mocks-isolation',
     'npm run validate:backend-controlled',
+    'npm run validate:controlled-seeds',
     'npm run validate:integrated-e2e',
     'npm run validate:operational-contracts',
     'npm run validate:guid-references',
@@ -90,6 +92,7 @@ if (existsSync(join(root, workflowPath))) {
         'npm run validate:source',
         'npm run validate:mocks-isolation',
         'npm run validate:backend-controlled',
+    'npm run validate:controlled-seeds',
     'npm run validate:integrated-e2e',
     'npm run validate:operational-contracts',
         'npm run validate:guid-references',
@@ -122,6 +125,9 @@ if (existsSync(join(root, workflowPath))) {
     }
     if (/LOGOSOFT_INTEGRATED_E2E_ACCESS_TOKEN|LOGOSOFT_INTEGRATED_E2E_RUN:\s*true/i.test(workflow)) {
         failures.push(`${workflowPath}: CI não deve declarar token nem ativar E2E integrado mutável`);
+    }
+    if (/LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK:\s*true/i.test(workflow)) {
+        failures.push(`${workflowPath}: CI não deve habilitar acknowledgement de ambiente descartável`);
     }
 }
 

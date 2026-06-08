@@ -1,6 +1,16 @@
 # Changelog
 
 
+## v1.11.0a8b33
+
+- Criado template `tests/seeds/integrated-e2e.controlled-seed.example.json` para dados descartáveis do E2E integrado.
+- Adicionado gate `validate:controlled-seeds` e integrado ao `validate:source`, `ci:gates` e GitHub Actions.
+- Reforçado o E2E integrado para exigir `LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID` e `LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true`.
+- Reforçado `validate-integrated-e2e` e `validate-ci-gates` para bloquear regressão de execução mutável sem seed controlada.
+- Criada documentação `docs/CONTROLLED_SEEDS_INTEGRATED_E2E.md` e levantamento `docs/LEVANTAMENTO_PENDENCIAS_FRONTEND_B33.md`.
+- Atualizada versão visual/documental para `1.11.0a8b33`.
+
+
 ## v1.11.0a8b32
 
 - Criado E2E integrado controlado para venda → fiscal → estoque → financeiro → auditoria.

@@ -41,6 +41,7 @@ npm run validate:ci
 
 ```bash
 npm run validate:backend-controlled
+npm run validate:controlled-seeds
 npm run validate:operational-contracts
 npm run validate:integrated-e2e
 ```
@@ -86,4 +87,4 @@ caso documentado de revisão
 
 ## Ambiente
 
-O projeto exige Node 24 e npm 11. Se o ambiente local não atender, documentar validações não executadas e não declarar aprovação completa. Validações contra backend real/controlado devem usar ambiente de homologação, sandbox ou base descartável; nunca apontar fluxo mutável para produção. O E2E integrado (`npm run test:e2e:integrated:backend`) só pode rodar com `LOGOSOFT_INTEGRATED_E2E_RUN=true` e ambiente descartável preparado.
+O projeto exige Node 24 e npm 11. Se o ambiente local não atender, documentar validações não executadas e não declarar aprovação completa. Validações contra backend real/controlado devem usar ambiente de homologação, sandbox ou base descartável; nunca apontar fluxo mutável para produção. O E2E integrado (`npm run test:e2e:integrated:backend`) só pode rodar com `LOGOSOFT_INTEGRATED_E2E_RUN=true`, `LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID` e `LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true` em ambiente descartável preparado.
