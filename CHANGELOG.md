@@ -1,3 +1,11 @@
+# v1.11.0a8b36
+
+- Adicionada validação real assistida do E2E integrado com backend descartável/controlado.
+- Criados gate `validate:assisted-e2e`, script `report:e2e:integrated:assisted` e template de evidências.
+- Adicionado ACK `LOGOSOFT_INTEGRATED_E2E_ASSISTED_VALIDATION_ACK=false` nos envs versionados.
+- Reforçado que o E2E integrado mutável, seed/reset e relatório assistido não rodam no CI padrão.
+- Atualizadas skills, README e documentação operacional da execução assistida.
+
 # Changelog
 
 

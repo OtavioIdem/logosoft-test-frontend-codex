@@ -31,6 +31,7 @@ describe('backend seed/reset integration for integrated E2E', () => {
         expect(spec).toContain('seedResetAppliedAck');
         expect(spec).toContain('runbookAck && seedResetAppliedAck');
         expect(spec).toContain('LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=true');
+        expect(spec).toContain('LOGOSOFT_INTEGRATED_E2E_ASSISTED_VALIDATION_ACK=true');
         expect(envExample).toContain('LOGOSOFT_INTEGRATED_E2E_SEED_RESET_RUN=false');
         expect(envExample).toContain('LOGOSOFT_INTEGRATED_E2E_SEED_RESET_ACK=false');
         expect(envExample).toContain('LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=false');

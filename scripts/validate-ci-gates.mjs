@@ -27,6 +27,7 @@ const requiredPackageScripts = [
     'validate:controlled-seeds',
     'validate:integrated-runbook',
     'validate:backend-seed-reset',
+    'validate:assisted-e2e',
     'validate:integrated-e2e',
     'validate:operational-contracts',
     'typecheck',
@@ -39,6 +40,7 @@ const requiredPackageScripts = [
     'test:e2e:fiscal:backend',
     'test:e2e:integrated:backend',
     'prepare:e2e:integrated:seed',
+    'report:e2e:integrated:assisted',
     'ci:gates'
 ];
 
@@ -54,6 +56,7 @@ const requiredCiGatesFragments = [
     'npm run validate:controlled-seeds',
     'npm run validate:integrated-runbook',
     'npm run validate:backend-seed-reset',
+    'npm run validate:assisted-e2e',
     'npm run validate:integrated-e2e',
     'npm run validate:operational-contracts',
     'npm run validate:guid-references',
@@ -87,6 +90,10 @@ if (ciGatesScript.includes('npm run prepare:e2e:integrated:seed')) {
     failures.push('package.json: ci:gates não deve executar seed/reset mutável integrado automaticamente');
 }
 
+if (ciGatesScript.includes('npm run report:e2e:integrated:assisted')) {
+    failures.push('package.json: ci:gates não deve gerar relatório assistido automaticamente');
+}
+
 if (existsSync(join(root, workflowPath))) {
     const requiredWorkflowFragments = [
         'pull_request:',
@@ -103,6 +110,7 @@ if (existsSync(join(root, workflowPath))) {
     'npm run validate:controlled-seeds',
     'npm run validate:integrated-runbook',
     'npm run validate:backend-seed-reset',
+    'npm run validate:assisted-e2e',
     'npm run validate:integrated-e2e',
     'npm run validate:operational-contracts',
         'npm run validate:guid-references',
@@ -136,6 +144,9 @@ if (existsSync(join(root, workflowPath))) {
     if (workflow.includes('npm run prepare:e2e:integrated:seed')) {
         failures.push(`${workflowPath}: workflow padrão não deve executar seed/reset mutável integrado automaticamente`);
     }
+    if (workflow.includes('npm run report:e2e:integrated:assisted')) {
+        failures.push(`${workflowPath}: workflow padrão não deve gerar relatório assistido automaticamente`);
+    }
     if (/LOGOSOFT_INTEGRATED_E2E_ACCESS_TOKEN|LOGOSOFT_INTEGRATED_E2E_RUN:\s*true/i.test(workflow)) {
         failures.push(`${workflowPath}: CI não deve declarar token nem ativar E2E integrado mutável`);
     }
@@ -147,6 +158,9 @@ if (existsSync(join(root, workflowPath))) {
     }
     if (/LOGOSOFT_INTEGRATED_E2E_SEED_RESET_(RUN|ACK|APPLIED_ACK):\s*true/i.test(workflow)) {
         failures.push(`${workflowPath}: CI não deve habilitar seed/reset integrado mutável`);
+    }
+    if (/LOGOSOFT_INTEGRATED_E2E_ASSISTED_VALIDATION_ACK:\s*true/i.test(workflow)) {
+        failures.push(`${workflowPath}: CI não deve habilitar validação assistida mutável`);
     }
 }
 

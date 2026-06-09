@@ -39,7 +39,9 @@ if (existsSync(join(root, 'tests/e2e/integrated-backend.spec.ts'))) {
         "LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK === 'true'",
         "LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK === 'true'",
         "LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK === 'true'",
+        "LOGOSOFT_INTEGRATED_E2E_ASSISTED_VALIDATION_ACK === 'true'",
         'seedResetAppliedAck',
+        'assistedValidationAck',
         'test.skip(!shouldRun',
         'runbookAck',
         '/api/vendas/pedidos',
@@ -116,7 +118,8 @@ if (existsSync(join(root, '.env.backend-controlled.example'))) {
         'LOGOSOFT_INTEGRATED_E2E_SEED_FILE=tests/seeds/integrated-e2e.controlled-seed.example.json',
         'LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=false',
         'LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=false',
-        'LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=false'
+        'LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=false',
+        'LOGOSOFT_INTEGRATED_E2E_ASSISTED_VALIDATION_ACK=false'
     ];
 
     for (const fragment of requiredEnvFragments) {

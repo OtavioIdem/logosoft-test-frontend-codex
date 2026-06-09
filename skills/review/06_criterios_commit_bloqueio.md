@@ -28,6 +28,7 @@ validate:fiscal:production falha.
 validate:skills falha.
 validate:integrated-e2e falha.
 validate:backend-seed-reset falha.
+validate:assisted-e2e falha.
 Arquivo rastreado some sem justificativa.
 Arquivo fora de escopo é reescrito.
 Markdown contradiz o ZIP.
@@ -36,7 +37,7 @@ Campo de vínculo vira input manual de GUID.
 Tela crítica fica sem permissão.
 Fluxo fiscal ignora workflow/resumo.
 Payload sensível aparece em tela, log ou teste.
-E2E integrado mutável ou seed/reset roda no CI comum, sem opt-in próprio, sem ambiente descartável, sem `LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true` ou sem `LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=true` quando aplicável.
+E2E integrado mutável ou seed/reset roda no CI comum, sem opt-in próprio, sem ambiente descartável, sem `LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true`, sem `LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=true` quando aplicável ou sem `LOGOSOFT_INTEGRATED_E2E_ASSISTED_VALIDATION_ACK=true` na execução real assistida.
 ```
 
 ## Commit

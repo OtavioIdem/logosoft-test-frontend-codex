@@ -318,6 +318,14 @@ try {
     failures.push('scripts/validate-backend-seed-reset.mjs: validação de seed/reset backend falhou ou está ausente');
 }
 
+
+try {
+    statSync(join(root, 'scripts/validate-assisted-e2e.mjs'));
+    execFileSync(process.execPath, [join(root, 'scripts/validate-assisted-e2e.mjs')], { stdio: 'inherit' });
+} catch {
+    failures.push('scripts/validate-assisted-e2e.mjs: validação assistida do E2E integrado falhou ou está ausente');
+}
+
 try {
     statSync(join(root, 'scripts/validate-integrated-e2e.mjs'));
     execFileSync(process.execPath, [join(root, 'scripts/validate-integrated-e2e.mjs')], { stdio: 'inherit' });

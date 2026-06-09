@@ -45,7 +45,7 @@ describe('controlled integrated E2E seeds', () => {
         expect(spec).toContain('disposableEnvironmentAck');
         expect(spec).toContain('runbookAck');
         expect(spec).toContain('seedResetAppliedAck');
-        expect(spec).toContain('shouldRun = Boolean(runIntegratedFlow && apiUrl && accessToken && empresaId && pedidoVendaId && seedRunId && disposableEnvironmentAck && runbookAck && seedResetAppliedAck)');
+        expect(spec).toContain('shouldRun = Boolean(runIntegratedFlow && apiUrl && accessToken && empresaId && pedidoVendaId && seedRunId && disposableEnvironmentAck && runbookAck && seedResetAppliedAck && assistedValidationAck)');
         expect(envExample).toContain('LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID=LOGOSOFT-E2E-CONTROLADO-EXEMPLO');
         expect(envExample).toContain('LOGOSOFT_INTEGRATED_E2E_SEED_FILE=tests/seeds/integrated-e2e.controlled-seed.example.json');
         expect(envExample).toContain('LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=false');

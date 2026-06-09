@@ -11,6 +11,7 @@ const seedRunId = process.env.LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID;
 const disposableEnvironmentAck = process.env.LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK === 'true';
 const runbookAck = process.env.LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK === 'true';
 const seedResetAppliedAck = process.env.LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK === 'true';
+const assistedValidationAck = process.env.LOGOSOFT_INTEGRATED_E2E_ASSISTED_VALIDATION_ACK === 'true';
 const runIntegratedFlow = process.env.LOGOSOFT_INTEGRATED_E2E_RUN === 'true';
 const ufAutorizadora = (process.env.LOGOSOFT_INTEGRATED_E2E_UF_AUTORIZADORA ?? 'SP').toUpperCase();
 const serieNota = process.env.LOGOSOFT_INTEGRATED_E2E_SERIE_NOTA ?? '1';
@@ -19,7 +20,7 @@ const unidadeComercialPadrao = process.env.LOGOSOFT_INTEGRATED_E2E_UNIDADE_COMER
 const schemaSetName = process.env.LOGOSOFT_INTEGRATED_E2E_SCHEMA_SET_NAME ?? 'NFe-4.00';
 const numeroNota = process.env.LOGOSOFT_INTEGRATED_E2E_NUMERO_NOTA ?? String(Date.now()).slice(-9);
 const primeiraDataVencimento = process.env.LOGOSOFT_INTEGRATED_E2E_PRIMEIRA_DATA_VENCIMENTO ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-const shouldRun = Boolean(runIntegratedFlow && apiUrl && accessToken && empresaId && pedidoVendaId && seedRunId && disposableEnvironmentAck && runbookAck && seedResetAppliedAck);
+const shouldRun = Boolean(runIntegratedFlow && apiUrl && accessToken && empresaId && pedidoVendaId && seedRunId && disposableEnvironmentAck && runbookAck && seedResetAppliedAck && assistedValidationAck);
 
 type JsonRecord = Record<string, unknown>;
 
@@ -155,7 +156,7 @@ const assertOperationalSideEffects = async (
 };
 
 test.describe('E2E integrado backend controlado', () => {
-    test.skip(!shouldRun, 'Defina LOGOSOFT_INTEGRATED_E2E_RUN=true, LOGOSOFT_INTEGRATED_E2E_API_URL, LOGOSOFT_INTEGRATED_E2E_ACCESS_TOKEN, LOGOSOFT_INTEGRATED_E2E_EMPRESA_ID, LOGOSOFT_INTEGRATED_E2E_PEDIDO_VENDA_ID, LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID, LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true, LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true e LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=true para executar este fluxo mutável em ambiente descartável/controlado.');
+    test.skip(!shouldRun, 'Defina LOGOSOFT_INTEGRATED_E2E_RUN=true, LOGOSOFT_INTEGRATED_E2E_API_URL, LOGOSOFT_INTEGRATED_E2E_ACCESS_TOKEN, LOGOSOFT_INTEGRATED_E2E_EMPRESA_ID, LOGOSOFT_INTEGRATED_E2E_PEDIDO_VENDA_ID, LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID, LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true, LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true e LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=true e LOGOSOFT_INTEGRATED_E2E_ASSISTED_VALIDATION_ACK=true para executar este fluxo mutável em ambiente descartável/controlado com validação assistida.');
 
     test('valida venda, fiscal, estoque, financeiro e auditoria em ambiente descartável', async ({ page }) => {
         await writeBackendSession(page);
@@ -233,6 +234,11 @@ test.describe('E2E integrado backend controlado', () => {
         await financeiroDialog.getByRole('button', { name: /^Gerar financeiro$/ }).click();
         await expect(financeiroDialog).toBeHidden({ timeout: 60_000 });
         await expect(fiscalSummaryCard(page, 'Financeiro').getByText('Gerado', { exact: true })).toBeVisible({ timeout: 60_000 });
+
+        await test.info().attach('integrated-e2e-assisted-context', {
+            body: JSON.stringify({ seedRunId, pedidoVendaId, notaFiscalId, assistedValidationAck }, null, 2),
+            contentType: 'application/json'
+        });
 
         await assertOperationalSideEffects(api, notaFiscalId);
         await api.dispose();
