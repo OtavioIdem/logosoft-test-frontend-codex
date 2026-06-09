@@ -25,6 +25,7 @@ const requiredPackageScripts = [
     'validate:fiscal:production',
     'validate:backend-controlled',
     'validate:controlled-seeds',
+    'validate:integrated-runbook',
     'validate:integrated-e2e',
     'validate:operational-contracts',
     'typecheck',
@@ -49,6 +50,7 @@ const requiredCiGatesFragments = [
     'npm run validate:mocks-isolation',
     'npm run validate:backend-controlled',
     'npm run validate:controlled-seeds',
+    'npm run validate:integrated-runbook',
     'npm run validate:integrated-e2e',
     'npm run validate:operational-contracts',
     'npm run validate:guid-references',
@@ -93,6 +95,7 @@ if (existsSync(join(root, workflowPath))) {
         'npm run validate:mocks-isolation',
         'npm run validate:backend-controlled',
     'npm run validate:controlled-seeds',
+    'npm run validate:integrated-runbook',
     'npm run validate:integrated-e2e',
     'npm run validate:operational-contracts',
         'npm run validate:guid-references',
@@ -128,6 +131,9 @@ if (existsSync(join(root, workflowPath))) {
     }
     if (/LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK:\s*true/i.test(workflow)) {
         failures.push(`${workflowPath}: CI não deve habilitar acknowledgement de ambiente descartável`);
+    }
+    if (/LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK:\s*true/i.test(workflow)) {
+        failures.push(`${workflowPath}: CI não deve habilitar acknowledgement de leitura do runbook`);
     }
 }
 

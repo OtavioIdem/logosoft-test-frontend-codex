@@ -1,8 +1,34 @@
-# logosoft Frontend v1.11.0a8b33
+# logosoft Frontend v1.11.0a8b34
 
 Frontend do ERP **logosoft** em **Next.js**, **React**, **TypeScript** e **PrimeReact/Sakai**, consumindo a API real em `http://localhost:8080` por padrão.
 
 Esta aplicação foi construída para operação real de ERP: autenticação, permissões, cadastros, estoque, vendas, financeiro, compras, auditoria, dashboard, validações, dialogs de motivo, feedbacks visuais e integração centralizada via Axios.
+
+
+## v1.11.0a8b34 — Runbook de backend descartável para E2E integrado
+
+A v1.11.0a8b34 documenta o procedimento seguro para executar o E2E integrado real contra backend descartável/controlado. A versão adiciona o runbook operacional, o gate `validate:integrated-runbook` e uma proteção extra `LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true`, sem colocar o fluxo mutável no CI comum.
+
+### Validação principal
+
+```bash
+npm run validate:integrated-runbook
+npm run validate:controlled-seeds
+npm run validate:integrated-e2e
+npm run validate:source
+```
+
+Quando houver backend descartável preparado e o runbook tiver sido seguido:
+
+```bash
+cp .env.backend-controlled.example .env.backend-controlled.local
+# preencher token e IDs somente localmente
+# habilitar LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true e LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true somente em ambiente descartável
+npx playwright install chromium
+npm run test:contract:fiscal
+npm run test:contract:operational
+npm run test:e2e:integrated:backend
+```
 
 ## v1.11.0a8b33 — Seeds controladas para E2E integrado
 

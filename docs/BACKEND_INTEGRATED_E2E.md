@@ -191,14 +191,21 @@ Variáveis adicionais obrigatórias:
 LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID=<identificador-da-seed>
 LOGOSOFT_INTEGRATED_E2E_SEED_FILE=tests/seeds/integrated-e2e.controlled-seed.example.json
 LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true
+LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true
 ```
 
 O arquivo versionado `tests/seeds/integrated-e2e.controlled-seed.example.json` é apenas um template seguro. Ele não executa seed no backend e não deve conter token, JWT, certificado, senha ou segredo.
 
-Sem `LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true`, a suíte integrada deve permanecer skipped mesmo que exista token e pedido de venda preenchido.
+Sem `LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true
+LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true`, a suíte integrada deve permanecer skipped mesmo que exista token e pedido de venda preenchido.
 
 A documentação detalhada está em:
 
 ```text
 docs/CONTROLLED_SEEDS_INTEGRATED_E2E.md
 ```
+
+
+## Runbook obrigatório
+
+Antes da execução real, seguir `docs/RUNBOOK_BACKEND_DESCARTAVEL_E2E_INTEGRADO.md`. A suíte mutável deve permanecer skipped sem `LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true`.

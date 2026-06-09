@@ -24,9 +24,11 @@ LOGOSOFT_INTEGRATED_E2E_EMPRESA_ID=<empresa-controlada>
 LOGOSOFT_INTEGRATED_E2E_PEDIDO_VENDA_ID=<pedido-controlado-faturavel>
 LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID=<identificador-da-seed>
 LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true
+LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true
 ```
 
-Sem `LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true`, a suíte deve ficar skipped mesmo que as outras variáveis estejam preenchidas.
+Sem `LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true
+LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true`, a suíte deve ficar skipped mesmo que as outras variáveis estejam preenchidas.
 
 ## Template de seed
 
@@ -94,7 +96,8 @@ Esse gate valida:
 2. Criar ou carregar dados seguindo `tests/seeds/integrated-e2e.controlled-seed.example.json`.
 3. Copiar `.env.backend-controlled.example` para `.env.backend-controlled.local`.
 4. Preencher token e IDs somente localmente.
-5. Definir `LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true` somente após confirmar que a base pode sofrer mutação.
+5. Definir `LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true
+LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true` somente após confirmar que a base pode sofrer mutação.
 6. Executar:
 
 ```bash
@@ -109,3 +112,8 @@ npm run test:e2e:integrated:backend
 - Geração de pedido de venda controlado.
 - Estratégia de limpeza das notas/financeiro/estoque gerados no teste.
 - Validação fiscal oficial por documentação vigente e especialista humano.
+
+
+## Runbook obrigatório
+
+Antes de habilitar a execução real, seguir `docs/RUNBOOK_BACKEND_DESCARTAVEL_E2E_INTEGRADO.md`. O arquivo versionado mantém `LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=false`; o valor `true` só pode existir no `.env.backend-controlled.local`.

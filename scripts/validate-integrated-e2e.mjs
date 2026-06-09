@@ -18,6 +18,7 @@ const requiredFiles = [
     ['docs/BACKEND_INTEGRATED_E2E.md', 'documentação do E2E integrado controlado obrigatória ausente'],
     ['docs/IMPLEMENTACAO_V1_11_0A8B32.md', 'markdown de implementação da B32 obrigatório ausente'],
     ['docs/CONTROLLED_SEEDS_INTEGRATED_E2E.md', 'documentação de seeds controladas obrigatória ausente'],
+    ['docs/RUNBOOK_BACKEND_DESCARTAVEL_E2E_INTEGRADO.md', 'runbook do backend descartável obrigatório ausente'],
     ['tests/seeds/integrated-e2e.controlled-seed.example.json', 'template de seed controlado obrigatório ausente'],
     ['.env.backend-controlled.example', 'template de ambiente controlado obrigatório ausente']
 ];
@@ -36,7 +37,9 @@ if (existsSync(join(root, 'tests/e2e/integrated-backend.spec.ts'))) {
         'LOGOSOFT_INTEGRATED_E2E_PEDIDO_VENDA_ID',
         'LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID',
         "LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK === 'true'",
+        "LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK === 'true'",
         'test.skip(!shouldRun',
+        'runbookAck',
         '/api/vendas/pedidos',
         '/api/fiscal/notas-fiscais/gerar-de-pedido-venda',
         '/api/estoque/movimentos',
@@ -109,7 +112,8 @@ if (existsSync(join(root, '.env.backend-controlled.example'))) {
         'LOGOSOFT_INTEGRATED_E2E_PEDIDO_VENDA_ID=',
         'LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID=LOGOSOFT-E2E-CONTROLADO-EXEMPLO',
         'LOGOSOFT_INTEGRATED_E2E_SEED_FILE=tests/seeds/integrated-e2e.controlled-seed.example.json',
-        'LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=false'
+        'LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=false',
+        'LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=false'
     ];
 
     for (const fragment of requiredEnvFragments) {

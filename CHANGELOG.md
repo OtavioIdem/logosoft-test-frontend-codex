@@ -1,6 +1,15 @@
 # Changelog
 
 
+## v1.11.0a8b34
+
+- Criado `docs/RUNBOOK_BACKEND_DESCARTAVEL_E2E_INTEGRADO.md` com procedimento de backend descartável para o E2E integrado real.
+- Adicionado gate `validate:integrated-runbook` e integrado ao `validate:source`, `ci:gates` e GitHub Actions.
+- Reforçado `tests/e2e/integrated-backend.spec.ts` para exigir `LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true` além do opt-in e ACK de ambiente descartável.
+- Atualizado `.env.backend-controlled.example` com `LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=false`, preservando execução desligada em arquivo versionado.
+- Criado teste unitário `tests/unit/integratedRunbook.test.ts` para proteger runbook, ACK e gates.
+- Atualizada versão visual/documental para `1.11.0a8b34`.
+
 ## v1.11.0a8b33
 
 - Criado template `tests/seeds/integrated-e2e.controlled-seed.example.json` para dados descartáveis do E2E integrado.

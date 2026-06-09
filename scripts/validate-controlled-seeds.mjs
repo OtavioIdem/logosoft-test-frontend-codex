@@ -76,7 +76,7 @@ if (existsSync(join(root, 'tests/e2e/integrated-backend.spec.ts'))) {
         "LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK === 'true'",
         'disposableEnvironmentAck',
         'seedRunId',
-        'shouldRun = Boolean(runIntegratedFlow && apiUrl && accessToken && empresaId && pedidoVendaId && seedRunId && disposableEnvironmentAck)'
+        'shouldRun = Boolean(runIntegratedFlow && apiUrl && accessToken && empresaId && pedidoVendaId && seedRunId && disposableEnvironmentAck && runbookAck)'
     ];
 
     for (const fragment of requiredSpecFragments) {
@@ -118,6 +118,17 @@ if (existsSync(join(root, '.github/workflows/frontend-ci.yml'))) {
 requireIncludes('scripts/validate-source.mjs', 'scripts/validate-controlled-seeds.mjs', 'validate:source deve executar validate-controlled-seeds');
 requireIncludes('scripts/validate-ci-gates.mjs', 'validate:controlled-seeds', 'validate-ci-gates deve exigir validate:controlled-seeds');
 requireIncludes('scripts/validate-integrated-e2e.mjs', 'LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID', 'validate-integrated-e2e deve exigir rastreio de seed controlada');
+
+
+if (existsSync(join(root, '.env.backend-controlled.example'))) {
+    const envExample = read('.env.backend-controlled.example');
+    if (!envExample.includes('LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=false')) {
+        failures.push('.env.backend-controlled.example: deve manter LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=false');
+    }
+    if (envExample.includes('LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true')) {
+        failures.push('.env.backend-controlled.example: não deve habilitar RUNBOOK_ACK=true em arquivo versionado');
+    }
+}
 
 if (failures.length > 0) {
     process.stderr.write(`Validação de seeds controladas falhou:\n${failures.map((failure) => `- ${failure}`).join('\n')}\n`);

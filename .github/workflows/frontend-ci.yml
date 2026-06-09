@@ -28,7 +28,7 @@ jobs:
       NEXT_PUBLIC_API_URL: http://localhost:8080
       NEXT_PUBLIC_APP_NAME: logosoft
       NEXT_PUBLIC_APP_ENV: test
-      NEXT_PUBLIC_APP_VERSION: 1.11.0a8b33
+      NEXT_PUBLIC_APP_VERSION: 1.11.0a8b34
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -53,6 +53,9 @@ jobs:
 
       - name: Validar seeds controladas para E2E integrado
         run: npm run validate:controlled-seeds
+
+      - name: Validar runbook do E2E integrado
+        run: npm run validate:integrated-runbook
 
       - name: Validar E2E integrado controlado
         run: npm run validate:integrated-e2e

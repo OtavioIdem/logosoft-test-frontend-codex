@@ -11,7 +11,7 @@ Os gates obrigatórios passaram.
 Os testes direcionados passaram.
 Os skips opt-in estão justificados.
 O contrato operacional read-only foi executado ou skipped por ausência de ambiente controlado.
-O E2E integrado mutável foi apenas validado estruturalmente ou executado com opt-in em ambiente descartável.
+O E2E integrado mutável foi apenas validado estruturalmente ou executado com opt-in em ambiente descartável após seguir o runbook.
 Não há mock produtivo.
 Não há GUID manual indevido.
 Não há exposição de dado sensível.
@@ -35,7 +35,7 @@ Campo de vínculo vira input manual de GUID.
 Tela crítica fica sem permissão.
 Fluxo fiscal ignora workflow/resumo.
 Payload sensível aparece em tela, log ou teste.
-E2E integrado mutável roda no CI comum ou sem opt-in próprio.
+E2E integrado mutável roda no CI comum, sem opt-in próprio, sem ambiente descartável ou sem `LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true`.
 ```
 
 ## Commit

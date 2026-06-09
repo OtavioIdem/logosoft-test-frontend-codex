@@ -302,6 +302,14 @@ try {
     failures.push('scripts/validate-controlled-seeds.mjs: validação de seeds controladas falhou ou está ausente');
 }
 
+
+try {
+    statSync(join(root, 'scripts/validate-integrated-runbook.mjs'));
+    execFileSync(process.execPath, [join(root, 'scripts/validate-integrated-runbook.mjs')], { stdio: 'inherit' });
+} catch {
+    failures.push('scripts/validate-integrated-runbook.mjs: validação do runbook de E2E integrado falhou ou está ausente');
+}
+
 try {
     statSync(join(root, 'scripts/validate-integrated-e2e.mjs'));
     execFileSync(process.execPath, [join(root, 'scripts/validate-integrated-e2e.mjs')], { stdio: 'inherit' });
