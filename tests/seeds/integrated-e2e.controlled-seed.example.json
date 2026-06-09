@@ -43,5 +43,13 @@
         "token real versionado",
         "certificado digital real versionado",
         "dados fiscais oficiais sem validação humana"
-    ]
+    ],
+    "backendSeedResetContract": {
+        "endpoint": "/api/test/integrated-e2e/reset",
+        "method": "POST",
+        "requiresDisposableEnvironmentAck": true,
+        "requiresRunbookAck": true,
+        "requiresSeedResetAck": true,
+        "requiresAppliedAckBeforeE2E": true
+    }
 }

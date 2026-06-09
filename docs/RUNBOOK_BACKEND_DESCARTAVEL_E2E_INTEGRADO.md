@@ -286,3 +286,22 @@ Validar que ACK true não está versionado.
 Confirmar que `ci:gates` não executa o E2E integrado mutável.
 Bloquear divergência entre markdown e pacote.
 ```
+
+## Integração com seed/reset real do backend
+
+A partir da v1.11.0a8b35, quando o backend disponibilizar endpoint real/controlado de preparação de dados, execute também:
+
+```bash
+npm run validate:backend-seed-reset
+npm run prepare:e2e:integrated:seed
+```
+
+O comando de seed/reset exige:
+
+```bash
+LOGOSOFT_INTEGRATED_E2E_SEED_RESET_RUN=true
+LOGOSOFT_INTEGRATED_E2E_SEED_RESET_ACK=true
+LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=true
+```
+
+O valor `LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=true` só deve ser definido depois que o backend confirmar que o reset foi aplicado no ambiente descartável.

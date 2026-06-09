@@ -1,6 +1,16 @@
 # Changelog
 
 
+## v1.11.0a8b35
+
+- Criado `scripts/prepare-integrated-e2e-seed.mjs` para chamar procedimento real/controlado de seed/reset do backend.
+- Adicionado gate `validate:backend-seed-reset` e integrado ao `validate:source`, `ci:gates` e GitHub Actions.
+- Reforçado o E2E integrado para exigir `LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=true` antes de rodar fluxo mutável.
+- Atualizados `.env.example`, `.env.test` e `.env.backend-controlled.example` com variáveis de seed/reset desligadas por padrão.
+- Criada documentação `docs/BACKEND_SEED_RESET_INTEGRATION.md` e levantamento `docs/LEVANTAMENTO_PENDENCIAS_FRONTEND_B35.md`.
+- Criado teste unitário `tests/unit/backendSeedResetIntegration.test.ts` para proteger scripts, ACKs e CI.
+- Atualizada versão visual/documental para `1.11.0a8b35`.
+
 ## v1.11.0a8b34
 
 - Criado `docs/RUNBOOK_BACKEND_DESCARTAVEL_E2E_INTEGRADO.md` com procedimento de backend descartável para o E2E integrado real.

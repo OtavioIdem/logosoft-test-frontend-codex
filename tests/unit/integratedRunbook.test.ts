@@ -13,6 +13,7 @@ describe('integrated E2E disposable backend runbook', () => {
         expect(runbook).toContain('LOGOSOFT_INTEGRATED_E2E_RUN=true');
         expect(runbook).toContain('LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true');
         expect(runbook).toContain('LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true');
+        expect(runbook).toContain('LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=true');
         expect(runbook).toContain('docker compose -f docker-compose.test.yml down -v');
         expect(runbook).toContain('docker compose -f docker-compose.test.yml up -d postgres redis api');
         expect(runbook).toContain('dotnet ef database update');
@@ -33,9 +34,13 @@ describe('integrated E2E disposable backend runbook', () => {
 
         expect(spec).toContain("LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK === 'true'");
         expect(spec).toContain('runbookAck');
+        expect(spec).toContain('seedResetAppliedAck');
         expect(spec).toContain('disposableEnvironmentAck && runbookAck');
+        expect(spec).toContain('runbookAck && seedResetAppliedAck');
         expect(spec).toContain('LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true');
+        expect(spec).toContain('LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=true');
         expect(envExample).toContain('LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=false');
+        expect(envExample).toContain('LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=false');
         expect(envExample).not.toContain('LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true');
     });
 

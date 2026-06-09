@@ -38,6 +38,8 @@ if (existsSync(join(root, 'tests/e2e/integrated-backend.spec.ts'))) {
         'LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID',
         "LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK === 'true'",
         "LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK === 'true'",
+        "LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK === 'true'",
+        'seedResetAppliedAck',
         'test.skip(!shouldRun',
         'runbookAck',
         '/api/vendas/pedidos',
@@ -113,7 +115,8 @@ if (existsSync(join(root, '.env.backend-controlled.example'))) {
         'LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID=LOGOSOFT-E2E-CONTROLADO-EXEMPLO',
         'LOGOSOFT_INTEGRATED_E2E_SEED_FILE=tests/seeds/integrated-e2e.controlled-seed.example.json',
         'LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=false',
-        'LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=false'
+        'LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=false',
+        'LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=false'
     ];
 
     for (const fragment of requiredEnvFragments) {
@@ -126,6 +129,7 @@ if (existsSync(join(root, '.env.backend-controlled.example'))) {
 
 requireIncludes('scripts/validate-source.mjs', 'scripts/validate-integrated-e2e.mjs', 'validate:source deve executar validate-integrated-e2e');
 requireIncludes('scripts/validate-source.mjs', 'scripts/validate-controlled-seeds.mjs', 'validate:source deve executar validate-controlled-seeds');
+requireIncludes('scripts/validate-source.mjs', 'scripts/validate-backend-seed-reset.mjs', 'validate:source deve executar validate-backend-seed-reset');
 
 if (failures.length > 0) {
     process.stderr.write(`Validação do E2E integrado controlado falhou:\n${failures.map((failure) => `- ${failure}`).join('\n')}\n`);

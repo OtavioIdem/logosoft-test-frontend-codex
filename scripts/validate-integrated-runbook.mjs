@@ -32,6 +32,7 @@ if (existsSync(join(root, 'docs/RUNBOOK_BACKEND_DESCARTAVEL_E2E_INTEGRADO.md')))
         'LOGOSOFT_INTEGRATED_E2E_RUN=true',
         'LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true',
         'LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true',
+        'LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=true',
         'docker compose -f docker-compose.test.yml down -v',
         'docker compose -f docker-compose.test.yml up -d postgres redis api',
         'dotnet ef database update',
@@ -57,8 +58,11 @@ if (existsSync(join(root, 'tests/e2e/integrated-backend.spec.ts'))) {
     const requiredSpecFragments = [
         "LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK === 'true'",
         'runbookAck',
+        'seedResetAppliedAck',
         'disposableEnvironmentAck && runbookAck',
-        'LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true'
+        'runbookAck && seedResetAppliedAck',
+        'LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true',
+        'LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=true'
     ];
     for (const fragment of requiredSpecFragments) {
         if (!spec.includes(fragment)) failures.push(`tests/e2e/integrated-backend.spec.ts: deve conter ${fragment}`);

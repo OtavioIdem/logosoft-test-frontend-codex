@@ -1,7 +1,7 @@
 {
     "name": "logosoft-frontend",
-    "version": "1.11.0-a.8.b34",
-    "logosoftVersion": "1.11.0a8b34",
+    "version": "1.11.0-a.8.b35",
+    "logosoftVersion": "1.11.0a8b35",
     "private": true,
     "scripts": {
         "dev": "next dev",
@@ -25,7 +25,7 @@
         "test:e2e:fiscal:backend": "playwright test --config=playwright.backend-e2e.config.ts",
         "validate:fiscal:production": "node scripts/validate-fiscal-production.mjs",
         "validate:guid-references": "node scripts/validate-guid-references.mjs",
-        "ci:gates": "npm run validate:source && npm run validate:skills && npm run validate:mocks-isolation && npm run validate:backend-controlled && npm run validate:controlled-seeds && npm run validate:integrated-runbook && npm run validate:integrated-e2e && npm run validate:operational-contracts && npm run validate:guid-references && npm run validate:fiscal:production && npm run typecheck && npm run lint && npm run test:unit && npm run build && npx playwright install chromium && npm run test:e2e:fiscal && npm run test:contract:fiscal && npm run test:contract:operational && npm run test:e2e:fiscal:backend",
+        "ci:gates": "npm run validate:source && npm run validate:skills && npm run validate:mocks-isolation && npm run validate:backend-controlled && npm run validate:controlled-seeds && npm run validate:integrated-runbook && npm run validate:backend-seed-reset && npm run validate:integrated-e2e && npm run validate:operational-contracts && npm run validate:guid-references && npm run validate:fiscal:production && npm run typecheck && npm run lint && npm run test:unit && npm run build && npx playwright install chromium && npm run test:e2e:fiscal && npm run test:contract:fiscal && npm run test:contract:operational && npm run test:e2e:fiscal:backend",
         "validate:skills": "node scripts/validate-skills.mjs",
         "validate:mocks-isolation": "node scripts/validate-mocks-isolation.mjs",
         "validate:backend-controlled": "node scripts/validate-backend-controlled.mjs",
@@ -34,7 +34,9 @@
         "validate:integrated-e2e": "node scripts/validate-integrated-e2e.mjs",
         "test:e2e:integrated:backend": "playwright test --config=playwright.integrated-e2e.config.ts",
         "validate:controlled-seeds": "node scripts/validate-controlled-seeds.mjs",
-        "validate:integrated-runbook": "node scripts/validate-integrated-runbook.mjs"
+        "validate:integrated-runbook": "node scripts/validate-integrated-runbook.mjs",
+        "validate:backend-seed-reset": "node scripts/validate-backend-seed-reset.mjs",
+        "prepare:e2e:integrated:seed": "node scripts/prepare-integrated-e2e-seed.mjs"
     },
     "dependencies": {
         "@hookform/resolvers": "^3.9.0",

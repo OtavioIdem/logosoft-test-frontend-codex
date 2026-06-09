@@ -76,7 +76,7 @@ if (existsSync(join(root, 'tests/e2e/integrated-backend.spec.ts'))) {
         "LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK === 'true'",
         'disposableEnvironmentAck',
         'seedRunId',
-        'shouldRun = Boolean(runIntegratedFlow && apiUrl && accessToken && empresaId && pedidoVendaId && seedRunId && disposableEnvironmentAck && runbookAck)'
+        'shouldRun = Boolean(runIntegratedFlow && apiUrl && accessToken && empresaId && pedidoVendaId && seedRunId && disposableEnvironmentAck && runbookAck && seedResetAppliedAck)'
     ];
 
     for (const fragment of requiredSpecFragments) {

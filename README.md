@@ -1,9 +1,35 @@
-# logosoft Frontend v1.11.0a8b34
+# logosoft Frontend v1.11.0a8b35
 
 Frontend do ERP **logosoft** em **Next.js**, **React**, **TypeScript** e **PrimeReact/Sakai**, consumindo a API real em `http://localhost:8080` por padrão.
 
 Esta aplicação foi construída para operação real de ERP: autenticação, permissões, cadastros, estoque, vendas, financeiro, compras, auditoria, dashboard, validações, dialogs de motivo, feedbacks visuais e integração centralizada via Axios.
 
+
+## v1.11.0a8b35 — Integração com seed/reset real do backend
+
+A v1.11.0a8b35 prepara o frontend para chamar um procedimento real de seed/reset fornecido pelo backend antes do E2E integrado. O comando é opt-in, exige ambiente descartável, exige leitura do runbook e não roda automaticamente no CI comum.
+
+### Validação principal
+
+```bash
+npm run validate:backend-seed-reset
+npm run validate:integrated-runbook
+npm run validate:controlled-seeds
+npm run validate:integrated-e2e
+npm run validate:source
+```
+
+Com backend descartável preparado e endpoint de seed/reset disponível:
+
+```bash
+cp .env.backend-controlled.example .env.backend-controlled.local
+# preencher token e IDs somente localmente
+# habilitar LOGOSOFT_INTEGRATED_E2E_SEED_RESET_RUN=true, LOGOSOFT_INTEGRATED_E2E_SEED_RESET_ACK=true,
+# LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true e LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true somente em backend descartável
+npm run prepare:e2e:integrated:seed
+# após sucesso do backend, habilitar LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=true no env local
+npm run test:e2e:integrated:backend
+```
 
 ## v1.11.0a8b34 — Runbook de backend descartável para E2E integrado
 

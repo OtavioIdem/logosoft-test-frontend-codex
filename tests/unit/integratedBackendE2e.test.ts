@@ -17,6 +17,8 @@ describe('integrated backend E2E', () => {
         expect(spec).toContain('LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID');
         expect(spec).toContain("LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK === 'true'");
         expect(spec).toContain("LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK === 'true'");
+        expect(spec).toContain("LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK === 'true'");
+        expect(spec).toContain('seedResetAppliedAck');
         expect(spec).toContain('test.skip(!shouldRun');
         expect(spec).toContain('runbookAck');
         expect(spec).toContain('/api/vendas/pedidos');
@@ -60,6 +62,7 @@ describe('integrated backend E2E', () => {
         expect(envExample).toContain('LOGOSOFT_INTEGRATED_E2E_SEED_FILE=tests/seeds/integrated-e2e.controlled-seed.example.json');
         expect(envExample).toContain('LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=false');
         expect(envExample).toContain('LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=false');
+        expect(envExample).toContain('LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=false');
         expect(envExample).not.toMatch(/Bearer\s+[A-Za-z0-9._-]+/i);
         expect(envExample).not.toMatch(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/);
         expect(envExample).not.toContain('sk-');
