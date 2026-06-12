@@ -6,11 +6,9 @@ import { Controller, useForm } from 'react-hook-form';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { Password } from 'primereact/password';
-import { Message } from 'primereact/message';
 import { classNames } from 'primereact/utils';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { FieldError } from '@/components/forms/FieldError';
-import { appConfig } from '@/config/app';
 import { useLogin } from '@/features/auth/hooks/useLogin';
 import { loginSchema, LoginFormValues } from '@/features/auth/schemas/loginSchema';
 import { LoginEnvironmentBadge } from '@/features/auth/components/LoginEnvironmentBadge';
@@ -47,7 +45,6 @@ export const LoginForm = () => {
                 <p>Acesse sua operação empresarial com segurança</p>
             </div>
 
-            {appConfig.useMockAuth ? <Message className="w-full mb-3" severity="warn" text="Mock de autenticação ativo somente para desenvolvimento local." /> : null}
             <ApiErrorPanel error={apiError} />
 
             <form onSubmit={handleSubmit(onSubmit)} className="login-form__fields" noValidate aria-busy={isSubmitting}>

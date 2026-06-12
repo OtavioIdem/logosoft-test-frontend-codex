@@ -24,6 +24,17 @@ describe('requestUtils', () => {
         });
     });
 
+    it('preserva correlationId textual sem tratar como Guid técnico', () => {
+        expect(
+            sanitizePayload({
+                correlationId: 'front-inutilizacao-001',
+                empresaId: '0'
+            })
+        ).toEqual({
+            correlationId: 'front-inutilizacao-001'
+        });
+    });
+
     it('converte Date em ISO dentro do payload', () => {
         expect(
             sanitizePayload({

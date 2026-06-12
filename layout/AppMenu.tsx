@@ -116,6 +116,15 @@ const AppMenu = () => {
                 items: [{ label: 'Pedidos de compra', icon: 'pi pi-fw pi-shopping-bag', to: '/compras/pedidos', anyPermissions: ['COMPRAS_CONSULTAR', 'COMPRAS_GERENCIAR'] }]
             },
             {
+                label: 'Fiscal',
+                anyPermissions: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_CANCELAR', 'FISCAL_INUTILIZAR', 'FISCAL_CARTA_CORRECAO'],
+                items: [
+                    { label: 'Notas fiscais', icon: 'pi pi-fw pi-file', to: '/fiscal/notas', anyPermissions: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR'] },
+                    { label: 'Observabilidade', icon: 'pi pi-fw pi-chart-line', to: '/fiscal/observabilidade', permission: 'FISCAL_CONSULTAR' },
+                    { label: 'Inutilizações', icon: 'pi pi-fw pi-ban', to: '/fiscal/inutilizacoes', permission: 'FISCAL_INUTILIZAR' }
+                ]
+            },
+            {
                 label: 'Auditoria',
                 permission: 'AUDITORIA_CONSULTAR',
                 items: [{ label: 'Eventos de auditoria', icon: 'pi pi-fw pi-history', to: '/auditoria/eventos', permission: 'AUDITORIA_CONSULTAR' }]

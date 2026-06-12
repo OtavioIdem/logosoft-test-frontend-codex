@@ -101,6 +101,99 @@ export enum StatusPedidoCompra {
     Cancelado = 6
 }
 
+
+export enum TipoDocumentoFiscal {
+    NFe = 1,
+    NFCe = 2,
+    NFSe = 3,
+    CTe = 4,
+    MDFe = 5,
+    Outro = 99
+}
+
+export enum TipoOperacaoFiscal {
+    Venda = 1,
+    Compra = 2,
+    Devolucao = 3,
+    Remessa = 4,
+    Transferencia = 5,
+    Bonificacao = 6,
+    Servico = 7,
+    Transporte = 8,
+    Outro = 99
+}
+
+export enum OrigemNotaFiscal {
+    Manual = 1,
+    PedidoVenda = 2,
+    PedidoCompra = 3,
+    Servico = 4,
+    Importacao = 5
+}
+
+export enum StatusNotaFiscal {
+    Rascunho = 1,
+    Validada = 2,
+    Assinada = 3,
+    Transmitida = 4,
+    Autorizada = 5,
+    Rejeitada = 6,
+    Cancelada = 7,
+    Inutilizada = 8,
+    Denegada = 9,
+    Contingencia = 10
+}
+
+export enum TipoXmlFiscal {
+    Envio = 1,
+    Autorizado = 2,
+    Cancelamento = 3,
+    CartaCorrecao = 4,
+    Inutilizacao = 5,
+    RetornoAutorizador = 6
+}
+
+export enum TipoEventoFiscal {
+    Criacao = 1,
+    Validacao = 2,
+    Assinatura = 3,
+    Transmissao = 4,
+    Autorizacao = 5,
+    Rejeicao = 6,
+    Cancelamento = 7,
+    CartaCorrecao = 8,
+    Inutilizacao = 9,
+    ErroIntegracao = 10,
+    CorrecaoRascunho = 11,
+    Contingencia = 12
+}
+
+export enum TipoServicoTransmissaoFiscal {
+    Autorizacao = 1,
+    ConsultaRetornoAutorizacao = 2,
+    ConsultaProtocolo = 3,
+    StatusServico = 4
+}
+
+export enum TipoContingenciaFiscal {
+    Svc = 1,
+    Epec = 2,
+    OfflineNfce = 3,
+    OperacionalInterna = 99
+}
+
+export enum TipoDocumentoAuxiliarFiscal {
+    Danfe = 1,
+    Dacte = 2,
+    Damdfe = 3,
+    Outros = 99
+}
+
+export enum FormatoDocumentoAuxiliarFiscal {
+    Pdf = 1,
+    Html = 2
+}
+
 export type PermissionCode =
     | 'AUDITORIA_CONSULTAR'
     | 'ADMINISTRACAO_CONSULTAR'
@@ -144,7 +237,14 @@ export type PermissionCode =
     | 'COMPRAS_GERENCIAR'
     | 'COMPRAS_APROVAR'
     | 'COMPRAS_CANCELAR'
-    | 'COMPRAS_RECEBER';
+    | 'COMPRAS_RECEBER'
+    | 'FISCAL_CONSULTAR'
+    | 'FISCAL_EXPORTAR'
+    | 'FISCAL_GERENCIAR'
+    | 'FISCAL_EMITIR'
+    | 'FISCAL_CANCELAR'
+    | 'FISCAL_INUTILIZAR'
+    | 'FISCAL_CARTA_CORRECAO';
 
 export type ApiResult<T> = { success: boolean; data?: T; error?: ApiError };
 export type ValidationError = { field: string; message: string };

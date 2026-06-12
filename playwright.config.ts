@@ -14,8 +14,6 @@ export default defineConfig({
         reuseExistingServer: !process.env.CI,
         env: {
             ...process.env,
-            NEXT_PUBLIC_USE_MOCK_AUTH: 'true',
-            NEXT_PUBLIC_USE_MOCK_API: 'true',
             NEXT_PUBLIC_APP_ENV: 'test'
         }
     },

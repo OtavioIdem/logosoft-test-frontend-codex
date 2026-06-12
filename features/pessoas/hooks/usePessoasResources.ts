@@ -9,10 +9,11 @@ type InativarPayload = { id: string; motivo: string };
 
 export const pessoasQueryKey = (query?: PessoaListQuery) => ['pessoas', query] as const;
 
-export const usePessoas = (query: PessoaListQuery = {}) =>
+export const usePessoas = (query: PessoaListQuery = {}, options?: { enabled?: boolean }) =>
     useQuery({
         queryKey: pessoasQueryKey(query),
-        queryFn: () => pessoasApi.listar(query)
+        queryFn: () => pessoasApi.listar(query),
+        enabled: options?.enabled ?? true
     });
 
 export const usePessoaMutations = (query: PessoaListQuery = {}) => {

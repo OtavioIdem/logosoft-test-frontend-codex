@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import { isValidGuid } from '@/lib/http/requestUtils';
+import { isValidGuid, normalizeGuidOrNull } from '@/lib/http/requestUtils';
 
-const nullableText = z.string().trim().optional().nullable().transform((value) => value || null);
+const nullableText = z.preprocess((value) => (typeof value === 'string' && value.trim() === '' ? undefined : value ?? undefined), z.string().trim().optional());
 const requiredText = (label: string, min = 1) => z.string().trim().min(min, `${label} é obrigatório.`);
 const requiredGuid = (label: string) => z.string().trim().refine(isValidGuid, `${label} deve ser selecionado.`);
-const optionalGuid = z.string().trim().optional().nullable().transform((value) => value || null).refine((value) => value === null || isValidGuid(value), 'Selecione um registro válido.');
+const optionalGuid = z.preprocess((value) => normalizeGuidOrNull(value) ?? undefined, z.string().trim().refine(isValidGuid, 'Selecione um registro válido.').optional());
 const quantidade = z.coerce.number().positive('Informe uma quantidade maior que zero.');
 const quantidadeNaoNegativa = z.coerce.number().min(0, 'Quantidade não pode ser negativa.');
 const motivo = requiredText('Motivo', 3).max(500, 'Motivo deve ter no máximo 500 caracteres.');

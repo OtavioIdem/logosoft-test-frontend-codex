@@ -45,4 +45,22 @@ describe('mapApiError', () => {
         const error = mapApiError(axiosLikeError(null, 403));
         expect(error.message).toBe('Você não possui permissão para executar esta operação.');
     });
+
+    it('preserva metadados de erros fiscais encapsulados pelo client', () => {
+        const error = mapApiError({
+            apiError: {
+                code: 'Fiscal.Validacao',
+                message: 'Mensagem de validação fiscal.',
+                status: 400,
+                traceId: 'trace-fiscal-1'
+            }
+        });
+
+        expect(error).toEqual({
+            code: 'Fiscal.Validacao',
+            message: 'Mensagem de validação fiscal.',
+            status: 400,
+            traceId: 'trace-fiscal-1'
+        });
+    });
 });

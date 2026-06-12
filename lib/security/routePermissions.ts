@@ -27,6 +27,10 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/financeiro\/condicoes-pagamento(?:\/.*)?$/, anyOf: ['FINANCEIRO_CONSULTAR', 'CONDICOES_PAGAMENTO_GERENCIAR'], description: 'Condições de pagamento' },
     { pattern: /^\/financeiro(?:\/.*)?$/, anyOf: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_GERENCIAR', 'FINANCEIRO_RECEBER', 'FINANCEIRO_PAGAR', 'FINANCEIRO_ESTORNAR', 'FINANCEIRO_CANCELAR'], description: 'Financeiro' },
     { pattern: /^\/compras(?:\/.*)?$/, anyOf: ['COMPRAS_CONSULTAR', 'COMPRAS_GERENCIAR', 'COMPRAS_APROVAR', 'COMPRAS_CANCELAR', 'COMPRAS_RECEBER'], description: 'Compras' },
+    { pattern: /^\/fiscal\/notas(?:\/.*)?$/, anyOf: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_CANCELAR', 'FISCAL_CARTA_CORRECAO'], description: 'Notas fiscais' },
+    { pattern: /^\/fiscal\/observabilidade(?:\/.*)?$/, anyOf: ['FISCAL_CONSULTAR'], description: 'Observabilidade fiscal' },
+    { pattern: /^\/fiscal\/inutilizacoes(?:\/.*)?$/, anyOf: ['FISCAL_INUTILIZAR'], description: 'Inutilizações fiscais' },
+    { pattern: /^\/fiscal(?:\/.*)?$/, anyOf: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_CANCELAR', 'FISCAL_INUTILIZAR', 'FISCAL_CARTA_CORRECAO'], description: 'Fiscal' },
     { pattern: /^\/auditoria(?:\/.*)?$/, anyOf: ['AUDITORIA_CONSULTAR'], description: 'Auditoria' }
 ];
 

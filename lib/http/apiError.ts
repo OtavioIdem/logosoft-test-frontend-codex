@@ -26,6 +26,23 @@ const isAspNetValidationError = (value: unknown): value is AspNetValidationError
 
 const isApiResult = (value: unknown): value is ApiResult<unknown> => isRecord(value) && typeof value.success === 'boolean';
 
+const isApiErrorLike = (value: unknown): value is ApiError => {
+    if (!isRecord(value)) {
+        return false;
+    }
+
+    return typeof value.message === 'string' && value.message.trim().length > 0;
+};
+
+const getNestedApiError = (error: unknown): ApiError | null => {
+    if (!isRecord(error)) {
+        return null;
+    }
+
+    const nested = error.apiError;
+    return isApiErrorLike(nested) ? nested : null;
+};
+
 const mapFieldErrors = (errors: Record<string, string[]>) =>
     Object.entries(errors).map(([field, messages]) => ({
         field,
@@ -98,6 +115,11 @@ const mapResponseData = (data: unknown, status?: number): ApiError | null => {
 };
 
 export const mapApiError = (error: unknown): ApiError => {
+    const nestedApiError = getNestedApiError(error);
+    if (nestedApiError) {
+        return nestedApiError;
+    }
+
     if (isAxiosError(error)) {
         const axiosError = error as AxiosError<unknown>;
         const status = axiosError.response?.status;

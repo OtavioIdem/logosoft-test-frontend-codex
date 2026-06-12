@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mockErpStore } from '@/features/shared/api/mockErpStore';
+import { mockErpStore } from '@/tests/mocks/resources/mockErpStore';
 import { getResourceDefinition } from '@/features/shared/config/erpFeatureCatalog';
 describe('mockErpStore', () => {
     it('lista dados paginados de produtos', async () => {

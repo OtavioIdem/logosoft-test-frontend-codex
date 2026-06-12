@@ -1,8 +1,184 @@
-# logosoft Frontend v1.11.0a5
+# logosoft Frontend v1.11.0a8b36
 
 Frontend do ERP **logosoft** em **Next.js**, **React**, **TypeScript** e **PrimeReact/Sakai**, consumindo a API real em `http://localhost:8080` por padrão.
 
 Esta aplicação foi construída para operação real de ERP: autenticação, permissões, cadastros, estoque, vendas, financeiro, compras, auditoria, dashboard, validações, dialogs de motivo, feedbacks visuais e integração centralizada via Axios.
+
+## v1.11.0a8b36 — Validação real assistida do E2E integrado
+
+A v1.11.0a8b36 adiciona checklist, evidências e relatório pós-execução para rodar o E2E integrado real contra backend descartável/controlado. O fluxo mutável continua fora do CI comum e agora exige `LOGOSOFT_INTEGRATED_E2E_ASSISTED_VALIDATION_ACK=true` além dos ACKs anteriores.
+
+### Validação principal
+
+```bash
+npm run validate:assisted-e2e
+npm run validate:backend-seed-reset
+npm run validate:integrated-e2e
+npm run validate:source
+```
+
+Com backend descartável preparado e evidências locais preenchidas:
+
+```bash
+cp .env.backend-controlled.example .env.backend-controlled.local
+# preencher token, IDs e ACKs somente localmente
+npm run prepare:e2e:integrated:seed
+npm run test:e2e:integrated:backend
+npm run report:e2e:integrated:assisted
+```
+
+## v1.11.0a8b35 — Integração com seed/reset real do backend
+
+A v1.11.0a8b35 prepara o frontend para chamar um procedimento real de seed/reset fornecido pelo backend antes do E2E integrado. O comando é opt-in, exige ambiente descartável, exige leitura do runbook e não roda automaticamente no CI comum.
+
+### Validação principal
+
+```bash
+npm run validate:backend-seed-reset
+npm run validate:integrated-runbook
+npm run validate:controlled-seeds
+npm run validate:integrated-e2e
+npm run validate:source
+```
+
+Com backend descartável preparado e endpoint de seed/reset disponível:
+
+```bash
+cp .env.backend-controlled.example .env.backend-controlled.local
+# preencher token e IDs somente localmente
+# habilitar LOGOSOFT_INTEGRATED_E2E_SEED_RESET_RUN=true, LOGOSOFT_INTEGRATED_E2E_SEED_RESET_ACK=true,
+# LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true e LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true somente em backend descartável
+npm run prepare:e2e:integrated:seed
+# após sucesso do backend, habilitar LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=true no env local
+npm run test:e2e:integrated:backend
+```
+
+## v1.11.0a8b34 — Runbook de backend descartável para E2E integrado
+
+A v1.11.0a8b34 documenta o procedimento seguro para executar o E2E integrado real contra backend descartável/controlado. A versão adiciona o runbook operacional, o gate `validate:integrated-runbook` e uma proteção extra `LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true`, sem colocar o fluxo mutável no CI comum.
+
+### Validação principal
+
+```bash
+npm run validate:integrated-runbook
+npm run validate:controlled-seeds
+npm run validate:integrated-e2e
+npm run validate:source
+```
+
+Quando houver backend descartável preparado e o runbook tiver sido seguido:
+
+```bash
+cp .env.backend-controlled.example .env.backend-controlled.local
+# preencher token e IDs somente localmente
+# habilitar LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true e LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true somente em ambiente descartável
+npx playwright install chromium
+npm run test:contract:fiscal
+npm run test:contract:operational
+npm run test:e2e:integrated:backend
+```
+
+## v1.11.0a8b33 — Seeds controladas para E2E integrado
+
+A v1.11.0a8b33 prepara o E2E integrado para rodar somente com dados previsíveis, rastreáveis e descartáveis. A versão adiciona template de seed, documentação e gate `validate:controlled-seeds`, sem criar seed real no backend e sem executar fluxo mutável no CI comum.
+
+### Validação principal
+
+```bash
+npm run validate:controlled-seeds
+npm run validate:integrated-e2e
+npm run validate:source
+```
+
+Quando houver backend descartável/homologação preparado:
+
+```bash
+cp .env.backend-controlled.example .env.backend-controlled.local
+# preencher LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID e LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true somente localmente
+npx playwright install chromium
+npm run test:e2e:integrated:backend
+```
+
+
+## v1.11.0a8b32 — E2E integrado controlado
+
+A v1.11.0a8b32 adiciona uma suíte E2E integrada e opt-in para validar, em ambiente controlado, o fluxo venda → fiscal → estoque → financeiro → auditoria. O fluxo é mutável, usa variáveis próprias `LOGOSOFT_INTEGRATED_E2E_*` e não roda automaticamente no CI comum.
+
+### Validação principal
+
+```bash
+npm run validate:integrated-e2e
+npm run validate:source
+```
+
+Quando houver backend descartável/homologação preparado:
+
+```bash
+cp .env.backend-controlled.example .env.backend-controlled.local
+npx playwright install chromium
+npm run test:e2e:integrated:backend
+```
+
+## v1.11.0a8b31.c1 — Correção de isolamento entre contrato fiscal e operacional
+
+A v1.11.0a8b31.c1 corrige a B31 bloqueada: `npm run test:contract:fiscal` passa a descobrir somente `fiscal-backend.contract.spec.ts`, enquanto `npm run test:contract:operational` permanece dedicado ao contrato operacional. O contrato operacional também deixa de aceitar fallback para variáveis fiscais `LOGOSOFT_CONTRACT_*`, exigindo opt-in explícito por `LOGOSOFT_OPERATIONAL_CONTRACT_*`.
+
+### Validação principal
+
+```bash
+npm run validate:operational-contracts
+npm run test:contract:fiscal
+npm run test:contract:operational
+```
+
+## v1.11.0a8b31 — Contratos reais/controlados por módulo prioritário
+
+A v1.11.0a8b31 adiciona contratos operacionais read-only para Vendas, Estoque, Financeiro e Auditoria. A validação é opt-in, usa backend controlado e não executa mutações como faturar pedido, baixar estoque, receber/pagar conta, cancelar ou estornar.
+
+### Validação principal
+
+```bash
+npm run validate:operational-contracts
+npm run validate:source
+```
+
+Quando houver backend controlado preparado:
+
+```bash
+cp .env.backend-controlled.example .env.backend-controlled.local
+npm run test:contract:operational
+```
+
+## v1.11.0a8b30 — Validação real/controlada frontend/backend
+
+A v1.11.0a8b30 prepara o frontend para validação contra backend real/controlado sem reintroduzir mocks produtivos. A versão adiciona template seguro de ambiente, documentação de execução controlada, gate `validate:backend-controlled` e levantamento formal do que ainda falta implementar por módulo.
+
+### Validação principal
+
+```bash
+npm run validate:backend-controlled
+npm run validate:source
+```
+
+Quando houver backend controlado preparado:
+
+```bash
+cp .env.backend-controlled.example .env.backend-controlled.local
+npx playwright install chromium
+npm run test:contract:fiscal
+npm run test:e2e:fiscal:backend
+```
+
+## v1.11.0a8b29 — Isolamento definitivo de mocks produtivos
+
+A v1.11.0a8b29 move mocks de autenticação e recursos para `tests/mocks/**`, preserva E2E mockado somente em fixtures Playwright e adiciona o gate `validate:mocks-isolation` para impedir retorno de mocks aos diretórios produtivos.
+
+### Validação principal
+
+```bash
+npm run validate:mocks-isolation
+npm run validate:source
+```
 
 ## v1.11.0a5 - Busca de telas na sidebar
 
@@ -436,8 +612,6 @@ Crie `.env.local`:
 NEXT_PUBLIC_API_URL=http://localhost:8080
 NEXT_PUBLIC_APP_NAME=logosoft
 NEXT_PUBLIC_APP_ENV=development
-NEXT_PUBLIC_USE_MOCK_AUTH=false
-NEXT_PUBLIC_USE_MOCK_API=false
 ```
 
 ## Rodando localmente

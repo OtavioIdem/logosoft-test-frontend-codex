@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { Skeleton } from 'primereact/skeleton';
 
-type LoadingStateVariant = 'panel' | 'table' | 'detail' | 'metrics';
+type LoadingStateVariant = 'panel' | 'table' | 'detail' | 'metrics' | 'cards';
 
 type LoadingStateProps = {
     variant?: LoadingStateVariant;
@@ -133,7 +133,7 @@ export const LoadingState = ({ variant = 'table', rows, columns, cards, classNam
         return <DetailSkeleton className={className} />;
     }
 
-    if (variant === 'metrics') {
+    if (variant === 'metrics' || variant === 'cards') {
         return <MetricsSkeleton cards={cards} className={className} />;
     }
 

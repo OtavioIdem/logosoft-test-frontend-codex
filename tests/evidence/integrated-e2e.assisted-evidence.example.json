@@ -1,0 +1,55 @@
+{
+    "version": "1.11.0a8b36",
+    "purpose": "Template de evidências para execução assistida do E2E integrado em backend descartável/controlado.",
+    "seedRunId": "LOGOSOFT-E2E-CONTROLADO-EXEMPLO",
+    "environment": {
+        "type": "disposable-backend",
+        "baseUrl": "http://localhost:8080",
+        "database": "postgresql-descartavel",
+        "disposableEnvironmentAckRequired": true,
+        "runbookAckRequired": true,
+        "seedResetAppliedAckRequired": true,
+        "assistedValidationAckRequired": true
+    },
+    "preRunChecklist": {
+        "backendDisposable": false,
+        "migrationsApplied": false,
+        "seedResetApplied": false,
+        "tokenGeneratedForControlledUser": false,
+        "productionDataProtected": true,
+        "runbookRead": false
+    },
+    "execution": {
+        "command": "npm run test:e2e:integrated:backend",
+        "startedAt": null,
+        "finishedAt": null,
+        "status": "not-executed"
+    },
+    "expectedSideEffects": {
+        "pedidoVendaConsultado": true,
+        "notaFiscalGerada": true,
+        "xmlGeradoAssinadoTransmitido": true,
+        "estoqueBaixado": true,
+        "financeiroGerado": true,
+        "auditoriaRegistrada": true
+    },
+    "observedSideEffects": {
+        "pedidoVendaId": null,
+        "notaFiscalId": null,
+        "movimentoEstoqueIds": [],
+        "contaReceberIds": [],
+        "auditoriaEventoIds": []
+    },
+    "postRunChecklist": {
+        "playwrightReportReviewed": false,
+        "backendLogsReviewed": false,
+        "sideEffectsValidated": false,
+        "rollbackOrDisposePlanned": false,
+        "noSecretsInArtifacts": true
+    },
+    "decision": {
+        "approved": false,
+        "blockers": [],
+        "nonBlockingWarnings": []
+    }
+}

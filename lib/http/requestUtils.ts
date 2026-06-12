@@ -24,7 +24,9 @@ export const isInvalidGuidLikeValue = (value: unknown) => {
     return INVALID_GUID_SENTINELS.has(normalized) || (normalized.length > 0 && !isValidGuid(normalized));
 };
 
-export const isGuidField = (fieldName: string) => /(^id$|id$|Id$)/.test(fieldName);
+const NON_GUID_ID_FIELDS = new Set(['correlationId', 'correlationID', 'correlation_id', 'correlationIdOriginal', 'correlationIDOriginal']);
+
+export const isGuidField = (fieldName: string) => !NON_GUID_ID_FIELDS.has(fieldName) && /(^id$|id$|Id$)/.test(fieldName);
 
 export const normalizeGuidOrNull = (value: unknown): string | null => {
     if (value === null || value === undefined) {

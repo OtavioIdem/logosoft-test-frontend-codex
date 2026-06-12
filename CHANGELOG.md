@@ -1,4 +1,206 @@
+# v1.11.0a8b36
+
+- Adicionada validação real assistida do E2E integrado com backend descartável/controlado.
+- Criados gate `validate:assisted-e2e`, script `report:e2e:integrated:assisted` e template de evidências.
+- Adicionado ACK `LOGOSOFT_INTEGRATED_E2E_ASSISTED_VALIDATION_ACK=false` nos envs versionados.
+- Reforçado que o E2E integrado mutável, seed/reset e relatório assistido não rodam no CI padrão.
+- Atualizadas skills, README e documentação operacional da execução assistida.
+
 # Changelog
+
+
+## v1.11.0a8b35
+
+- Criado `scripts/prepare-integrated-e2e-seed.mjs` para chamar procedimento real/controlado de seed/reset do backend.
+- Adicionado gate `validate:backend-seed-reset` e integrado ao `validate:source`, `ci:gates` e GitHub Actions.
+- Reforçado o E2E integrado para exigir `LOGOSOFT_INTEGRATED_E2E_SEED_RESET_APPLIED_ACK=true` antes de rodar fluxo mutável.
+- Atualizados `.env.example`, `.env.test` e `.env.backend-controlled.example` com variáveis de seed/reset desligadas por padrão.
+- Criada documentação `docs/BACKEND_SEED_RESET_INTEGRATION.md` e levantamento `docs/LEVANTAMENTO_PENDENCIAS_FRONTEND_B35.md`.
+- Criado teste unitário `tests/unit/backendSeedResetIntegration.test.ts` para proteger scripts, ACKs e CI.
+- Atualizada versão visual/documental para `1.11.0a8b35`.
+
+## v1.11.0a8b34
+
+- Criado `docs/RUNBOOK_BACKEND_DESCARTAVEL_E2E_INTEGRADO.md` com procedimento de backend descartável para o E2E integrado real.
+- Adicionado gate `validate:integrated-runbook` e integrado ao `validate:source`, `ci:gates` e GitHub Actions.
+- Reforçado `tests/e2e/integrated-backend.spec.ts` para exigir `LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=true` além do opt-in e ACK de ambiente descartável.
+- Atualizado `.env.backend-controlled.example` com `LOGOSOFT_INTEGRATED_E2E_RUNBOOK_ACK=false`, preservando execução desligada em arquivo versionado.
+- Criado teste unitário `tests/unit/integratedRunbook.test.ts` para proteger runbook, ACK e gates.
+- Atualizada versão visual/documental para `1.11.0a8b34`.
+
+## v1.11.0a8b33
+
+- Criado template `tests/seeds/integrated-e2e.controlled-seed.example.json` para dados descartáveis do E2E integrado.
+- Adicionado gate `validate:controlled-seeds` e integrado ao `validate:source`, `ci:gates` e GitHub Actions.
+- Reforçado o E2E integrado para exigir `LOGOSOFT_INTEGRATED_E2E_SEED_RUN_ID` e `LOGOSOFT_INTEGRATED_E2E_DISPOSABLE_ENVIRONMENT_ACK=true`.
+- Reforçado `validate-integrated-e2e` e `validate-ci-gates` para bloquear regressão de execução mutável sem seed controlada.
+- Criada documentação `docs/CONTROLLED_SEEDS_INTEGRATED_E2E.md` e levantamento `docs/LEVANTAMENTO_PENDENCIAS_FRONTEND_B33.md`.
+- Atualizada versão visual/documental para `1.11.0a8b33`.
+
+
+## v1.11.0a8b32
+
+- Criado E2E integrado controlado para venda → fiscal → estoque → financeiro → auditoria.
+- Adicionado `test:e2e:integrated:backend` com Playwright config dedicada e opt-in próprio `LOGOSOFT_INTEGRATED_E2E_*`.
+- Criado gate `validate:integrated-e2e` e integrado ao `validate:source`, `ci:gates` e GitHub Actions sem executar fluxo mutável no CI comum.
+- Atualizado `.env.backend-controlled.example` com variáveis integradas sem segredos reais e execução desligada por padrão.
+- Criada documentação `docs/BACKEND_INTEGRATED_E2E.md` e levantamento `docs/LEVANTAMENTO_PENDENCIAS_FRONTEND_B32.md`.
+- Atualizada versão visual/documental para `1.11.0a8b32`.
+
+## v1.11.0a8b31.c1
+
+- Corrigido isolamento entre contrato fiscal e contrato operacional.
+- `playwright.contract.config.ts` passa a executar somente `fiscal-backend.contract.spec.ts`.
+- Removido fallback `LOGOSOFT_CONTRACT_*` do contrato operacional, exigindo `LOGOSOFT_OPERATIONAL_CONTRACT_*`.
+- Reforçado `validate-operational-contracts` para bloquear regressão de descoberta cruzada ou dependência operacional em variáveis fiscais.
+- Atualizado teste unitário de regressão para proteger a separação das suítes.
+- Atualizada versão visual/documental para `1.11.0a8b31.c1`.
+
+## v1.11.0a8b31
+
+- Criados contratos operacionais read-only para Vendas, Estoque, Financeiro e Auditoria contra backend real/controlado.
+- Adicionado script `test:contract:operational` com configuração Playwright dedicada.
+- Criado gate `validate:operational-contracts` e integrado ao `validate:source`, `ci:gates` e GitHub Actions.
+- Atualizado `.env.backend-controlled.example` com variáveis operacionais sem segredos reais.
+- Documentada a validação em `docs/BACKEND_OPERATIONAL_CONTRACTS.md`.
+- Adicionado teste unitário para proteger scripts, opt-in e comportamento read-only do contrato operacional.
+- Atualizada versão visual/documental para `1.11.0a8b31`.
+
+## v1.11.0a8b30
+
+- Preparada validação real/controlada frontend/backend sem reintroduzir mocks produtivos.
+- Criado template `.env.backend-controlled.example` sem segredos reais.
+- Criado gate `validate:backend-controlled` e integrado ao `validate:source`, `ci:gates` e GitHub Actions.
+- Reforçado `validate-ci-gates` para exigir o novo gate.
+- Criada documentação `docs/BACKEND_CONTROLLED_VALIDATION.md`.
+- Criado levantamento `docs/LEVANTAMENTO_PENDENCIAS_FRONTEND.md` com pendências por módulo, testes e ambiente.
+- Adicionado teste unitário para proteger o contrato estrutural de backend controlado.
+- Atualizada versão visual/documental para `1.11.0a8b30`.
+
+## v1.11.0a8b29
+
+- Isolados mocks de autenticação e recursos fora de `features/**/api`, movendo-os para `tests/mocks/**`.
+- Mantido E2E mockado apenas em `tests/e2e/fixtures/logosoft.ts` com interceptação controlada via Playwright.
+- Criado gate `validate:mocks-isolation` e integrado ao `validate:source`, `ci:gates` e GitHub Actions.
+- Atualizado o gate de CI para bloquear variáveis públicas `NEXT_PUBLIC_USE_MOCK_*` no workflow.
+- Adicionado teste unitário de regressão para impedir retorno de arquivos mockados aos diretórios produtivos.
+- Criada documentação `docs/MOCKS_ISOLATION_FRONTEND.md`.
+- Atualizada versão visual/documental para `1.11.0a8b29`.
+
+## v1.11.0a8b8
+
+- Corrigido mascaramento defensivo de XML fiscal na observabilidade.
+- `maskFiscalSensitiveText` agora substitui blocos XML completos por `[XML_MASKED]`, evitando vazamento de tags internas como `emit`, `CNPJ`, totais ou valores fiscais.
+- Adicionado teste unitário com XML fiscal contendo dados internos para impedir regressão de segurança.
+- Atualizada versão visual/documental para `1.11.0a8b8`.
+
+## v1.11.0a8b7
+
+- Evoluída a tela de Observabilidade Fiscal com filtros locais por operação, status, reprocessamento e dado sensível mascarado.
+- Adicionada consulta operacional de status de serviço fiscal via `POST /api/fiscal/sefaz/status-servico`.
+- Adicionados históricos de status de serviço e contingência na observabilidade.
+- Adicionado mascaramento visual defensivo para `payloadResumo` fiscal, evitando exposição de token, senha, certificado, segredo ou XML completo.
+- Adicionados testes unitários para payload de status de serviço e mascaramento fiscal.
+- Corrigida duplicidade residual de `etapaAtual` no tipo de workflow fiscal.
+
+## v1.11.0a8b6
+
+- Corrigido `baixarDocumentoAuxiliar` para sempre retornar `filename` como string, preservando o contrato `DownloadedFiscalFile`.
+- Adicionado fallback seguro `documento-auxiliar-fiscal-{documentoAuxiliarId}.bin` quando o backend não enviar `Content-Disposition`.
+- Download de documento auxiliar passa a retornar `contentType` quando disponível.
+- Atualizada versão visual/documental para `1.11.0a8b6`.
+- Criado `docs/IMPLEMENTACAO_V1_11_0A8B6.md`.
+
+## v1.11.0a8b5
+
+- Corrigido `UsuarioFormDialog`: `Password` agora usa `inputId="senha"`, mantendo o wrapper separado como `senha-wrapper`.
+- Exportação CSV fiscal agora ignora paginação visual (`page`/`pageSize`) e usa filtros + limite auditado.
+- Adicionada validação local para empresa obrigatória na exportação fiscal.
+- Adicionada validação local para filtros conflitantes de pendência XML, DANFE e financeiro.
+- Tratamento de erro em resposta `blob` para JSON, ProblemDetails e texto simples.
+- Sanitização de nome de arquivo e fallback `notas-fiscais-YYYY-MM-DD.csv`.
+- Adicionado teste unitário para parâmetros da exportação CSV auditada.
+- Criado `docs/IMPLEMENTACAO_V1_11_0A8B5.md`.
+
+## v1.11.0a8b4
+
+Versão anterior aplicada: `v1.11.0a8`.
+
+### Corrigido
+- Normalizado payload fiscal de geração de conta a receber para enviar `primeiraDataVencimento` como string ISO.
+- `LoadingState` passou a aceitar o variant `cards`.
+- Corrigidas regressões unitárias em fiscal, financeiro, estoque, auth refresh e formulário de usuário.
+- Ações fiscais de consulta de protocolo e contingência passam a respeitar workflow/regras operacionais, não apenas permissão.
+- Reprocessamento de integração fiscal passou a usar `PermissionGuard` com `FISCAL_EMITIR`.
+
+### Alterado
+- Campo de condição de pagamento no fluxo fiscal financeiro deixou de aceitar digitação manual de ID e passou a usar select carregado por API.
+- Atualizada versão visual/documental para `1.11.0a8b4`.
+
+### Documentação
+- Criado `docs/IMPLEMENTACAO_V1_11_0A8B4.md`.
+- Criado `docs/DIRETRIZES_UX_REFERENCIAS.md` com regra global de dropdowns/selects para entidades relacionadas.
+
+### Validação
+- `node scripts/validate-source.mjs` executado com sucesso.
+- `npm install` não concluiu no container por Node 22/npm 10 e timeout/SIGTERM; validar `typecheck`, `lint`, `test:unit` e `build` em Node 24/npm 11.
+
+## v1.11.0a8
+
+Versão anterior aplicada: `v1.11.0a7`.
+
+### Adicionado
+- Listagem fiscal operacional em `/fiscal/notas` usando `GET /api/fiscal/notas-fiscais` com filtros, paginação, pendências e ação principal sugerida pelo backend.
+- Exportação CSV auditada com motivo obrigatório e permissão `FISCAL_EXPORTAR`.
+- Consumo de `resumo-operacional`, `workflow-operacional` e integrações no detalhe da nota fiscal.
+- Abas de Workflow e Integrações na tela de detalhe fiscal.
+- Modais de reprocessamento SEFAZ, consulta de protocolo, contingência, baixa de estoque e geração de conta a receber.
+- Tela `/fiscal/observabilidade` com métricas e logs fiscais sanitizados.
+- Tipos, schemas, hooks e API client para o contrato fiscal frontend/backend v1.10.0a18.
+
+### Alterado
+- Atualizada a versão visual/documental para `1.11.0a8`.
+- Módulo fiscal passa a usar `resumo.acoes` e workflow do backend para orientar ações críticas.
+- `docs/CONTRATO_FISCAL_OFICIAL.md` atualizado para a documentação fiscal v1.10.0a18.
+- Menu e proteção de rotas fiscais passam a reconhecer `FISCAL_EXPORTAR` e `/fiscal/observabilidade`.
+
+### Corrigido
+- Corrigida duplicidade de declaração em `CartaCorrecaoResponse` dentro dos tipos fiscais.
+
+### Documentação
+- Criado documento `docs/IMPLEMENTACAO_V1_11_0A8.md` com etapas padronizadas `v1.11.0a8b1` a `v1.11.0a8b7` para validação incremental.
+
+### Validação
+- `node scripts/validate-source.mjs` executado com sucesso.
+- Validação sintática local dos arquivos alterados executada com `typescript.transpileModule`.
+- `npm install`, `typecheck`, `lint`, testes e build dependem de Node 24/npm 11; o container atual está em Node 22/npm 10.
+
+## v1.11.0a7
+
+Versão anterior aplicada: `v1.11.0a6`.
+
+### Alterado
+- Removido o caminho de mock de runtime de autenticação e recursos compartilhados.
+- `authApi` e `createResourceClient` passam a usar somente endpoints reais da API.
+- Playwright mantém interceptações apenas em testes, sem flags públicas `NEXT_PUBLIC_USE_MOCK_*`.
+- Módulo fiscal troca campos manuais de empresa, filial, pessoa, pedido e produto por selects conectados aos endpoints já existentes.
+- Textos fiscais deixam de mencionar mock e passam a indicar ambiente configurado no backend.
+- Download fiscal passa a usar `Content-Disposition` quando disponível.
+- Erros fiscais preservam metadados técnicos de suporte: code, status HTTP e traceId.
+
+### Removido
+- `features/auth/api/mockAuthClient.ts`.
+- `features/shared/api/mockErpStore.ts`.
+- `features/shared/api/resourceMockClient.ts`.
+- Flags `NEXT_PUBLIC_USE_MOCK_AUTH` e `NEXT_PUBLIC_USE_MOCK_API` dos arquivos `.env`.
+
+### Documentação
+- Criado documento `docs/IMPLEMENTACAO_V1_11_0A7.md`.
+- Atualizado `docs/CONTRATO_FISCAL_OFICIAL.md` para v1.11.0a7.
+
+### Validação
+- `npm run validate:source` executado com sucesso.
+- Demais comandos dependem de Node 24/npm 11 por causa do `engine-strict=true`.
 
 ## v1.11.0a5
 

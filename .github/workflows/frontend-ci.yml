@@ -1,0 +1,104 @@
+name: LogoSoft Frontend CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+      - develop
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  workflow_dispatch:
+
+concurrency:
+  group: logosoft-frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend-gates:
+    name: Gates obrigatórios do frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: true
+      NEXT_TELEMETRY_DISABLED: 1
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_APP_NAME: logosoft
+      NEXT_PUBLIC_APP_ENV: test
+      NEXT_PUBLIC_APP_VERSION: 1.11.0a8b36
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Instalar dependências
+        run: npm install
+
+      - name: Validar fontes e gates estruturais
+        run: npm run validate:source
+
+      - name: Validar isolamento de mocks
+        run: npm run validate:mocks-isolation
+
+      - name: Validar contrato de ambiente backend controlado
+        run: npm run validate:backend-controlled
+
+      - name: Validar seeds controladas para E2E integrado
+        run: npm run validate:controlled-seeds
+
+      - name: Validar runbook do E2E integrado
+        run: npm run validate:integrated-runbook
+
+      - name: Validar integração de seed/reset backend
+        run: npm run validate:backend-seed-reset
+
+
+      - name: Validar execução assistida do E2E integrado
+        run: npm run validate:assisted-e2e
+
+      - name: Validar E2E integrado controlado
+        run: npm run validate:integrated-e2e
+
+      - name: Validar contratos operacionais controlados
+        run: npm run validate:operational-contracts
+
+      - name: Validar referências por select/API
+        run: npm run validate:guid-references
+
+      - name: Validar prontidão fiscal de produção
+        run: npm run validate:fiscal:production
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Testes unitários
+        run: npm run test:unit
+
+      - name: Build
+        run: npm run build
+
+      - name: Instalar Chromium do Playwright
+        run: npx playwright install chromium
+
+      - name: E2E fiscal mockado
+        run: npm run test:e2e:fiscal
+
+      - name: Contrato fiscal backend opt-in
+        run: npm run test:contract:fiscal
+
+      - name: Contrato operacional backend opt-in
+        run: npm run test:contract:operational
+
+      - name: E2E fiscal backend opt-in
+        run: npm run test:e2e:fiscal:backend

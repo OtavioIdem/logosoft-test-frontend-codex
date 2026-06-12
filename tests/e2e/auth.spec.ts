@@ -7,7 +7,7 @@ test('bloqueia rota interna sem autenticação', async ({ page }) => {
     await expect(page).toHaveURL(/login/);
 });
 
-test('login mockado e logout', async ({ page }) => {
+test('login interceptado e logout', async ({ page }) => {
     await mockApiRoutes(page);
     await loginByForm(page);
     await expect(page.getByText('Dashboard logosoft')).toBeVisible();
