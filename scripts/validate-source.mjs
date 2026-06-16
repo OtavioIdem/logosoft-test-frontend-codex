@@ -340,6 +340,15 @@ try {
     failures.push('scripts/validate-operational-contracts.mjs: validação dos contratos operacionais falhou ou está ausente');
 }
 
+
+
+try {
+    statSync(join(root, 'scripts/validate-backend-contract-map.mjs'));
+    execFileSync(process.execPath, [join(root, 'scripts/validate-backend-contract-map.mjs')], { stdio: 'inherit' });
+} catch {
+    failures.push('scripts/validate-backend-contract-map.mjs: validação do mapa de contratos frontend/backend falhou ou está ausente');
+}
+
 try {
     statSync(join(root, 'scripts/validate-backend-controlled.mjs'));
     execFileSync(process.execPath, [join(root, 'scripts/validate-backend-controlled.mjs')], { stdio: 'inherit' });

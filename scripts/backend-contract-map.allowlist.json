@@ -1,0 +1,120 @@
+{
+    "version": "1.11.0a8b38.c1",
+    "status": "pre-swagger-contract-map",
+    "description": "Mapa controlado de divergências conhecidas entre o frontend e o inventário/backend até o Swagger real ser versionado.",
+    "swaggerInput": "Opcional via LOGOSOFT_BACKEND_SWAGGER_FILE. Sem esse arquivo, o gate valida apenas classificação/documentação local.",
+    "documentedDivergences": [
+        {
+            "id": "AUTH_LOGIN_PAYLOAD_DIVERGENTE",
+            "status": "DIVERGENTE_PAYLOAD",
+            "frontend": "POST /api/auth/login com email/password/empresaId",
+            "backendInventario": "POST /api/auth/login com login/senha/empresaCodigo/filialCodigo",
+            "decisao": "Confirmar Swagger real antes de alterar LoginForm/AuthApi.",
+            "target": "B39 ou correção dedicada"
+        },
+        {
+            "id": "AUTH_ME_AUSENTE_FRONTEND",
+            "status": "AUSENTE_NO_FRONTEND",
+            "frontend": "Sem client para GET /api/auth/me",
+            "backendInventario": "GET /api/auth/me",
+            "decisao": "Implementar recarga de usuário/permissões após reconciliação de Auth.",
+            "target": "B39"
+        },
+        {
+            "id": "PRODUTO_FORNECEDOR_ALINHADO_B37",
+            "status": "OK_APOS_B37",
+            "frontend": "POST /api/produtos/{id}/fornecedores com fornecedorId/codigoProdutoFornecedor/principal",
+            "backendInventario": "Mesmo contrato esperado",
+            "decisao": "Manter teste de regressão em produtosPayload.test.ts.",
+            "target": "Concluído na B37"
+        },
+        {
+            "id": "PRODUTO_DADOS_FISCAIS_PATCH_VS_POST",
+            "status": "DIVERGENTE_METODO",
+            "frontend": "PATCH /api/produtos/{id}/dados-fiscais",
+            "backendInventario": "POST /api/produtos/{id}/dados-fiscais",
+            "decisao": "Confirmar controller real antes de alterar método HTTP.",
+            "target": "B38 follow-up"
+        },
+        {
+            "id": "ESTOQUE_INVENTARIO_FECHAR_VS_CONCLUIR",
+            "status": "DIVERGENTE_ROTA",
+            "frontend": "POST /api/estoque/inventarios/{id}/fechar",
+            "backendInventario": "POST /api/estoque/inventarios/{id}/concluir",
+            "decisao": "Resolver antes da B41 Estoque avançado.",
+            "target": "B41"
+        },
+        {
+            "id": "ESTOQUE_TRANSFERENCIAS_AUSENTE_FRONTEND",
+            "status": "AUSENTE_NO_FRONTEND",
+            "frontend": "Sem tela/client para POST /api/estoque/transferencias",
+            "backendInventario": "POST /api/estoque/transferencias",
+            "decisao": "Implementar na B41.",
+            "target": "B41"
+        },
+        {
+            "id": "ESTOQUE_BLOQUEIOS_AUSENTE_FRONTEND",
+            "status": "AUSENTE_NO_FRONTEND",
+            "frontend": "Sem tela/client para bloqueios/liberar/cancelar",
+            "backendInventario": "POST /api/estoque/bloqueios e ações",
+            "decisao": "Implementar na B41.",
+            "target": "B41"
+        },
+        {
+            "id": "FINANCEIRO_BAIXAR_VS_RECEBER_PAGAR",
+            "status": "DIVERGENTE_ROTA",
+            "frontend": "/receber e /pagar",
+            "backendInventario": "/baixar por tipo",
+            "decisao": "Confirmar contrato real antes da B42.",
+            "target": "B42"
+        },
+        {
+            "id": "FINANCEIRO_ESTORNO_DIVERGENTE",
+            "status": "DIVERGENTE_ROTA",
+            "frontend": "/estornar-recebimento e /estornar-pagamento",
+            "backendInventario": "/contas/{id}/estornar e rotas espelhadas",
+            "decisao": "Confirmar contrato final e tratar FINANCEIRO_TIPO_CONTA_INCOMPATIVEL.",
+            "target": "B42"
+        },
+        {
+            "id": "TABELAS_PRECO_AUSENTE_FRONTEND",
+            "status": "AUSENTE_NO_FRONTEND",
+            "frontend": "Sem módulo de tabelas de preço",
+            "backendInventario": "/api/tabelas-preco completo",
+            "decisao": "Implementar na B40.",
+            "target": "B40"
+        },
+        {
+            "id": "ATIVIDADES_AUSENTE_FRONTEND",
+            "status": "AUSENTE_NO_FRONTEND",
+            "frontend": "Sem módulo de atividades",
+            "backendInventario": "/api/atividades completo",
+            "decisao": "Implementar na B43.",
+            "target": "B43"
+        },
+        {
+            "id": "RELATORIOS_AUSENTE_FRONTEND",
+            "status": "AUSENTE_NO_FRONTEND",
+            "frontend": "Sem módulo de relatórios operacionais/gerenciais",
+            "backendInventario": "/api/relatorios/operacionais e /api/relatorios/gerenciais/*",
+            "decisao": "Implementar na B44.",
+            "target": "B44"
+        },
+        {
+            "id": "AUDITORIA_OPERACIONAL_AUSENTE_FRONTEND",
+            "status": "AUSENTE_NO_FRONTEND",
+            "frontend": "Apenas /api/auditoria/eventos",
+            "backendInventario": "/api/auditoria/operacional e eventos-recentes",
+            "decisao": "Implementar na B45.",
+            "target": "B45"
+        },
+        {
+            "id": "FISCAL_ROTAS_AVANCADAS_VS_INVENTARIO",
+            "status": "DIVERGENTE_CONTRATO",
+            "frontend": "Contrato fiscal avançado com transmitir-sefaz, observabilidade, contingência e documentos auxiliares",
+            "backendInventario": "Inventário resumido com transmitir, logs-integracao, xml e danfe",
+            "decisao": "Reconciliar somente contra Swagger real; não inventar regra fiscal.",
+            "target": "B38/B45 fiscal follow-up"
+        }
+    ]
+}

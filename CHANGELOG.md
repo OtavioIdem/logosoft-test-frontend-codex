@@ -1,3 +1,20 @@
+# v1.11.0a8b38.c1
+
+## Correção de typecheck do gate de contratos
+
+- Corrigido `tests/unit/backendContractMap.test.ts` para remover regex com flag `s`, incompatível com `target: es5` do `tsconfig.json`.
+- Substituída a validação por extração do tipo `VincularFornecedorProdutoRequest` com `[\s\S]*?` e `not.toContain('descricaoFornecedor')`.
+- Atualizado `scripts/validate-backend-contract-map.mjs` para usar a mesma abordagem sem flag dotAll.
+- Mantido o escopo estrutural da B38 sem alteração de tela produtiva.
+
+## Reconciliação controlada de contratos
+
+- Criado `validate:backend-contract-map` para mapear endpoints frontend e divergências conhecidas contra o inventário/backend.
+- Criada allowlist versionada de divergências controladas entre frontend e backend.
+- Criado `docs/CONTRATO_FRONTEND_BACKEND_B38.md` com decisões, alvos e bloqueios para B39-B45.
+- Preservada a correção B37 de Produto x Fornecedor como item resolvido no mapa.
+- Integrado o novo gate ao `validate:source`, `validate:ci` e `ci:gates`.
+
 # v1.11.0a8b37
 
 ## Correção Produto x Fornecedor

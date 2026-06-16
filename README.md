@@ -1,17 +1,26 @@
-# logosoft Frontend v1.11.0a8b37
+# logosoft Frontend v1.11.0a8b38.c1
 
-## v1.11.0a8b37 — Correção Produto x Fornecedor
+## v1.11.0a8b38.c1 — Correção typecheck do gate de contratos
 
-A v1.11.0a8b37 corrige o contrato do vínculo fornecedor/produto para enviar `fornecedorId` operacional e `codigoProdutoFornecedor` no endpoint `/api/produtos/{id}/fornecedores`, evitando confusão entre Pessoa e Fornecedor no cadastro de produto.
+A v1.11.0a8b38.c1 corrige o teste `tests/unit/backendContractMap.test.ts`, removendo a flag regex `s` incompatível com `target: es5` e preservando a validação do payload Produto x Fornecedor.
+
+## v1.11.0a8b38 — Reconciliação controlada de contratos
+
+A v1.11.0a8b38 adiciona o gate `validate:backend-contract-map`, uma allowlist versionada e o documento `docs/CONTRATO_FRONTEND_BACKEND_B38.md` para classificar divergências conhecidas entre frontend e backend antes da implementação dos módulos B39-B45.
+
+
+## v1.11.0a8b38.c1 — Correção Produto x Fornecedor
+
+A v1.11.0a8b38.c1 corrige o contrato do vínculo fornecedor/produto para enviar `fornecedorId` operacional e `codigoProdutoFornecedor` no endpoint `/api/produtos/{id}/fornecedores`, evitando confusão entre Pessoa e Fornecedor no cadastro de produto.
 
 
 Frontend do ERP **logosoft** em **Next.js**, **React**, **TypeScript** e **PrimeReact/Sakai**, consumindo a API real em `http://localhost:8080` por padrão.
 
 Esta aplicação foi construída para operação real de ERP: autenticação, permissões, cadastros, estoque, vendas, financeiro, compras, auditoria, dashboard, validações, dialogs de motivo, feedbacks visuais e integração centralizada via Axios.
 
-## v1.11.0a8b37 — Validação real assistida do E2E integrado
+## v1.11.0a8b38.c1 — Validação real assistida do E2E integrado
 
-A v1.11.0a8b37 adiciona checklist, evidências e relatório pós-execução para rodar o E2E integrado real contra backend descartável/controlado. O fluxo mutável continua fora do CI comum e agora exige `LOGOSOFT_INTEGRATED_E2E_ASSISTED_VALIDATION_ACK=true` além dos ACKs anteriores.
+A v1.11.0a8b38.c1 adiciona checklist, evidências e relatório pós-execução para rodar o E2E integrado real contra backend descartável/controlado. O fluxo mutável continua fora do CI comum e agora exige `LOGOSOFT_INTEGRATED_E2E_ASSISTED_VALIDATION_ACK=true` além dos ACKs anteriores.
 
 ### Validação principal
 
