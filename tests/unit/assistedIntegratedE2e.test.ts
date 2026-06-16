@@ -48,7 +48,7 @@ describe('assisted integrated E2E validation', () => {
             postRunChecklist: { noSecretsInArtifacts: boolean };
         };
 
-        expect(evidence.version).toBe('1.11.0a8b36');
+        expect(evidence.version).toBe('1.11.0a8b37');
         expect(evidence.environment.assistedValidationAckRequired).toBe(true);
         expect(evidence.preRunChecklist.productionDataProtected).toBe(true);
         expect(evidence.postRunChecklist.noSecretsInArtifacts).toBe(true);

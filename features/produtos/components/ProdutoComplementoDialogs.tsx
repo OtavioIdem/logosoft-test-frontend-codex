@@ -13,6 +13,7 @@ import { CodigoBarrasFormValues, ProdutoFornecedorFormValues } from '@/features/
 import { FieldErrors, fieldErrorMap, textValue, toOptions } from '@/features/produtos/components/produtoFormUtils';
 import { FornecedorResponse } from '@/features/fornecedores/types/fornecedores.types';
 import { usePessoas } from '@/features/pessoas/hooks/usePessoasResources';
+import { EntityStatus } from '@/types/erp';
 
 export const CodigoBarrasDialog = ({ visible, loading, onHide, onSubmit }: { visible: boolean; loading?: boolean; onHide: () => void; onSubmit: (values: CodigoBarrasFormValues) => Promise<void> }) => {
     const [values, setValues] = useState<CodigoBarrasFormValues>({ codigo: '', descricao: null, principal: true });
@@ -65,15 +66,16 @@ export const CodigoBarrasDialog = ({ visible, loading, onHide, onSubmit }: { vis
 };
 
 export const ProdutoFornecedorDialog = ({ visible, loading, fornecedores, onHide, onSubmit }: { visible: boolean; loading?: boolean; fornecedores: FornecedorResponse[]; onHide: () => void; onSubmit: (values: ProdutoFornecedorFormValues) => Promise<void> }) => {
-    const [values, setValues] = useState<ProdutoFornecedorFormValues>({ fornecedorId: '', codigoFornecedor: null, descricaoFornecedor: null, principal: true });
+    const [values, setValues] = useState<ProdutoFornecedorFormValues>({ fornecedorId: '', codigoProdutoFornecedor: null, principal: true });
     const [errors, setErrors] = useState<FieldErrors>({});
     const pessoasQuery = usePessoas({});
     const pessoaLabelMap = useMemo(() => new Map((pessoasQuery.data ?? []).map((pessoa) => [pessoa.id, pessoa.nomeFantasia ? `${pessoa.nomeRazaoSocial} • ${pessoa.nomeFantasia}` : pessoa.nomeRazaoSocial])), [pessoasQuery.data]);
-    const fornecedorOptions = useMemo(() => toOptions(fornecedores, (item) => `${item.codigo} - ${pessoaLabelMap.get(item.pessoaId) ?? 'Pessoa não carregada'}`), [fornecedores, pessoaLabelMap]);
+    const fornecedoresAtivos = useMemo(() => fornecedores.filter((item) => Number(item.status) === EntityStatus.Ativo), [fornecedores]);
+    const fornecedorOptions = useMemo(() => toOptions(fornecedoresAtivos, (item) => `${item.codigo} - ${pessoaLabelMap.get(item.pessoaId) ?? 'Pessoa não carregada'}`), [fornecedoresAtivos, pessoaLabelMap]);
 
     useEffect(() => {
         if (visible) {
-            setValues({ fornecedorId: '', codigoFornecedor: null, descricaoFornecedor: null, principal: true });
+            setValues({ fornecedorId: '', codigoProdutoFornecedor: null, principal: true });
             setErrors({});
         }
     }, [visible]);
@@ -104,14 +106,9 @@ export const ProdutoFornecedorDialog = ({ visible, loading, fornecedores, onHide
                     <FieldError message={errors.fornecedorId} />
                 </div>
                 <div className="field col-12 md:col-6">
-                    <label htmlFor="codigoFornecedor" className="font-medium">Código no fornecedor</label>
-                    <InputText id="codigoFornecedor" value={textValue(values.codigoFornecedor)} className={className('codigoFornecedor')} onChange={(event) => update('codigoFornecedor', event.target.value)} />
-                    <FieldError message={errors.codigoFornecedor} />
-                </div>
-                <div className="field col-12 md:col-6">
-                    <label htmlFor="descricaoFornecedor" className="font-medium">Descrição no fornecedor</label>
-                    <InputText id="descricaoFornecedor" value={textValue(values.descricaoFornecedor)} className={className('descricaoFornecedor')} onChange={(event) => update('descricaoFornecedor', event.target.value)} />
-                    <FieldError message={errors.descricaoFornecedor} />
+                    <label htmlFor="codigoProdutoFornecedor" className="font-medium">Código do produto no fornecedor</label>
+                    <InputText id="codigoProdutoFornecedor" value={textValue(values.codigoProdutoFornecedor)} className={className('codigoProdutoFornecedor')} onChange={(event) => update('codigoProdutoFornecedor', event.target.value)} />
+                    <FieldError message={errors.codigoProdutoFornecedor} />
                 </div>
                 <div className="field col-12 flex align-items-center gap-2">
                     <Checkbox inputId="principalFornecedor" checked={Boolean(values.principal)} onChange={(event) => update('principal', Boolean(event.checked))} />

@@ -109,7 +109,6 @@ export const adicionarCodigoBarrasProdutoSchema = z.object({
 
 export const vincularFornecedorProdutoSchema = z.object({
     fornecedorId: requiredGuid('Fornecedor'),
-    codigoFornecedor: nullableText,
-    descricaoFornecedor: nullableText,
+    codigoProdutoFornecedor: nullableText,
     principal: z.boolean().default(false)
 });

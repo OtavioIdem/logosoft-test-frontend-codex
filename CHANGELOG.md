@@ -1,3 +1,21 @@
+# v1.11.0a8b37
+
+## Correção Produto x Fornecedor
+
+- Ajustado payload do vínculo fornecedor/produto para usar `codigoProdutoFornecedor`, alinhado ao inventário backend de `/api/produtos/{id}/fornecedores`.
+- Mantido envio de `fornecedorId` operacional; o formulário não envia `pessoaId`.
+- Removido campo de descrição do payload de vínculo para evitar propriedade não prevista no contrato.
+- Reforçados testes unitários para payload e validação de GUID do fornecedor.
+
+## Validações esperadas
+
+```bash
+npm run validate:source
+npm run validate:guid-references
+npm run test:unit -- tests/unit/produtosPayload.test.ts
+npm run ci:gates
+```
+
 # v1.11.0a8b36
 
 - Adicionada validação real assistida do E2E integrado com backend descartável/controlado.

@@ -1,12 +1,17 @@
-# logosoft Frontend v1.11.0a8b36
+# logosoft Frontend v1.11.0a8b37
+
+## v1.11.0a8b37 — Correção Produto x Fornecedor
+
+A v1.11.0a8b37 corrige o contrato do vínculo fornecedor/produto para enviar `fornecedorId` operacional e `codigoProdutoFornecedor` no endpoint `/api/produtos/{id}/fornecedores`, evitando confusão entre Pessoa e Fornecedor no cadastro de produto.
+
 
 Frontend do ERP **logosoft** em **Next.js**, **React**, **TypeScript** e **PrimeReact/Sakai**, consumindo a API real em `http://localhost:8080` por padrão.
 
 Esta aplicação foi construída para operação real de ERP: autenticação, permissões, cadastros, estoque, vendas, financeiro, compras, auditoria, dashboard, validações, dialogs de motivo, feedbacks visuais e integração centralizada via Axios.
 
-## v1.11.0a8b36 — Validação real assistida do E2E integrado
+## v1.11.0a8b37 — Validação real assistida do E2E integrado
 
-A v1.11.0a8b36 adiciona checklist, evidências e relatório pós-execução para rodar o E2E integrado real contra backend descartável/controlado. O fluxo mutável continua fora do CI comum e agora exige `LOGOSOFT_INTEGRATED_E2E_ASSISTED_VALIDATION_ACK=true` além dos ACKs anteriores.
+A v1.11.0a8b37 adiciona checklist, evidências e relatório pós-execução para rodar o E2E integrado real contra backend descartável/controlado. O fluxo mutável continua fora do CI comum e agora exige `LOGOSOFT_INTEGRATED_E2E_ASSISTED_VALIDATION_ACK=true` além dos ACKs anteriores.
 
 ### Validação principal
 

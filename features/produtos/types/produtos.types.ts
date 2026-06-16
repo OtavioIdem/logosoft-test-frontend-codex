@@ -48,9 +48,10 @@ export type CodigoBarrasProdutoResponse = {
 export type ProdutoFornecedorResponse = {
     id?: Guid;
     fornecedorId: Guid;
+    codigoProdutoFornecedor?: string | null;
+    principal: boolean;
     codigoFornecedor?: string | null;
     descricaoFornecedor?: string | null;
-    principal: boolean;
 };
 
 export type ProdutoResponse = {
@@ -174,8 +175,7 @@ export type AdicionarCodigoBarrasProdutoRequest = {
 
 export type VincularFornecedorProdutoRequest = {
     fornecedorId: Guid;
-    codigoFornecedor?: string | null;
-    descricaoFornecedor?: string | null;
+    codigoProdutoFornecedor?: string | null;
     principal: boolean;
 };
 
