@@ -1,5 +1,5 @@
 {
-    "version": "1.11.0a8b38.c1",
+    "version": "1.11.0a8b39.c1",
     "status": "pre-swagger-contract-map",
     "description": "Mapa controlado de divergências conhecidas entre o frontend e o inventário/backend até o Swagger real ser versionado.",
     "swaggerInput": "Opcional via LOGOSOFT_BACKEND_SWAGGER_FILE. Sem esse arquivo, o gate valida apenas classificação/documentação local.",
@@ -9,16 +9,16 @@
             "status": "DIVERGENTE_PAYLOAD",
             "frontend": "POST /api/auth/login com email/password/empresaId",
             "backendInventario": "POST /api/auth/login com login/senha/empresaCodigo/filialCodigo",
-            "decisao": "Confirmar Swagger real antes de alterar LoginForm/AuthApi.",
-            "target": "B39 ou correção dedicada"
+            "decisao": "Mantido sem alteração para não quebrar login aprovado; confirmar Swagger real antes de mexer em LoginForm/AuthApi.",
+            "target": "Correção dedicada pós-Swagger real"
         },
         {
             "id": "AUTH_ME_AUSENTE_FRONTEND",
-            "status": "AUSENTE_NO_FRONTEND",
-            "frontend": "Sem client para GET /api/auth/me",
+            "status": "CLIENT_IMPLEMENTADO_B39",
+            "frontend": "Client authApi.me implementado para GET /api/auth/me; uso automático na sessão permanece opt-in/follow-up.",
             "backendInventario": "GET /api/auth/me",
-            "decisao": "Implementar recarga de usuário/permissões após reconciliação de Auth.",
-            "target": "B39"
+            "decisao": "Client disponível; decidir na próxima revisão se AuthProvider deve recarregar permissões automaticamente.",
+            "target": "B39 concluído / wiring opcional posterior"
         },
         {
             "id": "PRODUTO_FORNECEDOR_ALINHADO_B37",

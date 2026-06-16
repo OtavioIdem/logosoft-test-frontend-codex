@@ -1,5 +1,5 @@
 {
-    "version": "1.11.0a8b38.c1",
+    "version": "1.11.0a8b39.c1",
     "purpose": "Template de evidências para execução assistida do E2E integrado em backend descartável/controlado.",
     "seedRunId": "LOGOSOFT-E2E-CONTROLADO-EXEMPLO",
     "environment": {

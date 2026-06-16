@@ -1,4 +1,4 @@
-# Implementação v1.11.0a8b38.c1 — Reconciliação controlada de contratos
+# Implementação v1.11.0a8b39.c1 — Reconciliação controlada de contratos
 
 ## Objetivo
 
@@ -13,7 +13,7 @@ Adicionar uma camada estrutural de reconciliação frontend x backend antes da i
 - Novo teste unitário estrutural `tests/unit/backendContractMap.test.ts`.
 - Novo script npm `validate:backend-contract-map`.
 - Integração do novo gate ao `validate:source`, `validate:ci` e `ci:gates`.
-- Versionamento para `v1.11.0a8b38.c1`.
+- Versionamento para `v1.11.0a8b39.c1`.
 
 ## Comportamento do gate
 

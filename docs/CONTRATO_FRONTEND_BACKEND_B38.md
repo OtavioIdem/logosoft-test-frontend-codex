@@ -30,8 +30,8 @@ LOGOSOFT_BACKEND_SWAGGER_FILE=docs/contracts/swagger-v1.json npm run validate:ba
 
 | ID | Status | Alvo | Decisão |
 |---|---|---|---|
-| `AUTH_LOGIN_PAYLOAD_DIVERGENTE` | DIVERGENTE_PAYLOAD | B39 ou correção dedicada | Confirmar Swagger real antes de alterar LoginForm/AuthApi. |
-| `AUTH_ME_AUSENTE_FRONTEND` | AUSENTE_NO_FRONTEND | B39 | Implementar recarga de usuário/permissões após reconciliação de Auth. |
+| `AUTH_LOGIN_PAYLOAD_DIVERGENTE` | DIVERGENTE_PAYLOAD | Correção dedicada pós-Swagger real | Mantido sem alteração para não quebrar login aprovado; confirmar Swagger real antes de alterar LoginForm/AuthApi. |
+| `AUTH_ME_AUSENTE_FRONTEND` | CLIENT_IMPLEMENTADO_B39 | B39 concluído / wiring opcional posterior | Client `authApi.me` implementado; decidir depois se AuthProvider deve recarregar permissões automaticamente. |
 | `PRODUTO_FORNECEDOR_ALINHADO_B37` | OK_APOS_B37 | Concluído na B37 | Manter teste de regressão em produtosPayload.test.ts. |
 | `PRODUTO_DADOS_FISCAIS_PATCH_VS_POST` | DIVERGENTE_METODO | B38 follow-up | Confirmar controller real antes de alterar método HTTP. |
 | `ESTOQUE_INVENTARIO_FECHAR_VS_CONCLUIR` | DIVERGENTE_ROTA | B41 | Resolver antes da B41 Estoque avançado. |

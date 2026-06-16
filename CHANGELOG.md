@@ -1,4 +1,4 @@
-# v1.11.0a8b38.c1
+# v1.11.0a8b39
 
 ## Correção de typecheck do gate de contratos
 
