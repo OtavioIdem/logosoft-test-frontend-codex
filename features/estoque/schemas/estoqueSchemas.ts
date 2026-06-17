@@ -48,6 +48,36 @@ export const ajusteEstoqueSchema = z.object({
     motivo
 });
 
+
+export const transferenciaEstoqueSchema = z.object({
+    empresaId: requiredGuid('Empresa'),
+    filialOrigemId: requiredGuid('Filial de origem'),
+    localOrigemId: requiredGuid('Local de origem'),
+    filialDestinoId: requiredGuid('Filial de destino'),
+    localDestinoId: requiredGuid('Local de destino'),
+    produtoId: requiredGuid('Produto'),
+    quantidade,
+    motivo
+}).refine((values) => values.localOrigemId !== values.localDestinoId || values.filialOrigemId !== values.filialDestinoId, { path: ['localDestinoId'], message: 'Destino deve ser diferente da origem.' });
+
+export const criarBloqueioEstoqueSchema = z.object({
+    empresaId: requiredGuid('Empresa'),
+    filialId: optionalGuid,
+    localEstoqueId: requiredGuid('Local de estoque'),
+    produtoId: requiredGuid('Produto'),
+    quantidade,
+    motivo
+});
+
+export const bloqueioEstoqueAcaoSchema = z.object({
+    bloqueioId: requiredGuid('Bloqueio'),
+    motivo
+});
+
+export const concluirInventarioSchema = z.object({
+    motivoAjuste: motivo
+});
+
 export const criarReservaEstoqueSchema = z.object({
     empresaId: requiredGuid('Empresa'),
     filialId: optionalGuid,

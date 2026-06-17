@@ -17,6 +17,8 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/estoque\/entradas(?:\/.*)?$/, anyOf: ['ESTOQUE_MOVIMENTAR'], description: 'Entradas de estoque' },
     { pattern: /^\/estoque\/saidas(?:\/.*)?$/, anyOf: ['ESTOQUE_MOVIMENTAR'], description: 'Saídas de estoque' },
     { pattern: /^\/estoque\/ajustes(?:\/.*)?$/, anyOf: ['ESTOQUE_MOVIMENTAR'], description: 'Ajustes de estoque' },
+    { pattern: /^\/estoque\/transferencias(?:\/.*)?$/, anyOf: ['ESTOQUE_MOVIMENTAR'], description: 'Transferências de estoque' },
+    { pattern: /^\/estoque\/bloqueios(?:\/.*)?$/, anyOf: ['ESTOQUE_MOVIMENTAR'], description: 'Bloqueios de estoque' },
     { pattern: /^\/estoque\/reservas(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'ESTOQUE_RESERVAR'], description: 'Reservas de estoque' },
     { pattern: /^\/estoque\/inventarios(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'ESTOQUE_INVENTARIO_GERENCIAR'], description: 'Inventários de estoque' },
     { pattern: /^\/estoque(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'ESTOQUE_MOVIMENTAR', 'ESTOQUE_RESERVAR', 'ESTOQUE_INVENTARIO_GERENCIAR'], description: 'Estoque' },

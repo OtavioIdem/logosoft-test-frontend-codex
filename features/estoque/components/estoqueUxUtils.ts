@@ -55,7 +55,11 @@ export const reservaStatusSeverity = (status?: number | string | null): TagSever
     return 'info';
 };
 
+const inventarioStatusText = (status?: number | string | null) => String(status ?? '').trim().toLowerCase();
+export const isInventarioEmContagem = (status?: number | string | null): boolean => inventarioStatusText(status).includes('contagem');
+
 export const inventarioStatusLabel = (status?: number | string | null): string => {
+    if (isInventarioEmContagem(status)) return 'Em contagem';
     const labels: Record<number, string> = {
         [StatusInventario.Aberto]: 'Aberto',
         [StatusInventario.Fechado]: 'Fechado',
@@ -65,6 +69,7 @@ export const inventarioStatusLabel = (status?: number | string | null): string =
 };
 
 export const inventarioStatusSeverity = (status?: number | string | null): TagSeverity => {
+    if (isInventarioEmContagem(status)) return 'info';
     const value = Number(status);
     if (value === StatusInventario.Aberto) return 'warning';
     if (value === StatusInventario.Fechado) return 'success';
@@ -101,6 +106,7 @@ export const calcularResumoReservas = (records: ReservaEstoqueResponse[]) => ({
 export const calcularResumoInventarios = (records: InventarioResponse[]) => ({
     totalInventarios: records.length,
     abertos: records.filter((record) => Number(record.statusInventario ?? record.status) === StatusInventario.Aberto).length,
+    emContagem: records.filter((record) => isInventarioEmContagem(record.statusInventario ?? record.status)).length,
     fechados: records.filter((record) => Number(record.statusInventario ?? record.status) === StatusInventario.Fechado).length,
     cancelados: records.filter((record) => Number(record.statusInventario ?? record.status) === StatusInventario.Cancelado).length,
     itensContados: records.reduce((total, record) => total + (record.itens?.length ?? 0), 0)

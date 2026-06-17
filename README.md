@@ -1,4 +1,4 @@
-# logosoft Frontend v1.11.0a8b38.c1
+# logosoft Frontend v1.11.0a8b41
 
 ## v1.11.0a8b38.c1 — Correção typecheck do gate de contratos
 
@@ -13,6 +13,21 @@ A v1.11.0a8b38 adiciona o gate `validate:backend-contract-map`, uma allowlist ve
 
 A v1.11.0a8b38.c1 corrige o contrato do vínculo fornecedor/produto para enviar `fornecedorId` operacional e `codigoProdutoFornecedor` no endpoint `/api/produtos/{id}/fornecedores`, evitando confusão entre Pessoa e Fornecedor no cadastro de produto.
 
+
+
+## v1.11.0a8b41 — Estoque avançado
+
+A v1.11.0a8b41 completa a primeira frente de estoque avançado no frontend: transferências, bloqueios e inventário operacional com detalhe, início de contagem e conclusão alinhada ao backend. A rota legada de inventário `/fechar` foi removida do client produtivo; a conclusão passa a usar `/concluir` com `{ motivoAjuste }`.
+
+### Validação principal
+
+```bash
+npm run validate:source
+npm run validate:backend-contract-map
+npm run validate:guid-references
+npm run test:unit -- tests/unit/estoquePayload.test.ts tests/unit/estoqueB41Structure.test.ts tests/unit/estoqueUxRules.test.ts
+npm run ci:gates
+```
 
 Frontend do ERP **logosoft** em **Next.js**, **React**, **TypeScript** e **PrimeReact/Sakai**, consumindo a API real em `http://localhost:8080` por padrão.
 

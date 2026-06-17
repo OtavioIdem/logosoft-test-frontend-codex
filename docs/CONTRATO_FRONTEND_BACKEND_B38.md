@@ -34,9 +34,9 @@ LOGOSOFT_BACKEND_SWAGGER_FILE=docs/contracts/swagger-v1.json npm run validate:ba
 | `AUTH_ME_AUSENTE_FRONTEND` | CLIENT_IMPLEMENTADO_B39 | B39 concluído / wiring opcional posterior | Client `authApi.me` implementado; decidir depois se AuthProvider deve recarregar permissões automaticamente. |
 | `PRODUTO_FORNECEDOR_ALINHADO_B37` | OK_APOS_B37 | Concluído na B37 | Manter teste de regressão em produtosPayload.test.ts. |
 | `PRODUTO_DADOS_FISCAIS_PATCH_VS_POST` | DIVERGENTE_METODO | B38 follow-up | Confirmar controller real antes de alterar método HTTP. |
-| `ESTOQUE_INVENTARIO_FECHAR_VS_CONCLUIR` | DIVERGENTE_ROTA | B41 | Resolver antes da B41 Estoque avançado. |
-| `ESTOQUE_TRANSFERENCIAS_AUSENTE_FRONTEND` | AUSENTE_NO_FRONTEND | B41 | Implementar na B41. |
-| `ESTOQUE_BLOQUEIOS_AUSENTE_FRONTEND` | AUSENTE_NO_FRONTEND | B41 | Implementar na B41. |
+| `ESTOQUE_INVENTARIO_FECHAR_VS_CONCLUIR` | IMPLEMENTADO_B41 | B41 concluído | Client corrigido para `/concluir` com payload `{ motivoAjuste }`; `/fechar` removido. |
+| `ESTOQUE_TRANSFERENCIAS_AUSENTE_FRONTEND` | IMPLEMENTADO_B41 | B41 concluído | Criada rota `/estoque/transferencias` e client `POST /api/estoque/transferencias`. |
+| `ESTOQUE_BLOQUEIOS_AUSENTE_FRONTEND` | IMPLEMENTADO_B41 | B41 concluído | Criada rota `/estoque/bloqueios` e client para criar/liberar/cancelar. |
 | `FINANCEIRO_BAIXAR_VS_RECEBER_PAGAR` | DIVERGENTE_ROTA | B42 | Confirmar contrato real antes da B42. |
 | `FINANCEIRO_ESTORNO_DIVERGENTE` | DIVERGENTE_ROTA | B42 | Confirmar contrato final e tratar FINANCEIRO_TIPO_CONTA_INCOMPATIVEL. |
 | `TABELAS_PRECO_AUSENTE_FRONTEND` | IMPLEMENTADO_B40 | B40 concluído | Módulo `/tabelas-preco` implementado com CRUD de tabelas, itens, ativação, inativação e preço vigente. |
@@ -65,7 +65,7 @@ LOGOSOFT_BACKEND_SWAGGER_FILE=docs/contracts/swagger-v1.json npm run validate:ba
 
 ### Estoque
 
-`ESTOQUE_INVENTARIO_FECHAR_VS_CONCLUIR` deve ser resolvido antes da B41. A B41 não deve implementar inventário avançado sem essa decisão.
+`ESTOQUE_INVENTARIO_FECHAR_VS_CONCLUIR` foi resolvido na B41 com a troca do client para `/concluir` e payload `{ motivoAjuste }`.
 
 ### Fiscal
 

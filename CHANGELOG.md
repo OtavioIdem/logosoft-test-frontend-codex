@@ -1,3 +1,25 @@
+# v1.11.0a8b41
+
+## Estoque avançado
+
+- Criada tela `/estoque/transferencias` para registrar transferência entre filial/local de origem e destino usando o endpoint `POST /api/estoque/transferencias`.
+- Criada tela `/estoque/bloqueios` para registrar bloqueio de estoque e executar liberação/cancelamento por ID operacional com motivo auditável.
+- Corrigido o client de inventário para usar `POST /api/estoque/inventarios/{id}/concluir` com payload `{ motivoAjuste }`, removendo a rota legada `/fechar`.
+- Adicionado detalhe de inventário via `GET /api/estoque/inventarios/{id}` e ação `POST /api/estoque/inventarios/{id}/iniciar-contagem`.
+- Atualizados menu, guard de rotas e permissões para transferências e bloqueios com `ESTOQUE_MOVIMENTAR`.
+- Reforçados payloads, schemas e testes estruturais para estoque avançado B41.
+- Atualizado mapa de contratos frontend/backend para classificar as divergências de estoque como `IMPLEMENTADO_B41`.
+
+## Validações esperadas
+
+```bash
+npm run validate:source
+npm run validate:backend-contract-map
+npm run validate:guid-references
+npm run test:unit -- tests/unit/estoquePayload.test.ts tests/unit/estoqueB41Structure.test.ts tests/unit/estoqueUxRules.test.ts
+npm run ci:gates
+```
+
 # v1.11.0a8b39
 
 ## Correção de typecheck do gate de contratos

@@ -1,5 +1,5 @@
 {
-    "version": "1.11.0a8b40.c1",
+    "version": "1.11.0a8b41",
     "status": "pre-swagger-contract-map",
     "description": "Mapa controlado de divergências conhecidas entre o frontend e o inventário/backend até o Swagger real ser versionado.",
     "swaggerInput": "Opcional via LOGOSOFT_BACKEND_SWAGGER_FILE. Sem esse arquivo, o gate valida apenas classificação/documentação local.",
@@ -38,27 +38,27 @@
         },
         {
             "id": "ESTOQUE_INVENTARIO_FECHAR_VS_CONCLUIR",
-            "status": "DIVERGENTE_ROTA",
-            "frontend": "POST /api/estoque/inventarios/{id}/fechar",
+            "status": "IMPLEMENTADO_B41",
+            "frontend": "POST /api/estoque/inventarios/{id}/concluir com payload { motivoAjuste }",
             "backendInventario": "POST /api/estoque/inventarios/{id}/concluir",
-            "decisao": "Resolver antes da B41 Estoque avançado.",
-            "target": "B41"
+            "decisao": "Corrigido na B41; rota /fechar removida do client produtivo.",
+            "target": "B41 concluído"
         },
         {
             "id": "ESTOQUE_TRANSFERENCIAS_AUSENTE_FRONTEND",
-            "status": "AUSENTE_NO_FRONTEND",
-            "frontend": "Sem tela/client para POST /api/estoque/transferencias",
+            "status": "IMPLEMENTADO_B41",
+            "frontend": "Tela /estoque/transferencias e client POST /api/estoque/transferencias",
             "backendInventario": "POST /api/estoque/transferencias",
-            "decisao": "Implementar na B41.",
-            "target": "B41"
+            "decisao": "Implementado na B41 com payload de origem/destino, quantidade e motivo.",
+            "target": "B41 concluído"
         },
         {
             "id": "ESTOQUE_BLOQUEIOS_AUSENTE_FRONTEND",
-            "status": "AUSENTE_NO_FRONTEND",
-            "frontend": "Sem tela/client para bloqueios/liberar/cancelar",
+            "status": "IMPLEMENTADO_B41",
+            "frontend": "Tela /estoque/bloqueios e client para criar, liberar e cancelar bloqueio",
             "backendInventario": "POST /api/estoque/bloqueios e ações",
-            "decisao": "Implementar na B41.",
-            "target": "B41"
+            "decisao": "Implementado na B41. Sem GET confirmado, liberação/cancelamento exigem ID operacional do bloqueio.",
+            "target": "B41 concluído"
         },
         {
             "id": "FINANCEIRO_BAIXAR_VS_RECEBER_PAGAR",

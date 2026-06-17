@@ -6,6 +6,7 @@ import {
     calcularResumoReservas,
     calcularResumoSaldos,
     inventarioStatusLabel,
+    isInventarioEmContagem,
     movimentoImpactoLabel,
     reservaStatusLabel
 } from '@/features/estoque/components/estoqueUxUtils';
@@ -62,5 +63,15 @@ describe('estoque UX rules', () => {
 
         expect(inventarioStatusLabel(StatusInventario.Fechado)).toBe('Fechado');
         expect(calcularResumoInventarios(inventarios)).toMatchObject({ totalInventarios: 2, abertos: 1, fechados: 1, itensContados: 1 });
+    });
+
+    it('reconhece status textual de inventário em contagem', () => {
+        const inventarios = [
+            { ...saldoBase, codigo: 'INV-003', descricao: 'Inventário em contagem', statusInventario: 'EmContagem', itens: [] } as unknown as InventarioResponse
+        ];
+
+        expect(isInventarioEmContagem('EmContagem')).toBe(true);
+        expect(inventarioStatusLabel('EmContagem')).toBe('Em contagem');
+        expect(calcularResumoInventarios(inventarios)).toMatchObject({ totalInventarios: 1, emContagem: 1 });
     });
 });

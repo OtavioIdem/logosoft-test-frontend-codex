@@ -36,6 +36,26 @@ export type MovimentoManualEstoqueRequest = {
 
 export type AjusteEstoqueRequest = Omit<MovimentoManualEstoqueRequest, 'quantidade'> & { quantidadeContada: number };
 
+export type TransferenciaEstoqueRequest = {
+    empresaId: Guid;
+    filialOrigemId: Guid;
+    localOrigemId: Guid;
+    filialDestinoId: Guid;
+    localDestinoId: Guid;
+    produtoId: Guid;
+    quantidade: number;
+    motivo: string;
+};
+
+export type CriarBloqueioEstoqueRequest = {
+    empresaId: Guid;
+    filialId?: Guid | null;
+    localEstoqueId: Guid;
+    produtoId: Guid;
+    quantidade: number;
+    motivo: string;
+};
+
 export type CriarReservaEstoqueRequest = {
     empresaId: Guid;
     filialId?: Guid | null;
@@ -59,9 +79,13 @@ export type CancelarReservaEstoqueRequest = { quantidade?: number | null; motivo
 
 export type AbrirInventarioRequest = { empresaId: Guid; filialId?: Guid | null; codigo: string; localEstoqueId: Guid; descricao?: string | null };
 export type AdicionarItemInventarioRequest = { produtoId: Guid; quantidadeContada: number; observacao?: string | null };
+export type ConcluirInventarioRequest = { motivoAjuste: string };
 
 export type LocalEstoqueFormValues = Partial<CriarLocalEstoqueRequest & AtualizarLocalEstoqueRequest> & { id?: Guid };
 export type MovimentoEstoqueFormValues = Partial<MovimentoManualEstoqueRequest & AjusteEstoqueRequest>;
+export type TransferenciaEstoqueFormValues = Partial<TransferenciaEstoqueRequest>;
+export type BloqueioEstoqueFormValues = Partial<CriarBloqueioEstoqueRequest>;
+export type BloqueioEstoqueAcaoFormValues = { bloqueioId?: string; motivo?: string };
 export type ReservaEstoqueFormValues = Partial<CriarReservaEstoqueRequest>;
 export type BaixarReservaFormValues = Partial<BaixarReservaEstoqueRequest>;
 export type CancelarReservaFormValues = Partial<CancelarReservaEstoqueRequest>;
