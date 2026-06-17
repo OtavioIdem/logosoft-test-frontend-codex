@@ -1,4 +1,19 @@
-# logosoft Frontend v1.11.0a8b42
+# logosoft Frontend v1.11.0a8b43.c2
+
+
+## v1.11.0a8b43.c2 — Atividades / workflow operacional
+
+A v1.11.0a8b43.c2 implementa o módulo `/atividades` com listagem, detalhe, criação, edição, atribuição de responsável, alteração de status, comentários e cancelamento com motivo. O módulo usa os endpoints reais de `/api/atividades`, permissões `ATIVIDADES_CONSULTAR`/`ATIVIDADES_GERENCIAR` e atualiza o mapa frontend/backend para `IMPLEMENTADO_B43`.
+
+### Validação principal
+
+```bash
+npm run validate:source
+npm run validate:backend-contract-map
+npm run validate:guid-references
+npm run test:unit -- tests/unit/atividadesPayload.test.ts tests/unit/atividadesB43Structure.test.ts tests/unit/routePermissions.test.ts
+npm run ci:gates
+```
 
 ## v1.11.0a8b38.c1 — Correção typecheck do gate de contratos
 

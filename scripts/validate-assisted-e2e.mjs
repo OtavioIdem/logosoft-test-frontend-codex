@@ -30,7 +30,7 @@ for (const [path, reason] of requiredFiles) {
 if (existsSync(join(root, 'package.json'))) {
     const packageJson = JSON.parse(read('package.json'));
     const scripts = packageJson.scripts ?? {};
-    if (packageJson.logosoftVersion !== '1.11.0a8b42') failures.push('package.json: logosoftVersion deve ser 1.11.0a8b42');
+    if (packageJson.logosoftVersion !== '1.11.0a8b43.c2') failures.push('package.json: logosoftVersion deve ser 1.11.0a8b43.c2');
     if (scripts['validate:assisted-e2e'] !== 'node scripts/validate-assisted-e2e.mjs') {
         failures.push('package.json: script validate:assisted-e2e obrigatório ausente ou incorreto');
     }
@@ -99,7 +99,7 @@ if (existsSync(join(root, 'tests/evidence/integrated-e2e.assisted-evidence.examp
         failures.push('tests/evidence/integrated-e2e.assisted-evidence.example.json: não deve conter token, JWT ou segredo real');
     }
     const evidence = JSON.parse(raw);
-    if (evidence.version !== '1.11.0a8b42') failures.push('tests/evidence/integrated-e2e.assisted-evidence.example.json: version deve ser 1.11.0a8b42');
+    if (evidence.version !== '1.11.0a8b43.c2') failures.push('tests/evidence/integrated-e2e.assisted-evidence.example.json: version deve ser 1.11.0a8b43.c2');
     if (evidence.environment?.assistedValidationAckRequired !== true) failures.push('tests/evidence/integrated-e2e.assisted-evidence.example.json: deve exigir assistedValidationAckRequired');
     if (evidence.preRunChecklist?.productionDataProtected !== true) failures.push('tests/evidence/integrated-e2e.assisted-evidence.example.json: deve proteger dados produtivos por padrão');
     if (evidence.postRunChecklist?.noSecretsInArtifacts !== true) failures.push('tests/evidence/integrated-e2e.assisted-evidence.example.json: deve exigir artefatos sem segredo');

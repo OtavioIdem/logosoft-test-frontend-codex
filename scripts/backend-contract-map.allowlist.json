@@ -1,5 +1,5 @@
 {
-    "version": "1.11.0a8b42",
+    "version": "1.11.0a8b43.c2",
     "status": "pre-swagger-contract-map",
     "description": "Mapa controlado de divergências conhecidas entre o frontend e o inventário/backend até o Swagger real ser versionado.",
     "swaggerInput": "Opcional via LOGOSOFT_BACKEND_SWAGGER_FILE. Sem esse arquivo, o gate valida apenas classificação/documentação local.",
@@ -86,11 +86,11 @@
         },
         {
             "id": "ATIVIDADES_AUSENTE_FRONTEND",
-            "status": "AUSENTE_NO_FRONTEND",
-            "frontend": "Sem módulo de atividades",
+            "status": "IMPLEMENTADO_B43",
+            "frontend": "Módulo /atividades com client para listagem, detalhe, criação, edição, atribuição, status, comentários e cancelamento.",
             "backendInventario": "/api/atividades completo",
-            "decisao": "Implementar na B43.",
-            "target": "B43"
+            "decisao": "Implementado na B43 com payloads alinhados ao inventário backend e guards ATIVIDADES_*.",
+            "target": "B43 concluído"
         },
         {
             "id": "RELATORIOS_AUSENTE_FRONTEND",

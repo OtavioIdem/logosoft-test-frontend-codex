@@ -17,6 +17,13 @@ describe('route permission rules', () => {
     });
 
 
+
+    it('protege atividades por permissões do workflow operacional', () => {
+        const rule = findRoutePermissionRule('/atividades');
+        expect(rule?.anyOf).toContain('ATIVIDADES_CONSULTAR');
+        expect(rule?.anyOf).toContain('ATIVIDADES_GERENCIAR');
+    });
+
     it('protege inutilizações fiscais por permissão específica', () => {
         expect(findRoutePermissionRule('/fiscal/inutilizacoes')?.anyOf).toEqual(['FISCAL_INUTILIZAR']);
     });

@@ -1,3 +1,25 @@
+# v1.11.0a8b43.c2
+
+
+## Atividades / workflow operacional
+
+- Criada rota `/atividades` com tela real de workflow operacional.
+- Criado client `features/atividades/api/atividadesApi.ts` para todos os endpoints documentados de `/api/atividades`.
+- Implementadas listagem, detalhe, criação, edição, atribuição de responsável, alteração de status, comentários e cancelamento com motivo.
+- Adicionadas permissões `ATIVIDADES_CONSULTAR` e `ATIVIDADES_GERENCIAR` no menu, guards de rota e tipos do projeto.
+- Atualizado mapa frontend/backend para classificar `ATIVIDADES_AUSENTE_FRONTEND` como `IMPLEMENTADO_B43`.
+- Criados testes estruturais e de payload para o módulo.
+
+## Validações esperadas
+
+```bash
+npm run validate:source
+npm run validate:backend-contract-map
+npm run validate:guid-references
+npm run test:unit -- tests/unit/atividadesPayload.test.ts tests/unit/atividadesB43Structure.test.ts tests/unit/routePermissions.test.ts
+npm run ci:gates
+```
+
 # v1.11.0a8b42
 
 ## Financeiro gerencial
