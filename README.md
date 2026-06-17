@@ -1,4 +1,4 @@
-# logosoft Frontend v1.11.0a8b41
+# logosoft Frontend v1.11.0a8b42
 
 ## v1.11.0a8b38.c1 — Correção typecheck do gate de contratos
 
@@ -26,6 +26,21 @@ npm run validate:source
 npm run validate:backend-contract-map
 npm run validate:guid-references
 npm run test:unit -- tests/unit/estoquePayload.test.ts tests/unit/estoqueB41Structure.test.ts tests/unit/estoqueUxRules.test.ts
+npm run ci:gates
+```
+
+
+## v1.11.0a8b42 — Financeiro gerencial
+
+A v1.11.0a8b42 reconcilia o contrato financeiro do frontend com o inventário backend: baixa por `/baixar`, estorno por `/estornar` e nova tela de fluxo de caixa em `/financeiro/fluxo-caixa`. A UI não inventa regra de caixa, banco ou forma de pagamento quando o contrato backend não expõe esses campos para a baixa operacional.
+
+### Validação principal
+
+```bash
+npm run validate:source
+npm run validate:backend-contract-map
+npm run validate:guid-references
+npm run test:unit -- tests/unit/financeiroPayload.test.ts tests/unit/financeiroB42Structure.test.ts tests/unit/routePermissions.test.ts
 npm run ci:gates
 ```
 

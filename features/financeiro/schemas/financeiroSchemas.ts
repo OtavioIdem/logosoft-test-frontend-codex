@@ -5,7 +5,6 @@ import { isValidGuid, normalizeGuidOrNull } from '@/lib/http/requestUtils';
 const guidSchema = z.string().trim().refine(isValidGuid, 'Selecione um registro válido.');
 const optionalGuidSchema = z.preprocess((value) => normalizeGuidOrNull(value) ?? undefined, guidSchema.optional());
 const requiredText = (message: string) => z.string().trim().min(1, message);
-const moneySchema = z.number({ required_error: 'Informe um valor.' }).min(0, 'O valor não pode ser negativo.');
 const positiveMoneySchema = z.number({ required_error: 'Informe um valor.' }).positive('O valor precisa ser maior que zero.');
 const positiveNumberSchema = z.number({ required_error: 'Informe um número.' }).int('Informe um número inteiro.').positive('O número precisa ser maior que zero.');
 const isoDateSchema = z.preprocess((value) => {
@@ -71,21 +70,21 @@ export const gerarContaReceberPedidoSchema = z.object({
     observacao: z.string().trim().nullable().optional()
 });
 
-export const receberContaSchema = z.object({
-    parcelaId: guidSchema,
-    formaPagamentoId: guidSchema,
-    dataRecebimento: isoDateSchema,
-    valorRecebido: positiveMoneySchema,
-    valorJuros: moneySchema.default(0),
-    valorMulta: moneySchema.default(0),
-    valorDesconto: moneySchema.default(0),
-    gerarMovimentoCaixa: z.boolean().default(true),
-    gerarMovimentoBancario: z.boolean().default(false),
-    contaBancariaReferencia: z.preprocess((value) => (typeof value === 'string' && value.trim() === '' ? undefined : value), z.string().trim().optional()),
-    observacao: z.string().trim().nullable().optional()
+export const baixarContaFinanceiraSchema = z.object({
+    valor: positiveMoneySchema,
+    dataBaixa: isoDateSchema,
+    observacao: z.preprocess((value) => (typeof value === 'string' && value.trim() === '' ? undefined : value), z.string().trim().optional())
 });
 
-export const estornarRecebimentoSchema = z.object({ recebimentoId: guidSchema, motivo: requiredText('Informe o motivo.') });
+export const receberContaSchema = baixarContaFinanceiraSchema;
+
+export const estornarContaFinanceiraSchema = z.object({
+    baixaId: guidSchema,
+    dataEstorno: isoDateSchema,
+    motivo: requiredText('Informe o motivo.')
+});
+
+export const estornarRecebimentoSchema = estornarContaFinanceiraSchema;
 export const cancelarContaFinanceiraSchema = z.object({ motivo: requiredText('Informe o motivo.') });
 
 export const criarContaPagarSchema = z.object({
@@ -100,18 +99,13 @@ export const criarContaPagarSchema = z.object({
     parcelas: z.array(parcelaFinanceiraSchema).min(1, 'Informe ao menos uma parcela.')
 });
 
-export const pagarContaSchema = z.object({
-    parcelaId: guidSchema,
-    formaPagamentoId: guidSchema,
-    dataPagamento: isoDateSchema,
-    valorPago: positiveMoneySchema,
-    valorJuros: moneySchema.default(0),
-    valorMulta: moneySchema.default(0),
-    valorDesconto: moneySchema.default(0),
-    gerarMovimentoCaixa: z.boolean().default(true),
-    gerarMovimentoBancario: z.boolean().default(false),
-    contaBancariaReferencia: z.preprocess((value) => (typeof value === 'string' && value.trim() === '' ? undefined : value), z.string().trim().optional()),
-    observacao: z.string().trim().nullable().optional()
-});
+export const pagarContaSchema = baixarContaFinanceiraSchema;
+export const estornarPagamentoSchema = estornarContaFinanceiraSchema;
 
-export const estornarPagamentoSchema = z.object({ pagamentoId: guidSchema, motivo: requiredText('Informe o motivo.') });
+
+export const fluxoCaixaQuerySchema = z.object({
+    empresaId: optionalGuidSchema,
+    filialId: optionalGuidSchema,
+    dataInicial: isoDateSchema,
+    dataFinal: isoDateSchema
+});

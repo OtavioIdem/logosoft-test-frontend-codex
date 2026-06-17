@@ -37,8 +37,8 @@ LOGOSOFT_BACKEND_SWAGGER_FILE=docs/contracts/swagger-v1.json npm run validate:ba
 | `ESTOQUE_INVENTARIO_FECHAR_VS_CONCLUIR` | IMPLEMENTADO_B41 | B41 concluído | Client corrigido para `/concluir` com payload `{ motivoAjuste }`; `/fechar` removido. |
 | `ESTOQUE_TRANSFERENCIAS_AUSENTE_FRONTEND` | IMPLEMENTADO_B41 | B41 concluído | Criada rota `/estoque/transferencias` e client `POST /api/estoque/transferencias`. |
 | `ESTOQUE_BLOQUEIOS_AUSENTE_FRONTEND` | IMPLEMENTADO_B41 | B41 concluído | Criada rota `/estoque/bloqueios` e client para criar/liberar/cancelar. |
-| `FINANCEIRO_BAIXAR_VS_RECEBER_PAGAR` | DIVERGENTE_ROTA | B42 | Confirmar contrato real antes da B42. |
-| `FINANCEIRO_ESTORNO_DIVERGENTE` | DIVERGENTE_ROTA | B42 | Confirmar contrato final e tratar FINANCEIRO_TIPO_CONTA_INCOMPATIVEL. |
+| `FINANCEIRO_BAIXAR_VS_RECEBER_PAGAR` | IMPLEMENTADO_B42 | B42 concluído | Baixa alinhada para `/baixar` com `{ valor, dataBaixa, observacao }`. |
+| `FINANCEIRO_ESTORNO_DIVERGENTE` | IMPLEMENTADO_B42 | B42 concluído | Estorno alinhado para `/estornar` com `{ baixaId, dataEstorno, motivo }`. |
 | `TABELAS_PRECO_AUSENTE_FRONTEND` | IMPLEMENTADO_B40 | B40 concluído | Módulo `/tabelas-preco` implementado com CRUD de tabelas, itens, ativação, inativação e preço vigente. |
 | `ATIVIDADES_AUSENTE_FRONTEND` | AUSENTE_NO_FRONTEND | B43 | Implementar na B43. |
 | `RELATORIOS_AUSENTE_FRONTEND` | AUSENTE_NO_FRONTEND | B44 | Implementar na B44. |
@@ -61,7 +61,7 @@ LOGOSOFT_BACKEND_SWAGGER_FILE=docs/contracts/swagger-v1.json npm run validate:ba
 
 ### Financeiro
 
-`FINANCEIRO_BAIXAR_VS_RECEBER_PAGAR` e `FINANCEIRO_ESTORNO_DIVERGENTE` ficam bloqueados para implementação ampla até confirmação do Swagger real. A B42 deve decidir se o frontend altera rotas para `/baixar` e `/estornar` ou se o inventário será atualizado.
+`FINANCEIRO_BAIXAR_VS_RECEBER_PAGAR` e `FINANCEIRO_ESTORNO_DIVERGENTE` foram classificados como `IMPLEMENTADO_B42`, adotando as rotas `/baixar` e `/estornar` documentadas no inventário backend. Sem Swagger real informado, a validação permanece estrutural/documental.
 
 ### Estoque
 

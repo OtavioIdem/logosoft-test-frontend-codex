@@ -12,6 +12,10 @@ describe('route permission rules', () => {
         expect(findRoutePermissionRule('/auditoria/eventos')?.anyOf).toEqual(['AUDITORIA_CONSULTAR']);
     });
 
+    it('protege fluxo de caixa por consulta financeira', () => {
+        expect(findRoutePermissionRule('/financeiro/fluxo-caixa')?.anyOf).toEqual(['FINANCEIRO_CONSULTAR']);
+    });
+
 
     it('protege inutilizações fiscais por permissão específica', () => {
         expect(findRoutePermissionRule('/fiscal/inutilizacoes')?.anyOf).toEqual(['FISCAL_INUTILIZAR']);

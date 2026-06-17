@@ -1,7 +1,7 @@
 {
     "name": "logosoft-frontend",
-    "version": "1.11.0-a.8.b41",
-    "logosoftVersion": "1.11.0a8b41",
+    "version": "1.11.0-a.8.b42",
+    "logosoftVersion": "1.11.0a8b42",
     "private": true,
     "scripts": {
         "dev": "next dev",

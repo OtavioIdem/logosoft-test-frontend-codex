@@ -1,5 +1,5 @@
 {
-    "version": "1.11.0a8b41",
+    "version": "1.11.0a8b42",
     "status": "pre-swagger-contract-map",
     "description": "Mapa controlado de divergências conhecidas entre o frontend e o inventário/backend até o Swagger real ser versionado.",
     "swaggerInput": "Opcional via LOGOSOFT_BACKEND_SWAGGER_FILE. Sem esse arquivo, o gate valida apenas classificação/documentação local.",
@@ -62,19 +62,19 @@
         },
         {
             "id": "FINANCEIRO_BAIXAR_VS_RECEBER_PAGAR",
-            "status": "DIVERGENTE_ROTA",
-            "frontend": "/receber e /pagar",
+            "status": "IMPLEMENTADO_B42",
+            "frontend": "/api/financeiro/contas-receber/{id}/baixar e /api/financeiro/contas-pagar/{id}/baixar",
             "backendInventario": "/baixar por tipo",
-            "decisao": "Confirmar contrato real antes da B42.",
-            "target": "B42"
+            "decisao": "B42 alinhou baixa financeira ao contrato /baixar com payload { valor, dataBaixa, observacao }.",
+            "target": "B42 concluído"
         },
         {
             "id": "FINANCEIRO_ESTORNO_DIVERGENTE",
-            "status": "DIVERGENTE_ROTA",
-            "frontend": "/estornar-recebimento e /estornar-pagamento",
+            "status": "IMPLEMENTADO_B42",
+            "frontend": "/api/financeiro/contas-receber/{id}/estornar e /api/financeiro/contas-pagar/{id}/estornar",
             "backendInventario": "/contas/{id}/estornar e rotas espelhadas",
-            "decisao": "Confirmar contrato final e tratar FINANCEIRO_TIPO_CONTA_INCOMPATIVEL.",
-            "target": "B42"
+            "decisao": "B42 usa rotas espelhadas por tipo com payload { baixaId, dataEstorno, motivo }.",
+            "target": "B42 concluído"
         },
         {
             "id": "TABELAS_PRECO_AUSENTE_FRONTEND",

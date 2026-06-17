@@ -1,3 +1,25 @@
+# v1.11.0a8b42
+
+## Financeiro gerencial
+
+- Alinhadas as baixas financeiras para `POST /api/financeiro/contas-receber/{id}/baixar` e `POST /api/financeiro/contas-pagar/{id}/baixar`.
+- Alinhados os estornos financeiros para `POST /api/financeiro/contas-receber/{id}/estornar` e `POST /api/financeiro/contas-pagar/{id}/estornar`.
+- Simplificado o payload de baixa para `{ valor, dataBaixa, observacao }`, removendo campos de forma de pagamento/caixa/banco que não constavam no contrato inventariado.
+- Atualizado o payload de estorno para `{ baixaId, dataEstorno, motivo }`.
+- Criada tela `/financeiro/fluxo-caixa` consumindo `GET /api/financeiro/fluxo-caixa`.
+- Atualizados menu, guard de rota e mapa de contratos frontend/backend para `IMPLEMENTADO_B42`.
+- Reforçados testes de payload e estrutura financeira B42.
+
+## Validações esperadas
+
+```bash
+npm run validate:source
+npm run validate:backend-contract-map
+npm run validate:guid-references
+npm run test:unit -- tests/unit/financeiroPayload.test.ts tests/unit/financeiroB42Structure.test.ts tests/unit/routePermissions.test.ts
+npm run ci:gates
+```
+
 # v1.11.0a8b41
 
 ## Estoque avançado
