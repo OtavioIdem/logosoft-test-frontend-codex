@@ -1,9 +1,9 @@
-# logosoft Frontend v1.11.0a8b43.c2
+# logosoft Frontend v1.11.0a8b44.c1
 
 
-## v1.11.0a8b43.c2 — Atividades / workflow operacional
+## v1.11.0a8b44.c1 — Relatórios operacionais e gerenciais
 
-A v1.11.0a8b43.c2 implementa o módulo `/atividades` com listagem, detalhe, criação, edição, atribuição de responsável, alteração de status, comentários e cancelamento com motivo. O módulo usa os endpoints reais de `/api/atividades`, permissões `ATIVIDADES_CONSULTAR`/`ATIVIDADES_GERENCIAR` e atualiza o mapa frontend/backend para `IMPLEMENTADO_B43`.
+A v1.11.0a8b44.c1 implementa o módulo `/relatorios` com relatório operacional consolidado e relatórios gerenciais por módulo: vendas, compras, financeiro, estoque e fiscal. O frontend consome os endpoints reais de `/api/relatorios/operacionais` e `/api/relatorios/gerenciais/*`, aplica filtros por empresa, filial e período, mas não recalcula KPIs e bloqueia IDs técnicos ou valores UUID brutos nos cards.
 
 ### Validação principal
 
@@ -11,7 +11,7 @@ A v1.11.0a8b43.c2 implementa o módulo `/atividades` com listagem, detalhe, cria
 npm run validate:source
 npm run validate:backend-contract-map
 npm run validate:guid-references
-npm run test:unit -- tests/unit/atividadesPayload.test.ts tests/unit/atividadesB43Structure.test.ts tests/unit/routePermissions.test.ts
+npm run test:unit -- tests/unit/relatoriosPayload.test.ts tests/unit/relatoriosB44Structure.test.ts tests/unit/routePermissions.test.ts
 npm run ci:gates
 ```
 

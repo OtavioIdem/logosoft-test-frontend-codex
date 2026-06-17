@@ -1,14 +1,17 @@
-# v1.11.0a8b43.c2
+# v1.11.0a8b44.c1
 
+## Relatórios operacionais e gerenciais
 
-## Atividades / workflow operacional
-
-- Criada rota `/atividades` com tela real de workflow operacional.
-- Criado client `features/atividades/api/atividadesApi.ts` para todos os endpoints documentados de `/api/atividades`.
-- Implementadas listagem, detalhe, criação, edição, atribuição de responsável, alteração de status, comentários e cancelamento com motivo.
-- Adicionadas permissões `ATIVIDADES_CONSULTAR` e `ATIVIDADES_GERENCIAR` no menu, guards de rota e tipos do projeto.
-- Atualizado mapa frontend/backend para classificar `ATIVIDADES_AUSENTE_FRONTEND` como `IMPLEMENTADO_B43`.
+- Criada rota `/relatorios` com tela real para visão operacional e gerencial.
+- Criado client `features/relatorios/api/relatoriosApi.ts` para `/api/relatorios/operacionais` e `/api/relatorios/gerenciais/{modulo}`.
+- Implementados filtros por empresa, filial, data inicial e data final.
+- Implementados cards/KPIs por módulo sem recálculo no frontend.
+- Bloqueada exposição visual de IDs técnicos e valores UUID brutos nos cards de relatório.
+- Adicionada permissão `RELATORIOS_CONSULTAR` no menu, guards de rota, mocks controlados e fixtures.
+- Atualizado mapa frontend/backend para classificar `RELATORIOS_AUSENTE_FRONTEND` como `IMPLEMENTADO_B44`.
 - Criados testes estruturais e de payload para o módulo.
+- Corrigido texto informativo usado pelo teste estrutural para `não expõe IDs técnicos`.
+- Extraída regra de métricas para util testável que bloqueia UUID mesmo em chave textual não técnica.
 
 ## Validações esperadas
 
@@ -16,7 +19,7 @@
 npm run validate:source
 npm run validate:backend-contract-map
 npm run validate:guid-references
-npm run test:unit -- tests/unit/atividadesPayload.test.ts tests/unit/atividadesB43Structure.test.ts tests/unit/routePermissions.test.ts
+npm run test:unit -- tests/unit/relatoriosPayload.test.ts tests/unit/relatoriosB44Structure.test.ts tests/unit/routePermissions.test.ts
 npm run ci:gates
 ```
 

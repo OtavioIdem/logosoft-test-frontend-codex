@@ -209,5 +209,5 @@ npm run ci:gates
 ## Próxima etapa recomendada
 
 ```text
-v1.11.0a8b43.c2 — Atividades/workflow operacional.
+v1.11.0a8b43 — Atividades/workflow operacional.
 ```

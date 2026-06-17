@@ -18,6 +18,11 @@ describe('route permission rules', () => {
 
 
 
+
+    it('protege relatórios por permissão de consulta gerencial', () => {
+        expect(findRoutePermissionRule('/relatorios')?.anyOf).toEqual(['RELATORIOS_CONSULTAR']);
+    });
+
     it('protege atividades por permissões do workflow operacional', () => {
         const rule = findRoutePermissionRule('/atividades');
         expect(rule?.anyOf).toContain('ATIVIDADES_CONSULTAR');

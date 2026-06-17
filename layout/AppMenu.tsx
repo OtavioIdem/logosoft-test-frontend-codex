@@ -136,6 +136,11 @@ const AppMenu = () => {
                 items: [{ label: 'Workflow operacional', icon: 'pi pi-fw pi-check-square', to: '/atividades', anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'] }]
             },
             {
+                label: 'Relatórios',
+                permission: 'RELATORIOS_CONSULTAR',
+                items: [{ label: 'Operacionais e gerenciais', icon: 'pi pi-fw pi-chart-bar', to: '/relatorios', permission: 'RELATORIOS_CONSULTAR' }]
+            },
+            {
                 label: 'Auditoria',
                 permission: 'AUDITORIA_CONSULTAR',
                 items: [{ label: 'Eventos de auditoria', icon: 'pi pi-fw pi-history', to: '/auditoria/eventos', permission: 'AUDITORIA_CONSULTAR' }]

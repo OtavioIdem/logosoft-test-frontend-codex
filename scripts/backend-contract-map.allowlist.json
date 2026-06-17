@@ -1,5 +1,5 @@
 {
-    "version": "1.11.0a8b43.c2",
+    "version": "1.11.0a8b44.c1",
     "status": "pre-swagger-contract-map",
     "description": "Mapa controlado de divergências conhecidas entre o frontend e o inventário/backend até o Swagger real ser versionado.",
     "swaggerInput": "Opcional via LOGOSOFT_BACKEND_SWAGGER_FILE. Sem esse arquivo, o gate valida apenas classificação/documentação local.",
@@ -94,11 +94,11 @@
         },
         {
             "id": "RELATORIOS_AUSENTE_FRONTEND",
-            "status": "AUSENTE_NO_FRONTEND",
-            "frontend": "Sem módulo de relatórios operacionais/gerenciais",
+            "status": "IMPLEMENTADO_B44",
+            "frontend": "Módulo /relatorios com client para relatório operacional e gerenciais por módulo.",
             "backendInventario": "/api/relatorios/operacionais e /api/relatorios/gerenciais/*",
-            "decisao": "Implementar na B44.",
-            "target": "B44"
+            "decisao": "Implementado na B44 com filtros por empresa, filial e período, sem recalcular KPIs no frontend.",
+            "target": "B44 concluído"
         },
         {
             "id": "AUDITORIA_OPERACIONAL_AUSENTE_FRONTEND",

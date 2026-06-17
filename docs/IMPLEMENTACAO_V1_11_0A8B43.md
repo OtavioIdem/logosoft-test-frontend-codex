@@ -1,8 +1,8 @@
-# Implementação v1.11.0a8b43.c2 — Atividades / workflow operacional
+# Implementação v1.11.0a8b43 — Atividades / workflow operacional
 
 ## Objetivo
 
-A v1.11.0a8b43.c2 implementa o módulo frontend de Atividades, cobrindo o workflow operacional documentado no inventário backend até a35.
+A v1.11.0a8b43 implementa o módulo frontend de Atividades, cobrindo o workflow operacional documentado no inventário backend até a35.
 
 ## Escopo implementado
 
