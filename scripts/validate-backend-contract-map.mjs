@@ -12,7 +12,7 @@ const requireIncludes = (path, fragment, reason) => {
 };
 
 const packageJson = JSON.parse(read('package.json'));
-const expectedVersion = packageJson.logosoftVersion ?? '1.11.0a8b39.c1';
+const expectedVersion = packageJson.logosoftVersion ?? '1.11.0a8b40';
 const allowlistPath = 'scripts/backend-contract-map.allowlist.json';
 const docPath = 'docs/CONTRATO_FRONTEND_BACKEND_B38.md';
 

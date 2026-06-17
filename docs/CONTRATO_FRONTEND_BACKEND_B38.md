@@ -39,7 +39,7 @@ LOGOSOFT_BACKEND_SWAGGER_FILE=docs/contracts/swagger-v1.json npm run validate:ba
 | `ESTOQUE_BLOQUEIOS_AUSENTE_FRONTEND` | AUSENTE_NO_FRONTEND | B41 | Implementar na B41. |
 | `FINANCEIRO_BAIXAR_VS_RECEBER_PAGAR` | DIVERGENTE_ROTA | B42 | Confirmar contrato real antes da B42. |
 | `FINANCEIRO_ESTORNO_DIVERGENTE` | DIVERGENTE_ROTA | B42 | Confirmar contrato final e tratar FINANCEIRO_TIPO_CONTA_INCOMPATIVEL. |
-| `TABELAS_PRECO_AUSENTE_FRONTEND` | AUSENTE_NO_FRONTEND | B40 | Implementar na B40. |
+| `TABELAS_PRECO_AUSENTE_FRONTEND` | IMPLEMENTADO_B40 | B40 concluído | Módulo `/tabelas-preco` implementado com CRUD de tabelas, itens, ativação, inativação e preço vigente. |
 | `ATIVIDADES_AUSENTE_FRONTEND` | AUSENTE_NO_FRONTEND | B43 | Implementar na B43. |
 | `RELATORIOS_AUSENTE_FRONTEND` | AUSENTE_NO_FRONTEND | B44 | Implementar na B44. |
 | `AUDITORIA_OPERACIONAL_AUSENTE_FRONTEND` | AUSENTE_NO_FRONTEND | B45 | Implementar na B45. |

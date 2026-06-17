@@ -1,5 +1,5 @@
 {
-    "version": "1.11.0a8b39.c1",
+    "version": "1.11.0a8b40.c1",
     "status": "pre-swagger-contract-map",
     "description": "Mapa controlado de divergências conhecidas entre o frontend e o inventário/backend até o Swagger real ser versionado.",
     "swaggerInput": "Opcional via LOGOSOFT_BACKEND_SWAGGER_FILE. Sem esse arquivo, o gate valida apenas classificação/documentação local.",
@@ -78,11 +78,11 @@
         },
         {
             "id": "TABELAS_PRECO_AUSENTE_FRONTEND",
-            "status": "AUSENTE_NO_FRONTEND",
-            "frontend": "Sem módulo de tabelas de preço",
+            "status": "IMPLEMENTADO_B40",
+            "frontend": "Módulo /tabelas-preco com client para CRUD de tabelas, itens, ativação, inativação e preço vigente.",
             "backendInventario": "/api/tabelas-preco completo",
-            "decisao": "Implementar na B40.",
-            "target": "B40"
+            "decisao": "Implementado na B40 com testes estruturais e validação de payload.",
+            "target": "B40 concluído"
         },
         {
             "id": "ATIVIDADES_AUSENTE_FRONTEND",
