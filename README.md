@@ -1,9 +1,9 @@
-# logosoft Frontend v1.11.0a8b44.c1
+# logosoft Frontend v1.11.0a8b45
 
 
-## v1.11.0a8b44.c1 — Relatórios operacionais e gerenciais
+## v1.11.0a8b45 — Auditoria avançada
 
-A v1.11.0a8b44.c1 implementa o módulo `/relatorios` com relatório operacional consolidado e relatórios gerenciais por módulo: vendas, compras, financeiro, estoque e fiscal. O frontend consome os endpoints reais de `/api/relatorios/operacionais` e `/api/relatorios/gerenciais/*`, aplica filtros por empresa, filial e período, mas não recalcula KPIs e bloqueia IDs técnicos ou valores UUID brutos nos cards.
+A v1.11.0a8b45 evolui o módulo de auditoria com consulta operacional paginada, eventos recentes, filtros por contexto, usuário, módulo, entidade, ação, período e termo. O frontend consome `/api/auditoria/operacional` e `/api/auditoria/eventos-recentes`, preserva `/api/auditoria/eventos` no client e bloqueia exposição visual de GUID bruto.
 
 ### Validação principal
 
@@ -11,7 +11,7 @@ A v1.11.0a8b44.c1 implementa o módulo `/relatorios` com relatório operacional 
 npm run validate:source
 npm run validate:backend-contract-map
 npm run validate:guid-references
-npm run test:unit -- tests/unit/relatoriosPayload.test.ts tests/unit/relatoriosB44Structure.test.ts tests/unit/routePermissions.test.ts
+npm run test:unit -- tests/unit/auditoriaPayload.test.ts tests/unit/auditoriaB45Structure.test.ts tests/unit/auditoriaDisplay.test.ts tests/unit/routePermissions.test.ts
 npm run ci:gates
 ```
 

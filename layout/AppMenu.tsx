@@ -143,7 +143,10 @@ const AppMenu = () => {
             {
                 label: 'Auditoria',
                 permission: 'AUDITORIA_CONSULTAR',
-                items: [{ label: 'Eventos de auditoria', icon: 'pi pi-fw pi-history', to: '/auditoria/eventos', permission: 'AUDITORIA_CONSULTAR' }]
+                items: [
+                    { label: 'Auditoria operacional', icon: 'pi pi-fw pi-search', to: '/auditoria/operacional', permission: 'AUDITORIA_CONSULTAR' },
+                    { label: 'Eventos de auditoria', icon: 'pi pi-fw pi-history', to: '/auditoria/eventos', permission: 'AUDITORIA_CONSULTAR' }
+                ]
             }
         ],
         []

@@ -1,5 +1,5 @@
 {
-    "version": "1.11.0a8b44.c1",
+    "version": "1.11.0a8b45",
     "status": "pre-swagger-contract-map",
     "description": "Mapa controlado de divergências conhecidas entre o frontend e o inventário/backend até o Swagger real ser versionado.",
     "swaggerInput": "Opcional via LOGOSOFT_BACKEND_SWAGGER_FILE. Sem esse arquivo, o gate valida apenas classificação/documentação local.",
@@ -102,11 +102,11 @@
         },
         {
             "id": "AUDITORIA_OPERACIONAL_AUSENTE_FRONTEND",
-            "status": "AUSENTE_NO_FRONTEND",
-            "frontend": "Apenas /api/auditoria/eventos",
+            "status": "IMPLEMENTADO_B45",
+            "frontend": "Módulo de auditoria avançada com /api/auditoria/operacional e /api/auditoria/eventos-recentes.",
             "backendInventario": "/api/auditoria/operacional e eventos-recentes",
-            "decisao": "Implementar na B45.",
-            "target": "B45"
+            "decisao": "Implementado na B45 com filtros por contexto, usuário, módulo, entidade, ação, período e termo, sem exposição visual de GUID bruto.",
+            "target": "B45 concluído"
         },
         {
             "id": "FISCAL_ROTAS_AVANCADAS_VS_INVENTARIO",

@@ -42,7 +42,7 @@ LOGOSOFT_BACKEND_SWAGGER_FILE=docs/contracts/swagger-v1.json npm run validate:ba
 | `TABELAS_PRECO_AUSENTE_FRONTEND` | IMPLEMENTADO_B40 | B40 concluído | Módulo `/tabelas-preco` implementado com CRUD de tabelas, itens, ativação, inativação e preço vigente. |
 | `ATIVIDADES_AUSENTE_FRONTEND` | IMPLEMENTADO_B43 | B43 concluído | Módulo `/atividades` implementado com listagem, detalhe, criação, edição, atribuição, status, comentários e cancelamento. |
 | `RELATORIOS_AUSENTE_FRONTEND` | IMPLEMENTADO_B44 | B44 concluído | Módulo `/relatorios` implementado com operacional e gerenciais por vendas, compras, financeiro, estoque e fiscal. |
-| `AUDITORIA_OPERACIONAL_AUSENTE_FRONTEND` | AUSENTE_NO_FRONTEND | B45 | Implementar na B45. |
+| `AUDITORIA_OPERACIONAL_AUSENTE_FRONTEND` | IMPLEMENTADO_B45 | B45 concluído | Módulo de auditoria avançada implementado com `/api/auditoria/operacional` e `/api/auditoria/eventos-recentes`. |
 | `FISCAL_ROTAS_AVANCADAS_VS_INVENTARIO` | DIVERGENTE_CONTRATO | B38/B45 fiscal follow-up | Reconciliar somente contra Swagger real; não inventar regra fiscal. |
 
 ## Decisões importantes
@@ -90,3 +90,8 @@ A B39 pode iniciar desde que:
 ## Atualização B44
 
 `RELATORIOS_AUSENTE_FRONTEND` foi classificado como `IMPLEMENTADO_B44`, adotando `/api/relatorios/operacionais` e `/api/relatorios/gerenciais/{modulo}`. Sem Swagger real informado, a validação permanece estrutural/documental.
+
+
+## Atualização B45
+
+`AUDITORIA_OPERACIONAL_AUSENTE_FRONTEND` foi classificado como `IMPLEMENTADO_B45`, adotando `/api/auditoria/operacional` e `/api/auditoria/eventos-recentes`. Sem Swagger real informado, a validação permanece estrutural/documental.

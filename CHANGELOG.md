@@ -1,17 +1,16 @@
-# v1.11.0a8b44.c1
+# v1.11.0a8b45
 
-## Relatórios operacionais e gerenciais
+## Auditoria avançada
 
-- Criada rota `/relatorios` com tela real para visão operacional e gerencial.
-- Criado client `features/relatorios/api/relatoriosApi.ts` para `/api/relatorios/operacionais` e `/api/relatorios/gerenciais/{modulo}`.
-- Implementados filtros por empresa, filial, data inicial e data final.
-- Implementados cards/KPIs por módulo sem recálculo no frontend.
-- Bloqueada exposição visual de IDs técnicos e valores UUID brutos nos cards de relatório.
-- Adicionada permissão `RELATORIOS_CONSULTAR` no menu, guards de rota, mocks controlados e fixtures.
-- Atualizado mapa frontend/backend para classificar `RELATORIOS_AUSENTE_FRONTEND` como `IMPLEMENTADO_B44`.
-- Criados testes estruturais e de payload para o módulo.
-- Corrigido texto informativo usado pelo teste estrutural para `não expõe IDs técnicos`.
-- Extraída regra de métricas para util testável que bloqueia UUID mesmo em chave textual não técnica.
+- Evoluída a auditoria para consulta operacional paginada em `/api/auditoria/operacional`.
+- Adicionado consumo de `/api/auditoria/eventos-recentes`.
+- Preservado client legado de `/api/auditoria/eventos`.
+- Criada rota `/auditoria/operacional` reutilizando a tela avançada.
+- Atualizada tela `/auditoria/eventos` com cards, eventos recentes e auditoria operacional.
+- Implementados filtros por empresa, filial, usuário, módulo, entidade, ação, período e termo.
+- Bloqueada exposição visual de GUID bruto por mascaramento de identificadores técnicos.
+- Atualizado mapa frontend/backend para classificar `AUDITORIA_OPERACIONAL_AUSENTE_FRONTEND` como `IMPLEMENTADO_B45`.
+- Criados testes estruturais e de payload para auditoria B45.
 
 ## Validações esperadas
 
@@ -19,7 +18,7 @@
 npm run validate:source
 npm run validate:backend-contract-map
 npm run validate:guid-references
-npm run test:unit -- tests/unit/relatoriosPayload.test.ts tests/unit/relatoriosB44Structure.test.ts tests/unit/routePermissions.test.ts
+npm run test:unit -- tests/unit/auditoriaPayload.test.ts tests/unit/auditoriaB45Structure.test.ts tests/unit/auditoriaDisplay.test.ts tests/unit/routePermissions.test.ts
 npm run ci:gates
 ```
 
