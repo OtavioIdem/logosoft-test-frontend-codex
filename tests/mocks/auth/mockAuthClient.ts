@@ -4,6 +4,9 @@ import type { RefreshSessionResponse } from '@/features/auth/api/authResponseMap
 
 const mockPermissions: PermissionCode[] = [
     'AUDITORIA_CONSULTAR',
+    'ATIVIDADES_CONSULTAR',
+    'ATIVIDADES_GERENCIAR',
+    'RELATORIOS_CONSULTAR',
     'ADMINISTRACAO_CONSULTAR',
     'ADMINISTRACAO_GERENCIAR',
     'SEGURANCA_USUARIOS_CONSULTAR',

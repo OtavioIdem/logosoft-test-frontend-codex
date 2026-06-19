@@ -1,8 +1,8 @@
 import { httpClient } from '@/lib/http/httpClient';
 import { mapApiError } from '@/lib/http/apiError';
-import { clearSession, getRefreshToken, updateTokens } from '@/lib/auth/sessionStorage';
+import { clearSession, getAccessToken, getRefreshToken, updateTokens } from '@/lib/auth/sessionStorage';
 import { LoginPayload, LoginRequest } from '@/features/auth/types/auth.types';
-import { normalizeLoginSession, normalizeRefreshSession } from '@/features/auth/api/authResponseMapper';
+import { normalizeCurrentUserResponse, normalizeLoginSession, normalizeRefreshSession } from '@/features/auth/api/authResponseMapper';
 import { normalizeGuidOrNull } from '@/lib/http/requestUtils';
 
 const MANAGER_TEST_EMAIL = 'manager@erp.local';
@@ -81,6 +81,13 @@ export const authApi = {
             const refreshSession = normalizeRefreshSession(response.data);
             updateTokens(refreshSession, refreshSession.permissoes);
             return refreshSession;
+        });
+    },
+
+    async me() {
+        return runAuthRequest(async () => {
+            const response = await httpClient.get('/api/auth/me');
+            return normalizeCurrentUserResponse(response.data, getAccessToken() ?? '');
         });
     },
 

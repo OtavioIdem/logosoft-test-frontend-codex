@@ -1,12 +1,71 @@
-# logosoft Frontend v1.11.0a8b36
+# logosoft Frontend v1.11.0a8b45
+
+
+## v1.11.0a8b45 — Auditoria avançada
+
+A v1.11.0a8b45 evolui o módulo de auditoria com consulta operacional paginada, eventos recentes, filtros por contexto, usuário, módulo, entidade, ação, período e termo. O frontend consome `/api/auditoria/operacional` e `/api/auditoria/eventos-recentes`, preserva `/api/auditoria/eventos` no client e bloqueia exposição visual de GUID bruto.
+
+### Validação principal
+
+```bash
+npm run validate:source
+npm run validate:backend-contract-map
+npm run validate:guid-references
+npm run test:unit -- tests/unit/auditoriaPayload.test.ts tests/unit/auditoriaB45Structure.test.ts tests/unit/auditoriaDisplay.test.ts tests/unit/routePermissions.test.ts
+npm run ci:gates
+```
+
+## v1.11.0a8b38.c1 — Correção typecheck do gate de contratos
+
+A v1.11.0a8b38.c1 corrige o teste `tests/unit/backendContractMap.test.ts`, removendo a flag regex `s` incompatível com `target: es5` e preservando a validação do payload Produto x Fornecedor.
+
+## v1.11.0a8b38 — Reconciliação controlada de contratos
+
+A v1.11.0a8b38 adiciona o gate `validate:backend-contract-map`, uma allowlist versionada e o documento `docs/CONTRATO_FRONTEND_BACKEND_B38.md` para classificar divergências conhecidas entre frontend e backend antes da implementação dos módulos B39-B45.
+
+
+## v1.11.0a8b38.c1 — Correção Produto x Fornecedor
+
+A v1.11.0a8b38.c1 corrige o contrato do vínculo fornecedor/produto para enviar `fornecedorId` operacional e `codigoProdutoFornecedor` no endpoint `/api/produtos/{id}/fornecedores`, evitando confusão entre Pessoa e Fornecedor no cadastro de produto.
+
+
+
+## v1.11.0a8b41 — Estoque avançado
+
+A v1.11.0a8b41 completa a primeira frente de estoque avançado no frontend: transferências, bloqueios e inventário operacional com detalhe, início de contagem e conclusão alinhada ao backend. A rota legada de inventário `/fechar` foi removida do client produtivo; a conclusão passa a usar `/concluir` com `{ motivoAjuste }`.
+
+### Validação principal
+
+```bash
+npm run validate:source
+npm run validate:backend-contract-map
+npm run validate:guid-references
+npm run test:unit -- tests/unit/estoquePayload.test.ts tests/unit/estoqueB41Structure.test.ts tests/unit/estoqueUxRules.test.ts
+npm run ci:gates
+```
+
+
+## v1.11.0a8b42 — Financeiro gerencial
+
+A v1.11.0a8b42 reconcilia o contrato financeiro do frontend com o inventário backend: baixa por `/baixar`, estorno por `/estornar` e nova tela de fluxo de caixa em `/financeiro/fluxo-caixa`. A UI não inventa regra de caixa, banco ou forma de pagamento quando o contrato backend não expõe esses campos para a baixa operacional.
+
+### Validação principal
+
+```bash
+npm run validate:source
+npm run validate:backend-contract-map
+npm run validate:guid-references
+npm run test:unit -- tests/unit/financeiroPayload.test.ts tests/unit/financeiroB42Structure.test.ts tests/unit/routePermissions.test.ts
+npm run ci:gates
+```
 
 Frontend do ERP **logosoft** em **Next.js**, **React**, **TypeScript** e **PrimeReact/Sakai**, consumindo a API real em `http://localhost:8080` por padrão.
 
 Esta aplicação foi construída para operação real de ERP: autenticação, permissões, cadastros, estoque, vendas, financeiro, compras, auditoria, dashboard, validações, dialogs de motivo, feedbacks visuais e integração centralizada via Axios.
 
-## v1.11.0a8b36 — Validação real assistida do E2E integrado
+## v1.11.0a8b38.c1 — Validação real assistida do E2E integrado
 
-A v1.11.0a8b36 adiciona checklist, evidências e relatório pós-execução para rodar o E2E integrado real contra backend descartável/controlado. O fluxo mutável continua fora do CI comum e agora exige `LOGOSOFT_INTEGRATED_E2E_ASSISTED_VALIDATION_ACK=true` além dos ACKs anteriores.
+A v1.11.0a8b38.c1 adiciona checklist, evidências e relatório pós-execução para rodar o E2E integrado real contra backend descartável/controlado. O fluxo mutável continua fora do CI comum e agora exige `LOGOSOFT_INTEGRATED_E2E_ASSISTED_VALIDATION_ACK=true` além dos ACKs anteriores.
 
 ### Validação principal
 

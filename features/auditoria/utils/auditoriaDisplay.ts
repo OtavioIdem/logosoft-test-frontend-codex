@@ -1,26 +1,45 @@
+import { AuditoriaAcao } from '@/features/auditoria/types/auditoria.types';
 import { IsoDateTime } from '@/types/erp';
 
 export type AuditoriaActionSeverity = 'success' | 'info' | 'warning' | 'danger' | undefined;
 
-const actionLabels: Record<number, string> = {
-    1: 'Criação',
-    2: 'Atualização',
-    3: 'Inativação',
-    4: 'Cancelamento',
-    5: 'Aprovação',
-    6: 'Baixa',
-    7: 'Estorno',
-    8: 'Login',
-    9: 'Logout'
+const actionLabels: Record<string, string> = {
+    '1': 'Criação',
+    Criacao: 'Criação',
+    Criação: 'Criação',
+    '2': 'Atualização',
+    Atualizacao: 'Atualização',
+    Atualização: 'Atualização',
+    '3': 'Inativação',
+    Inativacao: 'Inativação',
+    Inativação: 'Inativação',
+    '4': 'Cancelamento',
+    Cancelamento: 'Cancelamento',
+    '5': 'Aprovação',
+    Aprovacao: 'Aprovação',
+    Aprovação: 'Aprovação',
+    '6': 'Baixa',
+    Baixa: 'Baixa',
+    '7': 'Estorno',
+    Estorno: 'Estorno',
+    '8': 'Login',
+    Login: 'Login',
+    '9': 'Logout',
+    Logout: 'Logout'
 };
 
-export const getAuditoriaActionLabel = (acao: number) => actionLabels[acao] ?? `Ação ${acao}`;
+const UUID_REGEX = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+const actionKey = (acao?: AuditoriaAcao | null) => String(acao ?? '').trim();
 
-export const getAuditoriaActionSeverity = (acao: number): AuditoriaActionSeverity => {
-    if ([1, 5, 8].includes(acao)) return 'success';
-    if ([2, 9].includes(acao)) return 'info';
-    if ([6, 7].includes(acao)) return 'warning';
-    if ([3, 4].includes(acao)) return 'danger';
+export const maskAuditoriaTechnicalIds = (value?: string | null) => (value ? value.replace(UUID_REGEX, 'vínculo técnico') : '-');
+export const getAuditoriaActionLabel = (acao: AuditoriaAcao) => actionLabels[actionKey(acao)] ?? `Ação ${actionKey(acao) || 'não informada'}`;
+
+export const getAuditoriaActionSeverity = (acao: AuditoriaAcao): AuditoriaActionSeverity => {
+    const key = actionKey(acao);
+    if (['1', 'Criacao', 'Criação', '5', 'Aprovacao', 'Aprovação', '8', 'Login'].includes(key)) return 'success';
+    if (['2', 'Atualizacao', 'Atualização', '9', 'Logout'].includes(key)) return 'info';
+    if (['6', 'Baixa', '7', 'Estorno'].includes(key)) return 'warning';
+    if (['3', 'Inativacao', 'Inativação', '4', 'Cancelamento'].includes(key)) return 'danger';
     return undefined;
 };
 
@@ -31,8 +50,8 @@ export const formatAuditoriaDateTime = (value?: IsoDateTime | string | null) => 
     return date.toLocaleString('pt-BR');
 };
 
-export const buildAuditoriaReference = (entidade?: string | null, acao?: number | null) => {
-    const entidadeLabel = entidade?.trim() || 'Entidade operacional';
-    const acaoLabel = typeof acao === 'number' ? getAuditoriaActionLabel(acao).toLowerCase() : 'evento';
+export const buildAuditoriaReference = (entidade?: string | null, acao?: AuditoriaAcao | null) => {
+    const entidadeLabel = maskAuditoriaTechnicalIds(entidade?.trim() || 'Entidade operacional');
+    const acaoLabel = acao !== null && acao !== undefined ? getAuditoriaActionLabel(acao).toLowerCase() : 'evento';
     return `${entidadeLabel}: ${acaoLabel} registrada com rastreabilidade`;
 };

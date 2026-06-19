@@ -70,7 +70,12 @@ describe('payloads de Produtos / Catálogo', () => {
 
     it('monta código de barras e vínculo com fornecedor', () => {
         expect(buildAdicionarCodigoBarrasProdutoPayload({ codigo: '7891234567895', descricao: '', principal: true })).toEqual({ codigo: '7891234567895', descricao: null, principal: true });
-        expect(buildVincularFornecedorProdutoPayload({ fornecedorId, codigoFornecedor: 'ABC-123', descricaoFornecedor: '', principal: true })).toEqual({ fornecedorId, codigoFornecedor: 'ABC-123', descricaoFornecedor: null, principal: true });
+        expect(buildVincularFornecedorProdutoPayload({ fornecedorId, codigoProdutoFornecedor: 'ABC-123', principal: true })).toEqual({ fornecedorId, codigoProdutoFornecedor: 'ABC-123', principal: true });
+    });
+
+    it('rejeita vínculo de fornecedor sem fornecedor operacional válido', () => {
+        expect(() => buildVincularFornecedorProdutoPayload({ fornecedorId: '', codigoProdutoFornecedor: 'ABC-123', principal: true })).toThrow('Fornecedor deve ser selecionado corretamente.');
+        expect(() => buildVincularFornecedorProdutoPayload({ fornecedorId: 'pessoa-001', codigoProdutoFornecedor: 'ABC-123', principal: true })).toThrow('Fornecedor deve ser selecionado corretamente.');
     });
 
     it('monta unidade de medida e exige motivo na inativação', () => {

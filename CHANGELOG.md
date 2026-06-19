@@ -1,3 +1,106 @@
+# v1.11.0a8b45
+
+## Auditoria avançada
+
+- Evoluída a auditoria para consulta operacional paginada em `/api/auditoria/operacional`.
+- Adicionado consumo de `/api/auditoria/eventos-recentes`.
+- Preservado client legado de `/api/auditoria/eventos`.
+- Criada rota `/auditoria/operacional` reutilizando a tela avançada.
+- Atualizada tela `/auditoria/eventos` com cards, eventos recentes e auditoria operacional.
+- Implementados filtros por empresa, filial, usuário, módulo, entidade, ação, período e termo.
+- Bloqueada exposição visual de GUID bruto por mascaramento de identificadores técnicos.
+- Atualizado mapa frontend/backend para classificar `AUDITORIA_OPERACIONAL_AUSENTE_FRONTEND` como `IMPLEMENTADO_B45`.
+- Criados testes estruturais e de payload para auditoria B45.
+
+## Validações esperadas
+
+```bash
+npm run validate:source
+npm run validate:backend-contract-map
+npm run validate:guid-references
+npm run test:unit -- tests/unit/auditoriaPayload.test.ts tests/unit/auditoriaB45Structure.test.ts tests/unit/auditoriaDisplay.test.ts tests/unit/routePermissions.test.ts
+npm run ci:gates
+```
+
+# v1.11.0a8b42
+
+## Financeiro gerencial
+
+- Alinhadas as baixas financeiras para `POST /api/financeiro/contas-receber/{id}/baixar` e `POST /api/financeiro/contas-pagar/{id}/baixar`.
+- Alinhados os estornos financeiros para `POST /api/financeiro/contas-receber/{id}/estornar` e `POST /api/financeiro/contas-pagar/{id}/estornar`.
+- Simplificado o payload de baixa para `{ valor, dataBaixa, observacao }`, removendo campos de forma de pagamento/caixa/banco que não constavam no contrato inventariado.
+- Atualizado o payload de estorno para `{ baixaId, dataEstorno, motivo }`.
+- Criada tela `/financeiro/fluxo-caixa` consumindo `GET /api/financeiro/fluxo-caixa`.
+- Atualizados menu, guard de rota e mapa de contratos frontend/backend para `IMPLEMENTADO_B42`.
+- Reforçados testes de payload e estrutura financeira B42.
+
+## Validações esperadas
+
+```bash
+npm run validate:source
+npm run validate:backend-contract-map
+npm run validate:guid-references
+npm run test:unit -- tests/unit/financeiroPayload.test.ts tests/unit/financeiroB42Structure.test.ts tests/unit/routePermissions.test.ts
+npm run ci:gates
+```
+
+# v1.11.0a8b41
+
+## Estoque avançado
+
+- Criada tela `/estoque/transferencias` para registrar transferência entre filial/local de origem e destino usando o endpoint `POST /api/estoque/transferencias`.
+- Criada tela `/estoque/bloqueios` para registrar bloqueio de estoque e executar liberação/cancelamento por ID operacional com motivo auditável.
+- Corrigido o client de inventário para usar `POST /api/estoque/inventarios/{id}/concluir` com payload `{ motivoAjuste }`, removendo a rota legada `/fechar`.
+- Adicionado detalhe de inventário via `GET /api/estoque/inventarios/{id}` e ação `POST /api/estoque/inventarios/{id}/iniciar-contagem`.
+- Atualizados menu, guard de rotas e permissões para transferências e bloqueios com `ESTOQUE_MOVIMENTAR`.
+- Reforçados payloads, schemas e testes estruturais para estoque avançado B41.
+- Atualizado mapa de contratos frontend/backend para classificar as divergências de estoque como `IMPLEMENTADO_B41`.
+
+## Validações esperadas
+
+```bash
+npm run validate:source
+npm run validate:backend-contract-map
+npm run validate:guid-references
+npm run test:unit -- tests/unit/estoquePayload.test.ts tests/unit/estoqueB41Structure.test.ts tests/unit/estoqueUxRules.test.ts
+npm run ci:gates
+```
+
+# v1.11.0a8b39
+
+## Correção de typecheck do gate de contratos
+
+- Corrigido `tests/unit/backendContractMap.test.ts` para remover regex com flag `s`, incompatível com `target: es5` do `tsconfig.json`.
+- Substituída a validação por extração do tipo `VincularFornecedorProdutoRequest` com `[\s\S]*?` e `not.toContain('descricaoFornecedor')`.
+- Atualizado `scripts/validate-backend-contract-map.mjs` para usar a mesma abordagem sem flag dotAll.
+- Mantido o escopo estrutural da B38 sem alteração de tela produtiva.
+
+## Reconciliação controlada de contratos
+
+- Criado `validate:backend-contract-map` para mapear endpoints frontend e divergências conhecidas contra o inventário/backend.
+- Criada allowlist versionada de divergências controladas entre frontend e backend.
+- Criado `docs/CONTRATO_FRONTEND_BACKEND_B38.md` com decisões, alvos e bloqueios para B39-B45.
+- Preservada a correção B37 de Produto x Fornecedor como item resolvido no mapa.
+- Integrado o novo gate ao `validate:source`, `validate:ci` e `ci:gates`.
+
+# v1.11.0a8b37
+
+## Correção Produto x Fornecedor
+
+- Ajustado payload do vínculo fornecedor/produto para usar `codigoProdutoFornecedor`, alinhado ao inventário backend de `/api/produtos/{id}/fornecedores`.
+- Mantido envio de `fornecedorId` operacional; o formulário não envia `pessoaId`.
+- Removido campo de descrição do payload de vínculo para evitar propriedade não prevista no contrato.
+- Reforçados testes unitários para payload e validação de GUID do fornecedor.
+
+## Validações esperadas
+
+```bash
+npm run validate:source
+npm run validate:guid-references
+npm run test:unit -- tests/unit/produtosPayload.test.ts
+npm run ci:gates
+```
+
 # v1.11.0a8b36
 
 - Adicionada validação real assistida do E2E integrado com backend descartável/controlado.

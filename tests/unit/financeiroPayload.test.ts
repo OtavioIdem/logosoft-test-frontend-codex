@@ -4,6 +4,8 @@ import {
     buildCriarContaPagarPayload,
     buildCriarContaReceberPayload,
     buildCriarFormaPagamentoPayload,
+    buildEstornarPagamentoPayload,
+    buildFluxoCaixaQuery,
     buildPagarContaPayload,
     buildReceberContaPayload
 } from '@/features/financeiro/api/financeiroApi';
@@ -11,8 +13,7 @@ import {
 const empresaId = '11111111-1111-1111-1111-111111111111';
 const clienteId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 const fornecedorId = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
-const parcelaId = 'cdcdcdcd-cdcd-cdcd-cdcd-cdcdcdcdcdcd';
-const formaPagamentoId = 'efefefef-efef-efef-efef-efefefefefef';
+const baixaId = 'dededede-dede-dede-dede-dededededede';
 
 describe('financeiro payloads', () => {
     it('monta forma de pagamento sem enviar filial inválida', () => {
@@ -33,15 +34,26 @@ describe('financeiro payloads', () => {
         expect(payload.fornecedorId).toBe(fornecedorId);
     });
 
-    it('monta recebimento com forma de pagamento e valores financeiros', () => {
-        const payload = buildReceberContaPayload({ parcelaId, formaPagamentoId, dataRecebimento: '2026-05-05T10:00:00-03:00', valorRecebido: 100, valorJuros: 0, valorMulta: 0, valorDesconto: 0, gerarMovimentoCaixa: true, gerarMovimentoBancario: false, contaBancariaReferencia: '', observacao: 'Recebimento integral' });
-        expect(payload.contaBancariaReferencia).toBeUndefined();
-        expect(payload.valorRecebido).toBe(100);
+    it('monta baixa de conta a receber no contrato oficial /baixar', () => {
+        const payload = buildReceberContaPayload({ dataBaixa: '2026-05-05T10:00:00-03:00', valor: 100, observacao: '' });
+        expect(payload).toEqual({ dataBaixa: '2026-05-05T10:00:00-03:00', valor: 100 });
+        expect(payload).not.toHaveProperty('parcelaId');
+        expect(payload).not.toHaveProperty('formaPagamentoId');
     });
 
-    it('monta pagamento com forma de pagamento e valores financeiros', () => {
-        const payload = buildPagarContaPayload({ parcelaId, formaPagamentoId, dataPagamento: '2026-05-05T10:00:00-03:00', valorPago: 100, valorJuros: 0, valorMulta: 0, valorDesconto: 0, gerarMovimentoCaixa: true, gerarMovimentoBancario: false });
-        expect(payload.formaPagamentoId).toBe(formaPagamentoId);
-        expect(payload.valorPago).toBe(100);
+    it('monta baixa de conta a pagar no contrato oficial /baixar', () => {
+        const payload = buildPagarContaPayload({ dataBaixa: '2026-05-05T10:00:00-03:00', valor: 100, observacao: 'Pagamento parcial' });
+        expect(payload).toMatchObject({ dataBaixa: '2026-05-05T10:00:00-03:00', valor: 100, observacao: 'Pagamento parcial' });
+    });
+
+    it('monta estorno financeiro com baixaId, dataEstorno e motivo', () => {
+        const payload = buildEstornarPagamentoPayload({ baixaId, dataEstorno: '2026-05-06T10:00:00-03:00', motivo: 'Baixa duplicada' });
+        expect(payload).toEqual({ baixaId, dataEstorno: '2026-05-06T10:00:00-03:00', motivo: 'Baixa duplicada' });
+        expect(payload).not.toHaveProperty('pagamentoId');
+    });
+
+    it('monta filtro do fluxo de caixa omitindo filial inválida', () => {
+        const payload = buildFluxoCaixaQuery({ empresaId, filialId: '', dataInicial: '2026-06-01T00:00:00-03:00', dataFinal: '2026-06-30T23:59:59-03:00' });
+        expect(payload).toEqual({ empresaId, dataInicial: '2026-06-01T00:00:00-03:00', dataFinal: '2026-06-30T23:59:59-03:00' });
     });
 });

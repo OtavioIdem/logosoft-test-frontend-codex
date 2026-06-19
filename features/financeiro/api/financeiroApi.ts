@@ -11,6 +11,7 @@ import {
     criarFormaPagamentoSchema,
     estornarPagamentoSchema,
     estornarRecebimentoSchema,
+    fluxoCaixaQuerySchema,
     gerarContaReceberPedidoSchema,
     pagarContaSchema,
     receberContaSchema
@@ -29,6 +30,8 @@ import {
     EstornarPagamentoRequest,
     EstornarRecebimentoRequest,
     FinanceiroListQuery,
+    FluxoCaixaQuery,
+    FluxoCaixaResponse,
     FormaPagamentoResponse,
     GerarContaReceberPedidoRequest,
     PagarContaRequest,
@@ -47,7 +50,7 @@ const runFinanceiroRequest = async <T>(request: () => Promise<T>) => {
 };
 
 const parseSchema = <T>(schema: Schema<T>, values: unknown): T => sanitizePayload(schema.parse(values)) as T;
-const params = (query?: FinanceiroListQuery) => cleanQueryParams({ empresaId: query?.empresaId, filialId: query?.filialId, clienteId: query?.clienteId, fornecedorId: query?.fornecedorId, status: query?.status });
+const params = (query?: FinanceiroListQuery) => cleanQueryParams({ empresaId: query?.empresaId, filialId: query?.filialId, clienteId: query?.clienteId, fornecedorId: query?.fornecedorId, participanteId: query?.participanteId, status: query?.status, dataInicial: query?.dataInicial, dataFinal: query?.dataFinal, page: query?.page, pageSize: query?.pageSize });
 
 export const buildCriarFormaPagamentoPayload = (values: unknown): CriarFormaPagamentoRequest => parseSchema(criarFormaPagamentoSchema, values);
 export const buildAtualizarFormaPagamentoPayload = (values: unknown): AtualizarFormaPagamentoRequest => parseSchema(atualizarFormaPagamentoSchema, values);
@@ -61,6 +64,7 @@ export const buildCancelarContaFinanceiraPayload = (motivo: string): CancelarCon
 export const buildCriarContaPagarPayload = (values: unknown): CriarContaPagarRequest => parseSchema(criarContaPagarSchema, values);
 export const buildPagarContaPayload = (values: unknown): PagarContaRequest => parseSchema(pagarContaSchema, values);
 export const buildEstornarPagamentoPayload = (values: unknown): EstornarPagamentoRequest => parseSchema(estornarPagamentoSchema, values);
+export const buildFluxoCaixaQuery = (values: unknown): FluxoCaixaQuery => parseSchema(fluxoCaixaQuerySchema, values);
 
 export const financeiroApi = {
     async listarFormasPagamento(query?: Pick<FinanceiroListQuery, 'empresaId'>) {
@@ -144,14 +148,14 @@ export const financeiroApi = {
     async receberConta(id: string, values: unknown) {
         const payload = buildReceberContaPayload(values);
         return runFinanceiroRequest(async () => {
-            const response = await httpClient.post<ContaReceberResponse>(`/api/financeiro/contas-receber/${id}/receber`, payload);
+            const response = await httpClient.post<ContaReceberResponse>(`/api/financeiro/contas-receber/${id}/baixar`, payload);
             return response.data;
         });
     },
     async estornarRecebimento(id: string, values: unknown) {
         const payload = buildEstornarRecebimentoPayload(values);
         return runFinanceiroRequest(async () => {
-            const response = await httpClient.post<ContaReceberResponse>(`/api/financeiro/contas-receber/${id}/estornar-recebimento`, payload);
+            const response = await httpClient.post<ContaReceberResponse>(`/api/financeiro/contas-receber/${id}/estornar`, payload);
             return response.data;
         });
     },
@@ -184,14 +188,14 @@ export const financeiroApi = {
     async pagarConta(id: string, values: unknown) {
         const payload = buildPagarContaPayload(values);
         return runFinanceiroRequest(async () => {
-            const response = await httpClient.post<ContaPagarResponse>(`/api/financeiro/contas-pagar/${id}/pagar`, payload);
+            const response = await httpClient.post<ContaPagarResponse>(`/api/financeiro/contas-pagar/${id}/baixar`, payload);
             return response.data;
         });
     },
     async estornarPagamento(id: string, values: unknown) {
         const payload = buildEstornarPagamentoPayload(values);
         return runFinanceiroRequest(async () => {
-            const response = await httpClient.post<ContaPagarResponse>(`/api/financeiro/contas-pagar/${id}/estornar-pagamento`, payload);
+            const response = await httpClient.post<ContaPagarResponse>(`/api/financeiro/contas-pagar/${id}/estornar`, payload);
             return response.data;
         });
     },
@@ -199,6 +203,19 @@ export const financeiroApi = {
         const payload = buildCancelarContaFinanceiraPayload(motivo);
         return runFinanceiroRequest(async () => {
             const response = await httpClient.post<ContaPagarResponse>(`/api/financeiro/contas-pagar/${id}/cancelar`, payload);
+            return response.data;
+        });
+    },
+    async buscarConta(id: string) {
+        return runFinanceiroRequest(async () => {
+            const response = await httpClient.get<ContaReceberResponse | ContaPagarResponse>(`/api/financeiro/contas/${id}`);
+            return response.data;
+        });
+    },
+    async consultarFluxoCaixa(query: FluxoCaixaQuery) {
+        const payload = buildFluxoCaixaQuery(query);
+        return runFinanceiroRequest(async () => {
+            const response = await httpClient.get<FluxoCaixaResponse>('/api/financeiro/fluxo-caixa', { params: cleanQueryParams({ empresaId: payload.empresaId, filialId: payload.filialId, dataInicial: payload.dataInicial, dataFinal: payload.dataFinal }) });
             return response.data;
         });
     }
@@ -221,6 +238,7 @@ export const contasReceberApi = {
     buscar: financeiroApi.buscarContaReceber,
     criar: financeiroApi.criarContaReceber,
     receber: financeiroApi.receberConta,
+    baixar: financeiroApi.receberConta,
     estornarRecebimento: financeiroApi.estornarRecebimento,
     cancelar: financeiroApi.cancelarContaReceber
 };
@@ -229,6 +247,11 @@ export const contasPagarApi = {
     buscar: financeiroApi.buscarContaPagar,
     criar: financeiroApi.criarContaPagar,
     pagar: financeiroApi.pagarConta,
+    baixar: financeiroApi.pagarConta,
     estornarPagamento: financeiroApi.estornarPagamento,
     cancelar: financeiroApi.cancelarContaPagar
+};
+
+export const fluxoCaixaApi = {
+    consultar: financeiroApi.consultarFluxoCaixa
 };

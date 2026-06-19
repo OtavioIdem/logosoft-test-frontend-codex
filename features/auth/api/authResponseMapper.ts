@@ -121,7 +121,7 @@ export const normalizeRefreshSession = (payload: unknown): RefreshSessionRespons
     };
 };
 
-const normalizeUser = (payload: Record<string, unknown>, accessToken: string): CurrentUser => {
+export const normalizeUser = (payload: Record<string, unknown>, accessToken: string): CurrentUser => {
     const tokenClaims: Record<string, unknown> = decodeJwtPayload(accessToken) ?? {};
     const userPayload = getRecord(payload, USER_KEYS) ?? payload;
     const userPermissions = normalizePermissions(userPayload);
@@ -147,6 +147,16 @@ const normalizeUser = (payload: Record<string, unknown>, accessToken: string): C
         filialId: getString(userPayload, ['filialId', 'FilialId']) ?? getString(tokenClaims, ['filialId', 'FilialId']),
         permissoes: permissions
     };
+};
+
+export const normalizeCurrentUserResponse = (payload: unknown, accessToken = ''): CurrentUser => {
+    const data = extractEnvelopePayload(payload);
+
+    if (!isRecord(data)) {
+        throw new Error('Resposta de usuário autenticado inválida: corpo da resposta não é um objeto JSON.');
+    }
+
+    return normalizeUser(data, accessToken);
 };
 
 export const normalizeLoginSession = (payload: unknown): AuthSession => {

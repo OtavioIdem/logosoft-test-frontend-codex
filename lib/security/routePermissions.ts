@@ -17,12 +17,16 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/estoque\/entradas(?:\/.*)?$/, anyOf: ['ESTOQUE_MOVIMENTAR'], description: 'Entradas de estoque' },
     { pattern: /^\/estoque\/saidas(?:\/.*)?$/, anyOf: ['ESTOQUE_MOVIMENTAR'], description: 'Saídas de estoque' },
     { pattern: /^\/estoque\/ajustes(?:\/.*)?$/, anyOf: ['ESTOQUE_MOVIMENTAR'], description: 'Ajustes de estoque' },
+    { pattern: /^\/estoque\/transferencias(?:\/.*)?$/, anyOf: ['ESTOQUE_MOVIMENTAR'], description: 'Transferências de estoque' },
+    { pattern: /^\/estoque\/bloqueios(?:\/.*)?$/, anyOf: ['ESTOQUE_MOVIMENTAR'], description: 'Bloqueios de estoque' },
     { pattern: /^\/estoque\/reservas(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'ESTOQUE_RESERVAR'], description: 'Reservas de estoque' },
     { pattern: /^\/estoque\/inventarios(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'ESTOQUE_INVENTARIO_GERENCIAR'], description: 'Inventários de estoque' },
     { pattern: /^\/estoque(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'ESTOQUE_MOVIMENTAR', 'ESTOQUE_RESERVAR', 'ESTOQUE_INVENTARIO_GERENCIAR'], description: 'Estoque' },
+    { pattern: /^\/tabelas-preco(?:\/.*)?$/, anyOf: ['TABELAS_PRECO_CONSULTAR', 'TABELAS_PRECO_GERENCIAR', 'VENDAS_CONSULTAR', 'VENDAS_GERENCIAR'], description: 'Tabelas de preço' },
     { pattern: /^\/vendas(?:\/.*)?$/, anyOf: ['VENDAS_CONSULTAR', 'VENDAS_GERENCIAR', 'VENDAS_APROVAR', 'VENDAS_CANCELAR', 'VENDAS_FATURAR'], description: 'Vendas' },
     { pattern: /^\/financeiro\/contas-receber(?:\/.*)?$/, anyOf: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_RECEBER', 'FINANCEIRO_ESTORNAR', 'FINANCEIRO_CANCELAR'], description: 'Contas a receber' },
     { pattern: /^\/financeiro\/contas-pagar(?:\/.*)?$/, anyOf: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_PAGAR', 'FINANCEIRO_ESTORNAR', 'FINANCEIRO_CANCELAR'], description: 'Contas a pagar' },
+    { pattern: /^\/financeiro\/fluxo-caixa(?:\/.*)?$/, anyOf: ['FINANCEIRO_CONSULTAR'], description: 'Fluxo de caixa' },
     { pattern: /^\/financeiro\/formas-pagamento(?:\/.*)?$/, anyOf: ['FINANCEIRO_CONSULTAR', 'FORMAS_PAGAMENTO_GERENCIAR'], description: 'Formas de pagamento' },
     { pattern: /^\/financeiro\/condicoes-pagamento(?:\/.*)?$/, anyOf: ['FINANCEIRO_CONSULTAR', 'CONDICOES_PAGAMENTO_GERENCIAR'], description: 'Condições de pagamento' },
     { pattern: /^\/financeiro(?:\/.*)?$/, anyOf: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_GERENCIAR', 'FINANCEIRO_RECEBER', 'FINANCEIRO_PAGAR', 'FINANCEIRO_ESTORNAR', 'FINANCEIRO_CANCELAR'], description: 'Financeiro' },
@@ -31,6 +35,8 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/fiscal\/observabilidade(?:\/.*)?$/, anyOf: ['FISCAL_CONSULTAR'], description: 'Observabilidade fiscal' },
     { pattern: /^\/fiscal\/inutilizacoes(?:\/.*)?$/, anyOf: ['FISCAL_INUTILIZAR'], description: 'Inutilizações fiscais' },
     { pattern: /^\/fiscal(?:\/.*)?$/, anyOf: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_CANCELAR', 'FISCAL_INUTILIZAR', 'FISCAL_CARTA_CORRECAO'], description: 'Fiscal' },
+    { pattern: /^\/atividades(?:\/.*)?$/, anyOf: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'], description: 'Atividades' },
+    { pattern: /^\/relatorios(?:\/.*)?$/, anyOf: ['RELATORIOS_CONSULTAR'], description: 'Relatórios' },
     { pattern: /^\/auditoria(?:\/.*)?$/, anyOf: ['AUDITORIA_CONSULTAR'], description: 'Auditoria' }
 ];
 

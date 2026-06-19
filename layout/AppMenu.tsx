@@ -90,15 +90,20 @@ const AppMenu = () => {
                     { label: 'Movimentos', icon: 'pi pi-fw pi-list', to: '/estoque/movimentos', permission: 'ESTOQUE_CONSULTAR' },
                     { label: 'Entradas', icon: 'pi pi-fw pi-arrow-circle-down', to: '/estoque/entradas', permission: 'ESTOQUE_MOVIMENTAR' },
                     { label: 'Saídas', icon: 'pi pi-fw pi-arrow-circle-up', to: '/estoque/saidas', permission: 'ESTOQUE_MOVIMENTAR' },
+                    { label: 'Transferências', icon: 'pi pi-fw pi-send', to: '/estoque/transferencias', permission: 'ESTOQUE_MOVIMENTAR' },
                     { label: 'Ajustes', icon: 'pi pi-fw pi-sliders-h', to: '/estoque/ajustes', permission: 'ESTOQUE_MOVIMENTAR' },
+                    { label: 'Bloqueios', icon: 'pi pi-fw pi-lock', to: '/estoque/bloqueios', permission: 'ESTOQUE_MOVIMENTAR' },
                     { label: 'Reservas', icon: 'pi pi-fw pi-bookmark', to: '/estoque/reservas', anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_RESERVAR'] },
                     { label: 'Inventários', icon: 'pi pi-fw pi-clipboard', to: '/estoque/inventarios', anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_INVENTARIO_GERENCIAR'] }
                 ]
             },
             {
                 label: 'Vendas',
-                anyPermissions: ['VENDAS_CONSULTAR', 'VENDAS_GERENCIAR'],
-                items: [{ label: 'Pedidos de venda', icon: 'pi pi-fw pi-shopping-cart', to: '/vendas/pedidos', anyPermissions: ['VENDAS_CONSULTAR', 'VENDAS_GERENCIAR'] }]
+                anyPermissions: ['VENDAS_CONSULTAR', 'VENDAS_GERENCIAR', 'TABELAS_PRECO_CONSULTAR', 'TABELAS_PRECO_GERENCIAR'],
+                items: [
+                    { label: 'Pedidos de venda', icon: 'pi pi-fw pi-shopping-cart', to: '/vendas/pedidos', anyPermissions: ['VENDAS_CONSULTAR', 'VENDAS_GERENCIAR'] },
+                    { label: 'Tabelas de preço', icon: 'pi pi-fw pi-tags', to: '/tabelas-preco', anyPermissions: ['TABELAS_PRECO_CONSULTAR', 'TABELAS_PRECO_GERENCIAR', 'VENDAS_CONSULTAR', 'VENDAS_GERENCIAR'] }
+                ]
             },
             {
                 label: 'Financeiro',
@@ -106,6 +111,7 @@ const AppMenu = () => {
                 items: [
                     { label: 'Contas a receber', icon: 'pi pi-fw pi-arrow-down-left', to: '/financeiro/contas-receber', anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_RECEBER'] },
                     { label: 'Contas a pagar', icon: 'pi pi-fw pi-arrow-up-right', to: '/financeiro/contas-pagar', anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_PAGAR'] },
+                    { label: 'Fluxo de caixa', icon: 'pi pi-fw pi-chart-line', to: '/financeiro/fluxo-caixa', permission: 'FINANCEIRO_CONSULTAR' },
                     { label: 'Formas de pagamento', icon: 'pi pi-fw pi-credit-card', to: '/financeiro/formas-pagamento', anyPermissions: ['FINANCEIRO_CONSULTAR', 'FORMAS_PAGAMENTO_GERENCIAR'] },
                     { label: 'Condições de pagamento', icon: 'pi pi-fw pi-calendar-plus', to: '/financeiro/condicoes-pagamento', anyPermissions: ['FINANCEIRO_CONSULTAR', 'CONDICOES_PAGAMENTO_GERENCIAR'] }
                 ]
@@ -125,9 +131,22 @@ const AppMenu = () => {
                 ]
             },
             {
+                label: 'Atividades',
+                anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'],
+                items: [{ label: 'Workflow operacional', icon: 'pi pi-fw pi-check-square', to: '/atividades', anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'] }]
+            },
+            {
+                label: 'Relatórios',
+                permission: 'RELATORIOS_CONSULTAR',
+                items: [{ label: 'Operacionais e gerenciais', icon: 'pi pi-fw pi-chart-bar', to: '/relatorios', permission: 'RELATORIOS_CONSULTAR' }]
+            },
+            {
                 label: 'Auditoria',
                 permission: 'AUDITORIA_CONSULTAR',
-                items: [{ label: 'Eventos de auditoria', icon: 'pi pi-fw pi-history', to: '/auditoria/eventos', permission: 'AUDITORIA_CONSULTAR' }]
+                items: [
+                    { label: 'Auditoria operacional', icon: 'pi pi-fw pi-search', to: '/auditoria/operacional', permission: 'AUDITORIA_CONSULTAR' },
+                    { label: 'Eventos de auditoria', icon: 'pi pi-fw pi-history', to: '/auditoria/eventos', permission: 'AUDITORIA_CONSULTAR' }
+                ]
             }
         ],
         []
