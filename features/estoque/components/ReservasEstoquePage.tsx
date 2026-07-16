@@ -20,14 +20,14 @@ import { useLocaisEstoque, useReservaEstoqueMutations, useReservasEstoque } from
 import { BaixarReservaFormValues, CancelarReservaFormValues, EstoqueListQuery, ReservaEstoqueFormValues, ReservaEstoqueResponse } from '@/features/estoque/types/estoque.types';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { useProdutos } from '@/features/produtos/hooks/useProdutosResources';
-import { useAppToast } from '@/hooks/useAppToast';
+import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { StatusReservaEstoque } from '@/types/erp';
 
 const canOperate = (record: ReservaEstoqueResponse) => Number(record.statusReserva ?? record.status) === StatusReservaEstoque.Ativa || Number(record.statusReserva ?? record.status) === StatusReservaEstoque.ParcialmenteBaixada;
 
 export const ReservasEstoquePage = () => {
-    const toast = useAppToast();
+    const runWithToast = useMutationWithToast();
     const { hasPermission } = usePermissions();
     const [filters, setFilters] = useState<EstoqueListQuery>({});
     const [localSearch, setLocalSearch] = useState('');
@@ -50,38 +50,35 @@ export const ReservasEstoquePage = () => {
     const updateFilter = (name: keyof EstoqueListQuery, value: string | null) => { setFirst(0); setFilters((current) => ({ ...current, [name]: value || null })); };
 
     const criar = async (values: ReservaEstoqueFormValues) => {
-        try {
-            await criarMutation.mutateAsync(values);
-            toast.success('Reserva criada', 'Reserva registrada com sucesso.');
-            setCreateVisible(false);
-        } catch (error) {
-            toast.error('Erro ao reservar', error instanceof Error ? error.message : 'Não foi possível criar a reserva.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await criarMutation.mutateAsync(values);
+                setCreateVisible(false);
+            },
+            { success: { summary: 'Reserva criada', detail: 'Reserva registrada com sucesso.' }, error: { summary: 'Erro ao reservar', detail: 'Não foi possível criar a reserva.' }, rethrow: true }
+        );
     };
 
     const baixar = async (values: BaixarReservaFormValues) => {
         if (!baixarRecord) return;
-        try {
-            await baixarMutation.mutateAsync({ id: baixarRecord.id, values });
-            toast.success('Reserva baixada', 'Baixa de reserva concluída.');
-            setBaixarRecord(null);
-        } catch (error) {
-            toast.error('Erro ao baixar reserva', error instanceof Error ? error.message : 'Não foi possível baixar a reserva.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await baixarMutation.mutateAsync({ id: baixarRecord.id, values });
+                setBaixarRecord(null);
+            },
+            { success: { summary: 'Reserva baixada', detail: 'Baixa de reserva concluída.' }, error: { summary: 'Erro ao baixar reserva', detail: 'Não foi possível baixar a reserva.' }, rethrow: true }
+        );
     };
 
     const cancelar = async (values: CancelarReservaFormValues) => {
         if (!cancelarRecord) return;
-        try {
-            await cancelarMutation.mutateAsync({ id: cancelarRecord.id, values });
-            toast.success('Reserva cancelada', 'Cancelamento de reserva concluído.');
-            setCancelarRecord(null);
-        } catch (error) {
-            toast.error('Erro ao cancelar reserva', error instanceof Error ? error.message : 'Não foi possível cancelar a reserva.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await cancelarMutation.mutateAsync({ id: cancelarRecord.id, values });
+                setCancelarRecord(null);
+            },
+            { success: { summary: 'Reserva cancelada', detail: 'Cancelamento de reserva concluído.' }, error: { summary: 'Erro ao cancelar reserva', detail: 'Não foi possível cancelar a reserva.' }, rethrow: true }
+        );
     };
 
     return (

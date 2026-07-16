@@ -19,7 +19,7 @@ import { useLocaisEstoque, useMovimentoEstoqueMutations } from '@/features/estoq
 import { TransferenciaEstoqueFormValues } from '@/features/estoque/types/estoque.types';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { useProdutos } from '@/features/produtos/hooks/useProdutosResources';
-import { useAppToast } from '@/hooks/useAppToast';
+import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 
 type FieldErrors = Record<string, string | undefined>;
 
@@ -35,7 +35,7 @@ const initialValues: TransferenciaEstoqueFormValues = {
 };
 
 export const TransferenciaEstoquePage = () => {
-    const toast = useAppToast();
+    const runWithToast = useMutationWithToast();
     const { hasPermission } = usePermissions();
     const [values, setValues] = useState<TransferenciaEstoqueFormValues>(initialValues);
     const [errors, setErrors] = useState<FieldErrors>({});
@@ -56,14 +56,14 @@ export const TransferenciaEstoquePage = () => {
             setErrors(fieldErrorMap(parsed.error));
             return;
         }
-        try {
-            await transferenciaMutation.mutateAsync(parsed.data);
-            toast.success('Transferência registrada', 'Saída na origem e entrada no destino serão rastreadas pelo backend.');
-            setValues(initialValues);
-            setErrors({});
-        } catch (error) {
-            toast.error('Erro na transferência', error instanceof Error ? error.message : 'Não foi possível transferir estoque.');
-        }
+        await runWithToast(
+            async () => {
+                await transferenciaMutation.mutateAsync(parsed.data);
+                setValues(initialValues);
+                setErrors({});
+            },
+            { success: { summary: 'Transferência registrada', detail: 'Saída na origem e entrada no destino serão rastreadas pelo backend.' }, error: { summary: 'Erro na transferência', detail: 'Não foi possível transferir estoque.' } }
+        );
     };
 
     return (

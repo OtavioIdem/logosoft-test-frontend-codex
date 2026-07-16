@@ -19,11 +19,11 @@ import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { GrupoAcessoFormDialog } from '@/features/seguranca/components/GrupoAcessoFormDialog';
 import { useAtualizarGrupoAcessoSeguranca, useCriarGrupoAcessoSeguranca, useGruposAcessoSeguranca, useInativarGrupoAcessoSeguranca } from '@/features/seguranca/hooks/useUsuariosSeguranca';
 import { GrupoAcessoFormValues, GrupoAcessoResponse } from '@/features/seguranca/types/seguranca.types';
-import { useAppToast } from '@/hooks/useAppToast';
+import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 
 export const GruposAcessoPage = () => {
-    const toast = useAppToast();
+    const runWithToast = useMutationWithToast();
     const { hasPermission } = usePermissions();
     const gruposQuery = useGruposAcessoSeguranca();
     const criarGrupo = useCriarGrupoAcessoSeguranca();
@@ -46,32 +46,31 @@ export const GruposAcessoPage = () => {
     }
 
     const submitGrupo = async (values: GrupoAcessoFormValues) => {
-        try {
-            if (selectedGrupo) {
-                await atualizarGrupo.mutateAsync({ id: selectedGrupo.id, values });
-                toast.success('Grupo atualizado', 'O grupo de acesso foi atualizado com sucesso.');
-            } else {
-                await criarGrupo.mutateAsync(values);
-                toast.success('Grupo criado', 'O grupo de acesso foi criado com sucesso.');
+        await runWithToast(
+            async () => {
+                if (selectedGrupo) await atualizarGrupo.mutateAsync({ id: selectedGrupo.id, values });
+                else await criarGrupo.mutateAsync(values);
+                setFormVisible(false);
+                setSelectedGrupo(null);
+            },
+            {
+                success: { summary: selectedGrupo ? 'Grupo atualizado' : 'Grupo criado', detail: selectedGrupo ? 'O grupo de acesso foi atualizado com sucesso.' : 'O grupo de acesso foi criado com sucesso.' },
+                error: { summary: 'Erro ao salvar grupo', detail: 'Não foi possível salvar o grupo.' },
+                rethrow: true
             }
-            setFormVisible(false);
-            setSelectedGrupo(null);
-        } catch (error) {
-            toast.error('Erro ao salvar grupo', error instanceof Error ? error.message : 'Não foi possível salvar o grupo.');
-            throw error;
-        }
+        );
     };
 
     const confirmInativar = async (motivo: string) => {
         if (!selectedGrupo) return;
-        try {
-            await inativarGrupo.mutateAsync({ id: selectedGrupo.id, motivo });
-            toast.success('Grupo inativado', 'O grupo de acesso foi inativado com motivo auditável.');
-            setReasonVisible(false);
-            setSelectedGrupo(null);
-        } catch (error) {
-            toast.error('Erro ao inativar grupo', error instanceof Error ? error.message : 'Não foi possível inativar o grupo.');
-        }
+        await runWithToast(
+            async () => {
+                await inativarGrupo.mutateAsync({ id: selectedGrupo.id, motivo });
+                setReasonVisible(false);
+                setSelectedGrupo(null);
+            },
+            { success: { summary: 'Grupo inativado', detail: 'O grupo de acesso foi inativado com motivo auditável.' }, error: { summary: 'Erro ao inativar grupo', detail: 'Não foi possível inativar o grupo.' } }
+        );
     };
 
     const headerActions = (

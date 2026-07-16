@@ -18,7 +18,7 @@ import { PermissionGuard } from '@/components/security/PermissionGuard';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { ResetSenhaUsuarioDialog, VincularGrupoUsuarioDialog } from '@/features/seguranca/components/SegurancaActionDialogs';
 import { UsuarioFormDialog } from '@/features/seguranca/components/UsuarioFormDialog';
-import { useAppToast } from '@/hooks/useAppToast';
+import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { useEmpresasOptions } from '@/features/administracao/hooks/useEmpresaFilialOptions';
 import { mapApiError } from '@/lib/http/apiError';
 import {
@@ -37,7 +37,7 @@ const formatDateTime = (value?: string | null) => (value ? new Date(value).toLoc
 const gruposLabel = (usuario: UsuarioResponse) => (usuario.gruposAcesso?.length ? usuario.gruposAcesso.map((grupo) => grupo.nome ?? grupo.grupoAcessoId ?? grupo.id).filter(Boolean).join(', ') : '-');
 
 export const UsuariosPage = () => {
-    const toast = useAppToast();
+    const runWithToast = useMutationWithToast();
     const { hasPermission } = usePermissions();
     const usuariosQuery = useUsuariosSeguranca();
     const gruposQuery = useGruposAcessoSeguranca({ ativo: true });
@@ -71,63 +71,58 @@ export const UsuariosPage = () => {
     }
 
     const submitUsuario = async (values: UsuarioFormValues) => {
-        try {
-            await criarUsuario.mutateAsync(values);
-            toast.success('Usuário criado', 'O usuário foi criado com sucesso.');
-            setFormVisible(false);
-        } catch (error) {
-            toast.error('Erro ao criar usuário', error instanceof Error ? error.message : 'Não foi possível criar o usuário.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await criarUsuario.mutateAsync(values);
+                setFormVisible(false);
+            },
+            { success: { summary: 'Usuário criado', detail: 'O usuário foi criado com sucesso.' }, error: { summary: 'Erro ao criar usuário', detail: 'Não foi possível criar o usuário.' }, rethrow: true }
+        );
     };
 
     const submitResetSenha = async (values: ResetSenhaUsuarioFormValues) => {
         if (!selectedUsuario) return;
-        try {
-            await resetarSenha.mutateAsync({ id: selectedUsuario.id, values });
-            toast.success('Senha resetada', 'A nova senha foi registrada com auditoria.');
-            setResetVisible(false);
-            setSelectedUsuario(null);
-        } catch (error) {
-            toast.error('Erro ao resetar senha', error instanceof Error ? error.message : 'Não foi possível resetar a senha.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await resetarSenha.mutateAsync({ id: selectedUsuario.id, values });
+                setResetVisible(false);
+                setSelectedUsuario(null);
+            },
+            { success: { summary: 'Senha resetada', detail: 'A nova senha foi registrada com auditoria.' }, error: { summary: 'Erro ao resetar senha', detail: 'Não foi possível resetar a senha.' }, rethrow: true }
+        );
     };
 
     const submitVincularGrupo = async (values: VincularGrupoUsuarioFormValues) => {
         if (!selectedUsuario) return;
-        try {
-            await vincularGrupo.mutateAsync({ id: selectedUsuario.id, values });
-            toast.success('Grupo vinculado', 'O grupo de acesso foi vinculado ao usuário.');
-            setVincularVisible(false);
-            setSelectedUsuario(null);
-        } catch (error) {
-            toast.error('Erro ao vincular grupo', error instanceof Error ? error.message : 'Não foi possível vincular o grupo.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await vincularGrupo.mutateAsync({ id: selectedUsuario.id, values });
+                setVincularVisible(false);
+                setSelectedUsuario(null);
+            },
+            { success: { summary: 'Grupo vinculado', detail: 'O grupo de acesso foi vinculado ao usuário.' }, error: { summary: 'Erro ao vincular grupo', detail: 'Não foi possível vincular o grupo.' }, rethrow: true }
+        );
     };
 
     const confirmReasonAction = async (motivo: string) => {
         if (!selectedUsuario || !reasonAction) return;
-        try {
-            if (reasonAction === 'inativar') {
-                await inativarUsuario.mutateAsync({ id: selectedUsuario.id, motivo });
-                toast.success('Usuário inativado', 'O usuário foi inativado com motivo auditável.');
-            }
-            if (reasonAction === 'reativar') {
-                await reativarUsuario.mutateAsync({ id: selectedUsuario.id, motivo });
-                toast.success('Usuário reativado', 'O usuário foi reativado com motivo auditável.');
-            }
-            if (reasonAction === 'remover-grupo' && selectedGrupo) {
-                await removerGrupo.mutateAsync({ id: selectedUsuario.id, grupoAcessoId: selectedGrupo.id, motivo });
-                toast.success('Grupo removido', 'O grupo foi removido do usuário.');
-            }
-            setReasonAction(null);
-            setSelectedUsuario(null);
-            setSelectedGrupo(null);
-        } catch (error) {
-            toast.error('Erro na operação', error instanceof Error ? error.message : 'Não foi possível concluir a operação.');
-        }
+        const success =
+            reasonAction === 'inativar'
+                ? { summary: 'Usuário inativado', detail: 'O usuário foi inativado com motivo auditável.' }
+                : reasonAction === 'reativar'
+                ? { summary: 'Usuário reativado', detail: 'O usuário foi reativado com motivo auditável.' }
+                : { summary: 'Grupo removido', detail: 'O grupo foi removido do usuário.' };
+        await runWithToast(
+            async () => {
+                if (reasonAction === 'inativar') await inativarUsuario.mutateAsync({ id: selectedUsuario.id, motivo });
+                if (reasonAction === 'reativar') await reativarUsuario.mutateAsync({ id: selectedUsuario.id, motivo });
+                if (reasonAction === 'remover-grupo' && selectedGrupo) await removerGrupo.mutateAsync({ id: selectedUsuario.id, grupoAcessoId: selectedGrupo.id, motivo });
+                setReasonAction(null);
+                setSelectedUsuario(null);
+                setSelectedGrupo(null);
+            },
+            { success, error: { summary: 'Erro na operação', detail: 'Não foi possível concluir a operação.' } }
+        );
     };
 
     const headerActions = (

@@ -1,6 +1,6 @@
 'use client';
 
-import { InputText } from 'primereact/inputtext';
+import { SearchInput } from '@/components/forms/SearchInput';
 import { EmpresaFilialFilter } from '@/components/forms/EmpresaFilialFilter';
 import { EntitySelect } from '@/components/forms/EntitySelect';
 import { EstoqueListQuery, LocalEstoqueResponse } from '@/features/estoque/types/estoque.types';
@@ -14,7 +14,7 @@ export const EstoqueFilterBar = ({ filters, produtos, locais, showProduto = fals
         {showLocal ? <div className="min-w-18rem"><EntitySelect entityName="local" value={filters.localEstoqueId ?? null} options={localOptions(locais ?? [])} onChange={(value) => onFilterChange('localEstoqueId', value)} /></div> : null}
         <span className="p-input-icon-left">
             <i className="pi pi-search" />
-            <InputText placeholder="Buscar" value={search} onChange={(event) => onSearchChange(event.target.value)} />
+            <SearchInput ariaLabel="Buscar" defaultValue={search} onChange={onSearchChange} />
         </span>
     </div>
 );

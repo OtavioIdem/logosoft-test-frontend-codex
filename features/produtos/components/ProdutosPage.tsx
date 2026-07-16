@@ -4,12 +4,12 @@ import { useMemo, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
-import { InputText } from 'primereact/inputtext';
 import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
 import { PageHeader } from '@/components/common/PageHeader';
 import { OperationalGovernancePanel } from '@/components/common/OperationalGovernancePanel';
 import { EmpresaFilialFilter } from '@/components/forms/EmpresaFilialFilter';
+import { SearchInput } from '@/components/forms/SearchInput';
 import { DataTableActions } from '@/components/data/DataTableActions';
 import { DataTableServer } from '@/components/data/DataTableServer';
 import { StatusTag } from '@/components/data/StatusTag';
@@ -24,7 +24,7 @@ import { CodigoBarrasDialog, ProdutoFornecedorDialog } from '@/features/produtos
 import { ProdutoFormDialog } from '@/features/produtos/components/ProdutoFormDialog';
 import { useCategoriasProduto, useMarcas, useProdutoMutations, useProdutos, useUnidadesMedida } from '@/features/produtos/hooks/useProdutosResources';
 import { CodigoBarrasFormValues, ProdutoFormValues, ProdutoFornecedorFormValues, ProdutoListQuery, ProdutoResponse } from '@/features/produtos/types/produtos.types';
-import { useAppToast } from '@/hooks/useAppToast';
+import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { EntityStatus, TipoProduto } from '@/types/erp';
 
@@ -52,7 +52,7 @@ const tipoProdutoLabel = (tipo: number | TipoProduto) => {
 type ComplementoState = { kind: 'codigo' | 'fornecedor'; record: ProdutoResponse } | null;
 
 export const ProdutosPage = () => {
-    const toast = useAppToast();
+    const runWithToast = useMutationWithToast();
     const { hasPermission } = usePermissions();
     const [filters, setFilters] = useState<ProdutoListQuery>({});
     const [localSearch, setLocalSearch] = useState('');
@@ -83,67 +83,64 @@ export const ProdutosPage = () => {
     };
 
     const save = async (values: ProdutoFormValues) => {
-        try {
-            const saved = await saveMutation.mutateAsync({ id: values.id, values });
-            const produtoId = saved.id;
+        await runWithToast(
+            async () => {
+                const saved = await saveMutation.mutateAsync({ id: values.id, values });
+                const produtoId = saved.id;
 
-            if (values.id) {
-                await precoCustoMutation.mutateAsync({ id: produtoId, values: { precoVendaBase: values.precoVendaBase, custoReferencial: values.custoReferencial } });
-                if (hasPermission('PRODUTOS_DADOS_FISCAIS_GERENCIAR')) {
+                if (values.id) {
+                    await precoCustoMutation.mutateAsync({ id: produtoId, values: { precoVendaBase: values.precoVendaBase, custoReferencial: values.custoReferencial } });
+                    if (hasPermission('PRODUTOS_DADOS_FISCAIS_GERENCIAR')) {
+                        await dadosFiscaisMutation.mutateAsync({ id: produtoId, values: { ncm: values.ncm, cest: values.cest, origemMercadoriaCodigo: values.origemMercadoriaCodigo, tipoItemFiscal: values.tipoItemFiscal, unidadeTributavelId: values.unidadeTributavelId, codigoFiscalExterno: values.codigoFiscalExterno } });
+                    }
+                } else if (hasPermission('PRODUTOS_DADOS_FISCAIS_GERENCIAR')) {
                     await dadosFiscaisMutation.mutateAsync({ id: produtoId, values: { ncm: values.ncm, cest: values.cest, origemMercadoriaCodigo: values.origemMercadoriaCodigo, tipoItemFiscal: values.tipoItemFiscal, unidadeTributavelId: values.unidadeTributavelId, codigoFiscalExterno: values.codigoFiscalExterno } });
                 }
-            } else if (hasPermission('PRODUTOS_DADOS_FISCAIS_GERENCIAR')) {
-                await dadosFiscaisMutation.mutateAsync({ id: produtoId, values: { ncm: values.ncm, cest: values.cest, origemMercadoriaCodigo: values.origemMercadoriaCodigo, tipoItemFiscal: values.tipoItemFiscal, unidadeTributavelId: values.unidadeTributavelId, codigoFiscalExterno: values.codigoFiscalExterno } });
-            }
 
-            toast.success('Produto salvo', 'Cadastro do produto gravado com sucesso.');
-            setFormVisible(false);
-            setSelected(null);
-        } catch (error) {
-            toast.error('Erro ao salvar produto', error instanceof Error ? error.message : 'Não foi possível salvar o produto.');
-            throw error;
-        }
+                setFormVisible(false);
+                setSelected(null);
+            },
+            { success: { summary: 'Produto salvo', detail: 'Cadastro do produto gravado com sucesso.' }, error: { summary: 'Erro ao salvar produto', detail: 'Não foi possível salvar o produto.' }, rethrow: true }
+        );
     };
 
     const inativar = async (motivo: string) => {
         if (!reasonRecord) return;
-        try {
-            await inativarMutation.mutateAsync({ id: reasonRecord.id, motivo });
-            toast.success('Produto inativado', 'Motivo registrado com sucesso.');
-            setReasonRecord(null);
-        } catch (error) {
-            toast.error('Erro ao inativar produto', error instanceof Error ? error.message : 'Não foi possível inativar o produto.');
-        }
+        await runWithToast(
+            async () => {
+                await inativarMutation.mutateAsync({ id: reasonRecord.id, motivo });
+                setReasonRecord(null);
+            },
+            { success: { summary: 'Produto inativado', detail: 'Motivo registrado com sucesso.' }, error: { summary: 'Erro ao inativar produto', detail: 'Não foi possível inativar o produto.' } }
+        );
     };
 
     const adicionarCodigo = async (values: CodigoBarrasFormValues) => {
         if (!complementoState) return;
-        try {
-            await codigoBarrasMutation.mutateAsync({ id: complementoState.record.id, values });
-            toast.success('Código adicionado', 'Código de barras vinculado ao produto.');
-            setComplementoState(null);
-        } catch (error) {
-            toast.error('Erro ao adicionar código', error instanceof Error ? error.message : 'Não foi possível adicionar o código de barras.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await codigoBarrasMutation.mutateAsync({ id: complementoState.record.id, values });
+                setComplementoState(null);
+            },
+            { success: { summary: 'Código adicionado', detail: 'Código de barras vinculado ao produto.' }, error: { summary: 'Erro ao adicionar código', detail: 'Não foi possível adicionar o código de barras.' }, rethrow: true }
+        );
     };
 
     const vincularFornecedor = async (values: ProdutoFornecedorFormValues) => {
         if (!complementoState) return;
-        try {
-            await fornecedorMutation.mutateAsync({ id: complementoState.record.id, values });
-            toast.success('Fornecedor vinculado', 'Fornecedor vinculado ao produto.');
-            setComplementoState(null);
-        } catch (error) {
-            toast.error('Erro ao vincular fornecedor', error instanceof Error ? error.message : 'Não foi possível vincular fornecedor.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await fornecedorMutation.mutateAsync({ id: complementoState.record.id, values });
+                setComplementoState(null);
+            },
+            { success: { summary: 'Fornecedor vinculado', detail: 'Fornecedor vinculado ao produto.' }, error: { summary: 'Erro ao vincular fornecedor', detail: 'Não foi possível vincular fornecedor.' }, rethrow: true }
+        );
     };
 
     const headerActions = (
         <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
             <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
-            <span className="p-input-icon-left"><i className="pi pi-search" /><InputText placeholder="Buscar" value={localSearch} onChange={(event) => { setFirst(0); setLocalSearch(event.target.value); }} /></span>
+            <SearchInput ariaLabel="Buscar produtos" defaultValue={localSearch} onChange={(term) => { setFirst(0); setLocalSearch(term); }} />
             <PermissionGuard permission="PRODUTOS_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Novo produto" icon="pi pi-plus" disabled={disabled} onClick={() => { setSelected(null); setFormVisible(true); }} />}</PermissionGuard>
         </div>
     );
