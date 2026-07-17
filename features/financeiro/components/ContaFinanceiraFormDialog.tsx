@@ -124,7 +124,7 @@ export const ContaFinanceiraFormDialog = ({ type, visible, loading, onHide, onSu
     );
 
     return (
-        <Dialog header={type === 'receber' ? 'Nova conta a receber' : 'Nova conta a pagar'} visible={visible} modal style={{ width: '64rem' }} onHide={onHide} footer={footer}>
+        <Dialog header={type === 'receber' ? 'Nova conta a receber' : 'Nova conta a pagar'} visible={visible} modal style={{ width: 'min(64rem, 96vw)' }} onHide={onHide} footer={footer}>
             <FormGrid>
                 <EmpresaFilialFields empresaId={values.empresaId} filialId={values.filialId ?? null} onEmpresaChange={(value) => { setValues((current) => ({ ...current, empresaId: value ?? '', filialId: null, clienteId: type === 'receber' ? '' : current.clienteId, fornecedorId: type === 'pagar' ? '' : current.fornecedorId, origemId: null })); }} onFilialChange={(value) => { setValues((current) => ({ ...current, filialId: value, origemId: null })); }} disabled={loading} />
                 <div className="field col-12 md:col-6">

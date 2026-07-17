@@ -19,7 +19,7 @@ import { useBloqueioEstoqueMutations, useLocaisEstoque } from '@/features/estoqu
 import { BloqueioEstoqueAcaoFormValues, BloqueioEstoqueFormValues } from '@/features/estoque/types/estoque.types';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { useProdutos } from '@/features/produtos/hooks/useProdutosResources';
-import { useAppToast } from '@/hooks/useAppToast';
+import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 
 type FieldErrors = Record<string, string | undefined>;
 type BloqueioAction = 'liberar' | 'cancelar';
@@ -28,7 +28,7 @@ const initialBloqueio: BloqueioEstoqueFormValues = { empresaId: '', filialId: nu
 const initialAction: BloqueioEstoqueAcaoFormValues = { bloqueioId: '', motivo: '' };
 
 export const BloqueiosEstoquePage = () => {
-    const toast = useAppToast();
+    const runWithToast = useMutationWithToast();
     const { hasPermission } = usePermissions();
     const [values, setValues] = useState<BloqueioEstoqueFormValues>(initialBloqueio);
     const [actionValues, setActionValues] = useState<BloqueioEstoqueAcaoFormValues>(initialAction);
@@ -55,14 +55,14 @@ export const BloqueiosEstoquePage = () => {
             setErrors(fieldErrorMap(parsed.error));
             return;
         }
-        try {
-            await criarBloqueioMutation.mutateAsync(parsed.data);
-            toast.success('Bloqueio registrado', 'O bloqueio foi enviado ao backend para reduzir o saldo disponível.');
-            setValues(initialBloqueio);
-            setErrors({});
-        } catch (error) {
-            toast.error('Erro no bloqueio', error instanceof Error ? error.message : 'Não foi possível bloquear estoque.');
-        }
+        await runWithToast(
+            async () => {
+                await criarBloqueioMutation.mutateAsync(parsed.data);
+                setValues(initialBloqueio);
+                setErrors({});
+            },
+            { success: { summary: 'Bloqueio registrado', detail: 'O bloqueio foi enviado ao backend para reduzir o saldo disponível.' }, error: { summary: 'Erro no bloqueio', detail: 'Não foi possível bloquear estoque.' } }
+        );
     };
 
     const executarAcao = async (action: BloqueioAction) => {
@@ -71,15 +71,15 @@ export const BloqueiosEstoquePage = () => {
             setActionErrors(fieldErrorMap(parsed.error));
             return;
         }
-        try {
-            if (action === 'liberar') await liberarBloqueioMutation.mutateAsync({ id: parsed.data.bloqueioId, motivo: parsed.data.motivo });
-            if (action === 'cancelar') await cancelarBloqueioMutation.mutateAsync({ id: parsed.data.bloqueioId, motivo: parsed.data.motivo });
-            toast.success(action === 'liberar' ? 'Bloqueio liberado' : 'Bloqueio cancelado', 'Ação enviada ao backend com motivo auditável.');
-            setActionValues(initialAction);
-            setActionErrors({});
-        } catch (error) {
-            toast.error('Erro na ação', error instanceof Error ? error.message : 'Não foi possível atualizar o bloqueio.');
-        }
+        await runWithToast(
+            async () => {
+                if (action === 'liberar') await liberarBloqueioMutation.mutateAsync({ id: parsed.data.bloqueioId, motivo: parsed.data.motivo });
+                if (action === 'cancelar') await cancelarBloqueioMutation.mutateAsync({ id: parsed.data.bloqueioId, motivo: parsed.data.motivo });
+                setActionValues(initialAction);
+                setActionErrors({});
+            },
+            { success: { summary: action === 'liberar' ? 'Bloqueio liberado' : 'Bloqueio cancelado', detail: 'Ação enviada ao backend com motivo auditável.' }, error: { summary: 'Erro na ação', detail: 'Não foi possível atualizar o bloqueio.' } }
+        );
     };
 
     return (

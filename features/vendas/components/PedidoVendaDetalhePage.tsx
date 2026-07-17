@@ -31,7 +31,7 @@ import { useProdutos } from '@/features/produtos/hooks/useProdutosResources';
 import { useLocaisEstoque } from '@/features/estoque/hooks/useEstoqueResources';
 import { AprovarPedidoVendaRequest, FaturarPedidoVendaRequest, ItemPedidoVendaFormValues, ItemPedidoVendaResponse, PedidoVendaResponse, SalvarPedidoVendaValues } from '@/features/vendas/types/vendas.types';
 import { formatDate, formatMoney, pedidoPodeAprovar, pedidoPodeCancelar, pedidoPodeEditar, pedidoPodeEnviar, pedidoPodeFaturar, pedidoVendaAcoesDisponiveis, pedidoVendaBloqueiosVisuais, pedidoVendaDescontoPercentual, pedidoVendaItensCount, statusPedidoVendaLabel, statusPedidoVendaTagValue, tipoPedidoVendaLabel } from '@/features/vendas/components/vendasUiUtils';
-import { useAppToast } from '@/hooks/useAppToast';
+import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { StatusPedidoVenda } from '@/types/erp';
 
@@ -107,7 +107,7 @@ const AcoesDisponiveisPanel = ({ pedido }: { pedido: PedidoVendaResponse }) => {
 
 export const PedidoVendaDetalhePage = ({ pedidoId }: { pedidoId?: string }) => {
     const router = useRouter();
-    const toast = useAppToast();
+    const runWithToast = useMutationWithToast();
     const { hasPermission } = usePermissions();
     const isNovo = !pedidoId;
     const pedidoQuery = usePedidoVenda(pedidoId);
@@ -138,97 +138,89 @@ export const PedidoVendaDetalhePage = ({ pedidoId }: { pedidoId?: string }) => {
     if (!hasPermission('VENDAS_CONSULTAR')) return <UnauthorizedState description="Pedidos de venda exigem VENDAS_CONSULTAR." />;
 
     const save = async (values: SalvarPedidoVendaValues) => {
-        try {
-            const saved = await mutations.saveMutation.mutateAsync({ id: values.id, values });
-            toast.success('Pedido salvo', 'Pedido de venda gravado com sucesso.');
-            setFormVisible(false);
-            if (isNovo) router.replace(`/vendas/pedidos/${saved.id}`);
-        } catch (error) {
-            toast.error('Erro ao salvar pedido', error instanceof Error ? error.message : 'Não foi possível salvar o pedido.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                const saved = await mutations.saveMutation.mutateAsync({ id: values.id, values });
+                setFormVisible(false);
+                if (isNovo) router.replace(`/vendas/pedidos/${saved.id}`);
+            },
+            { success: { summary: 'Pedido salvo', detail: 'Pedido de venda gravado com sucesso.' }, error: { summary: 'Erro ao salvar pedido', detail: 'Não foi possível salvar o pedido.' }, rethrow: true }
+        );
     };
 
     const saveItem = async (values: ItemPedidoVendaFormValues) => {
         if (!pedido) return;
-        try {
-            await mutations.itemMutation.mutateAsync({ pedidoId: pedido.id, itemId: values.id, values });
-            toast.success('Item salvo', 'Item do pedido gravado com sucesso.');
-            setItemDialog(null);
-        } catch (error) {
-            toast.error('Erro ao salvar item', error instanceof Error ? error.message : 'Não foi possível salvar o item.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await mutations.itemMutation.mutateAsync({ pedidoId: pedido.id, itemId: values.id, values });
+                setItemDialog(null);
+            },
+            { success: { summary: 'Item salvo', detail: 'Item do pedido gravado com sucesso.' }, error: { summary: 'Erro ao salvar item', detail: 'Não foi possível salvar o item.' }, rethrow: true }
+        );
     };
 
     const removerItem = async (motivo: string) => {
         if (!pedido || !removeItem) return;
-        try {
-            await mutations.removerItemMutation.mutateAsync({ pedidoId: pedido.id, itemId: removeItem.id, motivo });
-            toast.success('Item removido', 'Motivo registrado e item removido logicamente.');
-            setRemoveItem(null);
-        } catch (error) {
-            toast.error('Erro ao remover item', error instanceof Error ? error.message : 'Não foi possível remover o item.');
-        }
+        await runWithToast(
+            async () => {
+                await mutations.removerItemMutation.mutateAsync({ pedidoId: pedido.id, itemId: removeItem.id, motivo });
+                setRemoveItem(null);
+            },
+            { success: { summary: 'Item removido', detail: 'Motivo registrado e item removido logicamente.' }, error: { summary: 'Erro ao remover item', detail: 'Não foi possível remover o item.' } }
+        );
     };
 
     const enviar = async () => {
         if (!pedido) return;
-        try {
-            await mutations.enviarMutation.mutateAsync(pedido.id);
-            toast.success('Pedido enviado', 'Pedido enviado para aprovação.');
-        } catch (error) {
-            toast.error('Erro ao enviar pedido', error instanceof Error ? error.message : 'Não foi possível enviar o pedido.');
-        }
+        await runWithToast(
+            () => mutations.enviarMutation.mutateAsync(pedido.id),
+            { success: { summary: 'Pedido enviado', detail: 'Pedido enviado para aprovação.' }, error: { summary: 'Erro ao enviar pedido', detail: 'Não foi possível enviar o pedido.' } }
+        );
     };
 
     const aprovar = async (values: AprovarPedidoVendaRequest) => {
         if (!pedido) return;
-        try {
-            await mutations.aprovarMutation.mutateAsync({ id: pedido.id, values });
-            toast.success('Pedido aprovado', values.reservarEstoque ? 'Pedido aprovado com reserva de estoque.' : 'Pedido aprovado sem reserva de estoque.');
-            setAprovarVisible(false);
-        } catch (error) {
-            toast.error('Erro ao aprovar pedido', error instanceof Error ? error.message : 'Não foi possível aprovar o pedido.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await mutations.aprovarMutation.mutateAsync({ id: pedido.id, values });
+                setAprovarVisible(false);
+            },
+            { success: { summary: 'Pedido aprovado', detail: values.reservarEstoque ? 'Pedido aprovado com reserva de estoque.' : 'Pedido aprovado sem reserva de estoque.' }, error: { summary: 'Erro ao aprovar pedido', detail: 'Não foi possível aprovar o pedido.' }, rethrow: true }
+        );
     };
 
     const cancelar = async (motivo: string) => {
         if (!pedido) return;
-        try {
-            await mutations.cancelarMutation.mutateAsync({ id: pedido.id, motivo });
-            toast.success('Pedido cancelado', 'Motivo registrado com sucesso.');
-            setCancelarVisible(false);
-        } catch (error) {
-            toast.error('Erro ao cancelar pedido', error instanceof Error ? error.message : 'Não foi possível cancelar o pedido.');
-        }
+        await runWithToast(
+            async () => {
+                await mutations.cancelarMutation.mutateAsync({ id: pedido.id, motivo });
+                setCancelarVisible(false);
+            },
+            { success: { summary: 'Pedido cancelado', detail: 'Motivo registrado com sucesso.' }, error: { summary: 'Erro ao cancelar pedido', detail: 'Não foi possível cancelar o pedido.' } }
+        );
     };
-
 
     const gerarNotaFiscal = async (values: unknown) => {
         if (!pedido) return;
-        try {
-            const result = await fiscalMutations.gerarNotaPedidoMutation.mutateAsync(values);
-            toast.success('Nota fiscal gerada', 'Nota fiscal criada em rascunho a partir do pedido de venda.');
-            setGerarNotaFiscalVisible(false);
-            router.push(`/fiscal/notas/${result.notaFiscal.id}`);
-        } catch (error) {
-            toast.error('Erro ao gerar nota fiscal', error instanceof Error ? error.message : 'Não foi possível gerar a nota fiscal.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                const result = await fiscalMutations.gerarNotaPedidoMutation.mutateAsync(values);
+                setGerarNotaFiscalVisible(false);
+                router.push(`/fiscal/notas/${result.notaFiscal.id}`);
+            },
+            { success: { summary: 'Nota fiscal gerada', detail: 'Nota fiscal criada em rascunho a partir do pedido de venda.' }, error: { summary: 'Erro ao gerar nota fiscal', detail: 'Não foi possível gerar a nota fiscal.' }, rethrow: true }
+        );
     };
 
     const faturar = async (values: FaturarPedidoVendaRequest) => {
         if (!pedido) return;
-        try {
-            await mutations.faturarMutation.mutateAsync({ id: pedido.id, values });
-            toast.success('Pedido faturado', values.baixarEstoque ? 'Pedido faturado com baixa de estoque.' : 'Pedido faturado sem baixa de estoque.');
-            setFaturarVisible(false);
-        } catch (error) {
-            toast.error('Erro ao faturar pedido', error instanceof Error ? error.message : 'Não foi possível faturar o pedido.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await mutations.faturarMutation.mutateAsync({ id: pedido.id, values });
+                setFaturarVisible(false);
+            },
+            { success: { summary: 'Pedido faturado', detail: values.baixarEstoque ? 'Pedido faturado com baixa de estoque.' : 'Pedido faturado sem baixa de estoque.' }, error: { summary: 'Erro ao faturar pedido', detail: 'Não foi possível faturar o pedido.' }, rethrow: true }
+        );
     };
 
     const headerActions = (

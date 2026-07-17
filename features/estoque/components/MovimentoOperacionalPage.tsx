@@ -13,7 +13,7 @@ import { useLocaisEstoque, useMovimentoEstoqueMutations } from '@/features/estoq
 import { MovimentoEstoqueFormValues } from '@/features/estoque/types/estoque.types';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { useProdutos } from '@/features/produtos/hooks/useProdutosResources';
-import { useAppToast } from '@/hooks/useAppToast';
+import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 
 type MovimentoKind = 'entrada' | 'saida' | 'ajuste';
 
@@ -24,7 +24,7 @@ const pageText: Record<MovimentoKind, { title: string; description: string; butt
 };
 
 export const MovimentoOperacionalPage = ({ kind }: { kind: MovimentoKind }) => {
-    const toast = useAppToast();
+    const runWithToast = useMutationWithToast();
     const { hasPermission } = usePermissions();
     const [dialogVisible, setDialogVisible] = useState(false);
     const produtosQuery = useProdutos({});
@@ -34,16 +34,15 @@ export const MovimentoOperacionalPage = ({ kind }: { kind: MovimentoKind }) => {
     if (!hasPermission('ESTOQUE_MOVIMENTAR')) return <UnauthorizedState description="Movimentações exigem ESTOQUE_MOVIMENTAR." />;
 
     const submit = async (values: MovimentoEstoqueFormValues) => {
-        try {
-            if (kind === 'entrada') await entradaMutation.mutateAsync(values);
-            if (kind === 'saida') await saidaMutation.mutateAsync(values);
-            if (kind === 'ajuste') await ajusteMutation.mutateAsync(values);
-            toast.success('Movimento registrado', `${pageText[kind].title} concluída com sucesso.`);
-            setDialogVisible(false);
-        } catch (error) {
-            toast.error('Erro no movimento', error instanceof Error ? error.message : 'Não foi possível registrar o movimento.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                if (kind === 'entrada') await entradaMutation.mutateAsync(values);
+                if (kind === 'saida') await saidaMutation.mutateAsync(values);
+                if (kind === 'ajuste') await ajusteMutation.mutateAsync(values);
+                setDialogVisible(false);
+            },
+            { success: { summary: 'Movimento registrado', detail: `${pageText[kind].title} concluída com sucesso.` }, error: { summary: 'Erro no movimento', detail: 'Não foi possível registrar o movimento.' }, rethrow: true }
+        );
     };
 
     const loading = entradaMutation.isPending || saidaMutation.isPending || ajusteMutation.isPending;

@@ -18,7 +18,7 @@ import { LoadingState } from '@/components/feedback/LoadingState';
 import { ReasonDialog } from '@/components/feedback/ReasonDialog';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
-import { useAppToast } from '@/hooks/useAppToast';
+import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { useFornecedores } from '@/features/fornecedores/hooks/useFornecedoresResources';
@@ -97,7 +97,7 @@ const OperationalBlocksPanel = ({ pedido }: { pedido: PedidoCompraResponse }) =>
 
 export const PedidoCompraDetalhePage = ({ pedidoId }: { pedidoId?: string }) => {
     const router = useRouter();
-    const toast = useAppToast();
+    const runWithToast = useMutationWithToast();
     const { hasPermission } = usePermissions();
     const isNovo = !pedidoId;
     const pedidoQuery = usePedidoCompra(pedidoId ?? null);
@@ -129,83 +129,77 @@ export const PedidoCompraDetalhePage = ({ pedidoId }: { pedidoId?: string }) => 
     if (!hasPermission('COMPRAS_CONSULTAR')) return <UnauthorizedState description="Pedidos de compra exigem COMPRAS_CONSULTAR." />;
 
     const save = async (values: SalvarPedidoCompraValues) => {
-        try {
-            const saved = await mutations.saveMutation.mutateAsync({ id: pedido?.id, values });
-            toast.success('Pedido salvo', 'Pedido de compra salvo com sucesso.');
-            setFormVisible(false);
-            if (isNovo) router.replace(`/compras/pedidos/${saved.id}`);
-        } catch (error) {
-            toast.error('Erro ao salvar pedido', error instanceof Error ? error.message : 'Não foi possível salvar o pedido.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                const saved = await mutations.saveMutation.mutateAsync({ id: pedido?.id, values });
+                setFormVisible(false);
+                if (isNovo) router.replace(`/compras/pedidos/${saved.id}`);
+            },
+            { success: { summary: 'Pedido salvo', detail: 'Pedido de compra salvo com sucesso.' }, error: { summary: 'Erro ao salvar pedido', detail: 'Não foi possível salvar o pedido.' }, rethrow: true }
+        );
     };
 
     const saveItem = async (values: ItemPedidoCompraFormValues) => {
         if (!pedido) return;
-        try {
-            await mutations.itemMutation.mutateAsync({ pedidoId: pedido.id, itemId: values.id, values });
-            toast.success('Item salvo', 'Item do pedido de compra atualizado.');
-            setItemDialog(null);
-        } catch (error) {
-            toast.error('Erro ao salvar item', error instanceof Error ? error.message : 'Não foi possível salvar o item.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await mutations.itemMutation.mutateAsync({ pedidoId: pedido.id, itemId: values.id, values });
+                setItemDialog(null);
+            },
+            { success: { summary: 'Item salvo', detail: 'Item do pedido de compra atualizado.' }, error: { summary: 'Erro ao salvar item', detail: 'Não foi possível salvar o item.' }, rethrow: true }
+        );
     };
 
     const removerItem = async (motivo: string) => {
         if (!pedido || !removeItem) return;
-        try {
-            await mutations.removerItemMutation.mutateAsync({ pedidoId: pedido.id, itemId: removeItem.id, motivo });
-            toast.success('Item removido', 'Motivo registrado e item removido logicamente.');
-            setRemoveItem(null);
-        } catch (error) {
-            toast.error('Erro ao remover item', error instanceof Error ? error.message : 'Não foi possível remover o item.');
-        }
+        await runWithToast(
+            async () => {
+                await mutations.removerItemMutation.mutateAsync({ pedidoId: pedido.id, itemId: removeItem.id, motivo });
+                setRemoveItem(null);
+            },
+            { success: { summary: 'Item removido', detail: 'Motivo registrado e item removido logicamente.' }, error: { summary: 'Erro ao remover item', detail: 'Não foi possível remover o item.' } }
+        );
     };
 
     const enviar = async () => {
         if (!pedido) return;
-        try {
-            await mutations.enviarMutation.mutateAsync(pedido.id);
-            toast.success('Pedido enviado', 'Pedido de compra enviado para aprovação.');
-        } catch (error) {
-            toast.error('Erro ao enviar pedido', error instanceof Error ? error.message : 'Não foi possível enviar o pedido.');
-        }
+        await runWithToast(
+            () => mutations.enviarMutation.mutateAsync(pedido.id),
+            { success: { summary: 'Pedido enviado', detail: 'Pedido de compra enviado para aprovação.' }, error: { summary: 'Erro ao enviar pedido', detail: 'Não foi possível enviar o pedido.' } }
+        );
     };
 
     const aprovar = async (values: AprovarPedidoCompraRequest) => {
         if (!pedido) return;
-        try {
-            await mutations.aprovarMutation.mutateAsync({ id: pedido.id, values });
-            toast.success('Pedido aprovado', 'Pedido de compra aprovado com sucesso.');
-            setAprovarVisible(false);
-        } catch (error) {
-            toast.error('Erro ao aprovar pedido', error instanceof Error ? error.message : 'Não foi possível aprovar o pedido.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await mutations.aprovarMutation.mutateAsync({ id: pedido.id, values });
+                setAprovarVisible(false);
+            },
+            { success: { summary: 'Pedido aprovado', detail: 'Pedido de compra aprovado com sucesso.' }, error: { summary: 'Erro ao aprovar pedido', detail: 'Não foi possível aprovar o pedido.' }, rethrow: true }
+        );
     };
 
     const cancelar = async (motivo: string) => {
         if (!pedido) return;
-        try {
-            await mutations.cancelarMutation.mutateAsync({ id: pedido.id, motivo });
-            toast.success('Pedido cancelado', 'Motivo registrado com sucesso.');
-            setCancelarVisible(false);
-        } catch (error) {
-            toast.error('Erro ao cancelar pedido', error instanceof Error ? error.message : 'Não foi possível cancelar o pedido.');
-        }
+        await runWithToast(
+            async () => {
+                await mutations.cancelarMutation.mutateAsync({ id: pedido.id, motivo });
+                setCancelarVisible(false);
+            },
+            { success: { summary: 'Pedido cancelado', detail: 'Motivo registrado com sucesso.' }, error: { summary: 'Erro ao cancelar pedido', detail: 'Não foi possível cancelar o pedido.' } }
+        );
     };
 
     const receber = async (values: ReceberPedidoCompraRequest) => {
         if (!pedido) return;
-        try {
-            await mutations.receberMutation.mutateAsync({ id: pedido.id, values });
-            toast.success('Recebimento registrado', values.gerarContaPagar ? 'Recebimento com geração de conta a pagar.' : 'Recebimento sem geração financeira.');
-            setReceberVisible(false);
-        } catch (error) {
-            toast.error('Erro ao receber pedido', error instanceof Error ? error.message : 'Não foi possível receber o pedido.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await mutations.receberMutation.mutateAsync({ id: pedido.id, values });
+                setReceberVisible(false);
+            },
+            { success: { summary: 'Recebimento registrado', detail: values.gerarContaPagar ? 'Recebimento com geração de conta a pagar.' : 'Recebimento sem geração financeira.' }, error: { summary: 'Erro ao receber pedido', detail: 'Não foi possível receber o pedido.' }, rethrow: true }
+        );
     };
 
     const headerActions = (

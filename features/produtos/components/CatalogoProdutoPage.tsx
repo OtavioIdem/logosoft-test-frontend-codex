@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
-import { InputText } from 'primereact/inputtext';
+import { SearchInput } from '@/components/forms/SearchInput';
 import { Message } from 'primereact/message';
 import { PageHeader } from '@/components/common/PageHeader';
 import { OperationalGovernancePanel } from '@/components/common/OperationalGovernancePanel';
@@ -21,7 +21,7 @@ import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { CatalogoProdutoFormDialog } from '@/features/produtos/components/CatalogoProdutoFormDialog';
 import { useCategoriaProdutoMutations, useCategoriasProduto, useMarcaMutations, useMarcas, useUnidadeMedidaMutations, useUnidadesMedida } from '@/features/produtos/hooks/useProdutosResources';
 import { CatalogoListQuery, CategoriaProdutoResponse, MarcaResponse, UnidadeMedidaResponse } from '@/features/produtos/types/produtos.types';
-import { useAppToast } from '@/hooks/useAppToast';
+import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { EntityStatus, PermissionCode } from '@/types/erp';
 
@@ -50,7 +50,7 @@ const filterLocal = (records: CatalogoRecord[], term: string) => {
 };
 
 export const CatalogoProdutoPage = ({ kind }: { kind: CatalogoKind }) => {
-    const toast = useAppToast();
+    const runWithToast = useMutationWithToast();
     const { hasPermission } = usePermissions();
     const config = configMap[kind];
     const [filters, setFilters] = useState<CatalogoListQuery>({});
@@ -84,32 +84,31 @@ export const CatalogoProdutoPage = ({ kind }: { kind: CatalogoKind }) => {
     };
 
     const save = async (values: Record<string, unknown>) => {
-        try {
-            await mutations.saveMutation.mutateAsync({ id: typeof values.id === 'string' ? values.id : undefined, values });
-            toast.success('Cadastro salvo', `${config.title} atualizado com sucesso.`);
-            setFormVisible(false);
-            setSelected(null);
-        } catch (error) {
-            toast.error('Erro ao salvar cadastro', error instanceof Error ? error.message : 'Não foi possível salvar o cadastro.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await mutations.saveMutation.mutateAsync({ id: typeof values.id === 'string' ? values.id : undefined, values });
+                setFormVisible(false);
+                setSelected(null);
+            },
+            { success: { summary: 'Cadastro salvo', detail: `${config.title} atualizado com sucesso.` }, error: { summary: 'Erro ao salvar cadastro', detail: 'Não foi possível salvar o cadastro.' }, rethrow: true }
+        );
     };
 
     const inativar = async (motivo: string) => {
         if (!reasonRecord) return;
-        try {
-            await mutations.inativarMutation.mutateAsync({ id: reasonRecord.id, motivo });
-            toast.success('Cadastro inativado', 'Motivo registrado com sucesso.');
-            setReasonRecord(null);
-        } catch (error) {
-            toast.error('Erro ao inativar cadastro', error instanceof Error ? error.message : 'Não foi possível inativar o cadastro.');
-        }
+        await runWithToast(
+            async () => {
+                await mutations.inativarMutation.mutateAsync({ id: reasonRecord.id, motivo });
+                setReasonRecord(null);
+            },
+            { success: { summary: 'Cadastro inativado', detail: 'Motivo registrado com sucesso.' }, error: { summary: 'Erro ao inativar cadastro', detail: 'Não foi possível inativar o cadastro.' } }
+        );
     };
 
     const headerActions = (
         <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
             <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
-            <span className="p-input-icon-left"><i className="pi pi-search" /><InputText placeholder="Buscar" value={localSearch} onChange={(event) => { setFirst(0); setLocalSearch(event.target.value); }} /></span>
+            <SearchInput ariaLabel="Buscar no catálogo" defaultValue={localSearch} onChange={(term) => { setFirst(0); setLocalSearch(term); }} />
             <PermissionGuard permission={config.managePermission} mode="disable">{({ disabled }) => <Button label={config.createLabel} icon="pi pi-plus" disabled={disabled} onClick={() => { setSelected(null); setFormVisible(true); }} />}</PermissionGuard>
         </div>
     );

@@ -20,14 +20,14 @@ import { filterLocalRecords } from '@/features/estoque/components/estoqueUiUtils
 import { useLocalEstoqueMutations, useLocaisEstoque } from '@/features/estoque/hooks/useEstoqueResources';
 import { EstoqueListQuery, LocalEstoqueFormValues, LocalEstoqueResponse } from '@/features/estoque/types/estoque.types';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
-import { useAppToast } from '@/hooks/useAppToast';
+import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { EntityStatus } from '@/types/erp';
 
 const isActive = (record: LocalEstoqueResponse) => Number(record.status) === EntityStatus.Ativo;
 
 export const LocaisEstoquePage = () => {
-    const toast = useAppToast();
+    const runWithToast = useMutationWithToast();
     const { hasPermission } = usePermissions();
     const [filters, setFilters] = useState<EstoqueListQuery>({});
     const [localSearch, setLocalSearch] = useState('');
@@ -48,26 +48,25 @@ export const LocaisEstoquePage = () => {
     const updateFilter = (name: keyof EstoqueListQuery, value: string | null) => { setFirst(0); setFilters((current) => ({ ...current, [name]: value || null })); };
 
     const save = async (values: LocalEstoqueFormValues) => {
-        try {
-            await saveMutation.mutateAsync({ id: values.id, values });
-            toast.success('Local salvo', 'Cadastro de local de estoque gravado com sucesso.');
-            setFormVisible(false);
-            setSelected(null);
-        } catch (error) {
-            toast.error('Erro ao salvar local', error instanceof Error ? error.message : 'Não foi possível salvar o local.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await saveMutation.mutateAsync({ id: values.id, values });
+                setFormVisible(false);
+                setSelected(null);
+            },
+            { success: { summary: 'Local salvo', detail: 'Cadastro de local de estoque gravado com sucesso.' }, error: { summary: 'Erro ao salvar local', detail: 'Não foi possível salvar o local.' }, rethrow: true }
+        );
     };
 
     const inativar = async (motivo: string) => {
         if (!reasonRecord) return;
-        try {
-            await inativarMutation.mutateAsync({ id: reasonRecord.id, motivo });
-            toast.success('Local inativado', 'Motivo registrado com sucesso.');
-            setReasonRecord(null);
-        } catch (error) {
-            toast.error('Erro ao inativar local', error instanceof Error ? error.message : 'Não foi possível inativar o local.');
-        }
+        await runWithToast(
+            async () => {
+                await inativarMutation.mutateAsync({ id: reasonRecord.id, motivo });
+                setReasonRecord(null);
+            },
+            { success: { summary: 'Local inativado', detail: 'Motivo registrado com sucesso.' }, error: { summary: 'Erro ao inativar local', detail: 'Não foi possível inativar o local.' } }
+        );
     };
 
     const headerActions = (

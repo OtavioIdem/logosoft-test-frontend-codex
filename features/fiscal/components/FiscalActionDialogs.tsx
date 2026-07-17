@@ -110,7 +110,7 @@ export const CriarNotaFiscalDialog = ({ visible, loading, onHide, onSubmit }: Ba
     }, [visible]);
 
     return (
-        <Dialog header="Nova nota fiscal manual" visible={visible} modal style={{ width: '56rem' }} onHide={onHide} footer={footer('criar-nota-fiscal-form', loading, onHide, 'Criar nota')}>
+        <Dialog header="Nova nota fiscal manual" visible={visible} modal style={{ width: 'min(56rem, 96vw)' }} onHide={onHide} footer={footer('criar-nota-fiscal-form', loading, onHide, 'Criar nota')}>
             <form id="criar-nota-fiscal-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
                 <ReferencePolicyMessage />
                 <Field label="Empresa"><EmpresaSelect value={values.empresaId || null} required onChange={(empresaId) => setValues((v) => ({ ...v, empresaId: empresaId ?? '', filialId: '', pessoaId: '' }))} /></Field>
@@ -152,7 +152,7 @@ export const GerarNotaFiscalPedidoVendaDialog = ({ visible, loading, onHide, onS
     }, [pedidoVendaId, visible]);
 
     return (
-        <Dialog header="Gerar nota fiscal de pedido de venda" visible={visible} modal style={{ width: '52rem' }} onHide={onHide} footer={footer('gerar-nf-pedido-form', loading, onHide, 'Gerar NF')}>
+        <Dialog header="Gerar nota fiscal de pedido de venda" visible={visible} modal style={{ width: 'min(52rem, 96vw)' }} onHide={onHide} footer={footer('gerar-nf-pedido-form', loading, onHide, 'Gerar NF')}>
             <form id="gerar-nf-pedido-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
                 <ReferencePolicyMessage />
                 {!pedidoVendaId ? (
@@ -204,7 +204,7 @@ export const ItemNotaFiscalDialog = ({ visible, loading, onHide, onSubmit, empre
     };
 
     return (
-        <Dialog header="Adicionar item fiscal" visible={visible} modal style={{ width: '56rem' }} onHide={onHide} footer={footer('item-nota-fiscal-form', loading, onHide, 'Adicionar item')}>
+        <Dialog header="Adicionar item fiscal" visible={visible} modal style={{ width: 'min(56rem, 96vw)' }} onHide={onHide} footer={footer('item-nota-fiscal-form', loading, onHide, 'Adicionar item')}>
             <form id="item-nota-fiscal-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
                 <ReferencePolicyMessage />
                 <Field label="Produto" hint="Seleção carregada da API de produtos. Código, descrição, NCM e preço são preenchidos como sugestão operacional."><EntitySelect entityName="produto" value={values.produtoId || null} options={produtosOptions} disabled={produtosQuery.isLoading} loading={produtosQuery.isFetching} onSearch={setProdutoSearch} onChange={selecionarProduto} /></Field>
@@ -227,7 +227,7 @@ export const ImpostoNotaFiscalDialog = ({ visible, loading, onHide, onSubmit, it
     const [values, setValues] = useState({ itemNotaFiscalId: '', nome: 'ICMS', cstCsosn: '', baseCalculo: 0, aliquota: 0, valor: 0, observacao: 'Imposto parametrizado manualmente.' });
     const itemOptions = [{ label: 'Imposto da nota', value: '' }, ...itens.map((item) => ({ label: `${item.sequencia} • ${item.codigoItem} • ${item.descricao}`, value: item.id }))];
     return (
-        <Dialog header="Adicionar imposto parametrizado" visible={visible} modal style={{ width: '52rem' }} onHide={onHide} footer={footer('imposto-nota-fiscal-form', loading, onHide, 'Adicionar imposto')}>
+        <Dialog header="Adicionar imposto parametrizado" visible={visible} modal style={{ width: 'min(52rem, 96vw)' }} onHide={onHide} footer={footer('imposto-nota-fiscal-form', loading, onHide, 'Adicionar imposto')}>
             <form id="imposto-nota-fiscal-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
                 <Field label="Item vinculado" hint="Lista derivada dos itens já carregados no detalhe da nota; não digite o ID do item."><Dropdown value={values.itemNotaFiscalId} options={itemOptions} onChange={(e) => setValues((v) => ({ ...v, itemNotaFiscalId: e.value }))} /></Field>
                 <Field label="Imposto"><InputText value={values.nome} onChange={(e) => setValues((v) => ({ ...v, nome: e.target.value }))} /></Field>
@@ -246,7 +246,7 @@ export const XmlPipelineDialog = ({ visible, loading, onHide, onSubmit, mode }: 
     const [values, setValues] = useState({ armazenarXml: true, validarSchema: false, armazenarXmlAssinado: true, validarSchemaAntesAssinatura: false, schemaSetName: 'NFe-4.00', certificateThumbprint: '', xmlEnvio: '' });
     const isAssinar = mode === 'assinar';
     return (
-        <Dialog header={isAssinar ? 'Assinar XML de envio' : 'Gerar XML de envio'} visible={visible} modal style={{ width: '48rem' }} onHide={onHide} footer={footer('xml-pipeline-form', loading, onHide, isAssinar ? 'Assinar XML' : 'Gerar XML')}>
+        <Dialog header={isAssinar ? 'Assinar XML de envio' : 'Gerar XML de envio'} visible={visible} modal style={{ width: 'min(48rem, 96vw)' }} onHide={onHide} footer={footer('xml-pipeline-form', loading, onHide, isAssinar ? 'Assinar XML' : 'Gerar XML')}>
             <form id="xml-pipeline-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(isAssinar ? { certificateThumbprint: values.certificateThumbprint, xmlEnvio: values.xmlEnvio, armazenarXmlAssinado: values.armazenarXmlAssinado, validarSchemaAntesAssinatura: values.validarSchemaAntesAssinatura, schemaSetName: values.schemaSetName } : { armazenarXml: values.armazenarXml, validarSchema: values.validarSchema, schemaSetName: values.schemaSetName }); }}>
                 <Field label="Schema set"><InputText value={values.schemaSetName} onChange={(e) => setValues((v) => ({ ...v, schemaSetName: e.target.value }))} /></Field>
                 {isAssinar ? (
@@ -272,7 +272,7 @@ export const TransmitirSefazDialog = ({ visible, loading, onHide, onSubmit }: Ba
     const [values, setValues] = useState({ ufAutorizadora: 'SP', servico: TipoServicoTransmissaoFiscal.Autorizacao, xmlEnvioAssinado: '', validarSchemaAntesTransmissao: false, schemaSetName: 'NFe-4.00', correlationId: gerarCorrelationId('transmitir') });
     useEffect(() => { if (visible) setValues((v) => ({ ...v, correlationId: gerarCorrelationId('transmitir') })); }, [visible]);
     return (
-        <Dialog header="Transmitir para SEFAZ / ambiente configurado" visible={visible} modal style={{ width: '52rem' }} onHide={onHide} footer={footer('transmitir-sefaz-form', loading, onHide, 'Transmitir')}>
+        <Dialog header="Transmitir para SEFAZ / ambiente configurado" visible={visible} modal style={{ width: 'min(52rem, 96vw)' }} onHide={onHide} footer={footer('transmitir-sefaz-form', loading, onHide, 'Transmitir')}>
             <form id="transmitir-sefaz-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
                 <Field label="UF autorizadora"><InputText value={values.ufAutorizadora} maxLength={2} onChange={(e) => setValues((v) => ({ ...v, ufAutorizadora: e.target.value.toUpperCase() }))} /></Field>
                 <Field label="Serviço"><Dropdown value={values.servico} options={servicoTransmissaoFiscalOptions} onChange={(e) => setValues((v) => ({ ...v, servico: e.value }))} /></Field>
@@ -289,7 +289,7 @@ export const TransmitirSefazDialog = ({ visible, loading, onHide, onSubmit }: Ba
 export const CancelarNotaLocalDialog = ({ visible, loading, onHide, onSubmit }: BaseDialogProps<Record<string, unknown>>) => {
     const [values, setValues] = useState({ motivo: '', protocoloCancelamento: '', xmlCancelamento: '' });
     return (
-        <Dialog header="Cancelar nota local/manual" visible={visible} modal style={{ width: '48rem' }} onHide={onHide} footer={footer('cancelar-nota-local-form', loading, onHide, 'Cancelar nota')}>
+        <Dialog header="Cancelar nota local/manual" visible={visible} modal style={{ width: 'min(48rem, 96vw)' }} onHide={onHide} footer={footer('cancelar-nota-local-form', loading, onHide, 'Cancelar nota')}>
             <form id="cancelar-nota-local-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
                 <TextAreaField label="Motivo" value={values.motivo} onChange={(motivo) => setValues((v) => ({ ...v, motivo }))} />
                 <Field label="Protocolo cancelamento"><InputText value={values.protocoloCancelamento} onChange={(e) => setValues((v) => ({ ...v, protocoloCancelamento: e.target.value }))} /></Field>
@@ -304,7 +304,7 @@ export const CancelarNotaSefazDialog = ({ visible, loading, onHide, onSubmit }: 
     const [values, setValues] = useState({ ufAutorizadora: 'SP', motivo: '', xmlEventoAssinado: '', validarSchemaAntesTransmissao: false, schemaSetName: 'NFe-Evento-4.00', correlationId: gerarCorrelationId('cancelamento') });
     useEffect(() => { if (visible) setValues((v) => ({ ...v, correlationId: gerarCorrelationId('cancelamento') })); }, [visible]);
     return (
-        <Dialog header="Cancelar via SEFAZ / ambiente configurado" visible={visible} modal style={{ width: '52rem' }} onHide={onHide} footer={footer('cancelar-nota-sefaz-form', loading, onHide, 'Transmitir cancelamento')}>
+        <Dialog header="Cancelar via SEFAZ / ambiente configurado" visible={visible} modal style={{ width: 'min(52rem, 96vw)' }} onHide={onHide} footer={footer('cancelar-nota-sefaz-form', loading, onHide, 'Transmitir cancelamento')}>
             <form id="cancelar-nota-sefaz-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
                 <Field label="UF autorizadora"><InputText value={values.ufAutorizadora} maxLength={2} onChange={(e) => setValues((v) => ({ ...v, ufAutorizadora: e.target.value.toUpperCase() }))} /></Field>
                 <Field label="Schema set"><InputText value={values.schemaSetName} onChange={(e) => setValues((v) => ({ ...v, schemaSetName: e.target.value }))} /></Field>
@@ -322,7 +322,7 @@ export const CartaCorrecaoDialog = ({ visible, loading, onHide, onSubmit }: Base
     const [values, setValues] = useState({ ufAutorizadora: 'SP', textoCorrecao: '', xmlEventoAssinado: '', validarSchemaAntesTransmissao: false, schemaSetName: 'NFe-Evento-4.00', correlationId: gerarCorrelationId('cce') });
     useEffect(() => { if (visible) setValues((v) => ({ ...v, correlationId: gerarCorrelationId('cce') })); }, [visible]);
     return (
-        <Dialog header="Carta de correção eletrônica" visible={visible} modal style={{ width: '52rem' }} onHide={onHide} footer={footer('carta-correcao-form', loading, onHide, 'Emitir CC-e')}>
+        <Dialog header="Carta de correção eletrônica" visible={visible} modal style={{ width: 'min(52rem, 96vw)' }} onHide={onHide} footer={footer('carta-correcao-form', loading, onHide, 'Emitir CC-e')}>
             <form id="carta-correcao-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
                 <Field label="UF autorizadora"><InputText value={values.ufAutorizadora} maxLength={2} onChange={(e) => setValues((v) => ({ ...v, ufAutorizadora: e.target.value.toUpperCase() }))} /></Field>
                 <Field label="Schema set"><InputText value={values.schemaSetName} onChange={(e) => setValues((v) => ({ ...v, schemaSetName: e.target.value }))} /></Field>
@@ -339,7 +339,7 @@ export const CartaCorrecaoDialog = ({ visible, loading, onHide, onSubmit }: Base
 export const RegistrarRejeicaoDialog = ({ visible, loading, onHide, onSubmit }: BaseDialogProps<Record<string, unknown>>) => {
     const [values, setValues] = useState({ codigoRejeicao: '', mensagemRejeicao: '' });
     return (
-        <Dialog header="Registrar rejeição manual/técnica" visible={visible} modal style={{ width: '40rem' }} onHide={onHide} footer={footer('registrar-rejeicao-form', loading, onHide, 'Registrar rejeição')}>
+        <Dialog header="Registrar rejeição manual/técnica" visible={visible} modal style={{ width: 'min(40rem, 96vw)' }} onHide={onHide} footer={footer('registrar-rejeicao-form', loading, onHide, 'Registrar rejeição')}>
             <form id="registrar-rejeicao-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
                 <Field label="Código"><InputText value={values.codigoRejeicao} onChange={(e) => setValues((v) => ({ ...v, codigoRejeicao: e.target.value }))} /></Field>
                 <TextAreaField label="Mensagem" value={values.mensagemRejeicao} onChange={(mensagemRejeicao) => setValues((v) => ({ ...v, mensagemRejeicao }))} />
@@ -360,7 +360,7 @@ export const ArmazenarXmlDialog = ({ visible, loading, onHide, onSubmit }: BaseD
         { label: 'Retorno autorizador', value: TipoXmlFiscal.RetornoAutorizador }
     ];
     return (
-        <Dialog header="Armazenar XML fiscal" visible={visible} modal style={{ width: '52rem' }} onHide={onHide} footer={footer('armazenar-xml-form', loading, onHide, 'Armazenar XML')}>
+        <Dialog header="Armazenar XML fiscal" visible={visible} modal style={{ width: 'min(52rem, 96vw)' }} onHide={onHide} footer={footer('armazenar-xml-form', loading, onHide, 'Armazenar XML')}>
             <form id="armazenar-xml-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
                 <Field label="Tipo XML"><Dropdown value={values.tipo} options={tipoOptions} onChange={(e) => setValues((v) => ({ ...v, tipo: e.value }))} /></Field>
                 <Field label="Protocolo"><InputText value={values.protocolo} onChange={(e) => setValues((v) => ({ ...v, protocolo: e.target.value }))} /></Field>
@@ -376,7 +376,7 @@ export const DanfeDialog = ({ visible, loading, onHide, onSubmit }: BaseDialogPr
     const [values, setValues] = useState({ correlationId: gerarCorrelationId('danfe'), formatoEsperado: FormatoDocumentoAuxiliarFiscal.Html });
     useEffect(() => { if (visible) setValues((v) => ({ ...v, correlationId: gerarCorrelationId('danfe') })); }, [visible]);
     return (
-        <Dialog header="Gerar DANFE técnico" visible={visible} modal style={{ width: '40rem' }} onHide={onHide} footer={footer('danfe-form', loading, onHide, 'Gerar DANFE')}>
+        <Dialog header="Gerar DANFE técnico" visible={visible} modal style={{ width: 'min(40rem, 96vw)' }} onHide={onHide} footer={footer('danfe-form', loading, onHide, 'Gerar DANFE')}>
             <form id="danfe-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit({ correlationId: values.correlationId }); }}>
                 <Field label="Correlation ID"><InputText value={values.correlationId} onChange={(e) => setValues((v) => ({ ...v, correlationId: e.target.value }))} /></Field>
                 <div className="field col-12"><small className="text-color-secondary line-height-3">O backend atual pode retornar DANFE técnico/fallback HTML. Em produção, o provider oficial precisa substituir o fallback.</small></div>
@@ -393,7 +393,7 @@ export const ReprocessarSefazDialog = ({ visible, loading, onHide, onSubmit, log
         if (visible) setValues((v) => ({ ...v, logIntegracaoFiscalId: logIntegracaoFiscalId ?? '', correlationIdOriginal: correlationIdOriginal ?? '', correlationId: gerarCorrelationId('reprocessamento') }));
     }, [visible, logIntegracaoFiscalId, correlationIdOriginal]);
     return (
-        <Dialog header="Reprocessar transmissão SEFAZ" visible={visible} modal style={{ width: '54rem' }} onHide={onHide} footer={footer('reprocessar-sefaz-form', loading, onHide, 'Reprocessar')}>
+        <Dialog header="Reprocessar transmissão SEFAZ" visible={visible} modal style={{ width: 'min(54rem, 96vw)' }} onHide={onHide} footer={footer('reprocessar-sefaz-form', loading, onHide, 'Reprocessar')}>
             <form id="reprocessar-sefaz-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
                 <div className="field col-12">
                     <Message severity="warn" className="w-full" text="Reprocessamento deve ser usado somente para falha técnica/log elegível. O backend continua responsável por idempotência, auditoria e regra fiscal." />
@@ -419,7 +419,7 @@ export const ConsultarProtocoloDialog = ({ visible, loading, onHide, onSubmit }:
     const [values, setValues] = useState({ ufAutorizadora: 'SP', servico: TipoServicoTransmissaoFiscal.ConsultaProtocolo, xmlConsultaAssinado: '', validarSchemaAntesConsulta: false, schemaSetName: 'NFe-4.00', aplicarReconciliacaoLocal: true, correlationId: gerarCorrelationId('consulta-protocolo') });
     useEffect(() => { if (visible) setValues((v) => ({ ...v, correlationId: gerarCorrelationId('consulta-protocolo') })); }, [visible]);
     return (
-        <Dialog header="Consultar protocolo / status da nota" visible={visible} modal style={{ width: '52rem' }} onHide={onHide} footer={footer('consultar-protocolo-form', loading, onHide, 'Consultar')}>
+        <Dialog header="Consultar protocolo / status da nota" visible={visible} modal style={{ width: 'min(52rem, 96vw)' }} onHide={onHide} footer={footer('consultar-protocolo-form', loading, onHide, 'Consultar')}>
             <form id="consultar-protocolo-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
                 <Field label="UF autorizadora"><InputText value={values.ufAutorizadora} maxLength={2} onChange={(e) => setValues((v) => ({ ...v, ufAutorizadora: e.target.value.toUpperCase() }))} /></Field>
                 <Field label="Serviço"><Dropdown value={values.servico} options={servicoTransmissaoFiscalOptions.filter((item) => item.value === TipoServicoTransmissaoFiscal.ConsultaProtocolo || item.value === TipoServicoTransmissaoFiscal.ConsultaRetornoAutorizacao)} onChange={(e) => setValues((v) => ({ ...v, servico: e.value }))} /></Field>
@@ -444,7 +444,7 @@ export const HabilitarContingenciaDialog = ({ visible, loading, onHide, onSubmit
     ];
     useEffect(() => { if (visible) setValues((v) => ({ ...v, correlationId: gerarCorrelationId('contingencia') })); }, [visible]);
     return (
-        <Dialog header="Habilitar contingência operacional" visible={visible} modal style={{ width: '46rem' }} onHide={onHide} footer={footer('habilitar-contingencia-form', loading, onHide, 'Habilitar contingência')}>
+        <Dialog header="Habilitar contingência operacional" visible={visible} modal style={{ width: 'min(46rem, 96vw)' }} onHide={onHide} footer={footer('habilitar-contingencia-form', loading, onHide, 'Habilitar contingência')}>
             <form id="habilitar-contingencia-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
                 <Field label="UF autorizadora"><InputText value={values.ufAutorizadora} maxLength={2} onChange={(e) => setValues((v) => ({ ...v, ufAutorizadora: e.target.value.toUpperCase() }))} /></Field>
                 <Field label="Tipo contingência"><Dropdown value={values.tipoContingencia} options={contingenciaOptions} onChange={(e) => setValues((v) => ({ ...v, tipoContingencia: e.value }))} /></Field>
@@ -462,7 +462,7 @@ export const BaixarEstoqueDialog = ({ visible, loading, onHide, onSubmit, docume
     const [values, setValues] = useState({ motivo: 'Baixa de estoque da nota fiscal autorizada.', documento: documento ?? '', correlationId: gerarCorrelationId('baixa-estoque') });
     useEffect(() => { if (visible) setValues((v) => ({ ...v, documento: documento ?? v.documento, correlationId: gerarCorrelationId('baixa-estoque') })); }, [visible, documento]);
     return (
-        <Dialog header="Baixar estoque da nota" visible={visible} modal style={{ width: '42rem' }} onHide={onHide} footer={footer('baixar-estoque-form', loading, onHide, 'Baixar estoque')}>
+        <Dialog header="Baixar estoque da nota" visible={visible} modal style={{ width: 'min(42rem, 96vw)' }} onHide={onHide} footer={footer('baixar-estoque-form', loading, onHide, 'Baixar estoque')}>
             <form id="baixar-estoque-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
                 <Field label="Documento"><InputText value={values.documento} onChange={(e) => setValues((v) => ({ ...v, documento: e.target.value }))} /></Field>
                 <Field label="Correlation ID"><InputText value={values.correlationId} onChange={(e) => setValues((v) => ({ ...v, correlationId: e.target.value }))} /></Field>
@@ -479,7 +479,7 @@ export const GerarContaReceberDialog = ({ visible, loading, onHide, onSubmit, do
     const condicoesQuery = useCondicoesPagamentoOptions(empresaId ?? null);
     useEffect(() => { if (visible) setValues((v) => ({ ...v, primeiraDataVencimento: defaultDate(), documento: documento ?? v.documento, correlationId: gerarCorrelationId('financeiro') })); }, [visible, documento]);
     return (
-        <Dialog header="Gerar conta a receber" visible={visible} modal style={{ width: '42rem' }} onHide={onHide} footer={footer('gerar-conta-receber-form', loading, onHide, 'Gerar financeiro')}>
+        <Dialog header="Gerar conta a receber" visible={visible} modal style={{ width: 'min(42rem, 96vw)' }} onHide={onHide} footer={footer('gerar-conta-receber-form', loading, onHide, 'Gerar financeiro')}>
             <form id="gerar-conta-receber-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
                 <Field label="Primeiro vencimento"><InputText type="datetime-local" value={values.primeiraDataVencimento.slice(0, 16)} onChange={(e) => setValues((v) => ({ ...v, primeiraDataVencimento: e.target.value }))} /></Field>
                 <Field label="Documento"><InputText value={values.documento} onChange={(e) => setValues((v) => ({ ...v, documento: e.target.value }))} /></Field>

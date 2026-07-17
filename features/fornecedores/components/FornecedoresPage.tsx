@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
-import { InputText } from 'primereact/inputtext';
+import { SearchInput } from '@/components/forms/SearchInput';
 import { Message } from 'primereact/message';
 import { PageHeader } from '@/components/common/PageHeader';
 import { OperationalGovernancePanel } from '@/components/common/OperationalGovernancePanel';
@@ -22,7 +22,7 @@ import { useFornecedorMutations, useFornecedores } from '@/features/fornecedores
 import { FornecedorFormValues, FornecedorListQuery, FornecedorResponse } from '@/features/fornecedores/types/fornecedores.types';
 import { usePessoas } from '@/features/pessoas/hooks/usePessoasResources';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
-import { useAppToast } from '@/hooks/useAppToast';
+import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { EntityStatus } from '@/types/erp';
 
@@ -34,7 +34,7 @@ const filterLocal = (records: FornecedorResponse[], term: string) => {
 };
 
 export const FornecedoresPage = () => {
-    const toast = useAppToast();
+    const runWithToast = useMutationWithToast();
     const { hasPermission } = usePermissions();
     const [filters, setFilters] = useState<FornecedorListQuery>({});
     const [localSearch, setLocalSearch] = useState('');
@@ -61,32 +61,31 @@ export const FornecedoresPage = () => {
     };
 
     const save = async (values: FornecedorFormValues) => {
-        try {
-            await saveMutation.mutateAsync({ id: values.id, values });
-            toast.success('Fornecedor salvo', 'Cadastro de fornecedor gravado com sucesso.');
-            setFormVisible(false);
-            setSelected(null);
-        } catch (error) {
-            toast.error('Erro ao salvar fornecedor', error instanceof Error ? error.message : 'Não foi possível salvar o fornecedor.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await saveMutation.mutateAsync({ id: values.id, values });
+                setFormVisible(false);
+                setSelected(null);
+            },
+            { success: { summary: 'Fornecedor salvo', detail: 'Cadastro de fornecedor gravado com sucesso.' }, error: { summary: 'Erro ao salvar fornecedor', detail: 'Não foi possível salvar o fornecedor.' }, rethrow: true }
+        );
     };
 
     const inativar = async (motivo: string) => {
         if (!reasonRecord) return;
-        try {
-            await inativarMutation.mutateAsync({ id: reasonRecord.id, motivo });
-            toast.success('Fornecedor inativado', 'Motivo registrado e cadastro inativado.');
-            setReasonRecord(null);
-        } catch (error) {
-            toast.error('Erro ao inativar fornecedor', error instanceof Error ? error.message : 'Não foi possível inativar o fornecedor.');
-        }
+        await runWithToast(
+            async () => {
+                await inativarMutation.mutateAsync({ id: reasonRecord.id, motivo });
+                setReasonRecord(null);
+            },
+            { success: { summary: 'Fornecedor inativado', detail: 'Motivo registrado e cadastro inativado.' }, error: { summary: 'Erro ao inativar fornecedor', detail: 'Não foi possível inativar o fornecedor.' } }
+        );
     };
 
     const headerActions = (
         <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
             <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
-            <span className="p-input-icon-left"><i className="pi pi-search" /><InputText placeholder="Buscar" value={localSearch} onChange={(event) => { setFirst(0); setLocalSearch(event.target.value); }} /></span>
+            <SearchInput ariaLabel="Buscar fornecedores" defaultValue={localSearch} onChange={(term) => { setFirst(0); setLocalSearch(term); }} />
             <PermissionGuard permission="FORNECEDORES_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Novo fornecedor" icon="pi pi-plus" disabled={disabled} onClick={() => { setSelected(null); setFormVisible(true); }} />}</PermissionGuard>
         </div>
     );

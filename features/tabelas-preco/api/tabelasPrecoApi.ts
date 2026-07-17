@@ -15,6 +15,17 @@ import {
     TabelaPrecoMotivoRequest,
     TabelaPrecoResponse
 } from '@/features/tabelas-preco/types/tabelasPreco.types';
+import { PagedResult } from '@/types/erp';
+
+type TabelaPrecoListResponse = TabelaPrecoResponse[] | PagedResult<TabelaPrecoResponse>;
+
+// Normaliza a resposta para PagedResult, tolerando endpoints que ainda devolvam array puro.
+const normalizePaged = (data: TabelaPrecoListResponse, query?: TabelaPrecoListQuery): PagedResult<TabelaPrecoResponse> => {
+    if (!Array.isArray(data)) return data;
+    const page = query?.page ?? 1;
+    const pageSize = query?.pageSize ?? (data.length || 1);
+    return { items: data, page, pageSize, totalItems: data.length, totalPages: 1 };
+};
 
 const runTabelaPrecoRequest = async <T>(request: () => Promise<T>) => {
     try { return await request(); } catch (error) { const apiError = mapApiError(error); throw new Error(apiError.message); }
@@ -45,8 +56,8 @@ export const buildAtualizarTabelaPrecoItemPayload = (values: TabelaPrecoItemForm
 export const tabelasPrecoApi = {
     async listar(query?: TabelaPrecoListQuery) {
         return runTabelaPrecoRequest(async () => {
-            const response = await httpClient.get<TabelaPrecoResponse[]>('/api/tabelas-preco', { params: params(query) });
-            return response.data;
+            const response = await httpClient.get<TabelaPrecoListResponse>('/api/tabelas-preco', { params: params(query) });
+            return normalizePaged(response.data, query);
         });
     },
     async obter(id: string) {

@@ -24,7 +24,7 @@ import { administracaoPageConfigs, AdministracaoColumnConfig } from '@/features/
 import { AdministracaoResourceKey, useAdministracaoResource } from '@/features/administracao/hooks/useAdministracaoResources';
 import { useEmpresasOptions, useTodasFiliaisOptions, useTodosSetoresOptions } from '@/features/administracao/hooks/useEmpresaFilialOptions';
 import { AdministracaoFormValues, AdministracaoListQuery } from '@/features/administracao/types/administracao.types';
-import { useAppToast } from '@/hooks/useAppToast';
+import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { EntityStatus } from '@/types/erp';
 
@@ -78,7 +78,7 @@ const filterLocal = (records: Record<string, unknown>[], term: string) => {
 
 export const AdministracaoPage = ({ resourceKey }: { resourceKey: AdministracaoResourceKey }) => {
     const config = administracaoPageConfigs[resourceKey];
-    const toast = useAppToast();
+    const runWithToast = useMutationWithToast();
     const { hasPermission } = usePermissions();
     const empresasOptions = useEmpresasOptions();
     const filiaisOptions = useTodasFiliaisOptions();
@@ -118,26 +118,25 @@ export const AdministracaoPage = ({ resourceKey }: { resourceKey: AdministracaoR
     };
 
     const save = async (values: AdministracaoFormValues) => {
-        try {
-            await saveMutation.mutateAsync({ id: values.id, values });
-            toast.success('Registro salvo', `${config.title}: dados gravados com sucesso.`);
-            setFormVisible(false);
-            setSelectedRecord(null);
-        } catch (error) {
-            toast.error('Erro ao salvar', error instanceof Error ? error.message : 'Não foi possível salvar o registro.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await saveMutation.mutateAsync({ id: values.id, values });
+                setFormVisible(false);
+                setSelectedRecord(null);
+            },
+            { success: { summary: 'Registro salvo', detail: `${config.title}: dados gravados com sucesso.` }, error: { summary: 'Erro ao salvar', detail: 'Não foi possível salvar o registro.' }, rethrow: true }
+        );
     };
 
     const inativar = async (motivo: string) => {
         if (!reasonRecord?.id) return;
-        try {
-            await inativarMutation.mutateAsync({ id: String(reasonRecord.id), motivo });
-            toast.success('Registro inativado', `${config.title}: inativação concluída.`);
-            setReasonRecord(null);
-        } catch (error) {
-            toast.error('Erro ao inativar', error instanceof Error ? error.message : 'Não foi possível inativar o registro.');
-        }
+        await runWithToast(
+            async () => {
+                await inativarMutation.mutateAsync({ id: String(reasonRecord.id), motivo });
+                setReasonRecord(null);
+            },
+            { success: { summary: 'Registro inativado', detail: `${config.title}: inativação concluída.` }, error: { summary: 'Erro ao inativar', detail: 'Não foi possível inativar o registro.' } }
+        );
     };
 
     const updateFilter = (name: keyof AdministracaoListQuery, value: string | null) => {

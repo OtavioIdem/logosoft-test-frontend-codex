@@ -21,7 +21,7 @@ import { useInventarioEstoqueDetalhe, useInventarioEstoqueMutations, useInventar
 import { EstoqueListQuery, InventarioFormValues, InventarioItemFormValues, InventarioResponse, ItemInventarioResponse } from '@/features/estoque/types/estoque.types';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { useProdutos } from '@/features/produtos/hooks/useProdutosResources';
-import { useAppToast } from '@/hooks/useAppToast';
+import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { StatusInventario } from '@/types/erp';
 
@@ -31,7 +31,7 @@ const canStartCounting = (record: InventarioResponse) => isAberto(record);
 const canCount = (record: InventarioResponse) => isAberto(record) || isInventarioEmContagem(statusValue(record));
 
 export const InventariosEstoquePage = () => {
-    const toast = useAppToast();
+    const runWithToast = useMutationWithToast();
     const { hasPermission } = usePermissions();
     const [filters, setFilters] = useState<EstoqueListQuery>({});
     const [localSearch, setLocalSearch] = useState('');
@@ -57,47 +57,43 @@ export const InventariosEstoquePage = () => {
     const updateFilter = (name: keyof EstoqueListQuery, value: string | null) => { setFirst(0); setFilters((current) => ({ ...current, [name]: value || null })); };
 
     const abrir = async (values: InventarioFormValues) => {
-        try {
-            await abrirMutation.mutateAsync(values);
-            toast.success('Inventário aberto', 'Inventário registrado com sucesso.');
-            setCreateVisible(false);
-        } catch (error) {
-            toast.error('Erro ao abrir inventário', error instanceof Error ? error.message : 'Não foi possível abrir inventário.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await abrirMutation.mutateAsync(values);
+                setCreateVisible(false);
+            },
+            { success: { summary: 'Inventário aberto', detail: 'Inventário registrado com sucesso.' }, error: { summary: 'Erro ao abrir inventário', detail: 'Não foi possível abrir inventário.' }, rethrow: true }
+        );
     };
 
     const adicionarItem = async (values: InventarioItemFormValues) => {
         if (!itemRecord) return;
-        try {
-            await adicionarItemMutation.mutateAsync({ id: itemRecord.id, values });
-            toast.success('Item adicionado', 'Item incluído no inventário.');
-            setItemRecord(null);
-        } catch (error) {
-            toast.error('Erro ao adicionar item', error instanceof Error ? error.message : 'Não foi possível adicionar item.');
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await adicionarItemMutation.mutateAsync({ id: itemRecord.id, values });
+                setItemRecord(null);
+            },
+            { success: { summary: 'Item adicionado', detail: 'Item incluído no inventário.' }, error: { summary: 'Erro ao adicionar item', detail: 'Não foi possível adicionar item.' }, rethrow: true }
+        );
     };
 
     const iniciarContagem = async (record: InventarioResponse) => {
-        try {
-            await iniciarContagemMutation.mutateAsync(record.id);
-            toast.success('Contagem iniciada', 'Inventário movido para contagem.');
-        } catch (error) {
-            toast.error('Erro ao iniciar contagem', error instanceof Error ? error.message : 'Não foi possível iniciar a contagem.');
-        }
+        await runWithToast(
+            () => iniciarContagemMutation.mutateAsync(record.id),
+            { success: { summary: 'Contagem iniciada', detail: 'Inventário movido para contagem.' }, error: { summary: 'Erro ao iniciar contagem', detail: 'Não foi possível iniciar a contagem.' } }
+        );
     };
 
     const executarMotivo = async (motivo: string) => {
         if (!reasonState) return;
-        try {
-            if (reasonState.action === 'concluir') await concluirMutation.mutateAsync({ id: reasonState.record.id, motivo });
-            if (reasonState.action === 'cancelar') await cancelarMutation.mutateAsync({ id: reasonState.record.id, motivo });
-            toast.success('Operação concluída', 'Inventário atualizado com sucesso.');
-            setReasonState(null);
-        } catch (error) {
-            toast.error('Erro no inventário', error instanceof Error ? error.message : 'Não foi possível atualizar o inventário.');
-        }
+        await runWithToast(
+            async () => {
+                if (reasonState.action === 'concluir') await concluirMutation.mutateAsync({ id: reasonState.record.id, motivo });
+                if (reasonState.action === 'cancelar') await cancelarMutation.mutateAsync({ id: reasonState.record.id, motivo });
+                setReasonState(null);
+            },
+            { success: { summary: 'Operação concluída', detail: 'Inventário atualizado com sucesso.' }, error: { summary: 'Erro no inventário', detail: 'Não foi possível atualizar o inventário.' } }
+        );
     };
 
     return (

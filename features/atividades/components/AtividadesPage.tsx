@@ -5,7 +5,7 @@ import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
 import { Dropdown } from 'primereact/dropdown';
-import { InputText } from 'primereact/inputtext';
+import { SearchInput } from '@/components/forms/SearchInput';
 import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -23,7 +23,7 @@ import { AlterarStatusAtividadeDialog, AtribuirAtividadeDialog, ComentarAtividad
 import { useAtividadeDetalhe, useAtividades, useAtividadesMutations } from '@/features/atividades/hooks/useAtividadesResources';
 import { AtividadeFormValues, AtividadePrioridade, AtividadeResponse, AtividadeStatus, AtividadesListQuery } from '@/features/atividades/types/atividades.types';
 import { useUsuariosSeguranca } from '@/features/seguranca/hooks/useUsuariosSeguranca';
-import { useAppToast } from '@/hooks/useAppToast';
+import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { SelectOption } from '@/types/erp';
 
@@ -77,7 +77,7 @@ const getStatus = (atividade: AtividadeResponse) => (atividade.statusAtividade ?
 const canOperate = (atividade: AtividadeResponse) => getStatus(atividade) !== 'Cancelada' && getStatus(atividade) !== 'Concluida';
 
 export const AtividadesPage = () => {
-    const toast = useAppToast();
+    const runWithToast = useMutationWithToast();
     const { hasAnyPermission } = usePermissions();
     const [filters, setFilters] = useState<AtividadesListQuery>({});
     const [search, setSearch] = useState('');
@@ -87,20 +87,18 @@ export const AtividadesPage = () => {
     const [selected, setSelected] = useState<AtividadeResponse | null>(null);
     const [action, setAction] = useState<ActionState>(null);
 
-    const atividadesQuery = useAtividades(filters);
+    const page = Math.floor(first / rows) + 1;
+    const listQuery = useMemo<AtividadesListQuery>(() => ({ ...filters, termo: search.trim() || null, page, pageSize: rows }), [filters, search, page, rows]);
+    const atividadesQuery = useAtividades(listQuery);
     const usuariosQuery = useUsuariosSeguranca({ empresaId: filters.empresaId ?? undefined, filialId: filters.filialId ?? undefined, ativo: true });
     const detalheQuery = useAtividadeDetalhe(selected?.id ?? null);
     const mutations = useAtividadesMutations();
 
-    const atividades = atividadesQuery.data ?? [];
+    const paged = atividadesQuery.data;
+    const atividades = useMemo(() => paged?.items ?? [], [paged]);
+    const totalRecords = paged?.totalItems ?? 0;
     const usuarios = usuariosQuery.data ?? [];
     const usuarioLabelMap = useMemo(() => new Map(usuarios.map((usuario) => [usuario.id, `${usuario.nome} • ${usuario.email}`])), [usuarios]);
-    const filteredAtividades = useMemo(() => {
-        const term = search.trim().toLowerCase();
-        if (!term) return atividades;
-        return atividades.filter((atividade) => `${atividade.titulo} ${atividade.descricao ?? ''} ${atividade.entidadeOrigem ?? ''}`.toLowerCase().includes(term));
-    }, [atividades, search]);
-    const visibleAtividades = useMemo(() => filteredAtividades.slice(first, first + rows), [filteredAtividades, first, rows]);
     const detalhe = detalheQuery.data ?? selected;
 
     if (!hasAnyPermission(['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'])) {
@@ -113,56 +111,63 @@ export const AtividadesPage = () => {
     };
 
     const saveAtividade = async (values: AtividadeFormValues) => {
-        try {
-            await mutations.saveMutation.mutateAsync({ id: values.id, values });
-            toast.success(values.id ? 'Atividade atualizada' : 'Atividade criada', 'O workflow foi enviado ao backend com auditoria operacional.');
-            setFormVisible(false);
-            setSelected(null);
-        } catch (error) {
-            toast.error('Erro ao salvar atividade', error instanceof Error ? error.message : mapApiError(error).message);
-            throw error;
-        }
+        await runWithToast(
+            async () => {
+                await mutations.saveMutation.mutateAsync({ id: values.id, values });
+                setFormVisible(false);
+                setSelected(null);
+            },
+            { success: { summary: values.id ? 'Atividade atualizada' : 'Atividade criada', detail: 'O workflow foi enviado ao backend com auditoria operacional.' }, error: { summary: 'Erro ao salvar atividade', detail: 'Não foi possível salvar a atividade.' }, rethrow: true }
+        );
     };
 
     const executarAtribuicao = async (values: { responsavelUsuarioId: string }) => {
         if (!selected) return;
-        try {
-            await mutations.atribuirMutation.mutateAsync({ id: selected.id, values });
-            toast.success('Responsável atribuído', 'A atividade foi reatribuída com rastreabilidade.');
-            setAction(null);
-        } catch (error) { toast.error('Erro ao atribuir', mapApiError(error).message); throw error; }
+        await runWithToast(
+            async () => {
+                await mutations.atribuirMutation.mutateAsync({ id: selected.id, values });
+                setAction(null);
+            },
+            { success: { summary: 'Responsável atribuído', detail: 'A atividade foi reatribuída com rastreabilidade.' }, error: { summary: 'Erro ao atribuir' }, rethrow: true }
+        );
     };
 
     const executarStatus = async (values: { status: AtividadeStatus; comentario?: string | null }) => {
         if (!selected) return;
-        try {
-            await mutations.statusMutation.mutateAsync({ id: selected.id, values });
-            toast.success('Status alterado', 'A mudança de status foi registrada no histórico.');
-            setAction(null);
-        } catch (error) { toast.error('Erro ao alterar status', mapApiError(error).message); throw error; }
+        await runWithToast(
+            async () => {
+                await mutations.statusMutation.mutateAsync({ id: selected.id, values });
+                setAction(null);
+            },
+            { success: { summary: 'Status alterado', detail: 'A mudança de status foi registrada no histórico.' }, error: { summary: 'Erro ao alterar status' }, rethrow: true }
+        );
     };
 
     const executarComentario = async (values: { mensagem: string }) => {
         if (!selected) return;
-        try {
-            await mutations.comentarioMutation.mutateAsync({ id: selected.id, values });
-            toast.success('Comentário adicionado', 'O comentário foi vinculado à atividade.');
-            setAction(null);
-        } catch (error) { toast.error('Erro ao comentar', mapApiError(error).message); throw error; }
+        await runWithToast(
+            async () => {
+                await mutations.comentarioMutation.mutateAsync({ id: selected.id, values });
+                setAction(null);
+            },
+            { success: { summary: 'Comentário adicionado', detail: 'O comentário foi vinculado à atividade.' }, error: { summary: 'Erro ao comentar' }, rethrow: true }
+        );
     };
 
     const executarCancelamento = async (motivo: string) => {
         if (!selected) return;
-        try {
-            await mutations.cancelarMutation.mutateAsync({ id: selected.id, motivo });
-            toast.success('Atividade cancelada', 'O cancelamento foi registrado com motivo.');
-            setAction(null);
-        } catch (error) { toast.error('Erro ao cancelar', mapApiError(error).message); }
+        await runWithToast(
+            async () => {
+                await mutations.cancelarMutation.mutateAsync({ id: selected.id, motivo });
+                setAction(null);
+            },
+            { success: { summary: 'Atividade cancelada', detail: 'O cancelamento foi registrado com motivo.' }, error: { summary: 'Erro ao cancelar' } }
+        );
     };
 
     const headerActions = (
         <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
-            <span className="p-input-icon-left"><i className="pi pi-search" /><InputText placeholder="Buscar atividade" value={search} onChange={(event) => { setSearch(event.target.value); setFirst(0); }} /></span>
+            <SearchInput ariaLabel="Buscar atividade" defaultValue={search} onChange={(term) => { setSearch(term); setFirst(0); }} />
             <PermissionGuard permission="ATIVIDADES_GERENCIAR" mode="disable">
                 {({ disabled }) => <Button label="Nova atividade" icon="pi pi-plus" disabled={disabled} onClick={() => { setSelected(null); setFormVisible(true); }} />}
             </PermissionGuard>
@@ -186,7 +191,7 @@ export const AtividadesPage = () => {
                 <div className="col-12 xl:col-8">
                     <Card title="Atividades operacionais">
                         {atividadesQuery.error ? <ApiErrorPanel error={mapApiError(atividadesQuery.error)} /> : null}
-                        <DataTableServer<AtividadeResponse> value={visibleAtividades} totalRecords={filteredAtividades.length} loading={atividadesQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhuma atividade encontrada.">
+                        <DataTableServer<AtividadeResponse> value={atividades} totalRecords={totalRecords} loading={atividadesQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhuma atividade encontrada.">
                             <Column field="titulo" header="Título" />
                             <Column header="Status" body={(row: AtividadeResponse) => <Tag value={statusLabel(getStatus(row))} severity={statusSeverity(getStatus(row))} />} />
                             <Column header="Prioridade" body={(row: AtividadeResponse) => <Tag value={prioridadeLabel(row.prioridade)} severity={prioridadeSeverity(row.prioridade)} />} />
@@ -202,7 +207,7 @@ export const AtividadesPage = () => {
                                 { key: 'cancelar', label: 'Cancelar', icon: 'pi pi-ban', permission: 'ATIVIDADES_GERENCIAR', severity: 'danger', disabled: !canOperate(row), onClick: () => { setSelected(row); setAction('cancelar'); } }
                             ]} />} />
                         </DataTableServer>
-                        {!atividadesQuery.isLoading && filteredAtividades.length === 0 ? <EmptyState title="Nenhuma atividade" description="Crie uma atividade ou ajuste os filtros." /> : null}
+                        {!atividadesQuery.isLoading && totalRecords === 0 ? <EmptyState title="Nenhuma atividade" description="Crie uma atividade ou ajuste os filtros." /> : null}
                     </Card>
                 </div>
 

@@ -76,7 +76,7 @@ const ExportarCsvDialog = ({ visible, loading, onHide, onSubmit }: { visible: bo
     );
 
     return (
-        <Dialog header="Exportar CSV fiscal auditado" visible={visible} modal style={{ width: '42rem' }} onHide={onHide} footer={footer}>
+        <Dialog header="Exportar CSV fiscal auditado" visible={visible} modal style={{ width: 'min(42rem, 96vw)' }} onHide={onHide} footer={footer}>
             <Message severity="info" className="w-full mb-3" text="A exportação usa os filtros atuais da listagem, ignora paginação visual e exige motivo para auditoria no backend." />
             <form
                 id="exportar-csv-fiscal-form"
