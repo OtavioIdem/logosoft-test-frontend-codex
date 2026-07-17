@@ -61,7 +61,7 @@ export const AtividadeFormDialog = ({ visible, loading, atividade, usuarios, onH
     );
 
     return (
-        <Dialog header={atividade ? 'Editar atividade' : 'Nova atividade'} visible={visible} modal style={{ width: '58rem' }} onHide={onHide} footer={footer}>
+        <Dialog header={atividade ? 'Editar atividade' : 'Nova atividade'} visible={visible} modal style={{ width: 'min(58rem, 96vw)' }} onHide={onHide} footer={footer}>
             <FormGrid>
                 {!atividade ? <EmpresaFilialFields empresaId={values.empresaId} filialId={values.filialId ?? null} onEmpresaChange={(value) => setValues((current) => ({ ...current, empresaId: value ?? '', filialId: null, responsavelUsuarioId: null }))} onFilialChange={(value) => update('filialId', value)} disabled={loading} /> : null}
                 <div className="field col-12 md:col-8">

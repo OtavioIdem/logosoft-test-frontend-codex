@@ -56,7 +56,7 @@ export const FormaPagamentoFormDialog = ({ visible, record, loading, onHide, onS
     );
 
     return (
-        <Dialog header={editing ? 'Editar forma de pagamento' : 'Nova forma de pagamento'} visible={visible} modal style={{ width: '42rem' }} onHide={onHide} footer={footer}>
+        <Dialog header={editing ? 'Editar forma de pagamento' : 'Nova forma de pagamento'} visible={visible} modal style={{ width: 'min(42rem, 96vw)' }} onHide={onHide} footer={footer}>
             <FormGrid>
                 {!editing ? <EmpresaFilialFields empresaId={values.empresaId} filialId={values.filialId ?? null} onEmpresaChange={(value) => update('empresaId', value ?? '')} onFilialChange={(value) => update('filialId', value)} disabled={loading} /> : null}
                 <div className="field col-12 md:col-4">

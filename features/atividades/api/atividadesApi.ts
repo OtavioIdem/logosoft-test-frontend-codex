@@ -28,7 +28,14 @@ const runAtividadesRequest = async <T>(request: () => Promise<T>) => {
 
 const parseSchema = <T>(schema: Schema<T>, values: unknown): T => sanitizePayload(schema.parse(values)) as T;
 const params = (query?: AtividadesListQuery) => cleanQueryParams({ empresaId: query?.empresaId, filialId: query?.filialId, responsavelUsuarioId: query?.responsavelUsuarioId, status: query?.status, prioridade: query?.prioridade, termo: query?.termo, page: query?.page, pageSize: query?.pageSize });
-const normalizeList = (data: AtividadesListResponse): AtividadeResponse[] => (Array.isArray(data) ? data : data.items ?? []);
+
+// Normaliza a resposta do backend para PagedResult, tolerando endpoints que ainda devolvem array puro.
+const normalizePaged = (data: AtividadesListResponse, query?: AtividadesListQuery): PagedResult<AtividadeResponse> => {
+    if (!Array.isArray(data)) return data;
+    const page = query?.page ?? 1;
+    const pageSize = query?.pageSize ?? (data.length || 1);
+    return { items: data, page, pageSize, totalItems: data.length, totalPages: 1 };
+};
 
 export const buildCriarAtividadePayload = (values: unknown): CriarAtividadeRequest => parseSchema(criarAtividadeSchema, values);
 export const buildAtualizarAtividadePayload = (values: unknown): AtualizarAtividadeRequest => parseSchema(atualizarAtividadeSchema, values);
@@ -41,7 +48,7 @@ export const atividadesApi = {
     async listar(query?: AtividadesListQuery) {
         return runAtividadesRequest(async () => {
             const response = await httpClient.get<AtividadesListResponse>('/api/atividades', { params: params(query) });
-            return normalizeList(response.data);
+            return normalizePaged(response.data, query);
         });
     },
 

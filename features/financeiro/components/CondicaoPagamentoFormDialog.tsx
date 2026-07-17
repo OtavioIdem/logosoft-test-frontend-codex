@@ -46,7 +46,7 @@ export const CondicaoPagamentoFormDialog = ({ visible, record, loading, onHide, 
     );
 
     return (
-        <Dialog header={editing ? 'Editar condição de pagamento' : 'Nova condição de pagamento'} visible={visible} modal style={{ width: '42rem' }} onHide={onHide} footer={footer}>
+        <Dialog header={editing ? 'Editar condição de pagamento' : 'Nova condição de pagamento'} visible={visible} modal style={{ width: 'min(42rem, 96vw)' }} onHide={onHide} footer={footer}>
             <FormGrid>
                 {!editing ? <EmpresaFilialFields empresaId={values.empresaId} filialId={values.filialId ?? null} onEmpresaChange={(value) => update('empresaId', value ?? '')} onFilialChange={(value) => update('filialId', value)} disabled={loading} /> : null}
                 <div className="field col-12 md:col-4"><label htmlFor="codigoCondicao" className="font-medium">Código</label><InputText id="codigoCondicao" value={values.codigo} onChange={(event) => update('codigo', event.target.value)} disabled={loading || editing} /></div>

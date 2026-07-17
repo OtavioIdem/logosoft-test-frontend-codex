@@ -8,6 +8,7 @@ import React, { forwardRef, useContext, useImperativeHandle, useRef } from 'reac
 import { AppTopbarRef } from '@/types';
 import { LayoutContext } from './context/layoutcontext';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { NotificacoesBell } from '@/features/notificacoes/components/NotificacoesBell';
 
 const AppTopbar = forwardRef<AppTopbarRef>((_, ref) => {
     const { layoutConfig, layoutState, setLayoutConfig, onMenuToggle, showProfileSidebar } = useContext(LayoutContext);
@@ -47,6 +48,7 @@ const AppTopbar = forwardRef<AppTopbarRef>((_, ref) => {
             </button>
 
             <div ref={topbarmenuRef} className={classNames('layout-topbar-menu', { 'layout-topbar-menu-mobile-active': layoutState.profileSidebarVisible })}>
+                <NotificacoesBell />
                 <button type="button" className="p-link layout-topbar-button" onClick={toggleTheme} aria-label="Alternar tema claro e escuro">
                     <i className={layoutConfig.colorScheme === 'light' ? 'pi pi-moon' : 'pi pi-sun'}></i>
                     <span>{layoutConfig.colorScheme === 'light' ? 'Tema escuro' : 'Tema claro'}</span>

@@ -62,7 +62,7 @@ export const BaixaFinanceiraDialog = ({ type, visible, conta, loading, onHide, o
     const footer = <div className="flex justify-content-end gap-2"><Button label="Cancelar" icon="pi pi-times" text onClick={onHide} disabled={loading} /><Button label={type === 'receber' ? 'Receber' : 'Pagar'} icon="pi pi-check" onClick={submit} loading={loading} /></div>;
 
     return (
-        <Dialog header={type === 'receber' ? 'Baixar conta a receber' : 'Baixar conta a pagar'} visible={visible} modal style={{ width: '36rem' }} onHide={onHide} footer={footer}>
+        <Dialog header={type === 'receber' ? 'Baixar conta a receber' : 'Baixar conta a pagar'} visible={visible} modal style={{ width: 'min(36rem, 96vw)' }} onHide={onHide} footer={footer}>
             <div className="grid formgrid p-fluid">
                 <div className="field col-12 md:col-6"><label className="font-medium">Data da baixa</label><DateTimeInput value={values.dataBaixa} onChange={(value) => update('dataBaixa', value ?? new Date())} disabled={loading} /></div>
                 <div className="field col-12 md:col-6"><label className="font-medium">Valor</label><MoneyInput value={values.valor} onChange={(value) => update('valor', value ?? 0)} disabled={loading} /></div>
@@ -83,7 +83,7 @@ export const EstornoFinanceiroDialog = ({ type, visible, conta, loading, onHide,
     useEffect(() => { if (visible) { setBaixaId(options[0]?.value ?? ''); setDataEstorno(new Date()); setMotivo(''); } }, [options, visible]);
 
     const footer = <div className="flex justify-content-end gap-2"><Button label="Cancelar" icon="pi pi-times" text onClick={onHide} disabled={loading} /><Button label="Estornar" icon="pi pi-undo" severity="warning" onClick={() => onSubmit({ baixaId, dataEstorno, motivo })} disabled={!baixaId || !motivo.trim()} loading={loading} /></div>;
-    return <Dialog header={type === 'recebimento' ? 'Estornar recebimento' : 'Estornar pagamento'} visible={visible} modal style={{ width: '36rem' }} onHide={onHide} footer={footer}><div className="field"><label className="font-medium">Baixa</label><Dropdown value={baixaId} options={options} optionLabel="label" optionValue="value" className="w-full" onChange={(event) => setBaixaId(event.value)} disabled={loading} /><FieldError message={options.length === 0 ? 'Nenhuma baixa disponível para estorno.' : undefined} /></div><div className="field"><label className="font-medium">Data do estorno</label><DateTimeInput value={dataEstorno} onChange={(value) => setDataEstorno(value ?? new Date())} disabled={loading} /></div><div className="field"><label className="font-medium">Motivo</label><InputTextarea value={motivo} onChange={(event) => setMotivo(event.target.value)} rows={4} className="w-full" disabled={loading} /></div></Dialog>;
+    return <Dialog header={type === 'recebimento' ? 'Estornar recebimento' : 'Estornar pagamento'} visible={visible} modal style={{ width: 'min(36rem, 96vw)' }} onHide={onHide} footer={footer}><div className="field"><label className="font-medium">Baixa</label><Dropdown value={baixaId} options={options} optionLabel="label" optionValue="value" className="w-full" onChange={(event) => setBaixaId(event.value)} disabled={loading} /><FieldError message={options.length === 0 ? 'Nenhuma baixa disponível para estorno.' : undefined} /></div><div className="field"><label className="font-medium">Data do estorno</label><DateTimeInput value={dataEstorno} onChange={(value) => setDataEstorno(value ?? new Date())} disabled={loading} /></div><div className="field"><label className="font-medium">Motivo</label><InputTextarea value={motivo} onChange={(event) => setMotivo(event.target.value)} rows={4} className="w-full" disabled={loading} /></div></Dialog>;
 };
 
 export const GerarContaReceberPedidoDialog = ({ visible, loading, onHide, onSubmit }: GerarPedidoVendaDialogProps) => {
@@ -106,7 +106,7 @@ export const GerarContaReceberPedidoDialog = ({ visible, loading, onHide, onSubm
 
     const footer = <div className="flex justify-content-end gap-2"><Button label="Cancelar" icon="pi pi-times" text onClick={onHide} disabled={loading} /><Button label="Gerar" icon="pi pi-file-plus" onClick={() => onSubmit(pedidoVendaId, values)} disabled={!pedidoVendaId || !values.documento} loading={loading} /></div>;
 
-    return <Dialog header="Gerar conta a receber por pedido de venda" visible={visible} modal style={{ width: '46rem' }} onHide={onHide} footer={footer}>
+    return <Dialog header="Gerar conta a receber por pedido de venda" visible={visible} modal style={{ width: 'min(46rem, 96vw)' }} onHide={onHide} footer={footer}>
         <div className="grid formgrid p-fluid">
             <EmpresaFilialFields empresaId={empresaId} filialId={filialId} onEmpresaChange={(value) => { setEmpresaId(value); setFilialId(null); setPedidoVendaId(''); }} onFilialChange={(value) => { setFilialId(value); setPedidoVendaId(''); }} disabled={loading} />
             <div className="field col-12"><label className="font-medium">Pedido de venda</label><EntitySelect value={pedidoVendaId || null} options={pedidoOptions} onChange={(value) => setPedidoVendaId(value ?? '')} entityName="pedido faturado" disabled={loading || !empresaId || pedidosQuery.isLoading} /><small className="text-600">Selecione pelo número do pedido; o vínculo correto será enviado automaticamente.</small></div>

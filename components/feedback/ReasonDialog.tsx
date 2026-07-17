@@ -25,7 +25,7 @@ export const ReasonDialog = ({ visible, title, confirmLabel = 'Confirmar', loadi
     );
 
     return (
-        <Dialog header={title} visible={visible} modal style={{ width: '32rem' }} onHide={onHide} footer={footer}>
+        <Dialog header={title} visible={visible} modal style={{ width: 'min(32rem, 96vw)' }} onHide={onHide} footer={footer}>
             <label htmlFor="reason" className="block font-medium mb-2">
                 Motivo obrigatório
             </label>

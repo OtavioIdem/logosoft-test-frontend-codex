@@ -249,7 +249,12 @@ export type PermissionCode =
     | 'FISCAL_EMITIR'
     | 'FISCAL_CANCELAR'
     | 'FISCAL_INUTILIZAR'
-    | 'FISCAL_CARTA_CORRECAO';
+    | 'FISCAL_CARTA_CORRECAO'
+    | 'NOTIFICACOES_CONSULTAR'
+    | 'NOTIFICACOES_GERENCIAR'
+    | 'ANEXOS_CONSULTAR'
+    | 'ANEXOS_BAIXAR'
+    | 'ANEXOS_GERENCIAR';
 
 export type ApiResult<T> = { success: boolean; data?: T; error?: ApiError };
 export type ValidationError = { field: string; message: string };

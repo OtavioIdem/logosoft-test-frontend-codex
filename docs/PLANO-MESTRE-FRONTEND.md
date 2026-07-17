@@ -121,6 +121,17 @@ mas as páginas passam o array inteiro e fatiam no cliente (`records.slice(first
 (agora correto) e renomear/documentar o componente. Requer alinhar endpoints com o backend. Migração incremental
 (piloto + listas transacionais grandes primeiro).
 
+**🔎 Investigação do backend (`../New project 3`) — 2026-07-17:**
+- **`PagedResult<T>`** do backend (`src/Erp.Shared/Kernel/PagedResult.cs`) = `{ Items, Page, PageSize, TotalItems, TotalPages, HasNextPage, HasPreviousPage }` → **compatível** com o `PagedResult<T>` do frontend (camelCase no JSON).
+- **Params de paginação**: `page` (default 1) + `pageSize` (default 20) + `termo` + filtros. **Sem `sort` server-side** (ordenação não é suportada por query hoje).
+- **Controllers que JÁ paginam**: Atividades, Auditoria, TabelasPreco, EstoqueAvancado, FinanceiroAvancado, Notificacoes, Integracoes.
+- **Núcleo NÃO pagina** (só `empresaId/filialId/termo`, retorna array): **Produtos, Clientes, Fornecedores, Pessoas, Estoque, Financeiro** (e provavelmente os demais cadastros). São exatamente as listas que mais crescem (>500) → **o fix de maior valor exige mudança no backend**.
+- **Frontend meio-pronto**: `atividadesApi.ts` já importa `PagedResult`, aceita `Response[] | PagedResult<Response>`, envia `page/pageSize` e tem `normalizeList` — mas **descarta `totalItems`** e achata para array (a página ainda pagina no cliente). Migrar = parar de achatar + expor `totalItems` no hook + `page/pageSize` na `queryKey` + `totalRecords={totalItems}` na página.
+
+**Conclusão / caminhos:**
+- **(A) Sem tocar no backend:** migrar para server-side real **só** as telas cujo backend já pagina que existem no frontend hoje — **Atividades** e **TabelasPreco** (e Auditoria). Núcleo permanece client-side: renomear `DataTableServer`→`DataTableClient`/documentar e assumir o teto ~500. Módulos novos já nascem paginados.
+- **(B) Com backend:** adicionar `page/pageSize` aos controllers do núcleo (Produtos, Clientes, Fornecedores, Pessoas, Estoque, Financeiro) em `../New project 3`, depois migrar tudo. Resolve B#1/B#3 de fato, mas é trabalho no repositório do backend.
+
 **🔴 2. Busca sem debounce + full-scan.** `filterLocal` roda `Object.values(record).some(...)` por registro a cada tecla
 (7 páginas); `hooks/useDebouncedValue.ts` existe mas só em 2 páginas. **Rec.:** debounce 250–300 ms em todas as buscas;
 com server-side (#1), busca vira query `termo` e o full-scan some.
@@ -584,14 +595,19 @@ flowchart LR
 ### Onda 0.5 — Correções de base *(pré-requisito; mexe em código existente)*
 1. ✅ **`<SearchInput>` compartilhado** (debounce + a11y) — criado em `components/forms/SearchInput.tsx` e aplicado nas **10 toolbars** (produtos, catálogo, clientes, fornecedores, pessoas, formas/condições de pagamento, estoque filter bar, EntityManagementPage, atividades). *[B#2, #6, #7]*
 2. ✅ **`useMutationWithToast`** — criado em `hooks/useMutationWithToast.ts` e aplicado a **19 arquivos** (todo o boilerplate `try/catch + toast` genérico). `toast.error` caiu de 72 → 18. **Exceções intencionais** (não são boilerplate genérico): páginas com estilo callback `.mutate(..., {onSuccess,onError})` já compacto (`ContasFinanceirasPage`, `FormasPagamentoPage`, `CondicoesPagamentoPage`) e páginas fiscais com formatador especializado `formatFiscalApiError` + lógica bespoke de download/navegação (`NotaFiscalConsultaPage`, `NotaFiscalDetalhePage`, `InutilizacoesFiscaisPage`). *[B#4]*
-3. ⏳ Paginação **server-side real** + renome/documentação de `DataTableServer` — **requer coordenação com o backend** (confirmar suporte a `page/pageSize/termo/sort` + `PagedResult`). *[B#1, #3, #5, #10]*
-4. ⏳ Densidade responsiva de tabela (colunas por breakpoint + overflow menu de ações). *[B#8, #9]*
-5. ⏳ Varredura dos 18 arquivos sem breakpoints. *[B#11]*
+3. ✅ **Paginação server-side real** (caminho **só frontend**, decisão do usuário) — migradas **Atividades** e **Tabelas de preço** (os endpoints do frontend cujo backend já pagina): api normaliza `array | PagedResult`, `page/pageSize/termo` entram na `queryKey` e refetcham, `totalRecords = totalItems`, sem slice client-side. `DataTableServer` **documentado** (JSDoc) com os dois modos (server-side vs client-side) em vez de renome — evita churn de 24 imports. Núcleo permanece client-side (backend não pagina; teto ~500 assumido e documentado). Sem `sort` server-side (backend não expõe). *[B#1, #3, #5]* — B#10 (ordenação) segue pendente por falta de suporte no backend.
+4. ✅ **Densidade responsiva de tabela** — (a) `DataTableActions` reescrito: botões inline no desktop, **overflow menu (kebab)** no mobile (`hidden md:flex` / `flex md:hidden`), com gating por permissão embutido; melhora **todas** as listas de uma vez. (b) **Colunas por breakpoint** aplicadas em Produtos (Tipo/Custo/Operação ocultas < md via `headerClassName`/`bodyClassName="hidden md:table-cell"`) como padrão de referência. *[B#8, #9]*
+5. ✅ **Varredura de responsividade** — os arquivos sem classes utilitárias responsivas (5, não 18) são falsos-positivos: telas de login usam SCSS dedicado (`_auth.scss`, com `@media` que colapsa para 1 coluna) e utils sem layout. Zero larguras fixas em `px`. **Correção encontrada e aplicada:** 29 diálogos com largura `rem`-pura (estouravam no mobile) receberam cap `min(Xrem, 96vw)` — desktop inalterado, mobile ≤ 96vw. *[B#11]*
 
-> **Status (2026-07-16):** itens 1 e 2 concluídos e validados (typecheck + lint 0 erros, 221 testes verdes). Itens 3–5 pendentes (item 3 depende do backend). Legenda: ✅ concluído · 🚧 em andamento · ⏳ pendente.
+> **Status (2026-07-17):** **Onda 0.5 concluída** (itens 1–5) e validada (typecheck + lint 0 erros, 221 testes verdes). B#10 (ordenação de colunas) segue pendente por falta de `sort` no backend. Próximo: Onda 0 (Notificações + Anexos) e piloto. Legenda: ✅ concluído · 🚧 em andamento · ⏳ pendente.
 
-### Onda 0 — Fundação transversal
-- Notificações (sino) e Anexos (widget) — aparecem em todas as telas.
+### Onda 0 — Fundação transversal ✅ (2026-07-17)
+Contratos confirmados no backend (`../New project 3`): permissões `NOTIFICACOES_CONSULTAR/GERENCIAR`, `ANEXOS_CONSULTAR/BAIXAR/GERENCIAR` (adicionadas ao union `PermissionCode`).
+
+- ✅ **Notificações (sino global)** — `features/notificacoes/{types,api,hooks,components}` + integração no `layout/AppTopbar.tsx` (aparece em todas as telas). Sino + badge de não-lidas com **polling** (`refetchInterval` 60s), OverlayPanel com lista de não-lidas, marcar-lida/marcar-todas, e navegação pela `acaoUrl` no clique. Gateado por `NOTIFICACOES_CONSULTAR` (retorna `null` sem permissão). Enums `SeveridadeNotificacao`(1-4)/`StatusNotificacao`(1-3). Lista tolera `array | paginado`.
+- ✅ **Anexos (widget reutilizável)** — `features/anexos/{types,api,hooks,components}`. `AnexosPanel({ modulo, entidade, entidadeId, empresaId, filialId? })` acoplável em qualquer tela: lista, **upload multipart** (FormData, validação cliente ≤25MB + extensões), **download** (blob), inativar (ReasonDialog). Gateado por `ANEXOS_CONSULTAR/GERENCIAR/BAIXAR`. Enum `CategoriaAnexo`(1-7); dedup por hash é automática no backend.
+- Testes: `tests/unit/onda0TransversaisStructure.test.ts` (endpoints, gating, integração). **227 testes verdes**, typecheck + lint 0 erros.
+- Pendente: teste de componente/e2e com render real (auth + react-query) e acoplar `AnexosPanel` nas telas de detalhe conforme os módulos forem construídos.
 
 ### Piloto de scaffold
 - Eleger **PDV** ou **Serviços**; validar ciclo completo api/hooks/schemas/types/components/tests + os 3 registros centrais (A.5) + `npm run validate` verde, **já usando o padrão corrigido da Onda 0.5**. Congelar como *template de referência*.

@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
-import { InputText } from 'primereact/inputtext';
+import { SearchInput } from '@/components/forms/SearchInput';
 import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -24,7 +24,7 @@ import { useProdutos } from '@/features/produtos/hooks/useProdutosResources';
 import { TabelaPrecoFormDialog } from '@/features/tabelas-preco/components/TabelaPrecoFormDialog';
 import { TabelaPrecoItemDialog } from '@/features/tabelas-preco/components/TabelaPrecoItemDialog';
 import { usePrecoVigente, useTabelaPrecoDetalhe, useTabelaPrecoMutations, useTabelasPreco } from '@/features/tabelas-preco/hooks/useTabelasPreco';
-import { TabelaPrecoFormValues, TabelaPrecoItemFormValues, TabelaPrecoItemResponse, TabelaPrecoResponse } from '@/features/tabelas-preco/types/tabelasPreco.types';
+import { TabelaPrecoFormValues, TabelaPrecoItemFormValues, TabelaPrecoItemResponse, TabelaPrecoListQuery, TabelaPrecoResponse } from '@/features/tabelas-preco/types/tabelasPreco.types';
 import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 
@@ -36,6 +36,8 @@ export const TabelasPrecoPage = () => {
     const runWithToast = useMutationWithToast();
     const { hasAnyPermission } = usePermissions();
     const [search, setSearch] = useState('');
+    const [first, setFirst] = useState(0);
+    const [rows, setRows] = useState(10);
     const [formVisible, setFormVisible] = useState(false);
     const [itemVisible, setItemVisible] = useState(false);
     const [reasonAction, setReasonAction] = useState<'inativar-tabela' | 'inativar-item' | null>(null);
@@ -47,21 +49,20 @@ export const TabelasPrecoPage = () => {
     const [precoData, setPrecoData] = useState<Date | null>(new Date());
     const [precoEnabled, setPrecoEnabled] = useState(false);
 
-    const tabelasQuery = useTabelasPreco();
+    const page = Math.floor(first / rows) + 1;
+    const listQuery = useMemo<TabelaPrecoListQuery>(() => ({ termo: search.trim() || null, page, pageSize: rows }), [search, page, rows]);
+    const tabelasQuery = useTabelasPreco(listQuery);
     const detalheQuery = useTabelaPrecoDetalhe(selectedTabela?.id ?? null);
     const produtosQuery = useProdutos({});
     const precoVigenteQuery = usePrecoVigente({ produtoId: precoProdutoId, empresaId: precoEmpresaId, filialId: precoFilialId, dataReferencia: precoData }, Boolean(precoProdutoId && precoEnabled));
     const mutations = useTabelaPrecoMutations();
     const canManageTabelaPreco = hasAnyPermission(['TABELAS_PRECO_GERENCIAR', 'VENDAS_GERENCIAR']);
 
-    const tabelas = tabelasQuery.data ?? [];
+    const paged = tabelasQuery.data;
+    const tabelas = useMemo(() => paged?.items ?? [], [paged]);
+    const totalRecords = paged?.totalItems ?? 0;
     const produtoOptions = useMemo(() => (produtosQuery.data ?? []).map((produto) => ({ label: `${produto.codigo} - ${produto.descricao}`, value: produto.id })), [produtosQuery.data]);
     const produtoLabelMap = useMemo(() => new Map((produtosQuery.data ?? []).map((produto) => [produto.id, `${produto.codigo} - ${produto.descricao}`])), [produtosQuery.data]);
-    const filteredTabelas = useMemo(() => {
-        const term = search.trim().toLowerCase();
-        if (!term) return tabelas;
-        return tabelas.filter((tabela) => `${tabela.nome} ${tabela.status ?? ''}`.toLowerCase().includes(term));
-    }, [search, tabelas]);
 
     if (!hasAnyPermission(['TABELAS_PRECO_CONSULTAR', 'TABELAS_PRECO_GERENCIAR', 'VENDAS_CONSULTAR', 'VENDAS_GERENCIAR'])) {
         return <UnauthorizedState description="A rotina Tabelas de preço exige permissão comercial para consulta ou gestão." />;
@@ -107,7 +108,7 @@ export const TabelasPrecoPage = () => {
 
     const headerActions = (
         <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
-            <span className="p-input-icon-left"><i className="pi pi-search" /><InputText placeholder="Buscar tabela" value={search} onChange={(event) => setSearch(event.target.value)} /></span>
+            <SearchInput ariaLabel="Buscar tabela" defaultValue={search} onChange={(term) => { setSearch(term); setFirst(0); }} />
             <PermissionGuard anyOf={['TABELAS_PRECO_GERENCIAR', 'VENDAS_GERENCIAR']} mode="disable">
                 {({ disabled }) => <Button label="Nova tabela" icon="pi pi-plus" disabled={disabled} onClick={() => { setSelectedTabela(null); setFormVisible(true); }} />}
             </PermissionGuard>
@@ -126,7 +127,7 @@ export const TabelasPrecoPage = () => {
                 <div className="col-12 lg:col-7">
                     <Card title="Tabelas cadastradas">
                         {tabelasQuery.error ? <ApiErrorPanel error={mapApiError(tabelasQuery.error)} /> : null}
-                        <DataTableServer<TabelaPrecoResponse> value={filteredTabelas} totalRecords={filteredTabelas.length} loading={tabelasQuery.isFetching} first={0} rows={10} onPage={() => undefined} emptyMessage="Nenhuma tabela encontrada.">
+                        <DataTableServer<TabelaPrecoResponse> value={tabelas} totalRecords={totalRecords} loading={tabelasQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhuma tabela encontrada.">
                             <Column field="nome" header="Nome" />
                             <Column header="Vigência" body={(tabela: TabelaPrecoResponse) => `${formatDate(tabela.dataInicioVigencia)} até ${formatDate(tabela.dataFimVigencia)}`} />
                             <Column header="Padrão" body={(tabela: TabelaPrecoResponse) => <Tag value={tabela.padrao ? 'Sim' : 'Não'} severity={tabela.padrao ? 'info' : undefined} />} />
@@ -140,7 +141,7 @@ export const TabelasPrecoPage = () => {
                                 ] : [])
                             ]} />} />
                         </DataTableServer>
-                        {!tabelasQuery.isLoading && filteredTabelas.length === 0 ? <EmptyState title="Nenhuma tabela" description="Crie uma tabela ou ajuste a busca." /> : null}
+                        {!tabelasQuery.isLoading && totalRecords === 0 ? <EmptyState title="Nenhuma tabela" description="Crie uma tabela ou ajuste a busca." /> : null}
                     </Card>
                 </div>
 

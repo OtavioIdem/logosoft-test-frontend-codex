@@ -87,20 +87,18 @@ export const AtividadesPage = () => {
     const [selected, setSelected] = useState<AtividadeResponse | null>(null);
     const [action, setAction] = useState<ActionState>(null);
 
-    const atividadesQuery = useAtividades(filters);
+    const page = Math.floor(first / rows) + 1;
+    const listQuery = useMemo<AtividadesListQuery>(() => ({ ...filters, termo: search.trim() || null, page, pageSize: rows }), [filters, search, page, rows]);
+    const atividadesQuery = useAtividades(listQuery);
     const usuariosQuery = useUsuariosSeguranca({ empresaId: filters.empresaId ?? undefined, filialId: filters.filialId ?? undefined, ativo: true });
     const detalheQuery = useAtividadeDetalhe(selected?.id ?? null);
     const mutations = useAtividadesMutations();
 
-    const atividades = atividadesQuery.data ?? [];
+    const paged = atividadesQuery.data;
+    const atividades = useMemo(() => paged?.items ?? [], [paged]);
+    const totalRecords = paged?.totalItems ?? 0;
     const usuarios = usuariosQuery.data ?? [];
     const usuarioLabelMap = useMemo(() => new Map(usuarios.map((usuario) => [usuario.id, `${usuario.nome} • ${usuario.email}`])), [usuarios]);
-    const filteredAtividades = useMemo(() => {
-        const term = search.trim().toLowerCase();
-        if (!term) return atividades;
-        return atividades.filter((atividade) => `${atividade.titulo} ${atividade.descricao ?? ''} ${atividade.entidadeOrigem ?? ''}`.toLowerCase().includes(term));
-    }, [atividades, search]);
-    const visibleAtividades = useMemo(() => filteredAtividades.slice(first, first + rows), [filteredAtividades, first, rows]);
     const detalhe = detalheQuery.data ?? selected;
 
     if (!hasAnyPermission(['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'])) {
@@ -193,7 +191,7 @@ export const AtividadesPage = () => {
                 <div className="col-12 xl:col-8">
                     <Card title="Atividades operacionais">
                         {atividadesQuery.error ? <ApiErrorPanel error={mapApiError(atividadesQuery.error)} /> : null}
-                        <DataTableServer<AtividadeResponse> value={visibleAtividades} totalRecords={filteredAtividades.length} loading={atividadesQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhuma atividade encontrada.">
+                        <DataTableServer<AtividadeResponse> value={atividades} totalRecords={totalRecords} loading={atividadesQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhuma atividade encontrada.">
                             <Column field="titulo" header="Título" />
                             <Column header="Status" body={(row: AtividadeResponse) => <Tag value={statusLabel(getStatus(row))} severity={statusSeverity(getStatus(row))} />} />
                             <Column header="Prioridade" body={(row: AtividadeResponse) => <Tag value={prioridadeLabel(row.prioridade)} severity={prioridadeSeverity(row.prioridade)} />} />
@@ -209,7 +207,7 @@ export const AtividadesPage = () => {
                                 { key: 'cancelar', label: 'Cancelar', icon: 'pi pi-ban', permission: 'ATIVIDADES_GERENCIAR', severity: 'danger', disabled: !canOperate(row), onClick: () => { setSelected(row); setAction('cancelar'); } }
                             ]} />} />
                         </DataTableServer>
-                        {!atividadesQuery.isLoading && filteredAtividades.length === 0 ? <EmptyState title="Nenhuma atividade" description="Crie uma atividade ou ajuste os filtros." /> : null}
+                        {!atividadesQuery.isLoading && totalRecords === 0 ? <EmptyState title="Nenhuma atividade" description="Crie uma atividade ou ajuste os filtros." /> : null}
                     </Card>
                 </div>
 
