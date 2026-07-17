@@ -272,7 +272,9 @@ export type PermissionCode =
     | 'COMPRAS_COTACOES_CONSULTAR'
     | 'COMPRAS_COTACOES_GERENCIAR'
     | 'COMPRAS_COTACOES_APROVAR'
-    | 'COMPRAS_CONFERENCIA_FISCAL_REGISTRAR';
+    | 'COMPRAS_CONFERENCIA_FISCAL_REGISTRAR'
+    | 'ESTOQUE_AJUSTAR'
+    | 'ESTOQUE_BLOQUEIO_GERENCIAR';
 
 export type ApiResult<T> = { success: boolean; data?: T; error?: ApiError };
 export type ValidationError = { field: string; message: string };
