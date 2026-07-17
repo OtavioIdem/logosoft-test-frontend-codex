@@ -254,7 +254,11 @@ export type PermissionCode =
     | 'NOTIFICACOES_GERENCIAR'
     | 'ANEXOS_CONSULTAR'
     | 'ANEXOS_BAIXAR'
-    | 'ANEXOS_GERENCIAR';
+    | 'ANEXOS_GERENCIAR'
+    | 'SERVICOS_CONSULTAR'
+    | 'SERVICOS_GERENCIAR'
+    | 'SERVICOS_APONTAR'
+    | 'SERVICOS_FATURAR';
 
 export type ApiResult<T> = { success: boolean; data?: T; error?: ApiError };
 export type ValidationError = { field: string; message: string };

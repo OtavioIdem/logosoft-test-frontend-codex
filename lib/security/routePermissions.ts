@@ -35,6 +35,7 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/fiscal\/observabilidade(?:\/.*)?$/, anyOf: ['FISCAL_CONSULTAR'], description: 'Observabilidade fiscal' },
     { pattern: /^\/fiscal\/inutilizacoes(?:\/.*)?$/, anyOf: ['FISCAL_INUTILIZAR'], description: 'Inutilizações fiscais' },
     { pattern: /^\/fiscal(?:\/.*)?$/, anyOf: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_CANCELAR', 'FISCAL_INUTILIZAR', 'FISCAL_CARTA_CORRECAO'], description: 'Fiscal' },
+    { pattern: /^\/servicos(?:\/.*)?$/, anyOf: ['SERVICOS_CONSULTAR', 'SERVICOS_GERENCIAR', 'SERVICOS_APONTAR', 'SERVICOS_FATURAR'], description: 'Serviços (Ordem de Serviço)' },
     { pattern: /^\/atividades(?:\/.*)?$/, anyOf: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'], description: 'Atividades' },
     { pattern: /^\/relatorios(?:\/.*)?$/, anyOf: ['RELATORIOS_CONSULTAR'], description: 'Relatórios' },
     { pattern: /^\/auditoria(?:\/.*)?$/, anyOf: ['AUDITORIA_CONSULTAR'], description: 'Auditoria' }

@@ -609,8 +609,19 @@ Contratos confirmados no backend (`../New project 3`): permissões `NOTIFICACOES
 - Testes: `tests/unit/onda0TransversaisStructure.test.ts` (endpoints, gating, integração). **227 testes verdes**, typecheck + lint 0 erros.
 - Pendente: teste de componente/e2e com render real (auth + react-query) e acoplar `AnexosPanel` nas telas de detalhe conforme os módulos forem construídos.
 
-### Piloto de scaffold
-- Eleger **PDV** ou **Serviços**; validar ciclo completo api/hooks/schemas/types/components/tests + os 3 registros centrais (A.5) + `npm run validate` verde, **já usando o padrão corrigido da Onda 0.5**. Congelar como *template de referência*.
+### Piloto de scaffold ✅ Serviços (2026-07-17) — *template de referência congelado*
+Escolhido **Serviços (Ordem de Serviço)** como piloto (representativo, risco gerenciável; PDV vem depois já com o template pronto). Contrato confirmado no backend (`../New project 3/OrdensServicoController` + `OrdemServicoContracts`).
+
+- **Feature completa** `features/servicos/{types,schemas,api,hooks,components}`: lista (`OrdensServicoPage`, client-side + SearchInput + filtro de status), detalhe (`OrdemServicoDetalhePage`, cabeçalho + itens + ações de estado), form de criação e diálogos de ação (`OrdemServicoDialogs`), `servicosLabels` (rótulos/severidades/predicados de transição).
+- **Ciclo de estado**: Aberta → Triar → Planejar → Iniciar execução → (Itens) → Encerrar (laudo) → Faturar / Cancelar — cada ação gateada pela permissão real e habilitada pelo status (predicados `pode*`).
+- **Rotas**: `app/(main)/servicos/ordens/{page,[id]/page}.tsx`.
+- **3 registros centrais (A.5)**: 4 permissões novas no union `PermissionCode` (`SERVICOS_CONSULTAR/GERENCIAR/APONTAR/FATURAR` — a `_APONTAR` para itens não estava na spec, veio do controller); regra em `routePermissions.ts`; grupo "Serviços" no `AppMenu.tsx`.
+- **Padrão corrigido em uso**: `SearchInput`, `useMutationWithToast`, `DataTableActions` responsivo, colunas por breakpoint, diálogos com cap `min(rem, vw)`.
+- **Dogfooding da Onda 0**: `AnexosPanel` acoplado no detalhe da OS (`modulo="Servicos"`, `entidade="OrdemServico"`).
+- **Testes**: `servicosPayload.test.ts` (schemas/builders) + `servicosPilotStructure.test.ts` (endpoints, gating, registros, dogfood). **`npm run validate` verde — 239 testes.**
+- **A confirmar**: `tecnicoResponsavelId` foi alimentado por usuários (`useUsuariosSeguranca`) — validar se o backend espera usuário ou colaborador quando RH existir. Testes de render/e2e e run com backend real ficam como follow-up.
+
+> **Template congelado.** Os demais 17 módulos seguem esta estrutura. Próximo natural: **PDV** (Onda 1), agora com o scaffold validado.
 
 ### Ondas 1→5
 Conforme o diagrama e a Parte C. Dependências cruzadas relevantes:
