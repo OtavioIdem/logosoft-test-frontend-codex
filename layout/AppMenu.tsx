@@ -139,6 +139,11 @@ const AppMenu = () => {
                 ]
             },
             {
+                label: 'Faturamento',
+                anyPermissions: ['FATURAMENTO_CONSULTAR', 'FATURAMENTO_PREPARAR', 'FATURAMENTO_CONFIRMAR', 'FATURAMENTO_CANCELAR'],
+                items: [{ label: 'Faturamentos', icon: 'pi pi-fw pi-file-export', to: '/faturamento', anyPermissions: ['FATURAMENTO_CONSULTAR', 'FATURAMENTO_PREPARAR'] }]
+            },
+            {
                 label: 'Serviços',
                 anyPermissions: ['SERVICOS_CONSULTAR', 'SERVICOS_GERENCIAR', 'SERVICOS_APONTAR', 'SERVICOS_FATURAR'],
                 items: [{ label: 'Ordens de serviço', icon: 'pi pi-fw pi-wrench', to: '/servicos/ordens', anyPermissions: ['SERVICOS_CONSULTAR', 'SERVICOS_GERENCIAR'] }]

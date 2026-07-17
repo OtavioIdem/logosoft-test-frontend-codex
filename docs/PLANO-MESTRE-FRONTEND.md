@@ -632,8 +632,15 @@ Escolhido **Serviços (Ordem de Serviço)** como piloto (representativo, risco g
 - Testes: `pdvPayload` (schemas, incl. rejeição de venda sem itens/pagamentos) + `pdvStructure`. **`npm run validate` verde — 249 testes.**
 - **Pendente (spec exige):** **E2E do fluxo completo de venda** — não escrito nesta rodada (precisa de app + backend + auth para rodar de verdade); fica como follow-up junto com um run visual.
 
+**✅ Faturamento (Onda 1) — concluído (2026-07-17).** Contrato confirmado no backend (`FaturamentosController` + `FaturamentoContracts`).
+- `features/faturamento/{types,schemas,api,hooks,components}`: **lista paginada server-side** (backend devolve `PagedResult`), **wizard Preparar → Confirmar**, detalhe com **histórico** e **ocorrências**, cancelar.
+- **Preparar** (de um pedido de venda) exibe `jaExistia` + `Alertas`; **Confirmar** coleta dados fiscais obrigatórios (UF, tipo doc, série, número, unidade, 1º vencimento) e exibe `Alertas`. Enums `StatusFaturamento`(1-7), `TipoDocumentoFiscal`, `TipoOcorrenciaFaturamento`.
+- Rotas `app/(main)/faturamento/{page,[id]/page}.tsx`; 3 registros centrais (permissões `FATURAMENTO_CONSULTAR/PREPARAR/CONFIRMAR/CANCELAR`, rota, menu). Dogfood do `AnexosPanel` no detalhe.
+- Testes: `faturamentoPayload` + `faturamentoStructure`. **`npm run validate` verde — 259 testes.**
+- **A confirmar**: `naturezaOperacaoId` (opcional) omitido da UI por falta de hook/tela de naturezas de operação — incluir quando existir.
+
 Conforme o diagrama e a Parte C. Dependências cruzadas relevantes:
-- Faturamento parte de Pedido de Venda (núcleo existe).
+- Faturamento parte de Pedido de Venda (núcleo existe). ✅ feito.
 - Estoque avançado é ponto de **liberação** de bloqueios de Qualidade/Alimentar.
 - RH reusa Cargo/Setor de Administração.
 - CRM converte oportunidade em Pedido de Venda; Contratos e Serviços geram ContaReceber.

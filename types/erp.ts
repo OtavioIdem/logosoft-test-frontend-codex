@@ -261,7 +261,11 @@ export type PermissionCode =
     | 'SERVICOS_FATURAR'
     | 'PDV_CONSULTAR'
     | 'PDV_CAIXA_GERENCIAR'
-    | 'PDV_VENDER';
+    | 'PDV_VENDER'
+    | 'FATURAMENTO_CONSULTAR'
+    | 'FATURAMENTO_PREPARAR'
+    | 'FATURAMENTO_CONFIRMAR'
+    | 'FATURAMENTO_CANCELAR';
 
 export type ApiResult<T> = { success: boolean; data?: T; error?: ApiError };
 export type ValidationError = { field: string; message: string };
