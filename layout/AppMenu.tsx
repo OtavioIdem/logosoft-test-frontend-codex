@@ -131,6 +131,14 @@ const AppMenu = () => {
                 ]
             },
             {
+                label: 'PDV',
+                anyPermissions: ['PDV_CONSULTAR', 'PDV_CAIXA_GERENCIAR', 'PDV_VENDER'],
+                items: [
+                    { label: 'Caixas', icon: 'pi pi-fw pi-wallet', to: '/pdv/caixas', anyPermissions: ['PDV_CONSULTAR', 'PDV_CAIXA_GERENCIAR'] },
+                    { label: 'Venda', icon: 'pi pi-fw pi-shopping-cart', to: '/pdv/vendas', anyPermissions: ['PDV_CONSULTAR', 'PDV_VENDER'] }
+                ]
+            },
+            {
                 label: 'Serviços',
                 anyPermissions: ['SERVICOS_CONSULTAR', 'SERVICOS_GERENCIAR', 'SERVICOS_APONTAR', 'SERVICOS_FATURAR'],
                 items: [{ label: 'Ordens de serviço', icon: 'pi pi-fw pi-wrench', to: '/servicos/ordens', anyPermissions: ['SERVICOS_CONSULTAR', 'SERVICOS_GERENCIAR'] }]

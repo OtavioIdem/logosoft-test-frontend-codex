@@ -624,6 +624,14 @@ Escolhido **Serviços (Ordem de Serviço)** como piloto (representativo, risco g
 > **Template congelado.** Os demais 17 módulos seguem esta estrutura. Próximo natural: **PDV** (Onda 1), agora com o scaffold validado.
 
 ### Ondas 1→5
+
+**✅ PDV (Onda 1) — concluído (2026-07-17).** Primeiro módulo pós-piloto, sobre o template de Serviços. Contrato confirmado no backend (`CaixasController` + `VendasPdvController` + `PdvContracts`).
+- `features/pdv/{types,schemas,api,hooks,components}` com **dois recursos**: **Caixas** (`CaixasPdvPage` — abrir, suprimento, sangria, fechar com **conferência** esperado × informado × diferença) e **Venda** (`VendaPdvPage` — tela interativa: itens + pagamentos + cálculo de **troco**, exige caixa aberto e total pago ≥ líquido).
+- Rotas `app/(main)/pdv/{caixas,vendas}/page.tsx`; 3 registros centrais (permissões `PDV_CONSULTAR/CAIXA_GERENCIAR/VENDER`, rota, menu com 2 itens).
+- Enums `StatusCaixa`, `StatusVendaPdv`, `MeioPagamento`, `TipoMovimentoCaixa`. Prefill do valor unitário pelo `precoVendaBase` do produto.
+- Testes: `pdvPayload` (schemas, incl. rejeição de venda sem itens/pagamentos) + `pdvStructure`. **`npm run validate` verde — 249 testes.**
+- **Pendente (spec exige):** **E2E do fluxo completo de venda** — não escrito nesta rodada (precisa de app + backend + auth para rodar de verdade); fica como follow-up junto com um run visual.
+
 Conforme o diagrama e a Parte C. Dependências cruzadas relevantes:
 - Faturamento parte de Pedido de Venda (núcleo existe).
 - Estoque avançado é ponto de **liberação** de bloqueios de Qualidade/Alimentar.

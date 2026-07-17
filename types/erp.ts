@@ -258,7 +258,10 @@ export type PermissionCode =
     | 'SERVICOS_CONSULTAR'
     | 'SERVICOS_GERENCIAR'
     | 'SERVICOS_APONTAR'
-    | 'SERVICOS_FATURAR';
+    | 'SERVICOS_FATURAR'
+    | 'PDV_CONSULTAR'
+    | 'PDV_CAIXA_GERENCIAR'
+    | 'PDV_VENDER';
 
 export type ApiResult<T> = { success: boolean; data?: T; error?: ApiError };
 export type ValidationError = { field: string; message: string };
