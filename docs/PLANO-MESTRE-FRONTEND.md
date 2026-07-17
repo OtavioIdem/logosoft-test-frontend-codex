@@ -653,6 +653,15 @@ Escolhido **Serviços (Ordem de Serviço)** como piloto (representativo, risco g
 - Nota do contrato: `filialId` **obrigatório** e `dataReferencia` em `DateOnly` (yyyy-MM-dd). Ajustes/bloqueios não têm GET de lista → aba de bloqueios usa ação por ID (não há como listar bloqueios ativos).
 - Testes: `estoqueAvancadoPayload` + `estoqueAvancadoStructure`. **`npm run validate` verde — 278 testes.**
 
+**✅ Financeiro avançado (Onda 1) — concluído (2026-07-17). ✅✅ ONDA 1 COMPLETA.** Contrato confirmado no backend (`FinanceiroAvancadoController` + requests/responses).
+- `features/financeiro-avancado/*` com rota `financeiro/avancado` em **TabView**: **Contas a receber** e **Contas a pagar** (listas paginadas server-side `{resultado}`, criar → detalhe com baixas → **baixar/estornar/cancelar**) + **Fluxo de caixa** (painel previstos/realizados/projetado por período).
+- Usa os endpoints **avançados** (`/api/financeiro/avancado/*`), paralelos ao núcleo. Baixa/estorno informam a **contabilização automática** do backend (achado da spec). Estorno escolhe a baixa (não estornada) da conta.
+- 1 permissão nova (`FINANCEIRO_FLUXO_CAIXA_CONSULTAR`); rota antes da genérica `/financeiro`; item no menu. Enums `StatusContaFinanceira`, `TipoContaFinanceira`. Datas em `DateOnly`.
+- Testes: `financeiroAvancadoPayload` + `financeiroAvancadoStructure`. **`npm run validate` verde — 286 testes.**
+- Nota: o núcleo (`features/financeiro`) já cobria baixa/estorno nos endpoints core; este módulo é a versão avançada dedicada da spec (§2.3).
+
+> **Onda 1 concluída:** PDV ✅ · Faturamento ✅ · Compras avançado ✅ · Estoque avançado ✅ · Financeiro avançado ✅.
+
 Conforme o diagrama e a Parte C. Dependências cruzadas relevantes:
 - Faturamento parte de Pedido de Venda (núcleo existe). ✅ feito.
 - Estoque avançado é ponto de **liberação** de bloqueios de Qualidade/Alimentar. ✅ feito.

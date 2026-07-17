@@ -28,6 +28,7 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/financeiro\/contas-receber(?:\/.*)?$/, anyOf: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_RECEBER', 'FINANCEIRO_ESTORNAR', 'FINANCEIRO_CANCELAR'], description: 'Contas a receber' },
     { pattern: /^\/financeiro\/contas-pagar(?:\/.*)?$/, anyOf: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_PAGAR', 'FINANCEIRO_ESTORNAR', 'FINANCEIRO_CANCELAR'], description: 'Contas a pagar' },
     { pattern: /^\/financeiro\/fluxo-caixa(?:\/.*)?$/, anyOf: ['FINANCEIRO_CONSULTAR'], description: 'Fluxo de caixa' },
+    { pattern: /^\/financeiro\/avancado(?:\/.*)?$/, anyOf: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_GERENCIAR', 'FINANCEIRO_RECEBER', 'FINANCEIRO_PAGAR', 'FINANCEIRO_ESTORNAR', 'FINANCEIRO_CANCELAR', 'FINANCEIRO_FLUXO_CAIXA_CONSULTAR'], description: 'Financeiro avançado' },
     { pattern: /^\/financeiro\/formas-pagamento(?:\/.*)?$/, anyOf: ['FINANCEIRO_CONSULTAR', 'FORMAS_PAGAMENTO_GERENCIAR'], description: 'Formas de pagamento' },
     { pattern: /^\/financeiro\/condicoes-pagamento(?:\/.*)?$/, anyOf: ['FINANCEIRO_CONSULTAR', 'CONDICOES_PAGAMENTO_GERENCIAR'], description: 'Condições de pagamento' },
     { pattern: /^\/financeiro(?:\/.*)?$/, anyOf: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_GERENCIAR', 'FINANCEIRO_RECEBER', 'FINANCEIRO_PAGAR', 'FINANCEIRO_ESTORNAR', 'FINANCEIRO_CANCELAR'], description: 'Financeiro' },

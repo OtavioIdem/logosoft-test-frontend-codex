@@ -113,6 +113,7 @@ const AppMenu = () => {
                     { label: 'Contas a receber', icon: 'pi pi-fw pi-arrow-down-left', to: '/financeiro/contas-receber', anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_RECEBER'] },
                     { label: 'Contas a pagar', icon: 'pi pi-fw pi-arrow-up-right', to: '/financeiro/contas-pagar', anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_PAGAR'] },
                     { label: 'Fluxo de caixa', icon: 'pi pi-fw pi-chart-line', to: '/financeiro/fluxo-caixa', permission: 'FINANCEIRO_CONSULTAR' },
+                    { label: 'Financeiro avançado', icon: 'pi pi-fw pi-money-bill', to: '/financeiro/avancado', anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_GERENCIAR', 'FINANCEIRO_FLUXO_CAIXA_CONSULTAR'] },
                     { label: 'Formas de pagamento', icon: 'pi pi-fw pi-credit-card', to: '/financeiro/formas-pagamento', anyPermissions: ['FINANCEIRO_CONSULTAR', 'FORMAS_PAGAMENTO_GERENCIAR'] },
                     { label: 'Condições de pagamento', icon: 'pi pi-fw pi-calendar-plus', to: '/financeiro/condicoes-pagamento', anyPermissions: ['FINANCEIRO_CONSULTAR', 'CONDICOES_PAGAMENTO_GERENCIAR'] }
                 ]

@@ -274,7 +274,8 @@ export type PermissionCode =
     | 'COMPRAS_COTACOES_APROVAR'
     | 'COMPRAS_CONFERENCIA_FISCAL_REGISTRAR'
     | 'ESTOQUE_AJUSTAR'
-    | 'ESTOQUE_BLOQUEIO_GERENCIAR';
+    | 'ESTOQUE_BLOQUEIO_GERENCIAR'
+    | 'FINANCEIRO_FLUXO_CAIXA_CONSULTAR';
 
 export type ApiResult<T> = { success: boolean; data?: T; error?: ApiError };
 export type ValidationError = { field: string; message: string };
