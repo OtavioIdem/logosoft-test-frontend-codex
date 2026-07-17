@@ -639,6 +639,14 @@ Escolhido **Serviços (Ordem de Serviço)** como piloto (representativo, risco g
 - Testes: `faturamentoPayload` + `faturamentoStructure`. **`npm run validate` verde — 259 testes.**
 - **A confirmar**: `naturezaOperacaoId` (opcional) omitido da UI por falta de hook/tela de naturezas de operação — incluir quando existir.
 
+**✅ Compras avançado (Onda 1) — concluído (2026-07-17).** Maior módulo até aqui (3 recursos). Contrato confirmado no backend (`SolicitacoesCompra/CotacoesCompra/RecebimentosCompra` controllers + contracts).
+- `features/compras-avancado/{types,schemas,api,hooks,components}` cobrindo o funil: **Solicitação** (abrir→itens→aprovar/cancelar), **Cotação** (criar→itens→aprovar que **gera pedido**/recusar/cancelar), **Recebimento** (divergências + registro de **conferência fiscal** da NF de entrada).
+- 5 rotas: `compras/{solicitacoes,solicitacoes/[id],cotacoes,cotacoes/[id],recebimentos}`. Regras de rota específicas inseridas **antes** da genérica `/compras` (precedência de `findRoutePermissionRule`).
+- 3 registros centrais: **7 permissões** (`COMPRAS_SOLICITACOES_*`, `COMPRAS_COTACOES_*`, `COMPRAS_CONFERENCIA_FISCAL_REGISTRAR`), rotas, e 3 itens novos no menu de Compras. Dogfood do `AnexosPanel` nos detalhes.
+- Enums `StatusSolicitacaoCompra`, `StatusCotacaoCompra`, `StatusConferenciaFiscalEntrada`, `TipoDivergenciaRecebimento`.
+- Testes: `comprasAvancadoPayload` + `comprasAvancadoStructure` (inclui verificação da precedência das regras de rota). **`npm run validate` verde — 269 testes.**
+- **A confirmar/limitações**: (a) aprovar cotação retorna a cotação (sem `pedidoCompraId`), então o link para o pedido é textual ("ver Compras › Pedidos"); (b) upload de XML/PDF da conferência (opcional no backend) foi omitido; (c) recebimentos não têm endpoint de lista — a tela parte das divergências para abrir o recebimento.
+
 Conforme o diagrama e a Parte C. Dependências cruzadas relevantes:
 - Faturamento parte de Pedido de Venda (núcleo existe). ✅ feito.
 - Estoque avançado é ponto de **liberação** de bloqueios de Qualidade/Alimentar.

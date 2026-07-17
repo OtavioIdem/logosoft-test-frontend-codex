@@ -118,8 +118,13 @@ const AppMenu = () => {
             },
             {
                 label: 'Compras',
-                anyPermissions: ['COMPRAS_CONSULTAR', 'COMPRAS_GERENCIAR'],
-                items: [{ label: 'Pedidos de compra', icon: 'pi pi-fw pi-shopping-bag', to: '/compras/pedidos', anyPermissions: ['COMPRAS_CONSULTAR', 'COMPRAS_GERENCIAR'] }]
+                anyPermissions: ['COMPRAS_CONSULTAR', 'COMPRAS_GERENCIAR', 'COMPRAS_SOLICITACOES_CONSULTAR', 'COMPRAS_COTACOES_CONSULTAR'],
+                items: [
+                    { label: 'Pedidos de compra', icon: 'pi pi-fw pi-shopping-bag', to: '/compras/pedidos', anyPermissions: ['COMPRAS_CONSULTAR', 'COMPRAS_GERENCIAR'] },
+                    { label: 'Solicitações', icon: 'pi pi-fw pi-file-edit', to: '/compras/solicitacoes', anyPermissions: ['COMPRAS_SOLICITACOES_CONSULTAR', 'COMPRAS_SOLICITACOES_GERENCIAR'] },
+                    { label: 'Cotações', icon: 'pi pi-fw pi-dollar', to: '/compras/cotacoes', anyPermissions: ['COMPRAS_COTACOES_CONSULTAR', 'COMPRAS_COTACOES_GERENCIAR'] },
+                    { label: 'Recebimentos', icon: 'pi pi-fw pi-inbox', to: '/compras/recebimentos', anyPermissions: ['COMPRAS_CONSULTAR', 'COMPRAS_CONFERENCIA_FISCAL_REGISTRAR'] }
+                ]
             },
             {
                 label: 'Fiscal',

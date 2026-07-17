@@ -265,7 +265,14 @@ export type PermissionCode =
     | 'FATURAMENTO_CONSULTAR'
     | 'FATURAMENTO_PREPARAR'
     | 'FATURAMENTO_CONFIRMAR'
-    | 'FATURAMENTO_CANCELAR';
+    | 'FATURAMENTO_CANCELAR'
+    | 'COMPRAS_SOLICITACOES_CONSULTAR'
+    | 'COMPRAS_SOLICITACOES_GERENCIAR'
+    | 'COMPRAS_SOLICITACOES_APROVAR'
+    | 'COMPRAS_COTACOES_CONSULTAR'
+    | 'COMPRAS_COTACOES_GERENCIAR'
+    | 'COMPRAS_COTACOES_APROVAR'
+    | 'COMPRAS_CONFERENCIA_FISCAL_REGISTRAR';
 
 export type ApiResult<T> = { success: boolean; data?: T; error?: ApiError };
 export type ValidationError = { field: string; message: string };
