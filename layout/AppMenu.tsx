@@ -206,6 +206,11 @@ const AppMenu = () => {
                 ]
             },
             {
+                label: 'Contratos',
+                anyPermissions: ['CONTRATOS_CONSULTAR', 'CONTRATOS_GERENCIAR', 'CONTRATOS_FATURAR'],
+                items: [{ label: 'Contratos', icon: 'pi pi-fw pi-file-o', to: '/contratos', anyPermissions: ['CONTRATOS_CONSULTAR', 'CONTRATOS_GERENCIAR'] }]
+            },
+            {
                 label: 'Atividades',
                 anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'],
                 items: [{ label: 'Workflow operacional', icon: 'pi pi-fw pi-check-square', to: '/atividades', anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'] }]

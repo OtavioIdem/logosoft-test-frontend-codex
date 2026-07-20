@@ -297,7 +297,10 @@ export type PermissionCode =
     | 'PRODUCAO_ORDENS_LIBERAR'
     | 'PRODUCAO_ORDENS_APONTAR'
     | 'PRODUCAO_ORDENS_ENCERRAR'
-    | 'PRODUCAO_ORDENS_CANCELAR';
+    | 'PRODUCAO_ORDENS_CANCELAR'
+    | 'CONTRATOS_CONSULTAR'
+    | 'CONTRATOS_GERENCIAR'
+    | 'CONTRATOS_FATURAR';
 
 export type ApiResult<T> = { success: boolean; data?: T; error?: ApiError };
 export type ValidationError = { field: string; message: string };
