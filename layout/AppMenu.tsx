@@ -206,6 +206,15 @@ const AppMenu = () => {
                 ]
             },
             {
+                label: 'CRM',
+                anyPermissions: ['CRM_CONSULTAR', 'CRM_LEADS_GERENCIAR', 'CRM_OPORTUNIDADES_GERENCIAR', 'CRM_CONVERTER', 'CRM_PROPOSTAS_GERENCIAR'],
+                items: [
+                    { label: 'Leads', icon: 'pi pi-fw pi-filter', to: '/crm/leads', anyPermissions: ['CRM_CONSULTAR', 'CRM_LEADS_GERENCIAR'] },
+                    { label: 'Oportunidades', icon: 'pi pi-fw pi-chart-line', to: '/crm/oportunidades', anyPermissions: ['CRM_CONSULTAR', 'CRM_OPORTUNIDADES_GERENCIAR'] },
+                    { label: 'Propostas', icon: 'pi pi-fw pi-file-edit', to: '/crm/propostas', anyPermissions: ['CRM_CONSULTAR', 'CRM_PROPOSTAS_GERENCIAR'] }
+                ]
+            },
+            {
                 label: 'Contratos',
                 anyPermissions: ['CONTRATOS_CONSULTAR', 'CONTRATOS_GERENCIAR', 'CONTRATOS_FATURAR'],
                 items: [{ label: 'Contratos', icon: 'pi pi-fw pi-file-o', to: '/contratos', anyPermissions: ['CONTRATOS_CONSULTAR', 'CONTRATOS_GERENCIAR'] }]

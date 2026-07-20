@@ -50,6 +50,7 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/qualidade(?:\/.*)?$/, anyOf: ['QUALIDADE_CONSULTAR', 'QUALIDADE_INSPECIONAR', 'QUALIDADE_NAO_CONFORMIDADE_GERENCIAR'], description: 'Qualidade (inspeções e não-conformidades)' },
     { pattern: /^\/producao(?:\/.*)?$/, anyOf: ['PRODUCAO_CONSULTAR', 'PRODUCAO_FICHA_TECNICA_GERENCIAR', 'PRODUCAO_ORDENS_GERENCIAR', 'PRODUCAO_ORDENS_LIBERAR', 'PRODUCAO_ORDENS_APONTAR', 'PRODUCAO_ORDENS_ENCERRAR', 'PRODUCAO_ORDENS_CANCELAR'], description: 'Produção (fichas técnicas e ordens de produção)' },
     { pattern: /^\/contratos(?:\/.*)?$/, anyOf: ['CONTRATOS_CONSULTAR', 'CONTRATOS_GERENCIAR', 'CONTRATOS_FATURAR'], description: 'Contratos (faturamento recorrente e por consumo)' },
+    { pattern: /^\/crm(?:\/.*)?$/, anyOf: ['CRM_CONSULTAR', 'CRM_LEADS_GERENCIAR', 'CRM_OPORTUNIDADES_GERENCIAR', 'CRM_CONVERTER', 'CRM_PROPOSTAS_GERENCIAR'], description: 'CRM (leads, oportunidades e propostas)' },
     { pattern: /^\/atividades(?:\/.*)?$/, anyOf: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'], description: 'Atividades' },
     { pattern: /^\/relatorios(?:\/.*)?$/, anyOf: ['RELATORIOS_CONSULTAR'], description: 'Relatórios' },
     { pattern: /^\/auditoria(?:\/.*)?$/, anyOf: ['AUDITORIA_CONSULTAR'], description: 'Auditoria' }

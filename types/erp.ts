@@ -300,7 +300,12 @@ export type PermissionCode =
     | 'PRODUCAO_ORDENS_CANCELAR'
     | 'CONTRATOS_CONSULTAR'
     | 'CONTRATOS_GERENCIAR'
-    | 'CONTRATOS_FATURAR';
+    | 'CONTRATOS_FATURAR'
+    | 'CRM_CONSULTAR'
+    | 'CRM_LEADS_GERENCIAR'
+    | 'CRM_OPORTUNIDADES_GERENCIAR'
+    | 'CRM_CONVERTER'
+    | 'CRM_PROPOSTAS_GERENCIAR';
 
 export type ApiResult<T> = { success: boolean; data?: T; error?: ApiError };
 export type ValidationError = { field: string; message: string };
