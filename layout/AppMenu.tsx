@@ -198,6 +198,14 @@ const AppMenu = () => {
                 ]
             },
             {
+                label: 'Produção',
+                anyPermissions: ['PRODUCAO_CONSULTAR', 'PRODUCAO_FICHA_TECNICA_GERENCIAR', 'PRODUCAO_ORDENS_GERENCIAR', 'PRODUCAO_ORDENS_LIBERAR', 'PRODUCAO_ORDENS_APONTAR', 'PRODUCAO_ORDENS_ENCERRAR', 'PRODUCAO_ORDENS_CANCELAR'],
+                items: [
+                    { label: 'Fichas técnicas', icon: 'pi pi-fw pi-sitemap', to: '/producao/fichas-tecnicas', anyPermissions: ['PRODUCAO_CONSULTAR', 'PRODUCAO_FICHA_TECNICA_GERENCIAR'] },
+                    { label: 'Ordens de produção', icon: 'pi pi-fw pi-briefcase', to: '/producao/ordens', anyPermissions: ['PRODUCAO_CONSULTAR', 'PRODUCAO_ORDENS_GERENCIAR'] }
+                ]
+            },
+            {
                 label: 'Atividades',
                 anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'],
                 items: [{ label: 'Workflow operacional', icon: 'pi pi-fw pi-check-square', to: '/atividades', anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'] }]

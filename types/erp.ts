@@ -290,7 +290,14 @@ export type PermissionCode =
     | 'RH_EVENTOS_GERENCIAR'
     | 'QUALIDADE_CONSULTAR'
     | 'QUALIDADE_INSPECIONAR'
-    | 'QUALIDADE_NAO_CONFORMIDADE_GERENCIAR';
+    | 'QUALIDADE_NAO_CONFORMIDADE_GERENCIAR'
+    | 'PRODUCAO_CONSULTAR'
+    | 'PRODUCAO_FICHA_TECNICA_GERENCIAR'
+    | 'PRODUCAO_ORDENS_GERENCIAR'
+    | 'PRODUCAO_ORDENS_LIBERAR'
+    | 'PRODUCAO_ORDENS_APONTAR'
+    | 'PRODUCAO_ORDENS_ENCERRAR'
+    | 'PRODUCAO_ORDENS_CANCELAR';
 
 export type ApiResult<T> = { success: boolean; data?: T; error?: ApiError };
 export type ValidationError = { field: string; message: string };
