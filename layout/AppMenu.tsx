@@ -190,6 +190,14 @@ const AppMenu = () => {
                 ]
             },
             {
+                label: 'Qualidade',
+                anyPermissions: ['QUALIDADE_CONSULTAR', 'QUALIDADE_INSPECIONAR', 'QUALIDADE_NAO_CONFORMIDADE_GERENCIAR'],
+                items: [
+                    { label: 'Inspeções', icon: 'pi pi-fw pi-verified', to: '/qualidade/inspecoes', anyPermissions: ['QUALIDADE_CONSULTAR', 'QUALIDADE_INSPECIONAR'] },
+                    { label: 'Não-conformidades', icon: 'pi pi-fw pi-exclamation-triangle', to: '/qualidade/nao-conformidades', anyPermissions: ['QUALIDADE_CONSULTAR', 'QUALIDADE_NAO_CONFORMIDADE_GERENCIAR'] }
+                ]
+            },
+            {
                 label: 'Atividades',
                 anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'],
                 items: [{ label: 'Workflow operacional', icon: 'pi pi-fw pi-check-square', to: '/atividades', anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'] }]

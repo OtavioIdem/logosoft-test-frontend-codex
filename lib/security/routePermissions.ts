@@ -47,6 +47,7 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/portaria(?:\/.*)?$/, anyOf: ['PORTARIA_CONSULTAR', 'PORTARIA_PRE_AUTORIZAR', 'PORTARIA_OPERAR'], description: 'Portaria (controle de acesso)' },
     { pattern: /^\/alimentar(?:\/.*)?$/, anyOf: ['ALIMENTAR_CONSULTAR', 'ALIMENTAR_LOTES_GERENCIAR', 'ALIMENTAR_RECALL_GERENCIAR'], description: 'Alimentar (lotes e recall)' },
     { pattern: /^\/rh(?:\/.*)?$/, anyOf: ['RH_CONSULTAR', 'RH_GERENCIAR', 'RH_PONTO_REGISTRAR', 'RH_EVENTOS_GERENCIAR'], description: 'RH (colaboradores, ponto, ausências, benefícios, eventos)' },
+    { pattern: /^\/qualidade(?:\/.*)?$/, anyOf: ['QUALIDADE_CONSULTAR', 'QUALIDADE_INSPECIONAR', 'QUALIDADE_NAO_CONFORMIDADE_GERENCIAR'], description: 'Qualidade (inspeções e não-conformidades)' },
     { pattern: /^\/atividades(?:\/.*)?$/, anyOf: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'], description: 'Atividades' },
     { pattern: /^\/relatorios(?:\/.*)?$/, anyOf: ['RELATORIOS_CONSULTAR'], description: 'Relatórios' },
     { pattern: /^\/auditoria(?:\/.*)?$/, anyOf: ['AUDITORIA_CONSULTAR'], description: 'Auditoria' }

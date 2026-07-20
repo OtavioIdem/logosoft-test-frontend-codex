@@ -51,6 +51,7 @@ const buildInitialValues = (record?: ProdutoResponse | null): ProdutoFormValues 
               precoVendaBase: record.precoVendaBase,
               custoReferencial: record.custoReferencial,
               controlaEstoque: record.controlaEstoque,
+              controlaQualidade: record.controlaQualidade,
               permiteVenda: record.permiteVenda,
               permiteCompra: record.permiteCompra,
               ncm: record.ncm,
@@ -74,6 +75,7 @@ const buildInitialValues = (record?: ProdutoResponse | null): ProdutoFormValues 
               precoVendaBase: 0,
               custoReferencial: 0,
               controlaEstoque: true,
+              controlaQualidade: false,
               permiteVenda: true,
               permiteCompra: true,
               ncm: null,
@@ -210,6 +212,11 @@ export const ProdutoFormDialog = ({
                         <div className="field col-12 md:col-2 flex align-items-center gap-2 mt-4">
                             <Checkbox inputId="permiteCompra" checked={Boolean(values.permiteCompra)} onChange={(event) => update('permiteCompra', Boolean(event.checked))} />
                             <label htmlFor="permiteCompra" className="font-medium">Permite compra</label>
+                        </div>
+                        <div className="field col-12 flex align-items-center gap-2">
+                            <Checkbox inputId="controlaQualidade" checked={Boolean(values.controlaQualidade)} onChange={(event) => update('controlaQualidade', Boolean(event.checked))} />
+                            <label htmlFor="controlaQualidade" className="font-medium">Controla qualidade</label>
+                            <small className="text-color-secondary ml-2">Quando marcado, o recebimento de compra gera inspeção automática.</small>
                         </div>
                         <div className="field col-12">
                             <label htmlFor="observacao" className="font-medium">Observação</label>

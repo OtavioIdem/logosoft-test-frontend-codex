@@ -287,7 +287,10 @@ export type PermissionCode =
     | 'RH_CONSULTAR'
     | 'RH_GERENCIAR'
     | 'RH_PONTO_REGISTRAR'
-    | 'RH_EVENTOS_GERENCIAR';
+    | 'RH_EVENTOS_GERENCIAR'
+    | 'QUALIDADE_CONSULTAR'
+    | 'QUALIDADE_INSPECIONAR'
+    | 'QUALIDADE_NAO_CONFORMIDADE_GERENCIAR';
 
 export type ApiResult<T> = { success: boolean; data?: T; error?: ApiError };
 export type ValidationError = { field: string; message: string };
