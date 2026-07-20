@@ -156,6 +156,15 @@ const AppMenu = () => {
                 items: [{ label: 'Ordens de serviço', icon: 'pi pi-fw pi-wrench', to: '/servicos/ordens', anyPermissions: ['SERVICOS_CONSULTAR', 'SERVICOS_GERENCIAR'] }]
             },
             {
+                label: 'Frota',
+                anyPermissions: ['FROTA_CONSULTAR', 'FROTA_GERENCIAR'],
+                items: [
+                    { label: 'Veículos', icon: 'pi pi-fw pi-car', to: '/frota/veiculos', anyPermissions: ['FROTA_CONSULTAR', 'FROTA_GERENCIAR'] },
+                    { label: 'Motoristas', icon: 'pi pi-fw pi-user', to: '/frota/motoristas', anyPermissions: ['FROTA_CONSULTAR', 'FROTA_GERENCIAR'] },
+                    { label: 'Viagens', icon: 'pi pi-fw pi-map', to: '/frota/viagens', anyPermissions: ['FROTA_CONSULTAR', 'FROTA_GERENCIAR'] }
+                ]
+            },
+            {
                 label: 'Atividades',
                 anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'],
                 items: [{ label: 'Workflow operacional', icon: 'pi pi-fw pi-check-square', to: '/atividades', anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'] }]
