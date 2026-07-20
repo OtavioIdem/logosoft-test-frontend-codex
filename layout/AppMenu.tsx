@@ -178,6 +178,18 @@ const AppMenu = () => {
                 ]
             },
             {
+                label: 'RH',
+                anyPermissions: ['RH_CONSULTAR', 'RH_GERENCIAR', 'RH_PONTO_REGISTRAR', 'RH_EVENTOS_GERENCIAR'],
+                items: [
+                    { label: 'Colaboradores', icon: 'pi pi-fw pi-users', to: '/rh/colaboradores', anyPermissions: ['RH_CONSULTAR', 'RH_GERENCIAR'] },
+                    { label: 'Jornadas', icon: 'pi pi-fw pi-clock', to: '/rh/jornadas', anyPermissions: ['RH_CONSULTAR', 'RH_GERENCIAR'] },
+                    { label: 'Ponto', icon: 'pi pi-fw pi-stopwatch', to: '/rh/ponto', anyPermissions: ['RH_CONSULTAR', 'RH_PONTO_REGISTRAR'] },
+                    { label: 'Ausências', icon: 'pi pi-fw pi-calendar-times', to: '/rh/ausencias', anyPermissions: ['RH_CONSULTAR', 'RH_GERENCIAR'] },
+                    { label: 'Benefícios', icon: 'pi pi-fw pi-gift', to: '/rh/beneficios', anyPermissions: ['RH_CONSULTAR', 'RH_GERENCIAR'] },
+                    { label: 'Eventos de folha', icon: 'pi pi-fw pi-file-edit', to: '/rh/eventos', anyPermissions: ['RH_CONSULTAR', 'RH_EVENTOS_GERENCIAR'] }
+                ]
+            },
+            {
                 label: 'Atividades',
                 anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'],
                 items: [{ label: 'Workflow operacional', icon: 'pi pi-fw pi-check-square', to: '/atividades', anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'] }]

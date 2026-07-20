@@ -283,7 +283,11 @@ export type PermissionCode =
     | 'PORTARIA_OPERAR'
     | 'ALIMENTAR_CONSULTAR'
     | 'ALIMENTAR_LOTES_GERENCIAR'
-    | 'ALIMENTAR_RECALL_GERENCIAR';
+    | 'ALIMENTAR_RECALL_GERENCIAR'
+    | 'RH_CONSULTAR'
+    | 'RH_GERENCIAR'
+    | 'RH_PONTO_REGISTRAR'
+    | 'RH_EVENTOS_GERENCIAR';
 
 export type ApiResult<T> = { success: boolean; data?: T; error?: ApiError };
 export type ValidationError = { field: string; message: string };
