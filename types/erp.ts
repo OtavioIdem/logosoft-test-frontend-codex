@@ -311,7 +311,13 @@ export type PermissionCode =
     | 'CONTABIL_PERIODOS_GERENCIAR'
     | 'CONTABIL_LANCAMENTOS_GERENCIAR'
     | 'CONTABIL_LANCAMENTOS_ESTORNAR'
-    | 'CONTABIL_REGRAS_GERENCIAR';
+    | 'CONTABIL_REGRAS_GERENCIAR'
+    | 'PATRIMONIO_CONSULTAR'
+    | 'PATRIMONIO_BENS_GERENCIAR'
+    | 'PATRIMONIO_TRANSFERIR'
+    | 'PATRIMONIO_BAIXAR'
+    | 'PATRIMONIO_DEPRECIAR'
+    | 'PATRIMONIO_INVENTARIO_GERENCIAR';
 
 export type ApiResult<T> = { success: boolean; data?: T; error?: ApiError };
 export type ValidationError = { field: string; message: string };

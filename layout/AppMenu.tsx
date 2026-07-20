@@ -235,6 +235,15 @@ const AppMenu = () => {
                 ]
             },
             {
+                label: 'Patrimônio',
+                anyPermissions: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_BENS_GERENCIAR', 'PATRIMONIO_TRANSFERIR', 'PATRIMONIO_BAIXAR', 'PATRIMONIO_DEPRECIAR', 'PATRIMONIO_INVENTARIO_GERENCIAR'],
+                items: [
+                    { label: 'Bens', icon: 'pi pi-fw pi-building', to: '/patrimonio/bens', anyPermissions: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_BENS_GERENCIAR'] },
+                    { label: 'Depreciação', icon: 'pi pi-fw pi-chart-line', to: '/patrimonio/depreciacao', anyPermissions: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_DEPRECIAR'] },
+                    { label: 'Inventário', icon: 'pi pi-fw pi-clipboard', to: '/patrimonio/inventarios', anyPermissions: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_INVENTARIO_GERENCIAR'] }
+                ]
+            },
+            {
                 label: 'Relatórios',
                 permission: 'RELATORIOS_CONSULTAR',
                 items: [{ label: 'Operacionais e gerenciais', icon: 'pi pi-fw pi-chart-bar', to: '/relatorios', permission: 'RELATORIOS_CONSULTAR' }]
