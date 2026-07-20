@@ -170,6 +170,14 @@ const AppMenu = () => {
                 items: [{ label: 'Controle de acesso', icon: 'pi pi-fw pi-id-card', to: '/portaria', anyPermissions: ['PORTARIA_CONSULTAR', 'PORTARIA_PRE_AUTORIZAR', 'PORTARIA_OPERAR'] }]
             },
             {
+                label: 'Alimentar',
+                anyPermissions: ['ALIMENTAR_CONSULTAR', 'ALIMENTAR_LOTES_GERENCIAR', 'ALIMENTAR_RECALL_GERENCIAR'],
+                items: [
+                    { label: 'Lotes', icon: 'pi pi-fw pi-box', to: '/alimentar/lotes', anyPermissions: ['ALIMENTAR_CONSULTAR', 'ALIMENTAR_LOTES_GERENCIAR'] },
+                    { label: 'Recalls', icon: 'pi pi-fw pi-exclamation-circle', to: '/alimentar/recalls', anyPermissions: ['ALIMENTAR_CONSULTAR', 'ALIMENTAR_RECALL_GERENCIAR'] }
+                ]
+            },
+            {
                 label: 'Atividades',
                 anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'],
                 items: [{ label: 'Workflow operacional', icon: 'pi pi-fw pi-check-square', to: '/atividades', anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'] }]
