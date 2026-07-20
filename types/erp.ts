@@ -277,7 +277,10 @@ export type PermissionCode =
     | 'ESTOQUE_BLOQUEIO_GERENCIAR'
     | 'FINANCEIRO_FLUXO_CAIXA_CONSULTAR'
     | 'FROTA_CONSULTAR'
-    | 'FROTA_GERENCIAR';
+    | 'FROTA_GERENCIAR'
+    | 'PORTARIA_CONSULTAR'
+    | 'PORTARIA_PRE_AUTORIZAR'
+    | 'PORTARIA_OPERAR';
 
 export type ApiResult<T> = { success: boolean; data?: T; error?: ApiError };
 export type ValidationError = { field: string; message: string };

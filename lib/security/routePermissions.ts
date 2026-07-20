@@ -44,6 +44,7 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/faturamento(?:\/.*)?$/, anyOf: ['FATURAMENTO_CONSULTAR', 'FATURAMENTO_PREPARAR', 'FATURAMENTO_CONFIRMAR', 'FATURAMENTO_CANCELAR'], description: 'Faturamento' },
     { pattern: /^\/servicos(?:\/.*)?$/, anyOf: ['SERVICOS_CONSULTAR', 'SERVICOS_GERENCIAR', 'SERVICOS_APONTAR', 'SERVICOS_FATURAR'], description: 'Serviços (Ordem de Serviço)' },
     { pattern: /^\/frota(?:\/.*)?$/, anyOf: ['FROTA_CONSULTAR', 'FROTA_GERENCIAR'], description: 'Frota (veículos, motoristas, viagens)' },
+    { pattern: /^\/portaria(?:\/.*)?$/, anyOf: ['PORTARIA_CONSULTAR', 'PORTARIA_PRE_AUTORIZAR', 'PORTARIA_OPERAR'], description: 'Portaria (controle de acesso)' },
     { pattern: /^\/atividades(?:\/.*)?$/, anyOf: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'], description: 'Atividades' },
     { pattern: /^\/relatorios(?:\/.*)?$/, anyOf: ['RELATORIOS_CONSULTAR'], description: 'Relatórios' },
     { pattern: /^\/auditoria(?:\/.*)?$/, anyOf: ['AUDITORIA_CONSULTAR'], description: 'Auditoria' }
