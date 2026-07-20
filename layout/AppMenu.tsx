@@ -235,6 +235,15 @@ const AppMenu = () => {
                 ]
             },
             {
+                label: 'Bancos',
+                anyPermissions: ['BANCOS_CONSULTAR', 'BANCOS_GERENCIAR', 'BOLETOS_GERAR', 'BOLETOS_CANCELAR', 'CNAB_REMESSA_GERAR', 'CNAB_RETORNO_PROCESSAR'],
+                items: [
+                    { label: 'Cadastros bancários', icon: 'pi pi-fw pi-money-bill', to: '/bancos', anyPermissions: ['BANCOS_CONSULTAR', 'BANCOS_GERENCIAR'] },
+                    { label: 'Boletos', icon: 'pi pi-fw pi-credit-card', to: '/bancos/boletos', anyPermissions: ['BANCOS_CONSULTAR', 'BOLETOS_GERAR'] },
+                    { label: 'CNAB', icon: 'pi pi-fw pi-sync', to: '/bancos/cnab', anyPermissions: ['BANCOS_CONSULTAR', 'CNAB_REMESSA_GERAR', 'CNAB_RETORNO_PROCESSAR'] }
+                ]
+            },
+            {
                 label: 'Patrimônio',
                 anyPermissions: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_BENS_GERENCIAR', 'PATRIMONIO_TRANSFERIR', 'PATRIMONIO_BAIXAR', 'PATRIMONIO_DEPRECIAR', 'PATRIMONIO_INVENTARIO_GERENCIAR'],
                 items: [

@@ -317,7 +317,13 @@ export type PermissionCode =
     | 'PATRIMONIO_TRANSFERIR'
     | 'PATRIMONIO_BAIXAR'
     | 'PATRIMONIO_DEPRECIAR'
-    | 'PATRIMONIO_INVENTARIO_GERENCIAR';
+    | 'PATRIMONIO_INVENTARIO_GERENCIAR'
+    | 'BANCOS_CONSULTAR'
+    | 'BANCOS_GERENCIAR'
+    | 'BOLETOS_GERAR'
+    | 'BOLETOS_CANCELAR'
+    | 'CNAB_REMESSA_GERAR'
+    | 'CNAB_RETORNO_PROCESSAR';
 
 export type ApiResult<T> = { success: boolean; data?: T; error?: ApiError };
 export type ValidationError = { field: string; message: string };
