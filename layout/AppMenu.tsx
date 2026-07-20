@@ -225,6 +225,16 @@ const AppMenu = () => {
                 items: [{ label: 'Workflow operacional', icon: 'pi pi-fw pi-check-square', to: '/atividades', anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'] }]
             },
             {
+                label: 'Contábil',
+                anyPermissions: ['CONTABIL_CONSULTAR', 'CONTABIL_PLANO_CONTAS_GERENCIAR', 'CONTABIL_PERIODOS_GERENCIAR', 'CONTABIL_LANCAMENTOS_GERENCIAR', 'CONTABIL_LANCAMENTOS_ESTORNAR', 'CONTABIL_REGRAS_GERENCIAR'],
+                items: [
+                    { label: 'Plano de contas', icon: 'pi pi-fw pi-sitemap', to: '/contabil/plano-contas', anyPermissions: ['CONTABIL_CONSULTAR', 'CONTABIL_PLANO_CONTAS_GERENCIAR'] },
+                    { label: 'Períodos', icon: 'pi pi-fw pi-calendar', to: '/contabil/periodos', anyPermissions: ['CONTABIL_CONSULTAR', 'CONTABIL_PERIODOS_GERENCIAR'] },
+                    { label: 'Lançamentos', icon: 'pi pi-fw pi-book', to: '/contabil/lancamentos', anyPermissions: ['CONTABIL_CONSULTAR', 'CONTABIL_LANCAMENTOS_GERENCIAR'] },
+                    { label: 'Regras de contabilização', icon: 'pi pi-fw pi-sliders-h', to: '/contabil/regras', anyPermissions: ['CONTABIL_CONSULTAR', 'CONTABIL_REGRAS_GERENCIAR'] }
+                ]
+            },
+            {
                 label: 'Relatórios',
                 permission: 'RELATORIOS_CONSULTAR',
                 items: [{ label: 'Operacionais e gerenciais', icon: 'pi pi-fw pi-chart-bar', to: '/relatorios', permission: 'RELATORIOS_CONSULTAR' }]

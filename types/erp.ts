@@ -305,7 +305,13 @@ export type PermissionCode =
     | 'CRM_LEADS_GERENCIAR'
     | 'CRM_OPORTUNIDADES_GERENCIAR'
     | 'CRM_CONVERTER'
-    | 'CRM_PROPOSTAS_GERENCIAR';
+    | 'CRM_PROPOSTAS_GERENCIAR'
+    | 'CONTABIL_CONSULTAR'
+    | 'CONTABIL_PLANO_CONTAS_GERENCIAR'
+    | 'CONTABIL_PERIODOS_GERENCIAR'
+    | 'CONTABIL_LANCAMENTOS_GERENCIAR'
+    | 'CONTABIL_LANCAMENTOS_ESTORNAR'
+    | 'CONTABIL_REGRAS_GERENCIAR';
 
 export type ApiResult<T> = { success: boolean; data?: T; error?: ApiError };
 export type ValidationError = { field: string; message: string };

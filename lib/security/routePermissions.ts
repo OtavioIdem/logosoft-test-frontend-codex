@@ -51,6 +51,7 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/producao(?:\/.*)?$/, anyOf: ['PRODUCAO_CONSULTAR', 'PRODUCAO_FICHA_TECNICA_GERENCIAR', 'PRODUCAO_ORDENS_GERENCIAR', 'PRODUCAO_ORDENS_LIBERAR', 'PRODUCAO_ORDENS_APONTAR', 'PRODUCAO_ORDENS_ENCERRAR', 'PRODUCAO_ORDENS_CANCELAR'], description: 'Produção (fichas técnicas e ordens de produção)' },
     { pattern: /^\/contratos(?:\/.*)?$/, anyOf: ['CONTRATOS_CONSULTAR', 'CONTRATOS_GERENCIAR', 'CONTRATOS_FATURAR'], description: 'Contratos (faturamento recorrente e por consumo)' },
     { pattern: /^\/crm(?:\/.*)?$/, anyOf: ['CRM_CONSULTAR', 'CRM_LEADS_GERENCIAR', 'CRM_OPORTUNIDADES_GERENCIAR', 'CRM_CONVERTER', 'CRM_PROPOSTAS_GERENCIAR'], description: 'CRM (leads, oportunidades e propostas)' },
+    { pattern: /^\/contabil(?:\/.*)?$/, anyOf: ['CONTABIL_CONSULTAR', 'CONTABIL_PLANO_CONTAS_GERENCIAR', 'CONTABIL_PERIODOS_GERENCIAR', 'CONTABIL_LANCAMENTOS_GERENCIAR', 'CONTABIL_LANCAMENTOS_ESTORNAR', 'CONTABIL_REGRAS_GERENCIAR'], description: 'Contábil (plano de contas, períodos, lançamentos, regras)' },
     { pattern: /^\/atividades(?:\/.*)?$/, anyOf: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'], description: 'Atividades' },
     { pattern: /^\/relatorios(?:\/.*)?$/, anyOf: ['RELATORIOS_CONSULTAR'], description: 'Relatórios' },
     { pattern: /^\/auditoria(?:\/.*)?$/, anyOf: ['AUDITORIA_CONSULTAR'], description: 'Auditoria' }
