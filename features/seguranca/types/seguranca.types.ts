@@ -71,6 +71,8 @@ export type VincularGrupoUsuarioFormValues = {
 
 export type GrupoAcessoResponse = {
     id: Guid;
+    empresaId?: Guid;
+    filialId?: Guid | null;
     nome: string;
     descricao?: string | null;
     permissoes?: PermissionCode[];
@@ -80,21 +82,27 @@ export type GrupoAcessoResponse = {
 };
 
 export type CriarGrupoAcessoRequest = {
+    empresaId: Guid;
+    filialId?: Guid | null;
     nome: string;
     descricao?: string | null;
     permissoes: PermissionCode[];
 };
 
 export type AtualizarGrupoAcessoRequest = {
+    empresaId?: Guid;
+    filialId?: Guid | null;
     nome: string;
     descricao?: string | null;
     permissoes: PermissionCode[];
 };
 
 export type GrupoAcessoFormValues = {
+    empresaId: string;
+    filialId?: string | null;
     nome: string;
     descricao?: string | null;
-    permissoesTexto: string;
+    permissoes: PermissionCode[];
 };
 
 export type SegurancaListQuery = {

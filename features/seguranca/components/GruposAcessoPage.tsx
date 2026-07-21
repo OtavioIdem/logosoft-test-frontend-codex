@@ -34,7 +34,7 @@ export const GruposAcessoPage = () => {
     const [reasonVisible, setReasonVisible] = useState(false);
     const [selectedGrupo, setSelectedGrupo] = useState<GrupoAcessoResponse | null>(null);
 
-    const grupos = gruposQuery.data ?? [];
+    const grupos = useMemo(() => gruposQuery.data ?? [], [gruposQuery.data]);
     const filteredGrupos = useMemo(() => {
         const term = search.trim().toLowerCase();
         if (!term) return grupos;

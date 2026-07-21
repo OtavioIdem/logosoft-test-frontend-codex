@@ -31,16 +31,6 @@ const runSecurityRequest = async <T>(request: () => Promise<T>) => {
 
 const params = (query?: SegurancaListQuery) => cleanQueryParams({ empresaId: query?.empresaId, filialId: query?.filialId, termo: query?.termo, ativo: query?.ativo ?? undefined });
 
-const normalizePermissionsText = (value: string): PermissionCode[] =>
-    Array.from(
-        new Set(
-            value
-                .split(/[\n,;]/)
-                .map((item) => item.trim())
-                .filter(Boolean)
-        )
-    ) as PermissionCode[];
-
 export const buildCriarUsuarioPayload = (values: UsuarioFormValues): CriarUsuarioRequest => {
     const empresaId = normalizeGuidOrNull(values.empresaId);
     if (!empresaId) {
@@ -78,10 +68,16 @@ export const buildRemoverGrupoUsuarioPayload = (motivo: string): RemoverGrupoUsu
 
 export const buildGrupoAcessoPayload = (values: GrupoAcessoFormValues): CriarGrupoAcessoRequest | AtualizarGrupoAcessoRequest => {
     const parsed = grupoAcessoSchema.parse(values);
+    const empresaId = normalizeGuidOrNull(parsed.empresaId);
+    if (!empresaId) {
+        throw new Error('Informe uma empresa válida para o grupo de acesso.');
+    }
     return sanitizePayload({
+        empresaId,
+        filialId: normalizeGuidOrNull(parsed.filialId ?? null) ?? null,
         nome: parsed.nome.trim(),
         descricao: parsed.descricao?.trim() || null,
-        permissoes: normalizePermissionsText(parsed.permissoesTexto)
+        permissoes: parsed.permissoes as PermissionCode[]
     }) as CriarGrupoAcessoRequest;
 };
 
