@@ -9,6 +9,7 @@ export type RoutePermissionRule = {
 export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/seguranca\/usuarios(?:\/.*)?$/, anyOf: ['SEGURANCA_USUARIOS_CONSULTAR', 'SEGURANCA_USUARIOS_GERENCIAR'], description: 'Usuários' },
     { pattern: /^\/seguranca\/grupos-acesso(?:\/.*)?$/, anyOf: ['SEGURANCA_PERMISSOES_GERENCIAR'], description: 'Grupos de acesso' },
+    { pattern: /^\/administracao\/deploy(?:\/.*)?$/, anyOf: ['DEPLOY_CONSULTAR', 'DEPLOY_GERENCIAR'], description: 'Deploy / Ambiente' },
     { pattern: /^\/administracao(?:\/.*)?$/, anyOf: ['ADMINISTRACAO_CONSULTAR', 'ADMINISTRACAO_GERENCIAR'], description: 'Administração' },
     { pattern: /^\/pessoas(?:\/.*)?$/, anyOf: ['PESSOAS_CONSULTAR', 'PESSOAS_GERENCIAR'], description: 'Pessoas' },
     { pattern: /^\/clientes(?:\/.*)?$/, anyOf: ['CLIENTES_CONSULTAR', 'CLIENTES_GERENCIAR'], description: 'Clientes' },

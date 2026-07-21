@@ -3,10 +3,14 @@ import { mapApiError } from '@/lib/http/apiError';
 import { cleanQueryParams, sanitizePayload } from '@/lib/http/requestUtils';
 import { relatorioPeriodoQuerySchema } from '@/features/relatorios/schemas/relatoriosSchemas';
 import {
+    RelatorioAreaExportavel,
+    RelatorioDashboardConsolidadoResponse,
+    RelatorioFormatoExportacao,
     RelatorioGerencialComprasResponse,
     RelatorioGerencialEstoqueResponse,
     RelatorioGerencialFinanceiroResponse,
     RelatorioGerencialFiscalResponse,
+    RelatorioGerencialProducaoResponse,
     RelatorioGerencialVendasResponse,
     RelatorioOperacionalResponse,
     RelatorioPeriodoQuery
@@ -65,6 +69,24 @@ export const relatoriosApi = {
     async gerencialFiscal(query: RelatorioPeriodoQuery) {
         return runRelatoriosRequest(async () => {
             const response = await httpClient.get<RelatorioGerencialFiscalResponse>('/api/relatorios/gerenciais/fiscal', { params: params(query) });
+            return response.data;
+        });
+    },
+    async gerencialProducao(query: RelatorioPeriodoQuery) {
+        return runRelatoriosRequest(async () => {
+            const response = await httpClient.get<RelatorioGerencialProducaoResponse>('/api/relatorios/gerenciais/producao', { params: params(query) });
+            return response.data;
+        });
+    },
+    async dashboardConsolidado(query: RelatorioPeriodoQuery) {
+        return runRelatoriosRequest(async () => {
+            const response = await httpClient.get<RelatorioDashboardConsolidadoResponse>('/api/relatorios/gerenciais/dashboard', { params: params(query) });
+            return response.data;
+        });
+    },
+    async exportar(area: RelatorioAreaExportavel, formato: RelatorioFormatoExportacao, query: RelatorioPeriodoQuery) {
+        return runRelatoriosRequest(async () => {
+            const response = await httpClient.get<Blob>('/api/relatorios/gerenciais/exportar', { params: { ...params(query), area, formato }, responseType: 'blob' });
             return response.data;
         });
     }

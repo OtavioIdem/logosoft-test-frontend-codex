@@ -323,7 +323,10 @@ export type PermissionCode =
     | 'BOLETOS_GERAR'
     | 'BOLETOS_CANCELAR'
     | 'CNAB_REMESSA_GERAR'
-    | 'CNAB_RETORNO_PROCESSAR';
+    | 'CNAB_RETORNO_PROCESSAR'
+    | 'RELATORIOS_EXPORTAR'
+    | 'DEPLOY_CONSULTAR'
+    | 'DEPLOY_GERENCIAR';
 
 export type ApiResult<T> = { success: boolean; data?: T; error?: ApiError };
 export type ValidationError = { field: string; message: string };

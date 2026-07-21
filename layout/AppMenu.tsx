@@ -264,6 +264,11 @@ const AppMenu = () => {
                     { label: 'Auditoria operacional', icon: 'pi pi-fw pi-search', to: '/auditoria/operacional', permission: 'AUDITORIA_CONSULTAR' },
                     { label: 'Eventos de auditoria', icon: 'pi pi-fw pi-history', to: '/auditoria/eventos', permission: 'AUDITORIA_CONSULTAR' }
                 ]
+            },
+            {
+                label: 'Deploy',
+                anyPermissions: ['DEPLOY_CONSULTAR', 'DEPLOY_GERENCIAR'],
+                items: [{ label: 'Deploy / Ambiente', icon: 'pi pi-fw pi-server', to: '/administracao/deploy', anyPermissions: ['DEPLOY_CONSULTAR', 'DEPLOY_GERENCIAR'] }]
             }
         ],
         []
