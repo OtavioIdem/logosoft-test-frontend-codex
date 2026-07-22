@@ -99,7 +99,7 @@ export const LoginForm = () => {
                 </div>
 
                 <div className="login-field">
-                    <label htmlFor="empresaId">Empresa</label>
+                    <label htmlFor="empresaId">Empresa <span className="login-field__optional">(opcional)</span></label>
                     <Controller
                         name="empresaId"
                         control={control}
@@ -108,9 +108,10 @@ export const LoginForm = () => {
                                 {...field}
                                 id="empresaId"
                                 className="w-full"
-                                placeholder="Código autorizado"
+                                placeholder="Código autorizado (opcional)"
                                 autoComplete="organization"
-                                aria-label="Empresa"
+                                aria-label="Empresa (opcional)"
+                                aria-describedby="empresaId-help"
                                 onChange={(event) => {
                                     clearApiError();
                                     field.onChange(event);
@@ -118,6 +119,7 @@ export const LoginForm = () => {
                             />
                         )}
                     />
+                    <small id="empresaId-help" className="login-field__help">Deixe em branco para acessar sem informar a empresa.</small>
                 </div>
 
                 <Button type="submit" label="Entrar" icon="pi pi-sign-in" loading={isSubmitting} disabled={isSubmitting} className="w-full login-form__submit" />

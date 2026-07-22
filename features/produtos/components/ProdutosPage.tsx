@@ -22,7 +22,7 @@ import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { useFornecedores } from '@/features/fornecedores/hooks/useFornecedoresResources';
 import { CodigoBarrasDialog, ProdutoFornecedorDialog } from '@/features/produtos/components/ProdutoComplementoDialogs';
 import { ProdutoFormDialog } from '@/features/produtos/components/ProdutoFormDialog';
-import { useCategoriasProduto, useMarcas, useProdutoMutations, useProdutos, useUnidadesMedida } from '@/features/produtos/hooks/useProdutosResources';
+import { useProdutoMutations, useProdutos } from '@/features/produtos/hooks/useProdutosResources';
 import { CodigoBarrasFormValues, ProdutoFormValues, ProdutoFornecedorFormValues, ProdutoListQuery, ProdutoResponse } from '@/features/produtos/types/produtos.types';
 import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
@@ -64,9 +64,6 @@ export const ProdutosPage = () => {
     const [complementoState, setComplementoState] = useState<ComplementoState>(null);
 
     const produtosQuery = useProdutos(filters);
-    const categoriasQuery = useCategoriasProduto(filters);
-    const unidadesQuery = useUnidadesMedida(filters);
-    const marcasQuery = useMarcas(filters);
     const fornecedoresQuery = useFornecedores({ empresaId: filters.empresaId, filialId: filters.filialId });
     const { saveMutation, precoCustoMutation, dadosFiscaisMutation, codigoBarrasMutation, fornecedorMutation, inativarMutation } = useProdutoMutations();
 
@@ -138,7 +135,7 @@ export const ProdutosPage = () => {
     };
 
     const headerActions = (
-        <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
+        <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
             <SearchInput ariaLabel="Buscar produtos" defaultValue={localSearch} onChange={(term) => { setFirst(0); setLocalSearch(term); }} />
             <PermissionGuard permission="PRODUTOS_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Novo produto" icon="pi pi-plus" disabled={disabled} onClick={() => { setSelected(null); setFormVisible(true); }} />}</PermissionGuard>
@@ -166,7 +163,7 @@ export const ProdutosPage = () => {
                 </DataTableServer>
                 {!produtosQuery.isLoading && records.length === 0 ? <EmptyState title="Nenhum produto" description="Crie um cadastro ou ajuste os filtros." /> : null}
             </Card>
-            <ProdutoFormDialog visible={formVisible} record={selected} categorias={categoriasQuery.data ?? []} unidades={unidadesQuery.data ?? []} marcas={marcasQuery.data ?? []} loading={mutationLoading} onHide={() => setFormVisible(false)} onSubmit={save} />
+            <ProdutoFormDialog visible={formVisible} record={selected} loading={mutationLoading} onHide={() => setFormVisible(false)} onSubmit={save} />
             <CodigoBarrasDialog visible={complementoState?.kind === 'codigo'} loading={codigoBarrasMutation.isPending} onHide={() => setComplementoState(null)} onSubmit={adicionarCodigo} />
             <ProdutoFornecedorDialog visible={complementoState?.kind === 'fornecedor'} fornecedores={fornecedoresQuery.data ?? []} loading={fornecedorMutation.isPending} onHide={() => setComplementoState(null)} onSubmit={vincularFornecedor} />
             <ReasonDialog visible={Boolean(reasonRecord)} title="Motivo da inativação" confirmLabel="Inativar" loading={inativarMutation.isPending} onHide={() => setReasonRecord(null)} onConfirm={inativar} />

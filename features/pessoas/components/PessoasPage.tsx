@@ -66,11 +66,19 @@ export const PessoasPage = () => {
     };
 
     const save = async (values: PessoaFormValues) => {
+        const isCreate = !values.id;
         await runWithToast(
             async () => {
                 await saveMutation.mutateAsync({ id: values.id, values });
                 setFormVisible(false);
                 setSelected(null);
+                // Após criar, alinha o filtro à empresa/filial do novo registro para que ele apareça na listagem
+                // (a lista é filtrada por empresa; sem isso o cadastro recém-criado "some" apesar do sucesso).
+                if (isCreate && values.empresaId) {
+                    setFirst(0);
+                    setLocalSearch('');
+                    setFilters((current) => ({ ...current, empresaId: values.empresaId ?? null, filialId: values.filialId ?? null }));
+                }
             },
             { success: { summary: 'Pessoa salva', detail: 'Cadastro de pessoa gravado com sucesso.' }, error: { summary: 'Erro ao salvar pessoa', detail: 'Não foi possível salvar a pessoa.' }, rethrow: true }
         );
@@ -88,7 +96,7 @@ export const PessoasPage = () => {
     };
 
     const headerActions = (
-        <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
+        <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
             <SearchInput ariaLabel="Buscar pessoas" defaultValue={localSearch} onChange={(term) => { setFirst(0); setLocalSearch(term); }} />
             <PermissionGuard permission="PESSOAS_GERENCIAR" mode="disable">

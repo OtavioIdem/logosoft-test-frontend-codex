@@ -222,7 +222,7 @@ export const ViagensPage = () => {
     };
 
     const headerActions = (
-        <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
+        <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
             <Dropdown value={filters.status ?? null} options={statusViagemFilterOptions} onChange={(event) => updateFilter('status', event.value)} aria-label="Filtrar por status" />
             <PermissionGuard permission="FROTA_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Nova viagem" icon="pi pi-plus" disabled={disabled} onClick={() => setDialog('iniciar')} />}</PermissionGuard>

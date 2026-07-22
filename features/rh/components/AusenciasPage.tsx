@@ -89,7 +89,7 @@ const FeriasTab = () => {
 
     return (
         <>
-            <div className="flex flex-column md:flex-row gap-2 md:align-items-center mb-3">
+            <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center mb-3">
                 <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
                 <Dropdown value={filters.status ?? null} options={statusFeriasFilterOptions} onChange={(event) => updateFilter('status', event.value)} aria-label="Filtrar por status" />
                 <PermissionGuard permission="RH_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Solicitar férias" icon="pi pi-plus" disabled={disabled} onClick={() => setFormVisible(true)} />}</PermissionGuard>
@@ -144,7 +144,7 @@ const AfastamentosTab = () => {
 
     return (
         <>
-            <div className="flex flex-column md:flex-row gap-2 md:align-items-center mb-3">
+            <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center mb-3">
                 <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
                 <Dropdown value={filters.status ?? null} options={statusAfastamentoFilterOptions} onChange={(event) => updateFilter('status', event.value)} aria-label="Filtrar por status" />
                 <PermissionGuard permission="RH_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Registrar afastamento" icon="pi pi-plus" disabled={disabled} onClick={() => setFormVisible(true)} />}</PermissionGuard>

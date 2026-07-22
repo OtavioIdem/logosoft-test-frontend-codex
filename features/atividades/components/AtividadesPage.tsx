@@ -166,7 +166,7 @@ export const AtividadesPage = () => {
     };
 
     const headerActions = (
-        <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
+        <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             <SearchInput ariaLabel="Buscar atividade" defaultValue={search} onChange={(term) => { setSearch(term); setFirst(0); }} />
             <PermissionGuard permission="ATIVIDADES_GERENCIAR" mode="disable">
                 {({ disabled }) => <Button label="Nova atividade" icon="pi pi-plus" disabled={disabled} onClick={() => { setSelected(null); setFormVisible(true); }} />}

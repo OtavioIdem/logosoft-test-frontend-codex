@@ -70,7 +70,7 @@ export const InventariosOperacionaisTab = () => {
 
     return (
         <>
-            <div className="flex flex-column md:flex-row gap-2 md:align-items-center mb-3">
+            <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center mb-3">
                 <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
                 <Dropdown value={filters.status ?? null} options={statusInventarioOptions} onChange={(event) => updateFilter('status', event.value)} aria-label="Filtrar por status" />
                 <PermissionGuard permission="ESTOQUE_INVENTARIO_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Novo inventário" icon="pi pi-plus" disabled={disabled} onClick={() => setDialog('criar')} />}</PermissionGuard>

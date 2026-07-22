@@ -70,7 +70,7 @@ export const LocaisEstoquePage = () => {
     };
 
     const headerActions = (
-        <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
+        <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             <EstoqueFilterBar filters={filters} search={localSearch} onSearchChange={(value) => { setFirst(0); setLocalSearch(value); }} onFilterChange={updateFilter} />
             <PermissionGuard permission="LOCAIS_ESTOQUE_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Novo local" icon="pi pi-plus" disabled={disabled} onClick={() => { setSelected(null); setFormVisible(true); }} />}</PermissionGuard>
         </div>

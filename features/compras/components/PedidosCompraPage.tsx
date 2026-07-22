@@ -63,7 +63,7 @@ export const PedidosCompraPage = () => {
     const updateFilter = (name: keyof PedidoCompraListQuery, value: string | number | null) => { setFirst(0); setFilters((current) => ({ ...current, [name]: value || null })); };
 
     const headerActions = (
-        <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
+        <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
             <EntitySelect entityName="fornecedor" value={filters.fornecedorId ?? null} options={fornecedorOptions(fornecedoresQuery.data ?? [], pessoaLabelMap)} disabled={fornecedoresQuery.isLoading || !filters.empresaId} onChange={(value) => updateFilter('fornecedorId', value)} />
             <Dropdown className="min-w-14rem" value={filters.status ?? null} options={statusPedidoCompraOptions} optionLabel="label" optionValue="value" showClear placeholder="Status" onChange={(event) => updateFilter('status', event.value ?? null)} />

@@ -73,7 +73,7 @@ export const CaixasPdvPage = () => {
     };
 
     const headerActions = (
-        <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
+        <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
             <PermissionGuard permission="PDV_CAIXA_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Abrir caixa" icon="pi pi-plus" disabled={disabled} onClick={() => setAbrirVisible(true)} />}</PermissionGuard>
         </div>

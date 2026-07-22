@@ -31,6 +31,17 @@ const runSecurityRequest = async <T>(request: () => Promise<T>) => {
 
 const params = (query?: SegurancaListQuery) => cleanQueryParams({ empresaId: query?.empresaId, filialId: query?.filialId, termo: query?.termo, ativo: query?.ativo ?? undefined });
 
+/**
+ * Normaliza o grupo de acesso vindo do backend. Algumas versões enviam apenas o campo textual
+ * `status` ("Ativo"/"Inativo") em vez do booleano `ativo` que a UI consome — sem esta normalização
+ * o grupo aparece sempre como "Inativo" e o botão "Inativar" fica permanentemente desabilitado.
+ */
+export const normalizeGrupoAcesso = (grupo: GrupoAcessoResponse): GrupoAcessoResponse => {
+    const statusTexto = typeof grupo.status === 'string' ? grupo.status.trim().toLowerCase() : null;
+    const ativo = typeof grupo.ativo === 'boolean' ? grupo.ativo : statusTexto ? statusTexto === 'ativo' : true;
+    return { ...grupo, ativo, permissoes: grupo.permissoes ?? [] };
+};
+
 export const buildCriarUsuarioPayload = (values: UsuarioFormValues): CriarUsuarioRequest => {
     const empresaId = normalizeGuidOrNull(values.empresaId);
     if (!empresaId) {
@@ -142,14 +153,14 @@ export const segurancaApi = {
     async listarGruposAcesso(query?: SegurancaListQuery) {
         return runSecurityRequest(async () => {
             const response = await httpClient.get<GrupoAcessoResponse[]>('/api/seguranca/grupos-acesso', { params: params(query) });
-            return response.data;
+            return (response.data ?? []).map(normalizeGrupoAcesso);
         });
     },
 
     async obterGrupoAcesso(id: string) {
         return runSecurityRequest(async () => {
             const response = await httpClient.get<GrupoAcessoResponse>(`/api/seguranca/grupos-acesso/${id}`);
-            return response.data;
+            return normalizeGrupoAcesso(response.data);
         });
     },
 
@@ -157,7 +168,7 @@ export const segurancaApi = {
         const payload = buildGrupoAcessoPayload(values);
         return runSecurityRequest(async () => {
             const response = await httpClient.post<GrupoAcessoResponse>('/api/seguranca/grupos-acesso', payload);
-            return response.data;
+            return normalizeGrupoAcesso(response.data);
         });
     },
 
@@ -165,7 +176,7 @@ export const segurancaApi = {
         const payload = buildGrupoAcessoPayload(values);
         return runSecurityRequest(async () => {
             const response = await httpClient.put<GrupoAcessoResponse>(`/api/seguranca/grupos-acesso/${id}`, payload);
-            return response.data;
+            return normalizeGrupoAcesso(response.data);
         });
     },
 

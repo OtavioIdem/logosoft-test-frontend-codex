@@ -66,7 +66,7 @@ export const ContasAvancadoTab = ({ tipo, baixarPermission, gerenciarPermission 
 
     return (
         <>
-            <div className="flex flex-column md:flex-row gap-2 md:align-items-center mb-3">
+            <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center mb-3">
                 <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
                 <Dropdown value={filters.status ?? null} options={statusContaOptions} onChange={(event) => updateFilter('status', event.value)} aria-label="Filtrar por status" />
                 <PermissionGuard permission={gerenciarPermission} mode="disable">{({ disabled }) => <Button label={tipo === 'receber' ? 'Nova conta a receber' : 'Nova conta a pagar'} icon="pi pi-plus" disabled={disabled} onClick={() => setDialog('criar')} />}</PermissionGuard>

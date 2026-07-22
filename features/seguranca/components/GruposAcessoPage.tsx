@@ -74,7 +74,7 @@ export const GruposAcessoPage = () => {
     };
 
     const headerActions = (
-        <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
+        <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             <span className="p-input-icon-left"><i className="pi pi-search" /><InputText placeholder="Buscar grupo" value={search} onChange={(event) => setSearch(event.target.value)} /></span>
             <PermissionGuard permission="SEGURANCA_PERMISSOES_GERENCIAR" mode="disable">
                 {({ disabled }) => <Button label="Novo grupo" icon="pi pi-shield" onClick={() => { setSelectedGrupo(null); setFormVisible(true); }} disabled={disabled} />}

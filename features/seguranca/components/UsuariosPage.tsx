@@ -34,6 +34,8 @@ import { GrupoAcessoResponse, ResetSenhaUsuarioFormValues, UsuarioFormValues, Us
 
 const formatDateTime = (value?: string | null) => (value ? new Date(value).toLocaleString('pt-BR') : '-');
 const gruposLabel = (usuario: UsuarioResponse) => (usuario.gruposAcesso?.length ? usuario.gruposAcesso.map((grupo) => grupo.nome ?? grupo.grupoAcessoId ?? grupo.id).filter(Boolean).join(', ') : '-');
+// Na tabela, a empresa é resumida ao nome fantasia (primeiro segmento do label "Fantasia • Razão • Documento") para não estourar a largura; o label completo fica no tooltip.
+const empresaCurto = (label: string) => label.split(' • ')[0] || label;
 
 export const UsuariosPage = () => {
     const runWithToast = useMutationWithToast();
@@ -142,7 +144,7 @@ export const UsuariosPage = () => {
     };
 
     const headerActions = (
-        <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
+        <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             <span className="p-input-icon-left"><i className="pi pi-search" /><InputText placeholder="Buscar usuário" value={search} onChange={(event) => setSearch(event.target.value)} /></span>
             <PermissionGuard permission="SEGURANCA_USUARIOS_GERENCIAR" mode="disable">
                 {({ disabled }) => <Button label="Novo usuário" icon="pi pi-user-plus" onClick={() => setFormVisible(true)} disabled={disabled} />}
@@ -163,13 +165,21 @@ export const UsuariosPage = () => {
 
                 <DataTableServer<UsuarioResponse> value={filteredUsuarios} totalRecords={filteredUsuarios.length} loading={usuariosQuery.isFetching} first={0} rows={10} onPage={() => undefined} emptyMessage="Nenhum usuário encontrado.">
                     <Column field="nome" header="Nome" />
-                    <Column field="email" header="E-mail" />
-                    <Column header="Login" body={(usuario: UsuarioResponse) => usuario.login ?? usuario.email} />
-                    <Column header="Empresa" body={(usuario: UsuarioResponse) => empresaLabelMap.get(usuario.empresaId) ?? 'Empresa não carregada'} />
-                    <Column header="Grupos" body={(usuario: UsuarioResponse) => gruposLabel(usuario)} />
+                    <Column field="email" header="E-mail" headerClassName="hidden md:table-cell" bodyClassName="hidden md:table-cell" />
+                    <Column header="Login" headerClassName="hidden xl:table-cell" bodyClassName="hidden xl:table-cell" body={(usuario: UsuarioResponse) => usuario.login ?? usuario.email} />
+                    <Column
+                        header="Empresa"
+                        headerClassName="hidden lg:table-cell"
+                        bodyClassName="hidden lg:table-cell"
+                        body={(usuario: UsuarioResponse) => {
+                            const label = empresaLabelMap.get(usuario.empresaId) ?? 'Empresa não carregada';
+                            return <span title={label}>{empresaCurto(label)}</span>;
+                        }}
+                    />
+                    <Column header="Grupos" headerClassName="hidden lg:table-cell" bodyClassName="hidden lg:table-cell" body={(usuario: UsuarioResponse) => gruposLabel(usuario)} />
                     <Column header="Ativo" body={(usuario: UsuarioResponse) => <Tag value={usuario.ativo ? 'Ativo' : 'Inativo'} severity={usuario.ativo ? 'success' : 'danger'} />} />
-                    <Column header="Bloqueado" body={(usuario: UsuarioResponse) => <Tag value={usuario.bloqueado ? 'Bloqueado' : 'Liberado'} severity={usuario.bloqueado ? 'danger' : 'success'} />} />
-                    <Column header="Último login" body={(usuario: UsuarioResponse) => formatDateTime(usuario.ultimoLoginEm)} />
+                    <Column header="Bloqueado" headerClassName="hidden lg:table-cell" bodyClassName="hidden lg:table-cell" body={(usuario: UsuarioResponse) => <Tag value={usuario.bloqueado ? 'Bloqueado' : 'Liberado'} severity={usuario.bloqueado ? 'danger' : 'success'} />} />
+                    <Column header="Último login" headerClassName="hidden xl:table-cell" bodyClassName="hidden xl:table-cell" body={(usuario: UsuarioResponse) => formatDateTime(usuario.ultimoLoginEm)} />
                     <Column
                         header="Ações"
                         align="right"

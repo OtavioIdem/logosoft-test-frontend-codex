@@ -9,10 +9,9 @@ import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
 import { MovimentoEstoqueFormDialog } from '@/features/estoque/components/MovimentoEstoqueFormDialog';
 import { estoqueOperacaoImpactos } from '@/features/estoque/components/estoqueUxUtils';
-import { useLocaisEstoque, useMovimentoEstoqueMutations } from '@/features/estoque/hooks/useEstoqueResources';
+import { useMovimentoEstoqueMutations } from '@/features/estoque/hooks/useEstoqueResources';
 import { MovimentoEstoqueFormValues } from '@/features/estoque/types/estoque.types';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
-import { useProdutos } from '@/features/produtos/hooks/useProdutosResources';
 import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 
 type MovimentoKind = 'entrada' | 'saida' | 'ajuste';
@@ -27,8 +26,6 @@ export const MovimentoOperacionalPage = ({ kind }: { kind: MovimentoKind }) => {
     const runWithToast = useMutationWithToast();
     const { hasPermission } = usePermissions();
     const [dialogVisible, setDialogVisible] = useState(false);
-    const produtosQuery = useProdutos({});
-    const locaisQuery = useLocaisEstoque({});
     const { entradaMutation, saidaMutation, ajusteMutation } = useMovimentoEstoqueMutations();
 
     if (!hasPermission('ESTOQUE_MOVIMENTAR')) return <UnauthorizedState description="Movimentações exigem ESTOQUE_MOVIMENTAR." />;
@@ -64,7 +61,7 @@ export const MovimentoOperacionalPage = ({ kind }: { kind: MovimentoKind }) => {
                     </div>
                 ))}
             </div>
-            <MovimentoEstoqueFormDialog visible={dialogVisible} kind={kind} produtos={produtosQuery.data ?? []} locais={locaisQuery.data ?? []} loading={loading} onHide={() => setDialogVisible(false)} onSubmit={submit} />
+            <MovimentoEstoqueFormDialog visible={dialogVisible} kind={kind} loading={loading} onHide={() => setDialogVisible(false)} onSubmit={submit} />
         </>
     );
 };

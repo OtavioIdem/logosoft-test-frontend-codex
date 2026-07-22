@@ -13,28 +13,32 @@ export const categoriasProdutoQueryKey = (query?: CatalogoListQuery) => ['produt
 export const unidadesMedidaQueryKey = (query?: CatalogoListQuery) => ['produtos-unidades-medida', query] as const;
 export const marcasQueryKey = (query?: CatalogoListQuery) => ['produtos-marcas', query] as const;
 
-export const useProdutos = (query: ProdutoListQuery = {}) =>
+export const useProdutos = (query: ProdutoListQuery = {}, enabled = true) =>
     useQuery({
         queryKey: produtosQueryKey(query),
-        queryFn: () => produtosApi.listar(query)
+        queryFn: () => produtosApi.listar(query),
+        enabled
     });
 
-export const useCategoriasProduto = (query: CatalogoListQuery = {}) =>
+export const useCategoriasProduto = (query: CatalogoListQuery = {}, enabled = true) =>
     useQuery({
         queryKey: categoriasProdutoQueryKey(query),
-        queryFn: () => categoriasProdutoApi.listar(query)
+        queryFn: () => categoriasProdutoApi.listar(query),
+        enabled
     });
 
-export const useUnidadesMedida = (query: CatalogoListQuery = {}) =>
+export const useUnidadesMedida = (query: CatalogoListQuery = {}, enabled = true) =>
     useQuery({
         queryKey: unidadesMedidaQueryKey(query),
-        queryFn: () => unidadesMedidaApi.listar(query)
+        queryFn: () => unidadesMedidaApi.listar(query),
+        enabled
     });
 
-export const useMarcas = (query: CatalogoListQuery = {}) =>
+export const useMarcas = (query: CatalogoListQuery = {}, enabled = true) =>
     useQuery({
         queryKey: marcasQueryKey(query),
-        queryFn: () => marcasApi.listar(query)
+        queryFn: () => marcasApi.listar(query),
+        enabled
     });
 
 export const useProdutoMutations = () => {

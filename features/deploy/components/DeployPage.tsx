@@ -91,8 +91,8 @@ export const DeployPage = () => {
     const status = detalhe ? Number(detalhe.status) : 0;
 
     const headerActions = (
-        <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
-            <Dropdown value={filters.status ?? null} options={statusDeployFilterOptions} onChange={(event) => updateFilter('status', event.value)} aria-label="Filtrar por status" />
+        <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
+            <Dropdown value={filters.status ?? null} options={statusDeployFilterOptions} onChange={(event) => updateFilter('status', event.value)} placeholder="Filtrar por status" aria-label="Filtrar por status" />
             <PermissionGuard permission="DEPLOY_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Registrar deploy" icon="pi pi-plus" disabled={disabled} onClick={() => setDialog('criar')} />}</PermissionGuard>
         </div>
     );

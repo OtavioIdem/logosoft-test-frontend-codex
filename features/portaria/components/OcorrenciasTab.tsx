@@ -52,7 +52,7 @@ export const OcorrenciasTab = () => {
 
     return (
         <>
-            <div className="flex flex-column md:flex-row gap-2 md:align-items-center mb-3">
+            <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center mb-3">
                 <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
                 <Dropdown value={filters.gravidade ?? null} options={gravidadeFilterOptions} onChange={(event) => updateFilter('gravidade', event.value)} aria-label="Filtrar por gravidade" />
                 <Dropdown value={filters.status ?? null} options={statusOcorrenciaFilterOptions} onChange={(event) => updateFilter('status', event.value)} aria-label="Filtrar por status" />

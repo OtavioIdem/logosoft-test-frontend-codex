@@ -84,7 +84,7 @@ export const NaoConformidadesPage = () => {
     const status = detalhe ? Number(detalhe.status) : 0;
 
     const headerActions = (
-        <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
+        <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
             <Dropdown value={filters.status ?? null} options={statusNaoConformidadeFilterOptions} onChange={(event) => updateFilter('status', event.value)} aria-label="Filtrar por status" />
         </div>

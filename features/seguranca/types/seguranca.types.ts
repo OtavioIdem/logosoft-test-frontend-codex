@@ -77,6 +77,8 @@ export type GrupoAcessoResponse = {
     descricao?: string | null;
     permissoes?: PermissionCode[];
     ativo: boolean;
+    /** Campo textual de status enviado por algumas versões do backend (ex.: "Ativo"/"Inativo"). */
+    status?: string | null;
     criadoEm?: IsoDateTime | null;
     alteradoEm?: IsoDateTime | null;
 };

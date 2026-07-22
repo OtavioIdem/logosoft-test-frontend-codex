@@ -3,6 +3,7 @@
 import { Dropdown } from 'primereact/dropdown';
 import type { DropdownFilterEvent } from 'primereact/dropdown';
 import { SelectOption } from '@/types/erp';
+import { truncateLabel } from '@/lib/formatters/display';
 
 export const SearchSelect = <TValue extends string | number | boolean | null = string>({
     id,
@@ -14,7 +15,8 @@ export const SearchSelect = <TValue extends string | number | boolean | null = s
     filterPlaceholder,
     emptyMessage,
     loading,
-    disabled
+    disabled,
+    maxLabelLength = 40
 }: {
     id?: string;
     value?: TValue | null;
@@ -26,6 +28,7 @@ export const SearchSelect = <TValue extends string | number | boolean | null = s
     emptyMessage?: string;
     loading?: boolean;
     disabled?: boolean;
+    maxLabelLength?: number;
 }) => (
     <Dropdown
         id={id}
@@ -43,6 +46,11 @@ export const SearchSelect = <TValue extends string | number | boolean | null = s
         resetFilterOnHide
         placeholder={placeholder ?? 'Selecione'}
         disabled={disabled}
+        valueTemplate={(option: SelectOption<TValue> | null) => {
+            if (!option) return <span>{placeholder ?? 'Selecione'}</span>;
+            const label = String(option.label ?? '');
+            return <span title={label}>{truncateLabel(label, maxLabelLength)}</span>;
+        }}
         onChange={(event) => onChange((event.value ?? null) as TValue | null)}
         onFilter={onSearch ? (event: DropdownFilterEvent) => onSearch(event.filter ?? '') : undefined}
     />

@@ -116,7 +116,7 @@ export const OportunidadesPage = () => {
     const status = selected ? Number(selected.status) : 0;
 
     const headerActions = (
-        <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
+        <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
             <Dropdown value={filters.estagio ?? null} options={estagioFilterOptions} onChange={(event) => updateFilter('estagio', event.value)} aria-label="Filtrar por estágio" />
             <Dropdown value={filters.status ?? null} options={statusOportunidadeFilterOptions} onChange={(event) => updateFilter('status', event.value)} aria-label="Filtrar por status" />
