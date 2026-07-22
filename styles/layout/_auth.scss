@@ -83,6 +83,19 @@
         color: var(--text-color);
         font-weight: 600;
     }
+
+    &__optional {
+        color: var(--text-color-secondary);
+        font-weight: 400;
+        font-size: 0.8125rem;
+    }
+
+    &__help {
+        display: block;
+        margin-top: 0.375rem;
+        color: var(--text-color-secondary);
+        font-size: 0.8125rem;
+    }
 }
 
 .login-environment-badge {

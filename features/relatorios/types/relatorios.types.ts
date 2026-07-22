@@ -46,5 +46,22 @@ export type RelatorioGerencialFinanceiroResponse = RelatorioResponse & {
 };
 export type RelatorioGerencialEstoqueResponse = RelatorioResponse;
 export type RelatorioGerencialFiscalResponse = RelatorioResponse;
+export type RelatorioGerencialProducaoResponse = RelatorioResponse & {
+    ordensPlanejadas?: number;
+    ordensEmProducao?: number;
+    ordensEncerradas?: number;
+    quantidadeProduzida?: number;
+    custoConsolidado?: number;
+};
+export type RelatorioDashboardConsolidadoResponse = RelatorioResponse & {
+    vendas?: RelatorioGerencialVendasResponse;
+    compras?: RelatorioGerencialComprasResponse;
+    financeiro?: RelatorioGerencialFinanceiroResponse;
+    estoque?: RelatorioGerencialEstoqueResponse;
+    fiscal?: RelatorioGerencialFiscalResponse;
+    producao?: RelatorioGerencialProducaoResponse;
+};
 
-export type RelatorioModulo = 'operacional' | 'vendas' | 'compras' | 'financeiro' | 'estoque' | 'fiscal';
+export type RelatorioModulo = 'operacional' | 'vendas' | 'compras' | 'financeiro' | 'estoque' | 'fiscal' | 'producao';
+export type RelatorioAreaExportavel = 'vendas' | 'compras' | 'financeiro' | 'estoque' | 'fiscal' | 'producao';
+export type RelatorioFormatoExportacao = 'csv' | 'xlsx' | 'pdf';

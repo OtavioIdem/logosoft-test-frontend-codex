@@ -43,7 +43,7 @@ describe('LoginForm', () => {
         expect(screen.getByText('Acesse sua operação empresarial com segurança')).toBeInTheDocument();
         expect(screen.getByLabelText('E-mail')).toBeInTheDocument();
         expect(screen.getByLabelText('Senha')).toBeInTheDocument();
-        expect(screen.getByLabelText('Empresa')).toBeInTheDocument();
+        expect(screen.getByLabelText('Empresa (opcional)')).toBeInTheDocument();
         expect(screen.queryByLabelText('Filial')).not.toBeInTheDocument();
         expect(screen.getByLabelText('Ambiente Produção')).toBeInTheDocument();
         expect(screen.queryByText(/guid/i)).not.toBeInTheDocument();
@@ -66,7 +66,7 @@ describe('LoginForm', () => {
 
         await user.type(screen.getByLabelText('E-mail'), 'usuario@erp.local');
         await user.type(screen.getByLabelText('Senha'), 'Senha@2026!');
-        await user.type(screen.getByLabelText('Empresa'), 'LOGO');
+        await user.type(screen.getByLabelText('Empresa (opcional)'), 'LOGO');
         await user.click(screen.getByRole('button', { name: /entrar/i }));
 
         expect(loginState.submitLogin).toHaveBeenCalledWith({

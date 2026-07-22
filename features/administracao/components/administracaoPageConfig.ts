@@ -15,7 +15,7 @@ import { AdministracaoResourceKey } from '@/features/administracao/hooks/useAdmi
 
 export type AdministracaoFieldKind = 'text' | 'textarea' | 'number' | 'guid' | 'documento';
 export type AdministracaoFieldConfig = { name: string; label: string; kind: AdministracaoFieldKind; required?: boolean; helperText?: string; createOnly?: boolean; updateOnly?: boolean; disabledOnUpdate?: boolean; col?: string };
-export type AdministracaoColumnConfig = { field: string; header: string; type?: 'text' | 'number' | 'status' | 'datetime' };
+export type AdministracaoColumnConfig = { field: string; header: string; type?: 'text' | 'number' | 'status' | 'datetime' | 'document' };
 export type AdministracaoPageConfig = {
     resourceKey: AdministracaoResourceKey;
     title: string;
@@ -49,7 +49,7 @@ export const administracaoPageConfigs: Record<AdministracaoResourceKey, Administ
         columns: [
             { field: 'razaoSocial', header: 'Razão social' },
             { field: 'nomeFantasia', header: 'Nome fantasia' },
-            { field: 'documento', header: 'Documento' },
+            { field: 'documento', header: 'Documento', type: 'document' },
             { field: 'inscricaoEstadual', header: 'IE' },
             { field: 'inscricaoMunicipal', header: 'IM' },
             ...auditoriaColumns
@@ -75,7 +75,7 @@ export const administracaoPageConfigs: Record<AdministracaoResourceKey, Administ
         columns: [
             { field: 'empresaId', header: 'Empresa' },
             { field: 'nome', header: 'Nome' },
-            { field: 'documento', header: 'Documento' },
+            { field: 'documento', header: 'Documento', type: 'document' },
             { field: 'inscricaoEstadual', header: 'IE' },
             { field: 'inscricaoMunicipal', header: 'IM' },
             ...auditoriaColumns

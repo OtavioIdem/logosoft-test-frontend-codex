@@ -25,3 +25,33 @@
         top: 100px;
     }
 }
+
+/*
+ * Utilitários responsivos de `table-cell` que o PrimeFlex não fornece nativamente (ele só gera
+ * block/flex/inline* responsivos). São usados no padrão `hidden md:table-cell` das tabelas para
+ * ocultar colunas secundárias em telas menores e revelá-las a partir do breakpoint. Precisam de
+ * `!important` e vir depois do PrimeFlex para vencer o `.hidden { display:none !important }`.
+ */
+@media screen and (min-width: 576px) {
+    .sm\:table-cell {
+        display: table-cell !important;
+    }
+}
+
+@media screen and (min-width: 768px) {
+    .md\:table-cell {
+        display: table-cell !important;
+    }
+}
+
+@media screen and (min-width: 992px) {
+    .lg\:table-cell {
+        display: table-cell !important;
+    }
+}
+
+@media screen and (min-width: 1200px) {
+    .xl\:table-cell {
+        display: table-cell !important;
+    }
+}

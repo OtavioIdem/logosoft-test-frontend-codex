@@ -65,7 +65,7 @@ export const CotacoesCompraPage = () => {
     };
 
     const headerActions = (
-        <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
+        <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
             <Dropdown value={filters.status ?? null} options={statusCotacaoOptions} onChange={(event) => updateFilter('status', event.value)} aria-label="Filtrar por status" />
             <SearchInput ariaLabel="Buscar cotação" defaultValue={localSearch} onChange={(term) => { setFirst(0); setLocalSearch(term); }} />

@@ -17,7 +17,7 @@ export const estoqueQueryKeys = {
     inventarioDetalhe: (id?: string | null) => ['estoque', 'inventarios', 'detalhe', id] as const
 };
 
-export const useLocaisEstoque = (query: EstoqueListQuery = {}) => useQuery({ queryKey: estoqueQueryKeys.locais(query), queryFn: () => estoqueApi.listarLocais(query) });
+export const useLocaisEstoque = (query: EstoqueListQuery = {}, enabled = true) => useQuery({ queryKey: estoqueQueryKeys.locais(query), queryFn: () => estoqueApi.listarLocais(query), enabled });
 export const useSaldosEstoque = (query: EstoqueListQuery = {}) => useQuery({ queryKey: estoqueQueryKeys.saldos(query), queryFn: () => estoqueApi.listarSaldos(query) });
 export const useMovimentosEstoque = (query: EstoqueListQuery = {}) => useQuery({ queryKey: estoqueQueryKeys.movimentos(query), queryFn: () => estoqueApi.listarMovimentos(query) });
 export const useReservasEstoque = (query: EstoqueListQuery = {}) => useQuery({ queryKey: estoqueQueryKeys.reservas(query), queryFn: () => estoqueApi.listarReservas(query) });

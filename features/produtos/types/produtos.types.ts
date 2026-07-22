@@ -68,6 +68,7 @@ export type ProdutoResponse = {
     precoVendaBase: number;
     custoReferencial: number;
     controlaEstoque: boolean;
+    controlaQualidade: boolean;
     permiteVenda: boolean;
     permiteCompra: boolean;
     ncm?: string | null;
@@ -135,6 +136,7 @@ export type CriarProdutoRequest = {
     precoVendaBase: number;
     custoReferencial: number;
     controlaEstoque: boolean;
+    controlaQualidade: boolean;
     permiteVenda: boolean;
     permiteCompra: boolean;
     observacao?: string | null;
@@ -148,6 +150,7 @@ export type AtualizarProdutoRequest = {
     categoriaProdutoId?: Guid | null;
     marcaId?: Guid | null;
     controlaEstoque: boolean;
+    controlaQualidade: boolean;
     permiteVenda: boolean;
     permiteCompra: boolean;
     observacao?: string | null;

@@ -103,8 +103,8 @@ export const AuditoriaEventosPage = () => {
     return (
         <>
             <PageHeader
-                title="Auditoria avançada"
-                description="Consulta operacional auditável com filtros por contexto, usuário, módulo, entidade, ação, período e termo."
+                title="Eventos de auditoria"
+                description="Consulta operacional auditável avançada, com filtros por contexto, usuário, módulo, entidade, ação, período e termo."
                 actions={<Button label="Atualizar" icon="pi pi-refresh" outlined loading={operacionalQuery.isFetching || recentesQuery.isFetching} onClick={refresh} />}
             />
             <Message severity="info" className="w-full mb-3" text="A auditoria é consultiva. O frontend não expõe GUID bruto; identificadores técnicos são exibidos como vínculo técnico ou contexto protegido." />

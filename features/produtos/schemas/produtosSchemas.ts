@@ -69,6 +69,7 @@ export const criarProdutoSchema = z.object({
     precoVendaBase: money('Preço de venda'),
     custoReferencial: money('Custo referencial'),
     controlaEstoque: z.boolean().default(true),
+    controlaQualidade: z.boolean().default(false),
     permiteVenda: z.boolean().default(true),
     permiteCompra: z.boolean().default(true),
     observacao: nullableText
@@ -82,6 +83,7 @@ export const atualizarProdutoSchema = z.object({
     categoriaProdutoId: optionalGuid,
     marcaId: optionalGuid,
     controlaEstoque: z.boolean().default(true),
+    controlaQualidade: z.boolean().default(false),
     permiteVenda: z.boolean().default(true),
     permiteCompra: z.boolean().default(true),
     observacao: nullableText

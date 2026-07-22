@@ -29,6 +29,7 @@ describe('payloads de Produtos / Catálogo', () => {
             precoVendaBase: 100,
             custoReferencial: 60,
             controlaEstoque: true,
+            controlaQualidade: true,
             permiteVenda: true,
             permiteCompra: true,
             observacao: ''
@@ -47,6 +48,7 @@ describe('payloads de Produtos / Catálogo', () => {
             precoVendaBase: 100,
             custoReferencial: 60,
             controlaEstoque: true,
+            controlaQualidade: true,
             permiteVenda: true,
             permiteCompra: true,
             observacao: null

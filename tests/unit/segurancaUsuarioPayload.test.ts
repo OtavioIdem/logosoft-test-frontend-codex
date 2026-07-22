@@ -65,8 +65,10 @@ describe('segurança operacional payloads', () => {
         expect(buildVincularGrupoUsuarioPayload({ grupoAcessoId, motivo: 'Conceder acesso operacional.' })).toEqual({ grupoAcessoId, motivo: 'Conceder acesso operacional.' });
     });
 
-    it('monta payload de grupo de acesso com permissões normalizadas', () => {
-        expect(buildGrupoAcessoPayload({ nome: ' Financeiro ', descricao: ' Grupo financeiro ', permissoesTexto: 'FINANCEIRO_CONSULTAR\nFINANCEIRO_GERENCIAR, FINANCEIRO_CONSULTAR' })).toEqual({
+    it('monta payload de grupo de acesso com empresa, filial e permissões selecionadas', () => {
+        expect(buildGrupoAcessoPayload({ empresaId, filialId, nome: ' Financeiro ', descricao: ' Grupo financeiro ', permissoes: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_GERENCIAR'] })).toEqual({
+            empresaId,
+            filialId,
             nome: 'Financeiro',
             descricao: 'Grupo financeiro',
             permissoes: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_GERENCIAR']

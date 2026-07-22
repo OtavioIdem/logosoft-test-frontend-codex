@@ -58,7 +58,7 @@ export const PedidosVendaPage = () => {
     const updateFilter = (name: keyof PedidoVendaListQuery, value: string | number | null) => { setFirst(0); setFilters((current) => ({ ...current, [name]: value || null })); };
 
     const headerActions = (
-        <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
+        <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
             <Dropdown className="min-w-14rem" value={filters.status ?? null} options={statusPedidoVendaOptions} optionLabel="label" optionValue="value" showClear placeholder="Status" onChange={(event) => updateFilter('status', event.value ?? null)} />
             <span className="p-input-icon-left"><i className="pi pi-search" /><InputText placeholder="Buscar pedido" value={localSearch} onChange={(event) => { setFirst(0); setLocalSearch(event.target.value); }} /></span>

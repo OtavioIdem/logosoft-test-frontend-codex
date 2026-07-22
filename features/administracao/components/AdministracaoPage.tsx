@@ -26,6 +26,7 @@ import { useEmpresasOptions, useTodasFiliaisOptions, useTodosSetoresOptions } fr
 import { AdministracaoFormValues, AdministracaoListQuery } from '@/features/administracao/types/administracao.types';
 import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
+import { formatDocumento } from '@/lib/formatters/display';
 import { EntityStatus } from '@/types/erp';
 
 const statusLabel = (status: unknown) => {
@@ -65,6 +66,7 @@ const formatValue = (record: Record<string, unknown>, column: AdministracaoColum
     const value = record[column.field];
     if (column.type === 'status') return <Tag value={statusLabel(value)} severity={statusSeverity(value)} />;
     if (column.type === 'datetime') return formatDateTime(value);
+    if (column.type === 'document') return formatDocumento(typeof value === 'string' ? value : value == null ? null : String(value));
     if (column.type === 'number') return Number(value ?? 0).toLocaleString('pt-BR');
     if (column.field.endsWith('Id')) return resolveReferenceLabel(column.field, value, lookups);
     return value === null || value === undefined || value === '' ? '-' : String(value);
@@ -118,11 +120,21 @@ export const AdministracaoPage = ({ resourceKey }: { resourceKey: AdministracaoR
     };
 
     const save = async (values: AdministracaoFormValues) => {
+        const isCreate = !values.id;
+        const empresaCriada = typeof values.empresaId === 'string' ? values.empresaId : null;
+        const filialCriada = typeof values.filialId === 'string' ? values.filialId : null;
         await runWithToast(
             async () => {
                 await saveMutation.mutateAsync({ id: values.id, values });
                 setFormVisible(false);
                 setSelectedRecord(null);
+                // Listas com filtro por empresa escondem o registro recém-criado quando nenhuma empresa está
+                // selecionada; após criar, alinhamos o filtro à empresa/filial do novo registro.
+                if (isCreate && config.showEmpresaFilter && empresaCriada) {
+                    setFirst(0);
+                    setLocalSearch('');
+                    setFilters((current) => ({ ...current, empresaId: empresaCriada, filialId: config.showFilialFilter ? filialCriada : current.filialId ?? null }));
+                }
             },
             { success: { summary: 'Registro salvo', detail: `${config.title}: dados gravados com sucesso.` }, error: { summary: 'Erro ao salvar', detail: 'Não foi possível salvar o registro.' }, rethrow: true }
         );
@@ -145,7 +157,7 @@ export const AdministracaoPage = ({ resourceKey }: { resourceKey: AdministracaoR
     };
 
     const headerActions = (
-        <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
+        <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             {config.showEmpresaFilter ? <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} showFilial={config.showFilialFilter} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} /> : null}
             <span className="p-input-icon-left">
                 <i className="pi pi-search" />

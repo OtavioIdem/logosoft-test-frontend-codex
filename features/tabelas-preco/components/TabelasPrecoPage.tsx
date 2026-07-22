@@ -107,7 +107,7 @@ export const TabelasPrecoPage = () => {
     };
 
     const headerActions = (
-        <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
+        <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             <SearchInput ariaLabel="Buscar tabela" defaultValue={search} onChange={(term) => { setSearch(term); setFirst(0); }} />
             <PermissionGuard anyOf={['TABELAS_PRECO_GERENCIAR', 'VENDAS_GERENCIAR']} mode="disable">
                 {({ disabled }) => <Button label="Nova tabela" icon="pi pi-plus" disabled={disabled} onClick={() => { setSelectedTabela(null); setFormVisible(true); }} />}

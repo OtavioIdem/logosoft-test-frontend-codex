@@ -647,9 +647,24 @@ Escolhido **Serviços (Ordem de Serviço)** como piloto (representativo, risco g
 - Testes: `comprasAvancadoPayload` + `comprasAvancadoStructure` (inclui verificação da precedência das regras de rota). **`npm run validate` verde — 269 testes.**
 - **A confirmar/limitações**: (a) aprovar cotação retorna a cotação (sem `pedidoCompraId`), então o link para o pedido é textual ("ver Compras › Pedidos"); (b) upload de XML/PDF da conferência (opcional no backend) foi omitido; (c) recebimentos não têm endpoint de lista — a tela parte das divergências para abrir o recebimento.
 
+**✅ Estoque avançado (Onda 1) — concluído (2026-07-17).** Contrato confirmado no backend (`EstoqueAvancadoController` + requests/responses).
+- `features/estoque-avancado/*` com rota única `estoque/avancado` em **TabView** (3 abas): **Inventários operacionais** (lista paginada server-side com resposta aninhada `{resultado}`, criar → itens com divergência → iniciar contagem → concluir com motivo de ajuste / cancelar), **Ajustes** (form entrada/saída com motivo), **Bloqueios** (criar + **liberar/cancelar por ID** — ponto de liberação dos bloqueios de Qualidade/Alimentar).
+- 2 permissões novas (`ESTOQUE_AJUSTAR`, `ESTOQUE_BLOQUEIO_GERENCIAR`; `ESTOQUE_INVENTARIO_GERENCIAR` já existia); rota inserida antes da genérica `/estoque`; item no menu de Estoque. Enums `StatusInventarioEstoque`, `TipoAjusteEstoque`, `StatusBloqueioEstoque`.
+- Nota do contrato: `filialId` **obrigatório** e `dataReferencia` em `DateOnly` (yyyy-MM-dd). Ajustes/bloqueios não têm GET de lista → aba de bloqueios usa ação por ID (não há como listar bloqueios ativos).
+- Testes: `estoqueAvancadoPayload` + `estoqueAvancadoStructure`. **`npm run validate` verde — 278 testes.**
+
+**✅ Financeiro avançado (Onda 1) — concluído (2026-07-17). ✅✅ ONDA 1 COMPLETA.** Contrato confirmado no backend (`FinanceiroAvancadoController` + requests/responses).
+- `features/financeiro-avancado/*` com rota `financeiro/avancado` em **TabView**: **Contas a receber** e **Contas a pagar** (listas paginadas server-side `{resultado}`, criar → detalhe com baixas → **baixar/estornar/cancelar**) + **Fluxo de caixa** (painel previstos/realizados/projetado por período).
+- Usa os endpoints **avançados** (`/api/financeiro/avancado/*`), paralelos ao núcleo. Baixa/estorno informam a **contabilização automática** do backend (achado da spec). Estorno escolhe a baixa (não estornada) da conta.
+- 1 permissão nova (`FINANCEIRO_FLUXO_CAIXA_CONSULTAR`); rota antes da genérica `/financeiro`; item no menu. Enums `StatusContaFinanceira`, `TipoContaFinanceira`. Datas em `DateOnly`.
+- Testes: `financeiroAvancadoPayload` + `financeiroAvancadoStructure`. **`npm run validate` verde — 286 testes.**
+- Nota: o núcleo (`features/financeiro`) já cobria baixa/estorno nos endpoints core; este módulo é a versão avançada dedicada da spec (§2.3).
+
+> **Onda 1 concluída:** PDV ✅ · Faturamento ✅ · Compras avançado ✅ · Estoque avançado ✅ · Financeiro avançado ✅.
+
 Conforme o diagrama e a Parte C. Dependências cruzadas relevantes:
 - Faturamento parte de Pedido de Venda (núcleo existe). ✅ feito.
-- Estoque avançado é ponto de **liberação** de bloqueios de Qualidade/Alimentar.
+- Estoque avançado é ponto de **liberação** de bloqueios de Qualidade/Alimentar. ✅ feito.
 - RH reusa Cargo/Setor de Administração.
 - CRM converte oportunidade em Pedido de Venda; Contratos e Serviços geram ContaReceber.
 - Qualidade a48.1 altera `features/produtos` (campo `controlaQualidade`).

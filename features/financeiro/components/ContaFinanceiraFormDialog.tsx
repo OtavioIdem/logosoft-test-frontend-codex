@@ -145,7 +145,7 @@ export const ContaFinanceiraFormDialog = ({ type, visible, loading, onHide, onSu
                                 <h5 className="m-0">Parcelas</h5>
                                 <small className="text-600">Informe vencimento e valor de cada parcela da conta.</small>
                             </div>
-                            <div className="flex flex-column md:flex-row gap-2 md:align-items-center">
+                            <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
                                 <span className="text-600">{values.parcelas.length} parcela(s) • {formatMoney(parcelasTotal)}</span>
                                 <Button label="Adicionar" icon="pi pi-plus" type="button" outlined className="p-button-sm w-full md:w-auto" onClick={addParcela} disabled={loading} />
                             </div>

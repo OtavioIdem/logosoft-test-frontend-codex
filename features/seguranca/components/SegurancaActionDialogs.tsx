@@ -5,14 +5,74 @@ import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { Password } from 'primereact/password';
+import { Tag } from 'primereact/tag';
 import { classNames } from 'primereact/utils';
 import { EntitySelect } from '@/components/forms/EntitySelect';
 import { FieldError } from '@/components/forms/FieldError';
-import { GrupoAcessoResponse, ResetSenhaUsuarioFormValues, VincularGrupoUsuarioFormValues } from '@/features/seguranca/types/seguranca.types';
+import { PermissionGuard } from '@/components/security/PermissionGuard';
+import { GrupoAcessoResponse, ResetSenhaUsuarioFormValues, UsuarioResponse, VincularGrupoUsuarioFormValues } from '@/features/seguranca/types/seguranca.types';
 import { resetSenhaUsuarioSchema, vincularGrupoUsuarioSchema } from '@/features/seguranca/schemas/segurancaSchemas';
 
 type FieldErrors = Record<string, string | undefined>;
 const fieldErrorMap = (error: { issues: Array<{ path: Array<string | number>; message: string }> }) => Object.fromEntries(error.issues.map((issue) => [String(issue.path[0] ?? 'form'), issue.message])) as FieldErrors;
+
+const formatDateTime = (value?: string | null) => (value ? new Date(value).toLocaleString('pt-BR') : '-');
+
+type GerenciarUsuarioAcoes = {
+    onResetSenha: () => void;
+    onVincularGrupo: () => void;
+    onRemoverGrupo: () => void;
+    onInativar: () => void;
+    onReativar: () => void;
+};
+
+const InfoField = ({ label, children, className = 'col-12 md:col-6' }: { label: string; children: React.ReactNode; className?: string }) => (
+    <div className={className}>
+        <span className="block text-color-secondary text-sm">{label}</span>
+        <div className="font-medium">{children}</div>
+    </div>
+);
+
+export const GerenciarUsuarioDialog = ({ visible, usuario, empresaLabel, gruposLabel, temGrupo, onHide, acoes }: { visible: boolean; usuario: UsuarioResponse | null; empresaLabel: string; gruposLabel: string; temGrupo: boolean; onHide: () => void; acoes: GerenciarUsuarioAcoes }) => {
+    if (!usuario) return null;
+
+    return (
+        <Dialog header="Gerenciar usuário" visible={visible} modal style={{ width: 'min(44rem, 96vw)' }} onHide={onHide} footer={<div className="flex justify-content-end"><Button label="Fechar" icon="pi pi-times" severity="secondary" outlined onClick={onHide} /></div>}>
+            <div className="surface-100 border-round p-3 mb-3">
+                <div className="flex align-items-center justify-content-between gap-2 mb-2 flex-wrap">
+                    <span className="text-xl font-semibold">{usuario.nome}</span>
+                    <div className="flex gap-2">
+                        <Tag value={usuario.ativo ? 'Ativo' : 'Inativo'} severity={usuario.ativo ? 'success' : 'danger'} />
+                        <Tag value={usuario.bloqueado ? 'Bloqueado' : 'Liberado'} severity={usuario.bloqueado ? 'danger' : 'success'} />
+                    </div>
+                </div>
+                <div className="grid">
+                    <InfoField label="E-mail">{usuario.email}</InfoField>
+                    <InfoField label="Login">{usuario.login ?? usuario.email}</InfoField>
+                    <InfoField label="Empresa">{empresaLabel}</InfoField>
+                    <InfoField label="Último login">{formatDateTime(usuario.ultimoLoginEm)}</InfoField>
+                    <InfoField label="Grupos de acesso" className="col-12">{gruposLabel}</InfoField>
+                </div>
+            </div>
+
+            <span className="block text-color-secondary text-sm mb-2">Ações</span>
+            <PermissionGuard permission="SEGURANCA_USUARIOS_GERENCIAR" mode="disable">
+                {({ disabled }) => (
+                    <div className="flex flex-column sm:flex-row flex-wrap gap-2">
+                        <Button label="Resetar senha" icon="pi pi-key" severity="secondary" outlined disabled={disabled} onClick={acoes.onResetSenha} />
+                        <Button label="Vincular grupo" icon="pi pi-shield" severity="secondary" outlined disabled={disabled} onClick={acoes.onVincularGrupo} />
+                        <Button label="Remover grupo" icon="pi pi-minus-circle" severity="warning" outlined disabled={disabled || !temGrupo} onClick={acoes.onRemoverGrupo} />
+                        {usuario.ativo ? (
+                            <Button label="Inativar" icon="pi pi-user-minus" severity="danger" outlined disabled={disabled} onClick={acoes.onInativar} />
+                        ) : (
+                            <Button label="Reativar" icon="pi pi-user-plus" severity="success" outlined disabled={disabled} onClick={acoes.onReativar} />
+                        )}
+                    </div>
+                )}
+            </PermissionGuard>
+        </Dialog>
+    );
+};
 
 export const ResetSenhaUsuarioDialog = ({ visible, loading, onHide, onSubmit }: { visible: boolean; loading?: boolean; onHide: () => void; onSubmit: (values: ResetSenhaUsuarioFormValues) => Promise<void> }) => {
     const [values, setValues] = useState<ResetSenhaUsuarioFormValues>({ novaSenha: '', confirmarSenha: '', motivo: '' });

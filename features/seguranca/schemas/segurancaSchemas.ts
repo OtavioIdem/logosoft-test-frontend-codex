@@ -40,7 +40,9 @@ export const vincularGrupoUsuarioSchema = z.object({
 });
 
 export const grupoAcessoSchema = z.object({
+    empresaId: z.string().refine((value) => isValidGuid(value), 'Selecione uma empresa válida.'),
+    filialId: optionalGuidSchema,
     nome: z.string().trim().min(3, 'Informe o nome do grupo com pelo menos 3 caracteres.'),
     descricao: z.string().trim().optional().nullable(),
-    permissoesTexto: z.string().trim().min(3, 'Informe ao menos uma permissão.')
+    permissoes: z.array(z.string()).min(1, 'Selecione ao menos uma permissão.')
 });

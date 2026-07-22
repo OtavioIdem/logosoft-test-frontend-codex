@@ -17,7 +17,8 @@ import { MoneyInput } from '@/components/forms/MoneyInput';
 import { FormGrid } from '@/components/forms/FormGrid';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
 import { atualizarProdutoSchema, criarProdutoSchema } from '@/features/produtos/schemas/produtosSchemas';
-import { CategoriaProdutoResponse, MarcaResponse, ProdutoFormValues, ProdutoResponse, UnidadeMedidaResponse } from '@/features/produtos/types/produtos.types';
+import { CatalogoListQuery, ProdutoFormValues, ProdutoResponse } from '@/features/produtos/types/produtos.types';
+import { useCategoriasProduto, useMarcas, useUnidadesMedida } from '@/features/produtos/hooks/useProdutosResources';
 import { FieldErrors, fieldErrorMap, textValue, toOptions } from '@/features/produtos/components/produtoFormUtils';
 import { TipoItemFiscal, TipoProduto } from '@/types/erp';
 
@@ -51,6 +52,7 @@ const buildInitialValues = (record?: ProdutoResponse | null): ProdutoFormValues 
               precoVendaBase: record.precoVendaBase,
               custoReferencial: record.custoReferencial,
               controlaEstoque: record.controlaEstoque,
+              controlaQualidade: record.controlaQualidade,
               permiteVenda: record.permiteVenda,
               permiteCompra: record.permiteCompra,
               ncm: record.ncm,
@@ -74,6 +76,7 @@ const buildInitialValues = (record?: ProdutoResponse | null): ProdutoFormValues 
               precoVendaBase: 0,
               custoReferencial: 0,
               controlaEstoque: true,
+              controlaQualidade: false,
               permiteVenda: true,
               permiteCompra: true,
               ncm: null,
@@ -89,26 +92,37 @@ export const ProdutoFormDialog = ({
     visible,
     loading,
     record,
-    categorias,
-    unidades,
-    marcas,
     onHide,
     onSubmit
 }: {
     visible: boolean;
     loading?: boolean;
     record?: ProdutoResponse | null;
-    categorias: CategoriaProdutoResponse[];
-    unidades: UnidadeMedidaResponse[];
-    marcas: MarcaResponse[];
     onHide: () => void;
     onSubmit: (values: ProdutoFormValues) => Promise<void>;
 }) => {
     const [values, setValues] = useState<ProdutoFormValues>(() => buildInitialValues(record));
     const [errors, setErrors] = useState<FieldErrors>({});
-    const unidadeOptions = useMemo(() => toOptions(unidades, (item) => `${item.sigla} - ${item.descricao}`), [unidades]);
-    const categoriaOptions = useMemo(() => toOptions(categorias, (item) => `${item.codigo} - ${item.nome}`), [categorias]);
-    const marcaOptions = useMemo(() => toOptions(marcas, (item) => item.nome), [marcas]);
+
+    // Catálogos (unidade/categoria/marca) são carregados pela empresa efetiva do próprio modal:
+    // na edição usa a empresa do produto; na criação, a empresa escolhida no formulário. Assim o
+    // "Novo produto" funciona mesmo sem empresa pré-selecionada no filtro da página.
+    const catalogoQuery = useMemo<CatalogoListQuery>(
+        () => ({
+            empresaId: record?.empresaId ?? (textValue(values.empresaId) || null),
+            filialId: record?.filialId ?? (textValue(values.filialId) || null)
+        }),
+        [record, values.empresaId, values.filialId]
+    );
+    const catalogosHabilitados = visible && Boolean(catalogoQuery.empresaId);
+    const unidadesQuery = useUnidadesMedida(catalogoQuery, catalogosHabilitados);
+    const categoriasQuery = useCategoriasProduto(catalogoQuery, catalogosHabilitados);
+    const marcasQuery = useMarcas(catalogoQuery, catalogosHabilitados);
+
+    const unidadeOptions = useMemo(() => toOptions(unidadesQuery.data ?? [], (item) => `${item.sigla} - ${item.descricao}`), [unidadesQuery.data]);
+    const categoriaOptions = useMemo(() => toOptions(categoriasQuery.data ?? [], (item) => `${item.codigo} - ${item.nome}`), [categoriasQuery.data]);
+    const marcaOptions = useMemo(() => toOptions(marcasQuery.data ?? [], (item) => item.nome), [marcasQuery.data]);
+    const semEmpresaSelecionada = !record && !catalogoQuery.empresaId;
 
     useEffect(() => {
         if (visible) {
@@ -144,6 +158,7 @@ export const ProdutoFormDialog = ({
         <Dialog header={record ? 'Editar produto' : 'Novo produto'} visible={visible} modal style={{ width: 'min(72rem, 98vw)' }} footer={footer} onHide={onHide}>
             <TabView>
                 <TabPanel header="Dados gerais">
+                    {semEmpresaSelecionada ? <Message severity="info" className="w-full mb-3" text="Selecione a empresa para carregar as unidades, categorias e marcas disponíveis." /> : null}
                     <FormGrid>
                         {!record ? (
                             <>
@@ -210,6 +225,11 @@ export const ProdutoFormDialog = ({
                         <div className="field col-12 md:col-2 flex align-items-center gap-2 mt-4">
                             <Checkbox inputId="permiteCompra" checked={Boolean(values.permiteCompra)} onChange={(event) => update('permiteCompra', Boolean(event.checked))} />
                             <label htmlFor="permiteCompra" className="font-medium">Permite compra</label>
+                        </div>
+                        <div className="field col-12 flex align-items-center gap-2">
+                            <Checkbox inputId="controlaQualidade" checked={Boolean(values.controlaQualidade)} onChange={(event) => update('controlaQualidade', Boolean(event.checked))} />
+                            <label htmlFor="controlaQualidade" className="font-medium">Controla qualidade</label>
+                            <small className="text-color-secondary ml-2">Quando marcado, o recebimento de compra gera inspeção automática.</small>
                         </div>
                         <div className="field col-12">
                             <label htmlFor="observacao" className="font-medium">Observação</label>
