@@ -3,16 +3,19 @@
 
 import Link from 'next/link';
 import { PrimeReactContext } from 'primereact/api';
+import { Tooltip } from 'primereact/tooltip';
 import { classNames } from 'primereact/utils';
 import React, { forwardRef, useContext, useImperativeHandle, useRef } from 'react';
 import { AppTopbarRef } from '@/types';
 import { LayoutContext } from './context/layoutcontext';
+import { usePaginaAtual } from './context/pageheadercontext';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { NotificacoesBell } from '@/features/notificacoes/components/NotificacoesBell';
 
 const AppTopbar = forwardRef<AppTopbarRef>((_, ref) => {
     const { layoutConfig, layoutState, setLayoutConfig, onMenuToggle, showProfileSidebar } = useContext(LayoutContext);
     const { changeTheme } = useContext(PrimeReactContext);
+    const pagina = usePaginaAtual();
     const { user, logout } = useAuth();
     const menubuttonRef = useRef<HTMLButtonElement>(null);
     const topbarmenuRef = useRef<HTMLDivElement>(null);
@@ -42,6 +45,27 @@ const AppTopbar = forwardRef<AppTopbarRef>((_, ref) => {
             <button ref={menubuttonRef} type="button" className="p-link layout-menu-button layout-topbar-button" onClick={onMenuToggle} aria-label="Abrir menu">
                 <i className="pi pi-bars" />
             </button>
+
+            {pagina ? (
+                <div className="layout-topbar-title">
+                    <h1 className="layout-topbar-title-text">{pagina.titulo}</h1>
+                    {pagina.descricao ? (
+                        <>
+                            {/* A descrição saiu do corpo da página e virou dica: fica acessível sem ocupar a
+                                primeira dobra de toda tela. `data-pr-tooltip` é lido pelo Tooltip abaixo. */}
+                            <Tooltip target=".layout-topbar-title-help" position="bottom" className="layout-topbar-title-tooltip" />
+                            <button
+                                type="button"
+                                className="p-link layout-topbar-title-help"
+                                data-pr-tooltip={pagina.descricao}
+                                aria-label={`Sobre a tela ${pagina.titulo}: ${pagina.descricao}`}
+                            >
+                                <i className="pi pi-info-circle" aria-hidden="true" />
+                            </button>
+                        </>
+                    ) : null}
+                </div>
+            ) : null}
 
             <button ref={topbarmenubuttonRef} type="button" className="p-link layout-topbar-menu-button layout-topbar-button" onClick={showProfileSidebar} aria-label="Abrir ações rápidas">
                 <i className="pi pi-ellipsis-v" />

@@ -8,6 +8,7 @@ import AppFooter from './AppFooter';
 import AppSidebar from './AppSidebar';
 import AppTopbar from './AppTopbar';
 import { LayoutContext } from './context/layoutcontext';
+import { PageHeaderProvider } from './context/pageheadercontext';
 import { ChildContainerProps, LayoutState, AppTopbarRef } from '@/types';
 import { usePathname, useSearchParams } from 'next/navigation';
 
@@ -120,17 +121,20 @@ const Layout = ({ children }: ChildContainerProps) => {
 
     return (
         <React.Fragment>
-            <div className={containerClass}>
-                <AppTopbar ref={topbarRef} />
-                <div ref={sidebarRef} className="layout-sidebar">
-                    <AppSidebar />
+            {/* Envolve topbar e conteúdo: as telas registram o cabeçalho lá dentro e o topbar lê daqui. */}
+            <PageHeaderProvider>
+                <div className={containerClass}>
+                    <AppTopbar ref={topbarRef} />
+                    <div ref={sidebarRef} className="layout-sidebar">
+                        <AppSidebar />
+                    </div>
+                    <div className="layout-main-container">
+                        <div className="layout-main">{children}</div>
+                        <AppFooter />
+                    </div>
+                    <div className="layout-mask"></div>
                 </div>
-                <div className="layout-main-container">
-                    <div className="layout-main">{children}</div>
-                    <AppFooter />
-                </div>
-                <div className="layout-mask"></div>
-            </div>
+            </PageHeaderProvider>
         </React.Fragment>
     );
 };

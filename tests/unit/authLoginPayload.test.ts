@@ -2,40 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { buildLoginPayload } from '@/features/auth/api/authApi';
 
 describe('buildLoginPayload', () => {
-    it('envia somente email e password para o manager de teste', () => {
-        expect(
-            buildLoginPayload({
-                email: 'manager@erp.local',
-                password: 'Manager@2026!',
-                empresaId: '0',
-                filialId: '99'
-            } as any)
-        ).toEqual({
-            email: 'manager@erp.local',
-            password: 'Manager@2026!'
-        });
-    });
-
-    it('remove empresaId invalido antes do login e ignora filial legado', () => {
+    it('envia somente credenciais: a empresa é resolvida pelo backend na validação de licença', () => {
         expect(
             buildLoginPayload({
                 email: 'usuario@erp.local',
-                password: 'Senha@2026!',
-                empresaId: '0',
-                filialId: '99'
-            } as any)
-        ).toEqual({
-            email: 'usuario@erp.local',
-            password: 'Senha@2026!'
-        });
-    });
-
-    it('remove valores que nao sao registro valido para usuario comum', () => {
-        expect(
-            buildLoginPayload({
-                email: 'usuario@erp.local',
-                password: 'Senha@2026!',
-                empresaId: 'abc'
+                password: 'Senha@2026!'
             })
         ).toEqual({
             email: 'usuario@erp.local',
@@ -43,18 +14,34 @@ describe('buildLoginPayload', () => {
         });
     });
 
-    it('mantem empresaId valido sem enviar filialId no payload', () => {
+    it('normaliza espaços do e-mail sem tocar na senha', () => {
+        expect(
+            buildLoginPayload({
+                email: '  usuario@erp.local  ',
+                password: ' Senha@2026! '
+            })
+        ).toEqual({
+            email: 'usuario@erp.local',
+            password: ' Senha@2026! '
+        });
+    });
+
+    /*
+     * Regressão do corte do campo Empresa: mesmo que um chamador desatualizado passe empresaId/filialId em
+     * runtime, o corpo do login não pode carregá-los — o backend decide o vínculo e a licença, e um id vindo
+     * da tela reabriria a porta que essa mudança fechou.
+     */
+    it('não repassa empresaId nem filialId recebidos por engano em runtime', () => {
         expect(
             buildLoginPayload({
                 email: 'usuario@erp.local',
                 password: 'Senha@2026!',
                 empresaId: '3f7d2a41-93e3-4f0e-9e34-d98f6b70a6ef',
                 filialId: '93cfa7b1-37f1-4530-91ad-ad3c61657d42'
-            } as any)
+            } as never)
         ).toEqual({
             email: 'usuario@erp.local',
-            password: 'Senha@2026!',
-            empresaId: '3f7d2a41-93e3-4f0e-9e34-d98f6b70a6ef'
+            password: 'Senha@2026!'
         });
     });
 });

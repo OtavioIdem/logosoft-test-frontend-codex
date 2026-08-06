@@ -2,6 +2,8 @@ import { PermissionCode } from '@/types/erp';
 import { LoginRequest, LoginResponse } from '@/features/auth/types/auth.types';
 import type { RefreshSessionResponse } from '@/features/auth/api/authResponseMapper';
 
+const MOCK_EMPRESA_ID = '11111111-1111-1111-1111-111111111111';
+
 const mockPermissions: PermissionCode[] = [
     'AUDITORIA_CONSULTAR',
     'ATIVIDADES_CONSULTAR',
@@ -68,7 +70,9 @@ export const mockAuthClient = {
                 id: 'mock-user-id',
                 nome: 'Administrador logosoft',
                 email: payload.email,
-                empresaId: payload.empresaId,
+                // O login não envia mais empresa: quem resolve o vínculo é o backend. O mock devolve uma
+                // empresa fixa para espelhar isso, em vez de ecoar o que a tela mandou.
+                empresaId: MOCK_EMPRESA_ID,
                 filialId: null,
                 permissoes: mockPermissions
             }

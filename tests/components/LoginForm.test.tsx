@@ -43,7 +43,10 @@ describe('LoginForm', () => {
         expect(screen.getByText('Acesse sua operação empresarial com segurança')).toBeInTheDocument();
         expect(screen.getByLabelText('E-mail')).toBeInTheDocument();
         expect(screen.getByLabelText('Senha')).toBeInTheDocument();
-        expect(screen.getByLabelText('Empresa (opcional)')).toBeInTheDocument();
+        // A empresa é resolvida pelo backend junto da validação de licença: a tela não pergunta mais.
+        expect(screen.queryByLabelText(/empresa/i)).not.toBeInTheDocument();
+        // `\b` de propósito: o subtítulo institucional fala em "operação empresarial" e não é o campo.
+        expect(screen.queryByText(/empresa\b/i)).not.toBeInTheDocument();
         expect(screen.queryByLabelText('Filial')).not.toBeInTheDocument();
         expect(screen.getByLabelText('Ambiente Produção')).toBeInTheDocument();
         expect(screen.queryByText(/guid/i)).not.toBeInTheDocument();
@@ -66,13 +69,11 @@ describe('LoginForm', () => {
 
         await user.type(screen.getByLabelText('E-mail'), 'usuario@erp.local');
         await user.type(screen.getByLabelText('Senha'), 'Senha@2026!');
-        await user.type(screen.getByLabelText('Empresa (opcional)'), 'LOGO');
         await user.click(screen.getByRole('button', { name: /entrar/i }));
 
         expect(loginState.submitLogin).toHaveBeenCalledWith({
             email: 'usuario@erp.local',
-            senha: 'Senha@2026!',
-            empresaId: 'LOGO'
+            senha: 'Senha@2026!'
         });
     });
 

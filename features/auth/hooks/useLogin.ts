@@ -28,8 +28,7 @@ export const useLogin = () => {
             try {
                 await login({
                     email: values.email,
-                    password: values.senha,
-                    empresaId: values.empresaId || undefined
+                    password: values.senha
                 });
                 return true;
             } catch (error) {

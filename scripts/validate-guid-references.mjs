@@ -44,12 +44,12 @@ const allowedTechnicalFields = new Set([
     'schemaSetName',
     'certificateThumbprint'
 ]);
-const controlledExceptions = new Map([
-    [
-        'features/auth/components/LoginForm.tsx::empresaId',
-        'Campo legado do contrato de login. A UI solicita código autorizado da empresa, não seleção operacional de empresa já autenticada.'
-    ]
-]);
+/*
+ * Sem exceções abertas. A única que existia — `LoginForm.tsx::empresaId` — caiu quando o campo Empresa saiu da
+ * tela de login: a empresa passou a ser resolvida pelo backend, junto da validação de licença do cliente.
+ * Reintroduzir o campo volta a falhar no gate, que é o comportamento desejado.
+ */
+const controlledExceptions = new Map([]);
 
 const files = [];
 const walk = (dir) => {

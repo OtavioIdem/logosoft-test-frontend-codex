@@ -1,5 +1,7 @@
 export type Guid = string;
 export type IsoDateTime = string;
+/** Data sem hora (`yyyy-MM-dd`) — espelha o `DateOnly` do backend, que não serializa componente de tempo. */
+export type IsoDate = string;
 
 export enum EntityStatus {
     Ativo = 1,
@@ -250,6 +252,9 @@ export type PermissionCode =
     | 'FISCAL_CANCELAR'
     | 'FISCAL_INUTILIZAR'
     | 'FISCAL_CARTA_CORRECAO'
+    | 'FISCAL_REGRAS_CONSULTAR'
+    | 'FISCAL_REGRAS_GERENCIAR'
+    | 'FISCAL_CADASTROS_CONSULTAR'
     | 'NOTIFICACOES_CONSULTAR'
     | 'NOTIFICACOES_GERENCIAR'
     | 'ANEXOS_CONSULTAR'

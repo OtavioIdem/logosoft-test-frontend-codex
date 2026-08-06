@@ -37,6 +37,7 @@ Modernizar a tela `/login` com um layout corporativo em duas áreas, mantendo au
 - Formulário com logo, título, subtítulo, ambiente, campos e erro inline.
 - Erro de autenticação exibido via Toast pelo provider e via `ApiErrorPanel` no formulário.
 - Empresa e filial seguem como campos textuais temporários, sem expor GUID cru na interface.
+  - **Superado:** o campo Empresa foi removido do formulário de login. O backend passou a resolver o vínculo do usuário e a validar a licença do cliente a partir das credenciais, e o corpo de `/api/auth/login` carrega apenas `email` e `password`. Com isso a exceção controlada `LoginForm.tsx::empresaId` do gate `validate:guid-references` foi encerrada.
 - Painel visual abstrato com gradiente azul/roxo/magenta e variações futuras por campanha.
 - Em mobile, o painel visual é ocultado para priorizar o formulário.
 

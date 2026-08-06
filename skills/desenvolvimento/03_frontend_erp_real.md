@@ -55,6 +55,6 @@ Usuário escolhe entidade legível
 Frontend envia ID internamente
 ```
 
-## Exceção conhecida
+## Exceções conhecidas
 
-`LoginForm.tsx::empresaId` é exceção legado-controlada, exibida como código autorizado da empresa no contrato de login.
+Nenhuma. `LoginForm.tsx::empresaId` era a única exceção controlada e foi encerrada: o campo Empresa saiu da tela de login, e o backend passou a resolver o vínculo do usuário junto da validação de licença do cliente. O login envia apenas credenciais.
