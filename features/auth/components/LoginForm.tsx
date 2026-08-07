@@ -24,8 +24,7 @@ export const LoginForm = () => {
         resolver: zodResolver(loginSchema),
         defaultValues: {
             email: '',
-            senha: '',
-            empresaId: ''
+            senha: ''
         }
     });
 
@@ -96,30 +95,6 @@ export const LoginForm = () => {
                         )}
                     />
                     <FieldError id="senha-error" message={errors.senha?.message} />
-                </div>
-
-                <div className="login-field">
-                    <label htmlFor="empresaId">Empresa <span className="login-field__optional">(opcional)</span></label>
-                    <Controller
-                        name="empresaId"
-                        control={control}
-                        render={({ field }) => (
-                            <InputText
-                                {...field}
-                                id="empresaId"
-                                className="w-full"
-                                placeholder="Código autorizado (opcional)"
-                                autoComplete="organization"
-                                aria-label="Empresa (opcional)"
-                                aria-describedby="empresaId-help"
-                                onChange={(event) => {
-                                    clearApiError();
-                                    field.onChange(event);
-                                }}
-                            />
-                        )}
-                    />
-                    <small id="empresaId-help" className="login-field__help">Deixe em branco para acessar sem informar a empresa.</small>
                 </div>
 
                 <Button type="submit" label="Entrar" icon="pi pi-sign-in" loading={isSubmitting} disabled={isSubmitting} className="w-full login-form__submit" />

@@ -3,29 +3,16 @@ import { mapApiError } from '@/lib/http/apiError';
 import { clearSession, getAccessToken, getRefreshToken, updateTokens } from '@/lib/auth/sessionStorage';
 import { LoginPayload, LoginRequest } from '@/features/auth/types/auth.types';
 import { normalizeCurrentUserResponse, normalizeLoginSession, normalizeRefreshSession } from '@/features/auth/api/authResponseMapper';
-import { normalizeGuidOrNull } from '@/lib/http/requestUtils';
 
-const MANAGER_TEST_EMAIL = 'manager@erp.local';
-
-export const buildLoginPayload = ({ email, password, empresaId }: LoginRequest): LoginPayload => {
-    const normalizedEmail = email.trim();
-    const payload: LoginPayload = {
-        email: normalizedEmail,
-        password
-    };
-
-    if (normalizedEmail.toLowerCase() === MANAGER_TEST_EMAIL) {
-        return payload;
-    }
-
-    const normalizedEmpresaId = normalizeGuidOrNull(empresaId);
-
-    if (normalizedEmpresaId) {
-        payload.empresaId = normalizedEmpresaId;
-    }
-
-    return payload;
-};
+/**
+ * O payload de login carrega **somente credenciais**. A empresa saiu da tela: quem resolve o vínculo e valida
+ * a licença do cliente é o backend, a partir do usuário autenticado. A desestruturação explícita garante que
+ * um chamador desatualizado não reintroduza `empresaId` no corpo por engano.
+ */
+export const buildLoginPayload = ({ email, password }: LoginRequest): LoginPayload => ({
+    email: email.trim(),
+    password
+});
 
 const genericLoginMessages = new Set([
     'Sessão não autenticada ou expirada.',
@@ -37,15 +24,17 @@ const preserveApiMessage = (message: string, fallback: string) => (genericLoginM
 
 const mapLoginErrorMessage = (apiError: ReturnType<typeof mapApiError>) => {
     if (apiError.status === 401) {
-        return preserveApiMessage(apiError.message, 'Credenciais inválidas ou acesso não autorizado para a empresa informada.');
+        return preserveApiMessage(apiError.message, 'Credenciais inválidas ou acesso não autorizado.');
     }
 
     if (apiError.status === 403) {
         return preserveApiMessage(apiError.message, 'Usuário bloqueado ou sem permissão para acessar a operação selecionada.');
     }
 
+    // O backend responde aqui também quando a licença do cliente está irregular; a mensagem dele é específica
+    // e `preserveApiMessage` a mantém, caindo no texto genérico apenas quando não vem nada útil.
     if (apiError.status === 400) {
-        return preserveApiMessage(apiError.message, 'Empresa ou credenciais inválidas. Revise os dados informados.');
+        return preserveApiMessage(apiError.message, 'Credenciais inválidas. Revise os dados informados.');
     }
 
     return apiError.message;

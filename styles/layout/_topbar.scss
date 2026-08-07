@@ -84,11 +84,82 @@
             margin-left: 1rem;
         }
     }
+
+    // Centralizado em relação ao topbar inteiro, e não ao espaço que sobra entre logo e ações — por isso
+    // absoluto: em fluxo, a largura fixa do logo (300px) empurraria o título para a direita do meio real.
+    // `pointer-events` liberado só no conteúdo para o título não capturar cliques da faixa vazia ao redor.
+    .layout-topbar-title {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        max-width: 40%;
+        pointer-events: none;
+
+        .layout-topbar-title-text {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-color);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .layout-topbar-title-help {
+            pointer-events: auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            flex: 0 0 auto;
+            border-radius: 50%;
+            color: var(--text-color-secondary);
+            cursor: help;
+            transition: background-color $transitionDuration, color $transitionDuration;
+
+            &:hover {
+                color: var(--text-color);
+                background-color: var(--surface-hover);
+            }
+
+            &:focus {
+                @include focused();
+            }
+
+            i {
+                font-size: 1.1rem;
+            }
+        }
+    }
+}
+
+.layout-topbar-title-tooltip {
+    max-width: 28rem;
+}
+
+// O título só sai do corpo da página quando cabe no topbar. Abaixo de 992px o topbar já disputa espaço com
+// logo e botões, então o cabeçalho da tela volta a ser desenhado no conteúdo.
+.page-header-compact-title {
+    display: none;
+}
+
+@media (max-width: 991px) {
+    .page-header-compact-title {
+        display: block;
+    }
 }
 
 @media (max-width: 991px) {
     .layout-topbar {
         justify-content: space-between;
+
+        .layout-topbar-title {
+            display: none;
+        }
 
         .layout-topbar-logo {
             width: auto;

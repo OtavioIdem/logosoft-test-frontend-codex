@@ -81,6 +81,9 @@ export const PERMISSOES_CATALOGO: Record<PermissionCode, PermissaoCatalogoItem> 
     FISCAL_CANCELAR: { grupo: 'Fiscal', label: 'Cancelar' },
     FISCAL_INUTILIZAR: { grupo: 'Fiscal', label: 'Inutilizar' },
     FISCAL_CARTA_CORRECAO: { grupo: 'Fiscal', label: 'Carta de correção' },
+    FISCAL_REGRAS_CONSULTAR: { grupo: 'Fiscal', label: 'Regras de tributação · Consultar' },
+    FISCAL_REGRAS_GERENCIAR: { grupo: 'Fiscal', label: 'Regras de tributação · Gerenciar' },
+    FISCAL_CADASTROS_CONSULTAR: { grupo: 'Fiscal', label: 'Cadastros fiscais · Consultar' },
     // Notificações / Anexos
     NOTIFICACOES_CONSULTAR: { grupo: 'Notificações', label: 'Consultar' },
     NOTIFICACOES_GERENCIAR: { grupo: 'Notificações', label: 'Gerenciar' },

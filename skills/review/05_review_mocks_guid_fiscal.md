@@ -56,11 +56,15 @@ grupoAcessoId
 usuarioId
 ```
 
-Exceção conhecida:
+Exceções conhecidas:
 
 ```text
-LoginForm.tsx::empresaId como código autorizado da empresa no contrato legado de login.
+Nenhuma.
 ```
+
+A única exceção controlada que existia — `LoginForm.tsx::empresaId` — foi encerrada quando o campo Empresa saiu
+da tela de login. A empresa passou a ser resolvida pelo backend, junto da validação de licença do cliente, e o
+`controlledExceptions` do gate ficou vazio de propósito: reintroduzir o campo deve falhar.
 
 ## Fiscal
 
