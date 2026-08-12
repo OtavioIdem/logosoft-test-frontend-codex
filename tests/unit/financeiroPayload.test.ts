@@ -34,22 +34,23 @@ describe('financeiro payloads', () => {
         expect(payload.fornecedorId).toBe(fornecedorId);
     });
 
-    it('monta baixa de conta a receber no contrato oficial /baixar', () => {
-        const payload = buildReceberContaPayload({ dataBaixa: '2026-05-05T10:00:00-03:00', valor: 100, observacao: '' });
-        expect(payload).toEqual({ dataBaixa: '2026-05-05T10:00:00-03:00', valor: 100 });
-        expect(payload).not.toHaveProperty('parcelaId');
-        expect(payload).not.toHaveProperty('formaPagamentoId');
+    it('monta recebimento por parcela no DTO do endpoint /receber', () => {
+        const payload = buildReceberContaPayload({ parcelaId: baixaId, formaPagamentoId: clienteId, dataRecebimento: '2026-05-05T10:00:00-03:00', valorRecebido: 100, valorJuros: 0, valorMulta: 0, valorDesconto: 0, gerarMovimentoCaixa: true, gerarMovimentoBancario: false, contaBancariaReferencia: '', observacao: '' });
+        expect(payload).toEqual({ parcelaId: baixaId, formaPagamentoId: clienteId, dataRecebimento: '2026-05-05T10:00:00-03:00', valorRecebido: 100, valorJuros: 0, valorMulta: 0, valorDesconto: 0, gerarMovimentoCaixa: true, gerarMovimentoBancario: false });
+        expect(payload).not.toHaveProperty('dataBaixa');
+        expect(payload).not.toHaveProperty('valor');
     });
 
-    it('monta baixa de conta a pagar no contrato oficial /baixar', () => {
-        const payload = buildPagarContaPayload({ dataBaixa: '2026-05-05T10:00:00-03:00', valor: 100, observacao: 'Pagamento parcial' });
-        expect(payload).toMatchObject({ dataBaixa: '2026-05-05T10:00:00-03:00', valor: 100, observacao: 'Pagamento parcial' });
+    it('monta pagamento por parcela no DTO do endpoint /pagar', () => {
+        const payload = buildPagarContaPayload({ parcelaId: baixaId, formaPagamentoId: fornecedorId, dataPagamento: '2026-05-05T10:00:00-03:00', valorPago: 100, valorJuros: 0, valorMulta: 0, valorDesconto: 0, gerarMovimentoCaixa: true, gerarMovimentoBancario: false, contaBancariaReferencia: '', observacao: 'Pagamento parcial' });
+        expect(payload).toMatchObject({ parcelaId: baixaId, formaPagamentoId: fornecedorId, dataPagamento: '2026-05-05T10:00:00-03:00', valorPago: 100, valorJuros: 0, valorMulta: 0, valorDesconto: 0, gerarMovimentoCaixa: true, gerarMovimentoBancario: false, observacao: 'Pagamento parcial' });
+        expect(payload).not.toHaveProperty('dataBaixa');
     });
 
-    it('monta estorno financeiro com baixaId, dataEstorno e motivo', () => {
-        const payload = buildEstornarPagamentoPayload({ baixaId, dataEstorno: '2026-05-06T10:00:00-03:00', motivo: 'Baixa duplicada' });
-        expect(payload).toEqual({ baixaId, dataEstorno: '2026-05-06T10:00:00-03:00', motivo: 'Baixa duplicada' });
-        expect(payload).not.toHaveProperty('pagamentoId');
+    it('monta estorno com a referência do pagamento e motivo', () => {
+        const payload = buildEstornarPagamentoPayload({ pagamentoId: baixaId, motivo: 'Baixa duplicada' });
+        expect(payload).toEqual({ pagamentoId: baixaId, motivo: 'Baixa duplicada' });
+        expect(payload).not.toHaveProperty('baixaId');
     });
 
     it('monta filtro do fluxo de caixa omitindo filial inválida', () => {

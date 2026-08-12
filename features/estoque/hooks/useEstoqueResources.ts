@@ -14,7 +14,6 @@ export const estoqueQueryKeys = {
     movimentos: (query?: EstoqueListQuery) => ['estoque', 'movimentos', query] as const,
     reservas: (query?: EstoqueListQuery) => ['estoque', 'reservas', query] as const,
     inventarios: (query?: EstoqueListQuery) => ['estoque', 'inventarios', query] as const,
-    inventarioDetalhe: (id?: string | null) => ['estoque', 'inventarios', 'detalhe', id] as const
 };
 
 export const useLocaisEstoque = (query: EstoqueListQuery = {}, enabled = true) => useQuery({ queryKey: estoqueQueryKeys.locais(query), queryFn: () => estoqueApi.listarLocais(query), enabled });
@@ -22,7 +21,6 @@ export const useSaldosEstoque = (query: EstoqueListQuery = {}) => useQuery({ que
 export const useMovimentosEstoque = (query: EstoqueListQuery = {}) => useQuery({ queryKey: estoqueQueryKeys.movimentos(query), queryFn: () => estoqueApi.listarMovimentos(query) });
 export const useReservasEstoque = (query: EstoqueListQuery = {}) => useQuery({ queryKey: estoqueQueryKeys.reservas(query), queryFn: () => estoqueApi.listarReservas(query) });
 export const useInventariosEstoque = (query: EstoqueListQuery = {}) => useQuery({ queryKey: estoqueQueryKeys.inventarios(query), queryFn: () => estoqueApi.listarInventarios(query) });
-export const useInventarioEstoqueDetalhe = (id?: string | null) => useQuery({ queryKey: estoqueQueryKeys.inventarioDetalhe(id), queryFn: () => estoqueApi.obterInventario(id as string), enabled: Boolean(id) });
 
 export const useLocalEstoqueMutations = (query: EstoqueListQuery = {}) => {
     const queryClient = useQueryClient();
@@ -68,20 +66,7 @@ export const useInventarioEstoqueMutations = () => {
     };
     const abrirMutation = useMutation({ mutationFn: estoqueApi.abrirInventario, onSuccess: invalidate });
     const adicionarItemMutation = useMutation({ mutationFn: ({ id, values }: ActionPayload) => estoqueApi.adicionarItemInventario(id, values), onSuccess: invalidate });
-    const iniciarContagemMutation = useMutation({ mutationFn: (id: string) => estoqueApi.iniciarContagemInventario(id), onSuccess: invalidate });
-    const concluirMutation = useMutation({ mutationFn: ({ id, motivo }: ReasonPayload) => estoqueApi.concluirInventario(id, motivo), onSuccess: invalidate });
+    const fecharMutation = useMutation({ mutationFn: ({ id, motivo }: ReasonPayload) => estoqueApi.fecharInventario(id, motivo), onSuccess: invalidate });
     const cancelarMutation = useMutation({ mutationFn: ({ id, motivo }: ReasonPayload) => estoqueApi.cancelarInventario(id, motivo), onSuccess: invalidate });
-    return { abrirMutation, adicionarItemMutation, iniciarContagemMutation, concluirMutation, cancelarMutation };
-};
-
-export const useBloqueioEstoqueMutations = () => {
-    const queryClient = useQueryClient();
-    const invalidate = () => {
-        queryClient.invalidateQueries({ queryKey: ['estoque', 'saldos'] });
-        queryClient.invalidateQueries({ queryKey: ['estoque', 'movimentos'] });
-    };
-    const criarBloqueioMutation = useMutation({ mutationFn: estoqueApi.criarBloqueio, onSuccess: invalidate });
-    const liberarBloqueioMutation = useMutation({ mutationFn: ({ id, motivo }: ReasonPayload) => estoqueApi.liberarBloqueio(id, motivo), onSuccess: invalidate });
-    const cancelarBloqueioMutation = useMutation({ mutationFn: ({ id, motivo }: ReasonPayload) => estoqueApi.cancelarBloqueio(id, motivo), onSuccess: invalidate });
-    return { criarBloqueioMutation, liberarBloqueioMutation, cancelarBloqueioMutation };
+    return { abrirMutation, adicionarItemMutation, fecharMutation, cancelarMutation };
 };

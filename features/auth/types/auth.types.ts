@@ -1,4 +1,5 @@
 import { AuthSession, CurrentUser } from '@/types/erp';
+import { ApiError } from '@/types/erp';
 import type { RefreshSessionResponse } from '@/features/auth/api/authResponseMapper';
 
 /**
@@ -21,8 +22,11 @@ export type AuthContextValue = {
     user: CurrentUser | null;
     isAuthenticated: boolean;
     isLoading: boolean;
+    authStatus: 'loading' | 'authenticated' | 'anonymous' | 'error';
+    authError: ApiError | null;
     login: (payload: LoginRequest) => Promise<void>;
     logout: () => Promise<void>;
     refreshSession: () => Promise<RefreshSessionResponse | null>;
     refreshUserFromStorage: () => void;
+    retrySession: () => Promise<void>;
 };

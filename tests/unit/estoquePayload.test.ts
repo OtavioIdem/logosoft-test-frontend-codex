@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildAjusteEstoquePayload, buildConcluirInventarioPayload, buildCriarBloqueioEstoquePayload, buildCriarLocalEstoquePayload, buildMovimentoManualEstoquePayload, buildCriarReservaEstoquePayload, buildTransferenciaEstoquePayload } from '@/features/estoque/api/estoqueApi';
+import { buildAjusteEstoquePayload, buildCriarLocalEstoquePayload, buildFecharInventarioPayload, buildMovimentoManualEstoquePayload, buildCriarReservaEstoquePayload, buildTransferenciaEstoquePayload } from '@/features/estoque/api/estoqueApi';
 
 const empresaId = '11111111-1111-1111-1111-111111111111';
 const produtoId = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
@@ -37,9 +37,8 @@ describe('estoque payloads', () => {
         expect(() => buildTransferenciaEstoquePayload({ empresaId, filialOrigemId, localOrigemId: localEstoqueId, filialDestinoId: filialOrigemId, localDestinoId: localEstoqueId, produtoId, quantidade: 3, motivo: 'Mesmo local' })).toThrow('Destino deve ser diferente da origem.');
     });
 
-    it('monta bloqueio e conclusão de inventário com payloads oficiais B41', () => {
-        expect(buildCriarBloqueioEstoquePayload({ empresaId, filialId: '', localEstoqueId, produtoId, quantidade: 2, motivo: 'Produto avariado' })).toEqual({ empresaId, localEstoqueId, produtoId, quantidade: 2, motivo: 'Produto avariado' });
-        expect(buildConcluirInventarioPayload('Ajuste por inventário')).toEqual({ motivoAjuste: 'Ajuste por inventário' });
+    it('monta fechamento do inventário simples com motivo obrigatório', () => {
+        expect(buildFecharInventarioPayload('Ajuste por inventário')).toEqual({ motivo: 'Ajuste por inventário' });
     });
 
     it('monta reserva com origem de vendas', () => {

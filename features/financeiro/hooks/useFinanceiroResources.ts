@@ -9,7 +9,6 @@ import {
     ContaPagarFormValues,
     ContaReceberFormValues,
     FinanceiroListQuery,
-    FluxoCaixaQuery,
     FormaPagamentoFormValues,
     FormaPagamentoResponse
 } from '@/features/financeiro/types/financeiro.types';
@@ -28,7 +27,6 @@ export const formasPagamentoQueryKey = (empresaId?: string | null) => ['financei
 export const condicoesPagamentoQueryKey = (empresaId?: string | null) => ['financeiro', 'condicoes-pagamento', empresaId ?? null] as const;
 export const contasReceberQueryKey = (query?: FinanceiroListQuery) => ['financeiro', 'contas-receber', query] as const;
 export const contasPagarQueryKey = (query?: FinanceiroListQuery) => ['financeiro', 'contas-pagar', query] as const;
-export const fluxoCaixaQueryKey = (query?: FluxoCaixaQuery) => ['financeiro', 'fluxo-caixa', query] as const;
 
 const formaLabel = (forma: FormaPagamentoResponse) => `${forma.codigo} • ${forma.nome}`;
 const condicaoLabel = (condicao: CondicaoPagamentoResponse) => `${condicao.codigo} • ${condicao.nome}`;
@@ -36,7 +34,8 @@ const condicaoLabel = (condicao: CondicaoPagamentoResponse) => `${condicao.codig
 export const useFormasPagamento = (empresaId?: string | null) =>
     useQuery({
         queryKey: formasPagamentoQueryKey(empresaId),
-        queryFn: () => financeiroApi.listarFormasPagamento({ empresaId })
+        queryFn: () => financeiroApi.listarFormasPagamento({ empresaId }),
+        enabled: Boolean(empresaId)
     });
 
 export const useFormasPagamentoOptions = (empresaId?: string | null, mode: 'recebimento' | 'pagamento' | 'ambos' = 'ambos') => {
@@ -78,20 +77,13 @@ export const useContasPagar = (query: FinanceiroListQuery = {}) =>
         queryFn: () => financeiroApi.listarContasPagar(query)
     });
 
-export const useFluxoCaixa = (query: FluxoCaixaQuery) =>
-    useQuery({
-        queryKey: fluxoCaixaQueryKey(query),
-        queryFn: () => financeiroApi.consultarFluxoCaixa(query),
-        enabled: Boolean(query.dataInicial && query.dataFinal)
-    });
 
 export const useFinanceiroMutations = () => {
     const queryClient = useQueryClient();
     const invalidateFormas = () => queryClient.invalidateQueries({ queryKey: ['financeiro', 'formas-pagamento'] });
     const invalidateCondicoes = () => queryClient.invalidateQueries({ queryKey: ['financeiro', 'condicoes-pagamento'] });
-    const invalidateFluxo = () => queryClient.invalidateQueries({ queryKey: ['financeiro', 'fluxo-caixa'] });
-    const invalidateReceber = () => { queryClient.invalidateQueries({ queryKey: ['financeiro', 'contas-receber'] }); invalidateFluxo(); };
-    const invalidatePagar = () => { queryClient.invalidateQueries({ queryKey: ['financeiro', 'contas-pagar'] }); invalidateFluxo(); };
+    const invalidateReceber = () => queryClient.invalidateQueries({ queryKey: ['financeiro', 'contas-receber'] });
+    const invalidatePagar = () => queryClient.invalidateQueries({ queryKey: ['financeiro', 'contas-pagar'] });
 
     const formaSaveMutation = useMutation({
         mutationFn: ({ id, values }: SaveFormaPayload) => (id ? financeiroApi.atualizarFormaPagamento(id, values) : financeiroApi.criarFormaPagamento(values)),

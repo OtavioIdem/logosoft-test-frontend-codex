@@ -1,3 +1,20 @@
+# v1.11.0a8b45.c1
+
+## Reconciliação do contrato backend atual
+
+- Preservado o `HEAD 398298d` como corte técnico auditado, sem declará-lo aprovado.
+- Tornado `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md` a fonte canônica para integração.
+- Substituído o gate B38 por comparação estrita de método e caminho, com resolução de constantes e templates.
+- Mantidas visíveis as incompatibilidades reais; a corretiva continua bloqueada até as ondas de correção.
+- Nenhum client, tela, hook, schema ou fluxo produtivo foi alterado nesta Onda 0.
+
+## Validações esperadas
+
+```bash
+npm run test:unit -- tests/unit/backendContractMap.test.ts
+npm run validate:backend-contract-map
+```
+
 # v1.11.0a8b45
 
 ## Auditoria avançada

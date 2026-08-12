@@ -32,13 +32,17 @@ const params = (query: RelatorioPeriodoQuery) => {
     const payload = buildRelatorioPeriodoQuery(query);
     return cleanQueryParams({ empresaId: payload.empresaId, filialId: payload.filialId, dataInicial: payload.dataInicial, dataFinal: payload.dataFinal });
 };
+const operacionalParams = (query: RelatorioPeriodoQuery) => {
+    const payload = buildRelatorioPeriodoQuery(query);
+    return cleanQueryParams({ empresaId: payload.empresaId, filialId: payload.filialId, inicio: payload.dataInicial, fim: payload.dataFinal });
+};
 
 export const buildRelatorioPeriodoQuery = (values: unknown): RelatorioPeriodoQuery => parseSchema(relatorioPeriodoQuerySchema, values);
 
 export const relatoriosApi = {
     async operacional(query: RelatorioPeriodoQuery) {
         return runRelatoriosRequest(async () => {
-            const response = await httpClient.get<RelatorioOperacionalResponse>('/api/relatorios/operacionais', { params: params(query) });
+            const response = await httpClient.get<RelatorioOperacionalResponse>('/api/relatorios/operacional/geral', { params: operacionalParams(query) });
             return response.data;
         });
     },
@@ -86,7 +90,7 @@ export const relatoriosApi = {
     },
     async exportar(area: RelatorioAreaExportavel, formato: RelatorioFormatoExportacao, query: RelatorioPeriodoQuery) {
         return runRelatoriosRequest(async () => {
-            const response = await httpClient.get<Blob>('/api/relatorios/gerenciais/exportar', { params: { ...params(query), area, formato }, responseType: 'blob' });
+            const response = await httpClient.get<Blob>('/api/relatorios/gerenciais/exportar', { params: { ...params(query), indicador: area, formato }, responseType: 'blob' });
             return response.data;
         });
     }

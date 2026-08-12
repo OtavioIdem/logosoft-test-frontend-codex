@@ -79,7 +79,7 @@ export type CancelarReservaEstoqueRequest = { quantidade?: number | null; motivo
 
 export type AbrirInventarioRequest = { empresaId: Guid; filialId?: Guid | null; codigo: string; localEstoqueId: Guid; descricao?: string | null };
 export type AdicionarItemInventarioRequest = { produtoId: Guid; quantidadeContada: number; observacao?: string | null };
-export type ConcluirInventarioRequest = { motivoAjuste: string };
+export type FecharInventarioRequest = { motivo: string };
 
 export type LocalEstoqueFormValues = Partial<CriarLocalEstoqueRequest & AtualizarLocalEstoqueRequest> & { id?: Guid };
 export type MovimentoEstoqueFormValues = Partial<MovimentoManualEstoqueRequest & AjusteEstoqueRequest>;

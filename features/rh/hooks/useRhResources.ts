@@ -70,7 +70,18 @@ export const useFeriasMutations = () => {
         queryClient.invalidateQueries({ queryKey: ['rh-colaboradores'] });
     };
     const solicitarMutation = useMutation({ mutationFn: (values: unknown) => rhApi.solicitarFerias(values), onSuccess: invalidate });
-    const acaoMutation = useMutation({ mutationFn: ({ id, acao, motivo }: { id: string; acao: 'aprovar' | 'rejeitar' | 'iniciar' | 'concluir' | 'cancelar'; motivo?: string }) => rhApi.acaoFerias(id, acao, motivo), onSuccess: invalidate });
+    const acaoMutation = useMutation({
+        mutationFn: ({ id, acao, motivo }: { id: string; acao: 'aprovar' | 'rejeitar' | 'iniciar' | 'concluir' | 'cancelar'; motivo?: string }) => {
+            switch (acao) {
+                case 'aprovar': return rhApi.aprovarFerias(id);
+                case 'rejeitar': return rhApi.rejeitarFerias(id, motivo ?? '');
+                case 'iniciar': return rhApi.iniciarFerias(id);
+                case 'concluir': return rhApi.concluirFerias(id);
+                case 'cancelar': return rhApi.cancelarFerias(id, motivo ?? '');
+            }
+        },
+        onSuccess: invalidate
+    });
     return { solicitarMutation, acaoMutation };
 };
 

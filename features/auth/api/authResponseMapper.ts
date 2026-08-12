@@ -1,5 +1,6 @@
 import { AuthSession, AuthTokens, CurrentUser, PermissionCode } from '@/types/erp';
 import { decodeJwtPayload } from '@/lib/auth/jwt';
+import { MeResponse, meResponseSchema } from '@/features/auth/schemas/authSchemas';
 
 const ENVELOPE_KEYS = ['data', 'Data', 'value', 'Value', 'result', 'Result'] as const;
 
@@ -149,16 +150,20 @@ export const normalizeUser = (payload: Record<string, unknown>, accessToken: str
     };
 };
 
-export const normalizeCurrentUserResponse = (payload: unknown, accessToken = ''): CurrentUser => {
-    const data = extractEnvelopePayload(payload);
+export const normalizeMeResponse = (payload: unknown): MeResponse => meResponseSchema.parse(extractEnvelopePayload(payload));
 
-    if (!isRecord(data)) {
-        throw new Error('Resposta de usuário autenticado inválida: corpo da resposta não é um objeto JSON.');
-    }
-
-    return normalizeUser(data, accessToken);
+export const normalizeCurrentUserResponse = (payload: unknown): CurrentUser => {
+    const me = normalizeMeResponse(payload);
+    return {
+        id: me.usuarioId,
+        nome: me.nome,
+        email: me.email,
+        empresaId: me.empresaId,
+        filialId: me.filialId,
+        isMaster: me.isMaster,
+        permissoes: me.permissoes as PermissionCode[]
+    };
 };
-
 export const normalizeLoginSession = (payload: unknown): AuthSession => {
     const data = extractEnvelopePayload(payload);
 

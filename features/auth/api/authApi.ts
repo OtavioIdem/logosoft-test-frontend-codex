@@ -1,8 +1,19 @@
 import { httpClient } from '@/lib/http/httpClient';
 import { mapApiError } from '@/lib/http/apiError';
-import { clearSession, getAccessToken, getRefreshToken, updateTokens } from '@/lib/auth/sessionStorage';
+import { clearSession, getRefreshToken, updateTokens } from '@/lib/auth/sessionStorage';
 import { LoginPayload, LoginRequest } from '@/features/auth/types/auth.types';
 import { normalizeCurrentUserResponse, normalizeLoginSession, normalizeRefreshSession } from '@/features/auth/api/authResponseMapper';
+import { ZodError } from 'zod';
+
+export class AuthApiClientError extends Error {
+    apiError: ReturnType<typeof mapApiError>;
+
+    constructor(apiError: ReturnType<typeof mapApiError>) {
+        super(apiError.message);
+        this.name = 'AuthApiClientError';
+        this.apiError = apiError;
+    }
+}
 
 /**
  * O payload de login carrega **somente credenciais**. A empresa saiu da tela: quem resolve o vínculo e valida
@@ -44,8 +55,9 @@ const runAuthRequest = async <T>(request: () => Promise<T>, mapMessage?: (apiErr
     try {
         return await request();
     } catch (error) {
-        const apiError = mapApiError(error);
-        throw new Error(mapMessage ? mapMessage(apiError) : apiError.message);
+        const apiError = error instanceof ZodError ? { ...mapApiError(error), code: 'AUTH_PAYLOAD_INVALID' } : mapApiError(error);
+        const message = mapMessage ? mapMessage(apiError) : apiError.message;
+        throw new AuthApiClientError({ ...apiError, message });
     }
 };
 
@@ -76,7 +88,7 @@ export const authApi = {
     async me() {
         return runAuthRequest(async () => {
             const response = await httpClient.get('/api/auth/me');
-            return normalizeCurrentUserResponse(response.data, getAccessToken() ?? '');
+            return normalizeCurrentUserResponse(response.data);
         });
     },
 

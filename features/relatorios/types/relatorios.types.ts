@@ -1,7 +1,7 @@
 import { Guid, IsoDateTime } from '@/types/erp';
 
 export type RelatorioPeriodoQuery = {
-    empresaId?: Guid | null;
+    empresaId: Guid;
     filialId?: Guid | null;
     dataInicial: IsoDateTime | Date;
     dataFinal: IsoDateTime | Date;

@@ -85,21 +85,31 @@ export const RelatoriosPage = () => {
     const [areaExportacao, setAreaExportacao] = useState<RelatorioAreaExportavel>('vendas');
     const [formatoExportacao, setFormatoExportacao] = useState<RelatorioFormatoExportacao>('xlsx');
 
-    const query = useMemo<RelatorioPeriodoQuery>(() => ({ empresaId, filialId, dataInicial: dataInicial ?? startOfCurrentMonth(), dataFinal: dataFinal ?? endOfCurrentMonth() }), [dataFinal, dataInicial, empresaId, filialId]);
-    const operacional = useRelatorioOperacional(query);
-    const vendas = useRelatorioGerencialVendas(query);
-    const compras = useRelatorioGerencialCompras(query);
-    const financeiro = useRelatorioGerencialFinanceiro(query);
-    const estoque = useRelatorioGerencialEstoque(query);
-    const fiscal = useRelatorioGerencialFiscal(query);
-    const producao = useRelatorioGerencialProducao(query);
+    const query = useMemo<RelatorioPeriodoQuery | null>(() => empresaId ? ({ empresaId, filialId, dataInicial: dataInicial ?? startOfCurrentMonth(), dataFinal: dataFinal ?? endOfCurrentMonth() }) : null, [dataFinal, dataInicial, empresaId, filialId]);
+    const permissoes = {
+        operacional: hasPermission('RELATORIOS_OPERACIONAIS_CONSULTAR'),
+        vendas: hasPermission('RELATORIOS_VENDAS_CONSULTAR'),
+        compras: hasPermission('RELATORIOS_COMPRAS_CONSULTAR'),
+        financeiro: hasPermission('RELATORIOS_FINANCEIRO_CONSULTAR'),
+        estoque: hasPermission('RELATORIOS_ESTOQUE_CONSULTAR'),
+        fiscal: hasPermission('RELATORIOS_FISCAL_CONSULTAR'),
+        producao: hasPermission('RELATORIOS_PRODUCAO_CONSULTAR')
+    };
+    const podeConsultar = Object.values(permissoes).some(Boolean);
+    const operacional = useRelatorioOperacional(query, permissoes.operacional);
+    const vendas = useRelatorioGerencialVendas(query, permissoes.vendas);
+    const compras = useRelatorioGerencialCompras(query, permissoes.compras);
+    const financeiro = useRelatorioGerencialFinanceiro(query, permissoes.financeiro);
+    const estoque = useRelatorioGerencialEstoque(query, permissoes.estoque);
+    const fiscal = useRelatorioGerencialFiscal(query, permissoes.fiscal);
+    const producao = useRelatorioGerencialProducao(query, permissoes.producao);
     const exportarMutation = useExportarRelatorio();
 
-    if (!hasPermission('RELATORIOS_CONSULTAR')) {
-        return <UnauthorizedState description="Relatórios exigem RELATORIOS_CONSULTAR." />;
+    if (!podeConsultar && !hasPermission('RELATORIOS_EXPORTAR')) {
+        return <UnauthorizedState description="Seu usuário não possui permissão para consultar ou exportar relatórios." />;
     }
 
-    const exportar = () => runWithToast(() => exportarMutation.mutateAsync({ area: areaExportacao, formato: formatoExportacao, query }), { success: { summary: 'Exportação iniciada', detail: 'O download deve começar em instantes.' }, error: { summary: 'Erro ao exportar relatório' } });
+    const exportar = () => query ? runWithToast(() => exportarMutation.mutateAsync({ area: areaExportacao, formato: formatoExportacao, query }), { success: { summary: 'Exportação iniciada', detail: 'O download deve começar em instantes.' }, error: { summary: 'Erro ao exportar relatório' } }) : undefined;
 
     return (
         <>
@@ -121,13 +131,13 @@ export const RelatoriosPage = () => {
                 </div>
             </Card>
 
-            <RelatorioSection title="Operacional consolidado" moduleTag="Operacional" data={operacional.data} loading={operacional.isFetching} error={operacional.error} />
-            <RelatorioSection title="Gerencial de vendas" moduleTag="Vendas" data={vendas.data} loading={vendas.isFetching} error={vendas.error} />
-            <RelatorioSection title="Gerencial de compras" moduleTag="Compras" data={compras.data} loading={compras.isFetching} error={compras.error} />
-            <RelatorioSection title="Gerencial financeiro" moduleTag="Financeiro" data={financeiro.data} loading={financeiro.isFetching} error={financeiro.error} />
-            <RelatorioSection title="Gerencial de estoque" moduleTag="Estoque" data={estoque.data} loading={estoque.isFetching} error={estoque.error} />
-            <RelatorioSection title="Gerencial fiscal" moduleTag="Fiscal" data={fiscal.data} loading={fiscal.isFetching} error={fiscal.error} />
-            <RelatorioSection title="Gerencial de produção" moduleTag="Produção" data={producao.data} loading={producao.isFetching} error={producao.error} />
+            {permissoes.operacional ? <RelatorioSection title="Operacional consolidado" moduleTag="Operacional" data={operacional.data} loading={operacional.isFetching} error={operacional.error} /> : null}
+            {permissoes.vendas ? <RelatorioSection title="Gerencial de vendas" moduleTag="Vendas" data={vendas.data} loading={vendas.isFetching} error={vendas.error} /> : null}
+            {permissoes.compras ? <RelatorioSection title="Gerencial de compras" moduleTag="Compras" data={compras.data} loading={compras.isFetching} error={compras.error} /> : null}
+            {permissoes.financeiro ? <RelatorioSection title="Gerencial financeiro" moduleTag="Financeiro" data={financeiro.data} loading={financeiro.isFetching} error={financeiro.error} /> : null}
+            {permissoes.estoque ? <RelatorioSection title="Gerencial de estoque" moduleTag="Estoque" data={estoque.data} loading={estoque.isFetching} error={estoque.error} /> : null}
+            {permissoes.fiscal ? <RelatorioSection title="Gerencial fiscal" moduleTag="Fiscal" data={fiscal.data} loading={fiscal.isFetching} error={fiscal.error} /> : null}
+            {permissoes.producao ? <RelatorioSection title="Gerencial de produção" moduleTag="Produção" data={producao.data} loading={producao.isFetching} error={producao.error} /> : null}
         </>
     );
 };

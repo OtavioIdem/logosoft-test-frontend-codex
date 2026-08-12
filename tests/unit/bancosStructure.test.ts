@@ -6,15 +6,17 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(join(root, path), 'utf8');
 
 describe('Bancos/Boletos/CNAB (Onda 4) — estrutura e scaffold', () => {
-    it('client expõe os endpoints reais de Bancos', () => {
+    it('mantém apenas as operações bancárias publicadas pelo backend', () => {
         const api = read('features/bancos/api/bancosApi.ts');
         expect(api).toContain("const BASE = '/api/bancos'");
         expect(api).toContain('${BASE}/contas-bancarias');
         expect(api).toContain('${BASE}/convenios');
         expect(api).toContain('${BASE}/carteiras');
+        expect(api).toContain('listarBoletos');
+        expect(api).toContain('obterBoleto');
+        expect(api).toContain('historicoBoleto');
         expect(api).toContain('${BASE}/boletos/gerar');
         expect(api).toContain('${BASE}/boletos/${id}/cancelar');
-        expect(api).toContain('${BASE}/boletos/${id}/historico');
         expect(api).toContain('${BASE}/cnab/remessas');
         expect(api).toContain('${BASE}/cnab/retornos/importar');
     });
@@ -34,7 +36,6 @@ describe('Bancos/Boletos/CNAB (Onda 4) — estrutura e scaffold', () => {
         expect(rotas).toContain('/^\\/bancos');
         expect(rotas).toContain('BANCOS_CONSULTAR');
         const menu = read('layout/AppMenu.tsx');
-        expect(menu).toContain("to: '/bancos'");
         expect(menu).toContain("to: '/bancos/boletos'");
         expect(menu).toContain("to: '/bancos/cnab'");
         const page = read('app/(main)/bancos/boletos/page.tsx');
@@ -42,14 +43,12 @@ describe('Bancos/Boletos/CNAB (Onda 4) — estrutura e scaffold', () => {
         expect(page).not.toContain('ModulePlaceholderPage');
     });
 
-    it('boletos/CNAB gateiam ações por permissão própria e retorno CNAB é upload base64', () => {
+    it('expõe indisponibilidade honesta quando faltam consultas para concluir o fluxo bancário', () => {
         const boletos = read('features/bancos/components/BoletosPage.tsx');
-        expect(boletos).toContain('permission="BOLETOS_GERAR"');
-        expect(boletos).toContain("permission: 'BOLETOS_CANCELAR'");
+        const cadastros = read('features/bancos/components/CadastrosBancariosPage.tsx');
         const cnab = read('features/bancos/components/CnabPage.tsx');
-        expect(cnab).toContain('permission="CNAB_REMESSA_GERAR"');
-        expect(cnab).toContain('permission="CNAB_RETORNO_PROCESSAR"');
-        const dialogs = read('features/bancos/components/BancosOperacoesDialogs.tsx');
-        expect(dialogs).toContain('readAsDataURL');
+        expect(cadastros).toContain('não oferece endpoints de consulta');
+        expect(boletos).toContain('Geração de boleto indisponível');
+        expect(cnab).toContain('operações de remessa e retorno estão indisponíveis');
     });
 });

@@ -21,14 +21,11 @@ describe('relatórios payloads B44', () => {
         });
     });
 
-    it('omite empresa e filial vazias sem inventar contexto no frontend', () => {
-        expect(buildRelatorioPeriodoQuery({ empresaId: '', filialId: '', dataInicial: '2026-06-01', dataFinal: '2026-06-30' })).toEqual({
-            dataInicial: '2026-06-01',
-            dataFinal: '2026-06-30'
-        });
+    it('exige empresa para o relatório operacional, conforme o contrato do backend', () => {
+        expect(() => buildRelatorioPeriodoQuery({ empresaId: '', dataInicial: '2026-06-01', dataFinal: '2026-06-30' })).toThrow();
     });
 
     it('bloqueia data final menor que data inicial', () => {
-        expect(() => buildRelatorioPeriodoQuery({ dataInicial: '2026-07-01', dataFinal: '2026-06-30' })).toThrow('Data final deve ser maior ou igual à inicial.');
+        expect(() => buildRelatorioPeriodoQuery({ empresaId, dataInicial: '2026-07-01', dataFinal: '2026-06-30' })).toThrow('Data final deve ser maior ou igual à inicial.');
     });
 });

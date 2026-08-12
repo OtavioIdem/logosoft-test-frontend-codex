@@ -74,9 +74,7 @@ export const bloqueioEstoqueAcaoSchema = z.object({
     motivo
 });
 
-export const concluirInventarioSchema = z.object({
-    motivoAjuste: motivo
-});
+export const fecharInventarioSchema = z.object({ motivo });
 
 export const criarReservaEstoqueSchema = z.object({
     empresaId: requiredGuid('Empresa'),

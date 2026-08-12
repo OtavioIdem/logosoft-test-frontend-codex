@@ -60,7 +60,7 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/patrimonio(?:\/.*)?$/, anyOf: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_BENS_GERENCIAR', 'PATRIMONIO_TRANSFERIR', 'PATRIMONIO_BAIXAR', 'PATRIMONIO_DEPRECIAR', 'PATRIMONIO_INVENTARIO_GERENCIAR'], description: 'Patrimônio (bens, depreciação e inventário)' },
     { pattern: /^\/bancos(?:\/.*)?$/, anyOf: ['BANCOS_CONSULTAR', 'BANCOS_GERENCIAR', 'BOLETOS_GERAR', 'BOLETOS_CANCELAR', 'CNAB_REMESSA_GERAR', 'CNAB_RETORNO_PROCESSAR'], description: 'Bancos, boletos e CNAB' },
     { pattern: /^\/atividades(?:\/.*)?$/, anyOf: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'], description: 'Atividades' },
-    { pattern: /^\/relatorios(?:\/.*)?$/, anyOf: ['RELATORIOS_CONSULTAR'], description: 'Relatórios' },
+    { pattern: /^\/relatorios(?:\/.*)?$/, anyOf: ['RELATORIOS_OPERACIONAIS_CONSULTAR', 'RELATORIOS_VENDAS_CONSULTAR', 'RELATORIOS_COMPRAS_CONSULTAR', 'RELATORIOS_FINANCEIRO_CONSULTAR', 'RELATORIOS_ESTOQUE_CONSULTAR', 'RELATORIOS_FISCAL_CONSULTAR', 'RELATORIOS_PRODUCAO_CONSULTAR', 'RELATORIOS_DASHBOARD_CONSULTAR', 'RELATORIOS_EXPORTAR'], description: 'Relatórios' },
     { pattern: /^\/auditoria(?:\/.*)?$/, anyOf: ['AUDITORIA_CONSULTAR'], description: 'Auditoria' }
 ];
 

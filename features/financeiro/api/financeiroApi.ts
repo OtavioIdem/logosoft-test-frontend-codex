@@ -31,7 +31,6 @@ import {
     EstornarRecebimentoRequest,
     FinanceiroListQuery,
     FluxoCaixaQuery,
-    FluxoCaixaResponse,
     FormaPagamentoResponse,
     GerarContaReceberPedidoRequest,
     PagarContaRequest,
@@ -148,14 +147,14 @@ export const financeiroApi = {
     async receberConta(id: string, values: unknown) {
         const payload = buildReceberContaPayload(values);
         return runFinanceiroRequest(async () => {
-            const response = await httpClient.post<ContaReceberResponse>(`/api/financeiro/contas-receber/${id}/baixar`, payload);
+            const response = await httpClient.post<ContaReceberResponse>(`/api/financeiro/contas-receber/${id}/receber`, payload);
             return response.data;
         });
     },
     async estornarRecebimento(id: string, values: unknown) {
         const payload = buildEstornarRecebimentoPayload(values);
         return runFinanceiroRequest(async () => {
-            const response = await httpClient.post<ContaReceberResponse>(`/api/financeiro/contas-receber/${id}/estornar`, payload);
+            const response = await httpClient.post<ContaReceberResponse>(`/api/financeiro/contas-receber/${id}/estornar-recebimento`, payload);
             return response.data;
         });
     },
@@ -188,14 +187,14 @@ export const financeiroApi = {
     async pagarConta(id: string, values: unknown) {
         const payload = buildPagarContaPayload(values);
         return runFinanceiroRequest(async () => {
-            const response = await httpClient.post<ContaPagarResponse>(`/api/financeiro/contas-pagar/${id}/baixar`, payload);
+            const response = await httpClient.post<ContaPagarResponse>(`/api/financeiro/contas-pagar/${id}/pagar`, payload);
             return response.data;
         });
     },
     async estornarPagamento(id: string, values: unknown) {
         const payload = buildEstornarPagamentoPayload(values);
         return runFinanceiroRequest(async () => {
-            const response = await httpClient.post<ContaPagarResponse>(`/api/financeiro/contas-pagar/${id}/estornar`, payload);
+            const response = await httpClient.post<ContaPagarResponse>(`/api/financeiro/contas-pagar/${id}/estornar-pagamento`, payload);
             return response.data;
         });
     },
@@ -206,19 +205,6 @@ export const financeiroApi = {
             return response.data;
         });
     },
-    async buscarConta(id: string) {
-        return runFinanceiroRequest(async () => {
-            const response = await httpClient.get<ContaReceberResponse | ContaPagarResponse>(`/api/financeiro/contas/${id}`);
-            return response.data;
-        });
-    },
-    async consultarFluxoCaixa(query: FluxoCaixaQuery) {
-        const payload = buildFluxoCaixaQuery(query);
-        return runFinanceiroRequest(async () => {
-            const response = await httpClient.get<FluxoCaixaResponse>('/api/financeiro/fluxo-caixa', { params: cleanQueryParams({ empresaId: payload.empresaId, filialId: payload.filialId, dataInicial: payload.dataInicial, dataFinal: payload.dataFinal }) });
-            return response.data;
-        });
-    }
 };
 
 export const formasPagamentoApi = {
@@ -250,8 +236,4 @@ export const contasPagarApi = {
     baixar: financeiroApi.pagarConta,
     estornarPagamento: financeiroApi.estornarPagamento,
     cancelar: financeiroApi.cancelarContaPagar
-};
-
-export const fluxoCaixaApi = {
-    consultar: financeiroApi.consultarFluxoCaixa
 };

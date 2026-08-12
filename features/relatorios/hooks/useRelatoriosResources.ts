@@ -4,27 +4,29 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { relatoriosApi } from '@/features/relatorios/api/relatoriosApi';
 import { RelatorioAreaExportavel, RelatorioFormatoExportacao, RelatorioPeriodoQuery } from '@/features/relatorios/types/relatorios.types';
 
-const enabled = (query: RelatorioPeriodoQuery) => Boolean(query.dataInicial && query.dataFinal);
+type RelatorioQuery = RelatorioPeriodoQuery | null;
+const enabled = (query: RelatorioQuery, allowed = true) => allowed && Boolean(query?.empresaId && query.dataInicial && query.dataFinal);
 
 export const relatoriosQueryKeys = {
-    operacional: (query: RelatorioPeriodoQuery) => ['relatorios', 'operacional', query] as const,
-    vendas: (query: RelatorioPeriodoQuery) => ['relatorios', 'gerenciais', 'vendas', query] as const,
-    compras: (query: RelatorioPeriodoQuery) => ['relatorios', 'gerenciais', 'compras', query] as const,
-    financeiro: (query: RelatorioPeriodoQuery) => ['relatorios', 'gerenciais', 'financeiro', query] as const,
-    estoque: (query: RelatorioPeriodoQuery) => ['relatorios', 'gerenciais', 'estoque', query] as const,
-    fiscal: (query: RelatorioPeriodoQuery) => ['relatorios', 'gerenciais', 'fiscal', query] as const,
-    producao: (query: RelatorioPeriodoQuery) => ['relatorios', 'gerenciais', 'producao', query] as const,
-    dashboard: (query: RelatorioPeriodoQuery) => ['relatorios', 'gerenciais', 'dashboard', query] as const
+    operacional: (query: RelatorioQuery) => ['relatorios', 'operacional', query] as const,
+    vendas: (query: RelatorioQuery) => ['relatorios', 'gerenciais', 'vendas', query] as const,
+    compras: (query: RelatorioQuery) => ['relatorios', 'gerenciais', 'compras', query] as const,
+    financeiro: (query: RelatorioQuery) => ['relatorios', 'gerenciais', 'financeiro', query] as const,
+    estoque: (query: RelatorioQuery) => ['relatorios', 'gerenciais', 'estoque', query] as const,
+    fiscal: (query: RelatorioQuery) => ['relatorios', 'gerenciais', 'fiscal', query] as const,
+    producao: (query: RelatorioQuery) => ['relatorios', 'gerenciais', 'producao', query] as const,
+    dashboard: (query: RelatorioQuery) => ['relatorios', 'gerenciais', 'dashboard', query] as const
 };
 
-export const useRelatorioOperacional = (query: RelatorioPeriodoQuery) => useQuery({ queryKey: relatoriosQueryKeys.operacional(query), queryFn: () => relatoriosApi.operacional(query), enabled: enabled(query) });
-export const useRelatorioGerencialVendas = (query: RelatorioPeriodoQuery) => useQuery({ queryKey: relatoriosQueryKeys.vendas(query), queryFn: () => relatoriosApi.gerencialVendas(query), enabled: enabled(query) });
-export const useRelatorioGerencialCompras = (query: RelatorioPeriodoQuery) => useQuery({ queryKey: relatoriosQueryKeys.compras(query), queryFn: () => relatoriosApi.gerencialCompras(query), enabled: enabled(query) });
-export const useRelatorioGerencialFinanceiro = (query: RelatorioPeriodoQuery) => useQuery({ queryKey: relatoriosQueryKeys.financeiro(query), queryFn: () => relatoriosApi.gerencialFinanceiro(query), enabled: enabled(query) });
-export const useRelatorioGerencialEstoque = (query: RelatorioPeriodoQuery) => useQuery({ queryKey: relatoriosQueryKeys.estoque(query), queryFn: () => relatoriosApi.gerencialEstoque(query), enabled: enabled(query) });
-export const useRelatorioGerencialFiscal = (query: RelatorioPeriodoQuery) => useQuery({ queryKey: relatoriosQueryKeys.fiscal(query), queryFn: () => relatoriosApi.gerencialFiscal(query), enabled: enabled(query) });
-export const useRelatorioGerencialProducao = (query: RelatorioPeriodoQuery) => useQuery({ queryKey: relatoriosQueryKeys.producao(query), queryFn: () => relatoriosApi.gerencialProducao(query), enabled: enabled(query) });
-export const useRelatorioDashboardConsolidado = (query: RelatorioPeriodoQuery) => useQuery({ queryKey: relatoriosQueryKeys.dashboard(query), queryFn: () => relatoriosApi.dashboardConsolidado(query), enabled: enabled(query) });
+const requireQuery = (query: RelatorioQuery): RelatorioPeriodoQuery => { if (!query) throw new Error('Selecione uma empresa para consultar relatórios.'); return query; };
+export const useRelatorioOperacional = (query: RelatorioQuery, allowed = true) => useQuery({ queryKey: relatoriosQueryKeys.operacional(query), queryFn: () => relatoriosApi.operacional(requireQuery(query)), enabled: enabled(query, allowed) });
+export const useRelatorioGerencialVendas = (query: RelatorioQuery, allowed = true) => useQuery({ queryKey: relatoriosQueryKeys.vendas(query), queryFn: () => relatoriosApi.gerencialVendas(requireQuery(query)), enabled: enabled(query, allowed) });
+export const useRelatorioGerencialCompras = (query: RelatorioQuery, allowed = true) => useQuery({ queryKey: relatoriosQueryKeys.compras(query), queryFn: () => relatoriosApi.gerencialCompras(requireQuery(query)), enabled: enabled(query, allowed) });
+export const useRelatorioGerencialFinanceiro = (query: RelatorioQuery, allowed = true) => useQuery({ queryKey: relatoriosQueryKeys.financeiro(query), queryFn: () => relatoriosApi.gerencialFinanceiro(requireQuery(query)), enabled: enabled(query, allowed) });
+export const useRelatorioGerencialEstoque = (query: RelatorioQuery, allowed = true) => useQuery({ queryKey: relatoriosQueryKeys.estoque(query), queryFn: () => relatoriosApi.gerencialEstoque(requireQuery(query)), enabled: enabled(query, allowed) });
+export const useRelatorioGerencialFiscal = (query: RelatorioQuery, allowed = true) => useQuery({ queryKey: relatoriosQueryKeys.fiscal(query), queryFn: () => relatoriosApi.gerencialFiscal(requireQuery(query)), enabled: enabled(query, allowed) });
+export const useRelatorioGerencialProducao = (query: RelatorioQuery, allowed = true) => useQuery({ queryKey: relatoriosQueryKeys.producao(query), queryFn: () => relatoriosApi.gerencialProducao(requireQuery(query)), enabled: enabled(query, allowed) });
+export const useRelatorioDashboardConsolidado = (query: RelatorioQuery) => useQuery({ queryKey: relatoriosQueryKeys.dashboard(query), queryFn: () => relatoriosApi.dashboardConsolidado(requireQuery(query)), enabled: enabled(query) });
 
 const baixarBlob = (blob: Blob, nomeArquivo: string) => {
     const url = window.URL.createObjectURL(blob);

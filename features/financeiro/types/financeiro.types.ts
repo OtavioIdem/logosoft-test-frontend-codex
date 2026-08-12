@@ -175,20 +175,21 @@ export type GerarContaReceberPedidoRequest = {
     observacao?: string | null;
 };
 
-export type BaixarContaFinanceiraRequest = {
-    valor: number;
-    dataBaixa: IsoDateTime | Date;
+export type ReceberContaRequest = {
+    parcelaId: Guid;
+    formaPagamentoId: Guid;
+    dataRecebimento: IsoDateTime | Date;
+    valorRecebido: number;
+    valorJuros: number;
+    valorMulta: number;
+    valorDesconto: number;
+    gerarMovimentoCaixa: boolean;
+    gerarMovimentoBancario: boolean;
+    contaBancariaReferencia?: string | null;
     observacao?: string | null;
 };
 
-export type EstornarContaFinanceiraRequest = {
-    baixaId: Guid;
-    dataEstorno: IsoDateTime | Date;
-    motivo: string;
-};
-
-export type ReceberContaRequest = BaixarContaFinanceiraRequest;
-export type EstornarRecebimentoRequest = EstornarContaFinanceiraRequest;
+export type EstornarRecebimentoRequest = { recebimentoId: Guid; motivo: string };
 export type CancelarContaFinanceiraRequest = { motivo: string };
 
 export type CriarContaPagarRequest = {
@@ -203,9 +204,21 @@ export type CriarContaPagarRequest = {
     parcelas: ParcelaFinanceiraRequest[];
 };
 
-export type PagarContaRequest = BaixarContaFinanceiraRequest;
+export type PagarContaRequest = {
+    parcelaId: Guid;
+    formaPagamentoId: Guid;
+    dataPagamento: IsoDateTime | Date;
+    valorPago: number;
+    valorJuros: number;
+    valorMulta: number;
+    valorDesconto: number;
+    gerarMovimentoCaixa: boolean;
+    gerarMovimentoBancario: boolean;
+    contaBancariaReferencia?: string | null;
+    observacao?: string | null;
+};
 
-export type EstornarPagamentoRequest = EstornarContaFinanceiraRequest;
+export type EstornarPagamentoRequest = { pagamentoId: Guid; motivo: string };
 
 
 export type FluxoCaixaQuery = {
