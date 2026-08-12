@@ -1,113 +1,95 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { extname, join, relative } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { readContractMapInputs, routeKey, validateAuditAllowlist } from './lib/backend-contract-map.mjs';
 
 const root = process.cwd();
 const failures = [];
+const reportOnly = process.argv.includes('--report');
 const read = (path) => readFileSync(join(root, path), 'utf8');
-const requireFile = (path, reason) => {
-    if (!existsSync(join(root, path))) failures.push(`${path}: ${reason}`);
-};
-const requireIncludes = (path, fragment, reason) => {
-    if (!read(path).includes(fragment)) failures.push(`${path}: ${reason}`);
-};
+const fail = (message) => failures.push(message);
+
+const contractPath = 'docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md';
+const allowlistPath = 'scripts/backend-contract-map.allowlist.json';
+if (!existsSync(join(root, contractPath))) fail(`${contractPath}: contrato canônico ausente`);
+if (!existsSync(join(root, allowlistPath))) fail(`${allowlistPath}: allowlist auditável ausente`);
+
+let inputs;
+if (existsSync(join(root, contractPath))) inputs = readContractMapInputs(root, contractPath);
+
+let allowlist;
+if (existsSync(join(root, allowlistPath))) {
+    try {
+        allowlist = JSON.parse(read(allowlistPath));
+    } catch (error) {
+        fail(`${allowlistPath}: JSON inválido (${error.message})`);
+    }
+}
 
 const packageJson = JSON.parse(read('package.json'));
-const expectedVersion = packageJson.logosoftVersion ?? '1.11.0a8b45';
-const allowlistPath = 'scripts/backend-contract-map.allowlist.json';
-const docPath = 'docs/CONTRATO_FRONTEND_BACKEND_B38.md';
-
-requireFile(allowlistPath, 'allowlist de divergências controladas obrigatório ausente');
-requireFile(docPath, 'documentação de contrato frontend/backend B38 obrigatória ausente');
-requireFile('docs/IMPLEMENTACAO_V1_11_0A8B38.md', 'documentação de implementação B38 obrigatória ausente');
-
-const allowlist = existsSync(join(root, allowlistPath)) ? JSON.parse(read(allowlistPath)) : { documentedDivergences: [] };
-if (allowlist.version !== expectedVersion) failures.push(`${allowlistPath}: version deve ser ${expectedVersion}`);
-if (!Array.isArray(allowlist.documentedDivergences) || allowlist.documentedDivergences.length < 10) {
-    failures.push(`${allowlistPath}: deve classificar as divergências críticas conhecidas`);
+if (allowlist) {
+    for (const issue of validateAuditAllowlist(allowlist, { version: packageJson.logosoftVersion, contractDocument: contractPath })) {
+        fail(`${allowlistPath}: ${issue}`);
+    }
+    if (!Array.isArray(allowlist.documentedDivergences) || allowlist.documentedDivergences.length !== 0) fail(`${allowlistPath}: não pode manter divergências auditáveis enquanto o mapa canônico não aponta incompatibilidades`);
 }
 
-const ids = new Set();
-for (const item of allowlist.documentedDivergences ?? []) {
-    for (const field of ['id', 'status', 'frontend', 'backendInventario', 'decisao', 'target']) {
-        if (!item[field]) failures.push(`${allowlistPath}: divergência sem campo obrigatório ${field}`);
+if (inputs) {
+    if (inputs.backendRoutes.length < 500) fail(`${contractPath}: catálogo de rotas incompleto (${inputs.backendRoutes.length})`);
+    const incompatible = inputs.comparison.incompatible;
+    const allowlistedKeys = new Set((allowlist?.documentedDivergences ?? []).map((item) => routeKey(item.method, item.path)));
+    const incompatibleKeys = new Set(incompatible.map((item) => item.key));
+    for (const item of incompatible) {
+        if (!allowlistedKeys.has(item.key)) fail(`rota frontend sem correspondência no backend e sem registro auditável: ${item.key} (${item.file}:${item.line})`);
+        else fail(`rota frontend incompatível com o catálogo backend: ${item.key} (${item.file}:${item.line})`);
     }
-    if (ids.has(item.id)) failures.push(`${allowlistPath}: id duplicado ${item.id}`);
-    ids.add(item.id);
-
-    if (existsSync(join(root, docPath)) && !read(docPath).includes(item.id)) {
-        failures.push(`${docPath}: divergência ${item.id} deve estar documentada`);
+    for (const item of allowlist?.documentedDivergences ?? []) {
+        const key = routeKey(item.method, item.path);
+        if (!incompatibleKeys.has(key)) fail(`${allowlistPath}: divergência ${item.id} não corresponde a uma incompatibilidade observada (${key})`);
     }
-}
-
-const apiFiles = [];
-const walk = (dir) => {
-    if (!existsSync(dir)) return;
-    for (const entry of readdirSync(dir)) {
-        const path = join(dir, entry);
-        const stat = statSync(path);
-        if (stat.isDirectory()) {
-            if (['node_modules', '.next', 'coverage', 'test-results', 'playwright-report'].includes(entry)) continue;
-            walk(path);
-            continue;
-        }
-        if (extname(entry) === '.ts' && /(?:^|[/\\])api[/\\].+Api\.ts$/.test(path)) apiFiles.push(path);
+    if (inputs.comparison.unresolved.length > 0) {
+        const unclassified = inputs.comparison.unresolved.filter((item) => !allowlistedKeys.has(item.key));
+        for (const item of unclassified) fail(`rota dinâmica não classificada: ${item.key} (${item.file}:${item.line})`);
     }
-};
-walk(join(root, 'features'));
-walk(join(root, 'lib'));
 
-const endpointPattern = /(?:httpClient|rawHttpClient)\.(get|post|put|patch|delete)(?:<[^>]+>)?\((`[^`]+`|'[^']+'|"[^"]+")/g;
-const endpoints = [];
-for (const file of apiFiles) {
-    const content = readFileSync(file, 'utf8');
-    let match;
-    while ((match = endpointPattern.exec(content))) {
-        const literal = match[2].slice(1, -1);
-        if (literal.includes('/api/')) {
-            endpoints.push({ method: match[1].toUpperCase(), path: literal, file: relative(root, file) });
+    const swaggerFile = process.env.LOGOSOFT_BACKEND_SWAGGER_FILE;
+    if (swaggerFile) {
+        const fullSwaggerPath = join(root, swaggerFile);
+        if (!existsSync(fullSwaggerPath)) fail(`Swagger informado não existe: ${swaggerFile}`);
+        else {
+            let swagger;
+            try { swagger = JSON.parse(readFileSync(fullSwaggerPath, 'utf8')); } catch (error) { fail(`Swagger inválido: ${error.message}`); }
+            const paths = new Set(Object.keys(swagger?.paths ?? {}));
+            if (paths.size === 0) fail(`${swaggerFile}: Swagger sem paths`);
+            for (const route of inputs.backendRoutes) if (!paths.has(route.path)) fail(`${swaggerFile}: rota do catálogo ausente: ${route.path}`);
         }
     }
 }
 
-if (endpoints.length < 80) failures.push('Mapa de contratos: foram encontrados poucos endpoints frontend; verifique varredura de features/*/api');
+const summary = inputs ? {
+    backendRoutes: inputs.backendRoutes.length,
+    frontendCalls: inputs.frontendRoutes.length,
+    frontendUniqueRoutes: new Set(inputs.frontendRoutes.map((item) => item.key)).size,
+    matchedRoutes: inputs.comparison.matched.length,
+    incompatibleRoutes: inputs.comparison.incompatible.length,
+    missingRoutes: inputs.comparison.missing.length,
+    methodMismatches: inputs.comparison.methodMismatch.length,
+    indirectResourceRoutes: inputs.comparison.indirectMissing.length,
+    unresolvedRoutes: inputs.comparison.unresolved.length,
+    allowlistedForAuditOnly: allowlist?.documentedDivergences?.length ?? 0
+} : null;
 
-const productTypes = read('features/produtos/types/produtos.types.ts');
-const productSchema = read('features/produtos/schemas/produtosSchemas.ts');
-const productDialog = read('features/produtos/components/ProdutoComplementoDialogs.tsx');
-const productTests = read('tests/unit/produtosPayload.test.ts');
-if (!productTypes.includes('codigoProdutoFornecedor?: string | null')) failures.push('Produtos: request/response deve conhecer codigoProdutoFornecedor');
-if (!productSchema.includes('codigoProdutoFornecedor: nullableText')) failures.push('Produtos: schema de vínculo deve validar codigoProdutoFornecedor');
-if (!productDialog.includes('Código do produto no fornecedor')) failures.push('Produtos: modal deve exibir label de código do produto no fornecedor');
-if (!productDialog.includes('Number(item.status) === EntityStatus.Ativo')) failures.push('Produtos: modal deve listar apenas fornecedores ativos');
-if (!productTests.includes('codigoProdutoFornecedor')) failures.push('Produtos: teste de regressão deve validar codigoProdutoFornecedor');
-const vincularFornecedorRequestType = productTypes.match(/VincularFornecedorProdutoRequest\s*=\s*{[\s\S]*?};/)?.[0] ?? '';
-if (vincularFornecedorRequestType.includes('descricaoFornecedor')) {
-    failures.push('Produtos: VincularFornecedorProdutoRequest não deve enviar descricaoFornecedor no payload produtivo');
+if (reportOnly) {
+    const issues = inputs ? {
+        incompatible: inputs.comparison.incompatible.map(({ key, file, line, kind }) => ({ key, file, line, kind })),
+        methodMismatch: inputs.comparison.methodMismatch.map(({ key, file, line, backendMethods }) => ({ key, file, line, backendMethods })),
+        unresolved: inputs.comparison.unresolved.map(({ key, file, line, expressions }) => ({ key, file, line, expressions })),
+        indirectMissing: inputs.comparison.indirectMissing.map(({ key, file, line }) => ({ key, file, line }))
+    } : null;
+    process.stdout.write(`${JSON.stringify({ ok: failures.length === 0, failures, summary, issues }, null, 2)}\n`);
+    process.exit(0);
 }
-
-const swaggerFile = process.env.LOGOSOFT_BACKEND_SWAGGER_FILE;
-if (swaggerFile) {
-    const fullSwaggerPath = join(root, swaggerFile);
-    if (!existsSync(fullSwaggerPath)) {
-        failures.push(`LOGOSOFT_BACKEND_SWAGGER_FILE aponta para arquivo inexistente: ${swaggerFile}`);
-    } else {
-        const swagger = JSON.parse(readFileSync(fullSwaggerPath, 'utf8'));
-        const swaggerPaths = new Set(Object.keys(swagger.paths ?? {}));
-        if (swaggerPaths.size === 0) failures.push(`${swaggerFile}: Swagger sem paths`);
-        const literalFrontendPaths = endpoints
-            .map((endpoint) => endpoint.path.replace(/\$\{[^}]+\}/g, '{id}'))
-            .filter((path) => !path.includes('${definition.endpoint}'));
-        const missing = literalFrontendPaths.filter((path) => !swaggerPaths.has(path));
-        if (missing.length > 0) {
-            failures.push(`${swaggerFile}: ${missing.length} rotas frontend não aparecem no Swagger informado. Primeiras: ${missing.slice(0, 10).join(', ')}`);
-        }
-    }
-}
-
 if (failures.length > 0) {
     process.stderr.write(`Validação do mapa de contratos frontend/backend falhou:\n${failures.map((failure) => `- ${failure}`).join('\n')}\n`);
     process.exit(1);
 }
-
-const swaggerMessage = swaggerFile ? `Swagger conferido via ${swaggerFile}` : 'Swagger real não informado; validação executada em modo estrutural/documental.';
-process.stdout.write(`Validação do mapa de contratos frontend/backend concluída: ${endpoints.length} endpoints frontend mapeados. ${swaggerMessage}\n`);
+process.stdout.write(`Validação do mapa de contratos frontend/backend concluída: ${summary.frontendUniqueRoutes} rotas frontend únicas e compatíveis.\n`);

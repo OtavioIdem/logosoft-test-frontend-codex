@@ -188,8 +188,8 @@ export type ColaboradoresListQuery = {
 
 export type JornadasListQuery = { empresaId?: Guid | null; filialId?: Guid | null };
 export type PontoListQuery = { empresaId?: Guid | null; filialId?: Guid | null; colaboradorId?: Guid | null };
-export type FeriasListQuery = { empresaId?: Guid | null; filialId?: Guid | null; colaboradorId?: Guid | null; status?: StatusFerias | number | null };
-export type AfastamentosListQuery = { empresaId?: Guid | null; filialId?: Guid | null; colaboradorId?: Guid | null; status?: StatusAfastamento | number | null };
+export type FeriasListQuery = { empresaId?: Guid | null; colaboradorId?: Guid | null; status?: StatusFerias | number | null };
+export type AfastamentosListQuery = { empresaId?: Guid | null; colaboradorId?: Guid | null; status?: StatusAfastamento | number | null };
 export type BeneficiosListQuery = { empresaId?: Guid | null; filialId?: Guid | null };
 export type ConcessoesListQuery = { empresaId?: Guid | null; filialId?: Guid | null; colaboradorId?: Guid | null };
 export type EventosListQuery = { empresaId?: Guid | null; filialId?: Guid | null; colaboradorId?: Guid | null; competencia?: string | null };

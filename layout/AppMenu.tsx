@@ -242,7 +242,6 @@ const AppMenu = () => {
                 label: 'Bancos',
                 anyPermissions: ['BANCOS_CONSULTAR', 'BANCOS_GERENCIAR', 'BOLETOS_GERAR', 'BOLETOS_CANCELAR', 'CNAB_REMESSA_GERAR', 'CNAB_RETORNO_PROCESSAR'],
                 items: [
-                    { label: 'Cadastros bancários', icon: 'pi pi-fw pi-money-bill', to: '/bancos', anyPermissions: ['BANCOS_CONSULTAR', 'BANCOS_GERENCIAR'] },
                     { label: 'Boletos', icon: 'pi pi-fw pi-credit-card', to: '/bancos/boletos', anyPermissions: ['BANCOS_CONSULTAR', 'BOLETOS_GERAR'] },
                     { label: 'CNAB', icon: 'pi pi-fw pi-sync', to: '/bancos/cnab', anyPermissions: ['BANCOS_CONSULTAR', 'CNAB_REMESSA_GERAR', 'CNAB_RETORNO_PROCESSAR'] }
                 ]
@@ -258,8 +257,8 @@ const AppMenu = () => {
             },
             {
                 label: 'Relatórios',
-                permission: 'RELATORIOS_CONSULTAR',
-                items: [{ label: 'Operacionais e gerenciais', icon: 'pi pi-fw pi-chart-bar', to: '/relatorios', permission: 'RELATORIOS_CONSULTAR' }]
+                anyPermissions: ['RELATORIOS_OPERACIONAIS_CONSULTAR', 'RELATORIOS_VENDAS_CONSULTAR', 'RELATORIOS_COMPRAS_CONSULTAR', 'RELATORIOS_FINANCEIRO_CONSULTAR', 'RELATORIOS_ESTOQUE_CONSULTAR', 'RELATORIOS_FISCAL_CONSULTAR', 'RELATORIOS_PRODUCAO_CONSULTAR', 'RELATORIOS_DASHBOARD_CONSULTAR', 'RELATORIOS_EXPORTAR'],
+                items: [{ label: 'Operacionais e gerenciais', icon: 'pi pi-fw pi-chart-bar', to: '/relatorios', anyPermissions: ['RELATORIOS_OPERACIONAIS_CONSULTAR', 'RELATORIOS_VENDAS_CONSULTAR', 'RELATORIOS_COMPRAS_CONSULTAR', 'RELATORIOS_FINANCEIRO_CONSULTAR', 'RELATORIOS_ESTOQUE_CONSULTAR', 'RELATORIOS_FISCAL_CONSULTAR', 'RELATORIOS_PRODUCAO_CONSULTAR', 'RELATORIOS_DASHBOARD_CONSULTAR', 'RELATORIOS_EXPORTAR'] }]
             },
             {
                 label: 'Auditoria',

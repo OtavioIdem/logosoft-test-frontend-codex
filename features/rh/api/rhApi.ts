@@ -50,13 +50,11 @@ const parseSchema = <T>(schema: Schema<T>, values: unknown): T => sanitizePayloa
 const COLABORADORES = '/api/rh/colaboradores';
 const JORNADAS = '/api/rh/jornadas';
 const PONTO = '/api/rh/ponto';
-const FERIAS = '/api/rh/ausencias/ferias';
-const AFASTAMENTOS = '/api/rh/ausencias/afastamentos';
+const FERIAS = '/api/rh/ferias';
+const AFASTAMENTOS = '/api/rh/afastamentos';
 const BENEFICIOS = '/api/rh/beneficios';
 const CONCESSOES = '/api/rh/beneficios/concessoes';
 const EVENTOS = '/api/rh/eventos';
-
-type FeriasAcao = 'aprovar' | 'rejeitar' | 'iniciar' | 'concluir' | 'cancelar';
 
 export const rhApi = {
     // ---- Colaboradores ----
@@ -100,20 +98,33 @@ export const rhApi = {
 
     // ---- Férias ----
     async listarFerias(query?: FeriasListQuery) {
-        return runRequest(async () => (await httpClient.get<FeriasResponse[]>(FERIAS, { params: cleanQueryParams({ empresaId: query?.empresaId, filialId: query?.filialId, colaboradorId: query?.colaboradorId, status: query?.status }) })).data);
+        return runRequest(async () => (await httpClient.get<FeriasResponse[]>(FERIAS, { params: cleanQueryParams({ empresaId: query?.empresaId, colaboradorId: query?.colaboradorId, status: query?.status }) })).data);
     },
     async solicitarFerias(values: unknown) {
         const payload = parseSchema(solicitarFeriasSchema, values);
         return runRequest(async () => (await httpClient.post<FeriasResponse>(FERIAS, payload)).data);
     },
-    async acaoFerias(id: string, acao: FeriasAcao, motivo?: string) {
-        const payload = acao === 'rejeitar' || acao === 'cancelar' ? parseSchema(motivoSchema, { motivo }) : undefined;
-        return runRequest(async () => (await httpClient.post<FeriasResponse>(`${FERIAS}/${id}/${acao}`, payload)).data);
+    async aprovarFerias(id: string) {
+        return runRequest(async () => (await httpClient.post<FeriasResponse>(`${FERIAS}/${id}/aprovar`)).data);
+    },
+    async rejeitarFerias(id: string, motivo: string) {
+        const payload = parseSchema(motivoSchema, { motivo });
+        return runRequest(async () => (await httpClient.post<FeriasResponse>(`${FERIAS}/${id}/rejeitar`, payload)).data);
+    },
+    async iniciarFerias(id: string) {
+        return runRequest(async () => (await httpClient.post<FeriasResponse>(`${FERIAS}/${id}/iniciar`)).data);
+    },
+    async concluirFerias(id: string) {
+        return runRequest(async () => (await httpClient.post<FeriasResponse>(`${FERIAS}/${id}/concluir`)).data);
+    },
+    async cancelarFerias(id: string, motivo: string) {
+        const payload = parseSchema(motivoSchema, { motivo });
+        return runRequest(async () => (await httpClient.post<FeriasResponse>(`${FERIAS}/${id}/cancelar`, payload)).data);
     },
 
     // ---- Afastamentos ----
     async listarAfastamentos(query?: AfastamentosListQuery) {
-        return runRequest(async () => (await httpClient.get<AfastamentoResponse[]>(AFASTAMENTOS, { params: cleanQueryParams({ empresaId: query?.empresaId, filialId: query?.filialId, colaboradorId: query?.colaboradorId, status: query?.status }) })).data);
+        return runRequest(async () => (await httpClient.get<AfastamentoResponse[]>(AFASTAMENTOS, { params: cleanQueryParams({ empresaId: query?.empresaId, colaboradorId: query?.colaboradorId, status: query?.status }) })).data);
     },
     async registrarAfastamento(values: unknown) {
         const payload = parseSchema(registrarAfastamentoSchema, values);

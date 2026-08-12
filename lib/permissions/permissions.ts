@@ -1,7 +1,10 @@
 import { CurrentUser, PermissionCode } from '@/types/erp';
 
+const NON_BYPASS_PERMISSION_CODES = new Set<string>(['MASTER_GOD', '*']);
+
 export const hasPermission = (user: CurrentUser | null | undefined, permission?: PermissionCode) => {
     if (!permission) return true;
+    if (NON_BYPASS_PERMISSION_CODES.has(permission)) return false;
     return Boolean(user?.permissoes?.includes(permission));
 };
 

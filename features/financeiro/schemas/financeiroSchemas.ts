@@ -70,21 +70,25 @@ export const gerarContaReceberPedidoSchema = z.object({
     observacao: z.string().trim().nullable().optional()
 });
 
-export const baixarContaFinanceiraSchema = z.object({
-    valor: positiveMoneySchema,
-    dataBaixa: isoDateSchema,
+const movimentoFinanceiroSchema = {
+    parcelaId: guidSchema,
+    formaPagamentoId: guidSchema,
+    valorJuros: z.number().nonnegative(),
+    valorMulta: z.number().nonnegative(),
+    valorDesconto: z.number().nonnegative(),
+    gerarMovimentoCaixa: z.boolean(),
+    gerarMovimentoBancario: z.boolean(),
+    contaBancariaReferencia: z.preprocess((value) => (typeof value === 'string' && value.trim() === '' ? undefined : value), z.string().trim().optional()),
     observacao: z.preprocess((value) => (typeof value === 'string' && value.trim() === '' ? undefined : value), z.string().trim().optional())
+};
+
+export const receberContaSchema = z.object({
+    ...movimentoFinanceiroSchema,
+    dataRecebimento: isoDateSchema,
+    valorRecebido: positiveMoneySchema
 });
 
-export const receberContaSchema = baixarContaFinanceiraSchema;
-
-export const estornarContaFinanceiraSchema = z.object({
-    baixaId: guidSchema,
-    dataEstorno: isoDateSchema,
-    motivo: requiredText('Informe o motivo.')
-});
-
-export const estornarRecebimentoSchema = estornarContaFinanceiraSchema;
+export const estornarRecebimentoSchema = z.object({ recebimentoId: guidSchema, motivo: requiredText('Informe o motivo.') });
 export const cancelarContaFinanceiraSchema = z.object({ motivo: requiredText('Informe o motivo.') });
 
 export const criarContaPagarSchema = z.object({
@@ -99,8 +103,12 @@ export const criarContaPagarSchema = z.object({
     parcelas: z.array(parcelaFinanceiraSchema).min(1, 'Informe ao menos uma parcela.')
 });
 
-export const pagarContaSchema = baixarContaFinanceiraSchema;
-export const estornarPagamentoSchema = estornarContaFinanceiraSchema;
+export const pagarContaSchema = z.object({
+    ...movimentoFinanceiroSchema,
+    dataPagamento: isoDateSchema,
+    valorPago: positiveMoneySchema
+});
+export const estornarPagamentoSchema = z.object({ pagamentoId: guidSchema, motivo: requiredText('Informe o motivo.') });
 
 
 export const fluxoCaixaQuerySchema = z.object({

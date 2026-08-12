@@ -1,7 +1,7 @@
 {
     "name": "logosoft-frontend",
-    "version": "1.11.0-a.8.b45",
-    "logosoftVersion": "1.11.0a8b45",
+    "version": "1.11.0-a.8.b46",
+    "logosoftVersion": "1.11.0a8b46",
     "private": true,
     "scripts": {
         "dev": "next dev",
@@ -39,7 +39,8 @@
         "prepare:e2e:integrated:seed": "node scripts/prepare-integrated-e2e-seed.mjs",
         "validate:assisted-e2e": "node scripts/validate-assisted-e2e.mjs",
         "report:e2e:integrated:assisted": "node scripts/create-integrated-e2e-assisted-report.mjs",
-        "validate:backend-contract-map": "node scripts/validate-backend-contract-map.mjs"
+        "validate:backend-contract-map": "node scripts/validate-backend-contract-map.mjs",
+        "report:backend-contract-map": "node scripts/validate-backend-contract-map.mjs --report"
     },
     "dependencies": {
         "@hookform/resolvers": "^3.9.0",

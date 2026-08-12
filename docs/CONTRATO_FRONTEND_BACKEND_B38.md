@@ -1,5 +1,10 @@
 # Contrato frontend x backend — B38
 
+> Documento histórico. A partir de `v1.11.0a8b45.c1`,
+> `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md` é a fonte canônica de integração e
+> substitui este inventário em todo ponto divergente. Os estados `IMPLEMENTADO_B*`
+> abaixo não comprovam compatibilidade com o backend atual.
+
 ## Objetivo
 
 A B38 cria um mapa controlado de contratos para impedir que o frontend avance sobre endpoints ou payloads divergentes sem classificação explícita.

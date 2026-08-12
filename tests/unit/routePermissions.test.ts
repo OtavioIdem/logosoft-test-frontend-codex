@@ -20,8 +20,10 @@ describe('route permission rules', () => {
 
 
 
-    it('protege relatórios por permissão de consulta gerencial', () => {
-        expect(findRoutePermissionRule('/relatorios')?.anyOf).toEqual(['RELATORIOS_CONSULTAR']);
+    it('protege relatórios por ao menos uma permissão granular do backend', () => {
+        const rule = findRoutePermissionRule('/relatorios');
+        expect(rule?.anyOf).toContain('RELATORIOS_OPERACIONAIS_CONSULTAR');
+        expect(rule?.anyOf).toContain('RELATORIOS_EXPORTAR');
     });
 
     it('protege atividades por permissões do workflow operacional', () => {

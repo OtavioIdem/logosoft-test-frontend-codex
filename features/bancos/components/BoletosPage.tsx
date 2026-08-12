@@ -1,11 +1,11 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
 import { Dropdown } from 'primereact/dropdown';
 import { Tag } from 'primereact/tag';
+import { Message } from 'primereact/message';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmpresaFilialFilter } from '@/components/forms/EmpresaFilialFilter';
 import { SearchInput } from '@/components/forms/SearchInput';
@@ -15,15 +15,14 @@ import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ReasonDialog } from '@/components/feedback/ReasonDialog';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
-import { PermissionGuard } from '@/components/security/PermissionGuard';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { bancosApi } from '@/features/bancos/api/bancosApi';
-import { useBoletoHistorico, useBoletoMutations, useBoletos, useCarteiras } from '@/features/bancos/hooks/useBancosResources';
-import { BoletoResponse, BoletoResumoResponse, BoletosListQuery, GerarBoletoFormValues } from '@/features/bancos/types/bancos.types';
-import { BoletoDetalheDialog, GerarBoletoDialog } from '@/features/bancos/components/BancosOperacoesDialogs';
-import { boletoPodeCancelar, statusBoletoFilterOptions, statusBoletoLabel, statusBoletoSeverity, tipoCobrancaLabel } from '@/features/bancos/components/bancosLabels';
+import { useBoletoHistorico, useBoletoMutations, useBoletos } from '@/features/bancos/hooks/useBancosResources';
+import { BoletoResponse, BoletoResumoResponse, BoletosListQuery } from '@/features/bancos/types/bancos.types';
+import { BoletoDetalheDialog } from '@/features/bancos/components/BancosOperacoesDialogs';
+import { boletoPodeCancelar, statusBoletoFilterOptions, statusBoletoLabel, statusBoletoSeverity } from '@/features/bancos/components/bancosLabels';
 
 const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString('pt-BR') : '—');
@@ -41,16 +40,12 @@ export const BoletosPage = () => {
     const [localSearch, setLocalSearch] = useState('');
     const [first, setFirst] = useState(0);
     const [rows, setRows] = useState(10);
-    const [gerarVisible, setGerarVisible] = useState(false);
     const [cancelarAlvo, setCancelarAlvo] = useState<string | null>(null);
     const [detalhe, setDetalhe] = useState<BoletoResponse | null>(null);
 
     const boletosQuery = useBoletos(filters, hasPermission('BANCOS_CONSULTAR'));
-    const carteirasQuery = useCarteiras(hasPermission('BANCOS_CONSULTAR'));
     const historicoQuery = useBoletoHistorico(detalhe?.id ?? null);
-    const { gerarMutation, cancelarMutation } = useBoletoMutations();
-
-    const carteiraOptions = useMemo(() => (carteirasQuery.data ?? []).map((carteira) => ({ label: `${carteira.codigo} — ${tipoCobrancaLabel(Number(carteira.tipoCobranca))}`, value: carteira.id })), [carteirasQuery.data]);
+    const { cancelarMutation } = useBoletoMutations();
 
     const records = useMemo(() => filterLocal(boletosQuery.data ?? [], localSearch), [boletosQuery.data, localSearch]);
     const visibleRecords = useMemo(() => records.slice(first, first + rows), [records, first, rows]);
@@ -64,9 +59,6 @@ export const BoletosPage = () => {
         setFilters((current) => ({ ...current, [name]: value === '' ? null : value }));
     };
 
-    const gerar = async (values: GerarBoletoFormValues) => {
-        await runWithToast(async () => { const boleto = await gerarMutation.mutateAsync(values); setGerarVisible(false); setDetalhe(boleto); }, { success: { summary: 'Boleto gerado' }, error: { summary: 'Erro ao gerar boleto' }, rethrow: true });
-    };
     const cancelar = async (motivo: string) => {
         if (!cancelarAlvo) return;
         await runWithToast(async () => { await cancelarMutation.mutateAsync({ id: cancelarAlvo, motivo }); setCancelarAlvo(null); }, { success: { summary: 'Boleto cancelado' }, error: { summary: 'Erro ao cancelar boleto' }, rethrow: true });
@@ -80,13 +72,13 @@ export const BoletosPage = () => {
             <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
             <Dropdown value={filters.status ?? null} options={statusBoletoFilterOptions} onChange={(event) => updateFilter('status', event.value)} aria-label="Filtrar por status" />
             <SearchInput ariaLabel="Buscar boleto" defaultValue={localSearch} onChange={(term) => { setFirst(0); setLocalSearch(term); }} />
-            <PermissionGuard permission="BOLETOS_GERAR" mode="disable">{({ disabled }) => <Button label="Gerar boleto" icon="pi pi-plus" disabled={disabled} onClick={() => setGerarVisible(true)} />}</PermissionGuard>
         </div>
     );
 
     return (
         <>
             <PageHeader title="Boletos" description="Emissão, cancelamento e consulta de boletos (linha digitável e histórico)." actions={headerActions} />
+            <Message className="w-full mb-3" severity="warn" text="Geração de boleto indisponível: o backend atual não oferece consulta de carteiras para selecionar a carteira de cobrança." />
             <Card>
                 {boletosQuery.error ? <ApiErrorPanel error={mapApiError(boletosQuery.error)} /> : null}
                 <DataTableServer<BoletoResumoResponse> value={visibleRecords} totalRecords={records.length} loading={boletosQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhum boleto encontrado.">
@@ -101,10 +93,9 @@ export const BoletosPage = () => {
                         ]} />
                     )} />
                 </DataTableServer>
-                {!boletosQuery.isLoading && records.length === 0 ? <EmptyState title="Nenhum boleto" description="Gere um boleto ou ajuste os filtros." /> : null}
+                {!boletosQuery.isLoading && records.length === 0 ? <EmptyState title="Nenhum boleto" description="Ajuste os filtros para consultar boletos já emitidos." /> : null}
             </Card>
 
-            <GerarBoletoDialog visible={gerarVisible} loading={gerarMutation.isPending} carteiraOptions={carteiraOptions} carteiraLoading={carteirasQuery.isFetching} onHide={() => setGerarVisible(false)} onSubmit={gerar} />
             <BoletoDetalheDialog visible={Boolean(detalhe)} boleto={detalhe} historico={historicoQuery.data ?? []} historicoLoading={historicoQuery.isFetching} onHide={() => setDetalhe(null)} />
             <ReasonDialog visible={Boolean(cancelarAlvo)} title="Cancelar boleto" confirmLabel="Cancelar boleto" loading={cancelarMutation.isPending} onHide={() => setCancelarAlvo(null)} onConfirm={cancelar} />
         </>

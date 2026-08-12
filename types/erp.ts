@@ -201,6 +201,14 @@ export type PermissionCode =
     | 'ATIVIDADES_CONSULTAR'
     | 'ATIVIDADES_GERENCIAR'
     | 'RELATORIOS_CONSULTAR'
+    | 'RELATORIOS_OPERACIONAIS_CONSULTAR'
+    | 'RELATORIOS_VENDAS_CONSULTAR'
+    | 'RELATORIOS_COMPRAS_CONSULTAR'
+    | 'RELATORIOS_FINANCEIRO_CONSULTAR'
+    | 'RELATORIOS_ESTOQUE_CONSULTAR'
+    | 'RELATORIOS_FISCAL_CONSULTAR'
+    | 'RELATORIOS_PRODUCAO_CONSULTAR'
+    | 'RELATORIOS_DASHBOARD_CONSULTAR'
     | 'ADMINISTRACAO_CONSULTAR'
     | 'ADMINISTRACAO_GERENCIAR'
     | 'SEGURANCA_USUARIOS_CONSULTAR'
@@ -362,7 +370,7 @@ export type RefreshTokenResponse = {
     permissoes: PermissionCode[];
 };
 
-export type CurrentUser = { id: Guid; nome: string; email: string; empresaId?: Guid; filialId?: Guid | null; permissoes: PermissionCode[] };
+export type CurrentUser = { id: Guid; nome: string; email: string; empresaId?: Guid; filialId?: Guid | null; isMaster?: boolean; permissoes: PermissionCode[] };
 export type AuthTokens = { accessToken: string; accessTokenExpiraEm?: IsoDateTime; refreshToken: string; refreshTokenExpiraEm?: IsoDateTime; expiresAt?: IsoDateTime };
 export type AuthSession = AuthTokens & { user: CurrentUser; sessionStartedAt?: IsoDateTime; lastActivityAt?: IsoDateTime };
 

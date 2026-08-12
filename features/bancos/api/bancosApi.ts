@@ -13,14 +13,13 @@ import {
 } from '@/features/bancos/schemas/bancosSchemas';
 import {
     BancoResponse,
+    ContaBancariaResponse,
+    ConvenioBancarioResponse,
+    CarteiraCobrancaResponse,
     BoletoHistoricoResponse,
     BoletoResponse,
     BoletoResumoResponse,
     BoletosListQuery,
-    CarteiraCobrancaResponse,
-    ContaBancariaResponse,
-    ContasBancariasListQuery,
-    ConvenioBancarioResponse,
     RemessaCnabResponse,
     RetornoCnabResponse
 } from '@/features/bancos/types/bancos.types';
@@ -41,29 +40,17 @@ const BASE = '/api/bancos';
 
 export const bancosApi = {
     // ---- Cadastros ----
-    async listarBancos() {
-        return runRequest(async () => (await httpClient.get<BancoResponse[]>(BASE)).data);
-    },
     async criarBanco(values: unknown) {
         const payload = parseSchema(criarBancoSchema, values);
         return runRequest(async () => (await httpClient.post<BancoResponse>(BASE, payload)).data);
-    },
-    async listarContasBancarias(query?: ContasBancariasListQuery) {
-        return runRequest(async () => (await httpClient.get<ContaBancariaResponse[]>(`${BASE}/contas-bancarias`, { params: cleanQueryParams({ empresaId: query?.empresaId, filialId: query?.filialId }) })).data);
     },
     async criarContaBancaria(values: unknown) {
         const payload = parseSchema(criarContaBancariaSchema, values);
         return runRequest(async () => (await httpClient.post<ContaBancariaResponse>(`${BASE}/contas-bancarias`, payload)).data);
     },
-    async listarConvenios() {
-        return runRequest(async () => (await httpClient.get<ConvenioBancarioResponse[]>(`${BASE}/convenios`)).data);
-    },
     async criarConvenio(values: unknown) {
         const payload = parseSchema(criarConvenioSchema, values);
         return runRequest(async () => (await httpClient.post<ConvenioBancarioResponse>(`${BASE}/convenios`, payload)).data);
-    },
-    async listarCarteiras() {
-        return runRequest(async () => (await httpClient.get<CarteiraCobrancaResponse[]>(`${BASE}/carteiras`)).data);
     },
     async criarCarteira(values: unknown) {
         const payload = parseSchema(criarCarteiraSchema, values);

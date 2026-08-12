@@ -1,120 +1,45 @@
 {
-    "version": "1.11.0a8b45",
-    "status": "pre-swagger-contract-map",
-    "description": "Mapa controlado de divergências conhecidas entre o frontend e o inventário/backend até o Swagger real ser versionado.",
-    "swaggerInput": "Opcional via LOGOSOFT_BACKEND_SWAGGER_FILE. Sem esse arquivo, o gate valida apenas classificação/documentação local.",
-    "documentedDivergences": [
-        {
-            "id": "AUTH_LOGIN_PAYLOAD_DIVERGENTE",
-            "status": "DIVERGENTE_PAYLOAD",
-            "frontend": "POST /api/auth/login com email/password/empresaId",
-            "backendInventario": "POST /api/auth/login com login/senha/empresaCodigo/filialCodigo",
-            "decisao": "Mantido sem alteração para não quebrar login aprovado; confirmar Swagger real antes de mexer em LoginForm/AuthApi.",
-            "target": "Correção dedicada pós-Swagger real"
-        },
-        {
-            "id": "AUTH_ME_AUSENTE_FRONTEND",
-            "status": "CLIENT_IMPLEMENTADO_B39",
-            "frontend": "Client authApi.me implementado para GET /api/auth/me; uso automático na sessão permanece opt-in/follow-up.",
-            "backendInventario": "GET /api/auth/me",
-            "decisao": "Client disponível; decidir na próxima revisão se AuthProvider deve recarregar permissões automaticamente.",
-            "target": "B39 concluído / wiring opcional posterior"
-        },
-        {
-            "id": "PRODUTO_FORNECEDOR_ALINHADO_B37",
-            "status": "OK_APOS_B37",
-            "frontend": "POST /api/produtos/{id}/fornecedores com fornecedorId/codigoProdutoFornecedor/principal",
-            "backendInventario": "Mesmo contrato esperado",
-            "decisao": "Manter teste de regressão em produtosPayload.test.ts.",
-            "target": "Concluído na B37"
-        },
-        {
-            "id": "PRODUTO_DADOS_FISCAIS_PATCH_VS_POST",
-            "status": "DIVERGENTE_METODO",
-            "frontend": "PATCH /api/produtos/{id}/dados-fiscais",
-            "backendInventario": "POST /api/produtos/{id}/dados-fiscais",
-            "decisao": "Confirmar controller real antes de alterar método HTTP.",
-            "target": "B38 follow-up"
-        },
-        {
-            "id": "ESTOQUE_INVENTARIO_FECHAR_VS_CONCLUIR",
-            "status": "IMPLEMENTADO_B41",
-            "frontend": "POST /api/estoque/inventarios/{id}/concluir com payload { motivoAjuste }",
-            "backendInventario": "POST /api/estoque/inventarios/{id}/concluir",
-            "decisao": "Corrigido na B41; rota /fechar removida do client produtivo.",
-            "target": "B41 concluído"
-        },
-        {
-            "id": "ESTOQUE_TRANSFERENCIAS_AUSENTE_FRONTEND",
-            "status": "IMPLEMENTADO_B41",
-            "frontend": "Tela /estoque/transferencias e client POST /api/estoque/transferencias",
-            "backendInventario": "POST /api/estoque/transferencias",
-            "decisao": "Implementado na B41 com payload de origem/destino, quantidade e motivo.",
-            "target": "B41 concluído"
-        },
-        {
-            "id": "ESTOQUE_BLOQUEIOS_AUSENTE_FRONTEND",
-            "status": "IMPLEMENTADO_B41",
-            "frontend": "Tela /estoque/bloqueios e client para criar, liberar e cancelar bloqueio",
-            "backendInventario": "POST /api/estoque/bloqueios e ações",
-            "decisao": "Implementado na B41. Sem GET confirmado, liberação/cancelamento exigem ID operacional do bloqueio.",
-            "target": "B41 concluído"
-        },
-        {
-            "id": "FINANCEIRO_BAIXAR_VS_RECEBER_PAGAR",
-            "status": "IMPLEMENTADO_B42",
-            "frontend": "/api/financeiro/contas-receber/{id}/baixar e /api/financeiro/contas-pagar/{id}/baixar",
-            "backendInventario": "/baixar por tipo",
-            "decisao": "B42 alinhou baixa financeira ao contrato /baixar com payload { valor, dataBaixa, observacao }.",
-            "target": "B42 concluído"
-        },
-        {
-            "id": "FINANCEIRO_ESTORNO_DIVERGENTE",
-            "status": "IMPLEMENTADO_B42",
-            "frontend": "/api/financeiro/contas-receber/{id}/estornar e /api/financeiro/contas-pagar/{id}/estornar",
-            "backendInventario": "/contas/{id}/estornar e rotas espelhadas",
-            "decisao": "B42 usa rotas espelhadas por tipo com payload { baixaId, dataEstorno, motivo }.",
-            "target": "B42 concluído"
-        },
-        {
-            "id": "TABELAS_PRECO_AUSENTE_FRONTEND",
-            "status": "IMPLEMENTADO_B40",
-            "frontend": "Módulo /tabelas-preco com client para CRUD de tabelas, itens, ativação, inativação e preço vigente.",
-            "backendInventario": "/api/tabelas-preco completo",
-            "decisao": "Implementado na B40 com testes estruturais e validação de payload.",
-            "target": "B40 concluído"
-        },
-        {
-            "id": "ATIVIDADES_AUSENTE_FRONTEND",
-            "status": "IMPLEMENTADO_B43",
-            "frontend": "Módulo /atividades com client para listagem, detalhe, criação, edição, atribuição, status, comentários e cancelamento.",
-            "backendInventario": "/api/atividades completo",
-            "decisao": "Implementado na B43 com payloads alinhados ao inventário backend e guards ATIVIDADES_*.",
-            "target": "B43 concluído"
-        },
-        {
-            "id": "RELATORIOS_AUSENTE_FRONTEND",
-            "status": "IMPLEMENTADO_B44",
-            "frontend": "Módulo /relatorios com client para relatório operacional e gerenciais por módulo.",
-            "backendInventario": "/api/relatorios/operacionais e /api/relatorios/gerenciais/*",
-            "decisao": "Implementado na B44 com filtros por empresa, filial e período, sem recalcular KPIs no frontend.",
-            "target": "B44 concluído"
-        },
-        {
-            "id": "AUDITORIA_OPERACIONAL_AUSENTE_FRONTEND",
-            "status": "IMPLEMENTADO_B45",
-            "frontend": "Módulo de auditoria avançada com /api/auditoria/operacional e /api/auditoria/eventos-recentes.",
-            "backendInventario": "/api/auditoria/operacional e eventos-recentes",
-            "decisao": "Implementado na B45 com filtros por contexto, usuário, módulo, entidade, ação, período e termo, sem exposição visual de GUID bruto.",
-            "target": "B45 concluído"
-        },
-        {
-            "id": "FISCAL_ROTAS_AVANCADAS_VS_INVENTARIO",
-            "status": "DIVERGENTE_CONTRATO",
-            "frontend": "Contrato fiscal avançado com transmitir-sefaz, observabilidade, contingência e documentos auxiliares",
-            "backendInventario": "Inventário resumido com transmitir, logs-integracao, xml e danfe",
-            "decisao": "Reconciliar somente contra Swagger real; não inventar regra fiscal.",
-            "target": "B38/B45 fiscal follow-up"
-        }
+    "schemaVersion": 1,
+    "version": "1.11.0a8b46",
+    "status": "audit-only-no-suppressions",
+    "contractDocument": "docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md",
+    "sourceDate": "2026-08-12",
+    "generatedAt": "2026-08-12T00:00:00-03:00",
+    "auditPolicy": {
+        "owner": "Arquitetura Frontend LogoSoft",
+        "expiresAt": "2026-12-31T23:59:59-03:00",
+        "sourceContract": "docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md",
+        "target": "Ondas 1 a 3 do plano de adequação"
+    },
+    "suppressions": [],
+    "description": "Registro auditável do contrato canônico. Nenhum item autoriza o gate a ignorar uma rota incompatível.",
+    "documentedDivergences": [],
+    "legacyReferences": [
+        { "id": "BANCOS_GET_ROOT_AUSENTE", "method": "GET", "path": "/api/bancos", "source": "features/bancos/api/bancosApi.ts", "backend": "sem GET no catálogo; existem apenas operações POST", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; bloquear consulta até contrato de leitura existir.", "target": "Onda 1 — Bancos" },
+        { "id": "BANCOS_CONTAS_GET_AUSENTE", "method": "GET", "path": "/api/bancos/contas-bancarias", "source": "features/bancos/api/bancosApi.ts", "backend": "sem GET no catálogo; cadastro é POST-only", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; bloquear consulta até contrato de leitura existir.", "target": "Onda 1 — Bancos" },
+        { "id": "BANCOS_CONVENIOS_GET_AUSENTE", "method": "GET", "path": "/api/bancos/convenios", "source": "features/bancos/api/bancosApi.ts", "backend": "sem GET no catálogo; cadastro é POST-only", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; bloquear consulta até contrato de leitura existir.", "target": "Onda 1 — Bancos" },
+        { "id": "BANCOS_CARTEIRAS_GET_AUSENTE", "method": "GET", "path": "/api/bancos/carteiras", "source": "features/bancos/api/bancosApi.ts", "backend": "sem GET no catálogo; cadastro é POST-only", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; bloquear consulta até contrato de leitura existir.", "target": "Onda 1 — Bancos" },
+        { "id": "ESTOQUE_BLOQUEIOS_POST_LEGADO", "method": "POST", "path": "/api/estoque/bloqueios", "source": "features/estoque/api/estoqueApi.ts", "backend": "/api/estoque/avancado/bloqueios", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; escolher explicitamente o contrato avançado.", "target": "Onda 1 — Estoque" },
+        { "id": "ESTOQUE_BLOQUEIOS_LIBERAR_LEGADO", "method": "POST", "path": "/api/estoque/bloqueios/{param}/liberar", "source": "features/estoque/api/estoqueApi.ts", "backend": "/api/estoque/avancado/bloqueios/{id}/liberar", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; escolher explicitamente o contrato avançado.", "target": "Onda 1 — Estoque" },
+        { "id": "ESTOQUE_BLOQUEIOS_CANCELAR_LEGADO", "method": "POST", "path": "/api/estoque/bloqueios/{param}/cancelar", "source": "features/estoque/api/estoqueApi.ts", "backend": "/api/estoque/avancado/bloqueios/{id}/cancelar", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; escolher explicitamente o contrato avançado.", "target": "Onda 1 — Estoque" },
+        { "id": "ESTOQUE_INVENTARIOS_DETALHE_LEGADO", "method": "GET", "path": "/api/estoque/inventarios/{param}", "source": "features/estoque/api/estoqueApi.ts", "backend": "/api/estoque/avancado/inventarios/{id}", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; separar inventário simples do avançado.", "target": "Onda 1 — Estoque" },
+        { "id": "ESTOQUE_INVENTARIOS_INICIAR_LEGADO", "method": "POST", "path": "/api/estoque/inventarios/{param}/iniciar-contagem", "source": "features/estoque/api/estoqueApi.ts", "backend": "/api/estoque/avancado/inventarios/{id}/iniciar-contagem", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; separar inventário simples do avançado.", "target": "Onda 1 — Estoque" },
+        { "id": "ESTOQUE_INVENTARIOS_CONCLUIR_LEGADO", "method": "POST", "path": "/api/estoque/inventarios/{param}/concluir", "source": "features/estoque/api/estoqueApi.ts", "backend": "/api/estoque/avancado/inventarios/{id}/concluir", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; separar inventário simples do avançado.", "target": "Onda 1 — Estoque" },
+        { "id": "FINANCEIRO_RECEBER_BAIXAR_LEGADO", "method": "POST", "path": "/api/financeiro/contas-receber/{param}/baixar", "source": "features/financeiro/api/financeiroApi.ts", "backend": "/api/financeiro/contas-receber/{id}/receber", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; alinhar ação ao contrato simples.", "target": "Onda 1 — Financeiro" },
+        { "id": "FINANCEIRO_RECEBER_ESTORNAR_LEGADO", "method": "POST", "path": "/api/financeiro/contas-receber/{param}/estornar", "source": "features/financeiro/api/financeiroApi.ts", "backend": "/api/financeiro/contas-receber/{id}/estornar-recebimento", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; alinhar ação ao contrato simples.", "target": "Onda 1 — Financeiro" },
+        { "id": "FINANCEIRO_PAGAR_BAIXAR_LEGADO", "method": "POST", "path": "/api/financeiro/contas-pagar/{param}/baixar", "source": "features/financeiro/api/financeiroApi.ts", "backend": "/api/financeiro/contas-pagar/{id}/pagar", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; alinhar ação ao contrato simples.", "target": "Onda 1 — Financeiro" },
+        { "id": "FINANCEIRO_PAGAR_ESTORNAR_LEGADO", "method": "POST", "path": "/api/financeiro/contas-pagar/{param}/estornar", "source": "features/financeiro/api/financeiroApi.ts", "backend": "/api/financeiro/contas-pagar/{id}/estornar-pagamento", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; alinhar ação ao contrato simples.", "target": "Onda 1 — Financeiro" },
+        { "id": "FINANCEIRO_CONTAS_DETALHE_LEGADO", "method": "GET", "path": "/api/financeiro/contas/{param}", "source": "features/financeiro/api/financeiroApi.ts", "backend": "/api/financeiro/avancado/contas/{id}", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; separar contrato simples e avançado.", "target": "Onda 1 — Financeiro" },
+        { "id": "FINANCEIRO_FLUXO_CAIXA_LEGADO", "method": "GET", "path": "/api/financeiro/fluxo-caixa", "source": "features/financeiro/api/financeiroApi.ts", "backend": "/api/financeiro/avancado/fluxo-caixa", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; separar contrato simples e avançado.", "target": "Onda 1 — Financeiro" },
+        { "id": "RELATORIOS_OPERACIONAIS_ROTA_LEGADA", "method": "GET", "path": "/api/relatorios/operacionais", "source": "features/relatorios/api/relatoriosApi.ts", "backend": "/api/relatorios/operacional/geral", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; alinhar rota e permissão por relatório.", "target": "Onda 1 — Relatórios" },
+        { "id": "RH_FERIAS_LISTAR_LEGADO", "method": "GET", "path": "/api/rh/ausencias/ferias", "source": "features/rh/api/rhApi.ts", "backend": "/api/rh/ferias", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; alinhar base da API de férias.", "target": "Onda 1 — RH" },
+        { "id": "RH_FERIAS_CRIAR_LEGADO", "method": "POST", "path": "/api/rh/ausencias/ferias", "source": "features/rh/api/rhApi.ts", "backend": "/api/rh/ferias", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; alinhar base da API de férias.", "target": "Onda 1 — RH" },
+        { "id": "RH_FERIAS_ACAO_DINAMICA_LEGADA", "method": "POST", "path": "/api/rh/ausencias/ferias/{param}/{param}", "source": "features/rh/api/rhApi.ts", "backend": "/api/rh/ferias/{id}/aprovar|rejeitar|cancelar", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; resolver ações contra rotas do catálogo.", "target": "Onda 1 — RH" },
+        { "id": "RH_AFASTAMENTOS_LISTAR_LEGADO", "method": "GET", "path": "/api/rh/ausencias/afastamentos", "source": "features/rh/api/rhApi.ts", "backend": "/api/rh/afastamentos", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; alinhar base da API de afastamentos.", "target": "Onda 1 — RH" },
+        { "id": "RH_AFASTAMENTOS_CRIAR_LEGADO", "method": "POST", "path": "/api/rh/ausencias/afastamentos", "source": "features/rh/api/rhApi.ts", "backend": "/api/rh/afastamentos", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; alinhar base da API de afastamentos.", "target": "Onda 1 — RH" },
+        { "id": "RH_AFASTAMENTOS_ENCERRAR_LEGADO", "method": "POST", "path": "/api/rh/ausencias/afastamentos/{param}/encerrar", "source": "features/rh/api/rhApi.ts", "backend": "/api/rh/afastamentos/{id}/encerrar", "status": "DIVERGENTE_PRODUTIVO", "decision": "Não suprimir; alinhar base da API de afastamentos.", "target": "Onda 1 — RH" },
+        { "id": "ESTOQUE_ENTRADAS_GET_INDIRETO", "method": "GET", "path": "/api/estoque/entradas", "source": "features/shared/config/erpFeatureCatalog.ts", "backend": "sem GET no catálogo; a rota de entrada é POST-only", "status": "DIVERGENTE_PRODUTIVO_INDIRETO", "decision": "Não suprimir; impedir listagem genérica sobre endpoint mutável sem contrato de leitura.", "target": "Onda 2 — Estoque" },
+        { "id": "ESTOQUE_SAIDAS_GET_INDIRETO", "method": "GET", "path": "/api/estoque/saidas", "source": "features/shared/config/erpFeatureCatalog.ts", "backend": "sem GET no catálogo; a rota de saída é POST-only", "status": "DIVERGENTE_PRODUTIVO_INDIRETO", "decision": "Não suprimir; impedir listagem genérica sobre endpoint mutável sem contrato de leitura.", "target": "Onda 2 — Estoque" },
+        { "id": "ESTOQUE_AJUSTES_GET_INDIRETO", "method": "GET", "path": "/api/estoque/ajustes", "source": "features/shared/config/erpFeatureCatalog.ts", "backend": "sem GET no catálogo; a rota de ajuste é POST-only", "status": "DIVERGENTE_PRODUTIVO_INDIRETO", "decision": "Não suprimir; impedir listagem genérica sobre endpoint mutável sem contrato de leitura.", "target": "Onda 2 — Estoque" }
     ]
 }

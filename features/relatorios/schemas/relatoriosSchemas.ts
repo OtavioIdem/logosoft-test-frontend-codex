@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { normalizeGuidOrNull } from '@/lib/http/requestUtils';
 
 const optionalGuidSchema = z.preprocess((value) => normalizeGuidOrNull(value) ?? undefined, z.string().uuid('Selecione um registro válido.').optional());
+const requiredGuidSchema = z.preprocess((value) => normalizeGuidOrNull(value) ?? value, z.string().uuid());
 const isoDateSchema = z.preprocess((value) => {
     if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.toISOString() : '';
     if (typeof value === 'string') return value.trim();
@@ -9,7 +10,7 @@ const isoDateSchema = z.preprocess((value) => {
 }, z.string().min(1, 'Informe a data.'));
 
 export const relatorioPeriodoQuerySchema = z.object({
-    empresaId: optionalGuidSchema,
+    empresaId: requiredGuidSchema,
     filialId: optionalGuidSchema,
     dataInicial: isoDateSchema,
     dataFinal: isoDateSchema

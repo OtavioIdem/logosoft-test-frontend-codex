@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeLoginSession } from '@/features/auth/api/authResponseMapper';
+import { normalizeCurrentUserResponse, normalizeLoginSession } from '@/features/auth/api/authResponseMapper';
 
 const tokenPayload = {
     sub: 'manager-id',
@@ -83,5 +83,40 @@ describe('normalizeLoginSession', () => {
         expect(session.refreshToken).toBe('refresh-token');
         expect(session.user.id).toBe('usuario-id');
         expect(session.user.permissoes).toContain('VENDAS_CONSULTAR');
+    });
+});
+
+describe('normalizeCurrentUserResponse', () => {
+    const mePayload = {
+        usuarioId: '11111111-1111-1111-1111-111111111111',
+        nome: 'Usuario autorizado',
+        email: 'usuario@erp.local',
+        empresaId: '22222222-2222-2222-2222-222222222222',
+        filialId: '33333333-3333-3333-3333-333333333333',
+        isMaster: true,
+        permissoes: ['PRODUTOS_CONSULTAR']
+    };
+
+    it('mapeia o contrato /api/auth/me e usa as claims devolvidas pela API', () => {
+        expect(normalizeCurrentUserResponse({ success: true, data: mePayload })).toEqual({
+            id: mePayload.usuarioId,
+            nome: mePayload.nome,
+            email: mePayload.email,
+            empresaId: mePayload.empresaId,
+            filialId: mePayload.filialId,
+            isMaster: true,
+            permissoes: ['PRODUTOS_CONSULTAR']
+        });
+    });
+
+    it.each([
+        ['usuarioId', undefined],
+        ['empresaId', undefined],
+        ['isMaster', undefined],
+        ['permissoes', undefined],
+        ['filialId', 'nao-e-guid'],
+        ['permissoes', ['']]
+    ])('rejeita payload /me sem claim obrigatoria ou invalida: %s', (field, value) => {
+        expect(() => normalizeCurrentUserResponse({ ...mePayload, [field]: value })).toThrow();
     });
 });

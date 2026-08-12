@@ -16,8 +16,8 @@ import { PermissionGuard } from '@/components/security/PermissionGuard';
 import { EstoqueFilterBar } from '@/features/estoque/components/EstoqueFilterBar';
 import { InventarioFormDialog, InventarioItemDialog } from '@/features/estoque/components/InventarioEstoqueDialogs';
 import { filterLocalRecords } from '@/features/estoque/components/estoqueUiUtils';
-import { calcularResumoInventarios, inventarioStatusLabel, inventarioStatusSeverity, isInventarioEmContagem } from '@/features/estoque/components/estoqueUxUtils';
-import { useInventarioEstoqueDetalhe, useInventarioEstoqueMutations, useInventariosEstoque, useLocaisEstoque } from '@/features/estoque/hooks/useEstoqueResources';
+import { calcularResumoInventarios, inventarioStatusLabel, inventarioStatusSeverity } from '@/features/estoque/components/estoqueUxUtils';
+import { useInventarioEstoqueMutations, useInventariosEstoque, useLocaisEstoque } from '@/features/estoque/hooks/useEstoqueResources';
 import { EstoqueListQuery, InventarioFormValues, InventarioItemFormValues, InventarioResponse, ItemInventarioResponse } from '@/features/estoque/types/estoque.types';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { useProdutos } from '@/features/produtos/hooks/useProdutosResources';
@@ -27,8 +27,7 @@ import { StatusInventario } from '@/types/erp';
 
 const statusValue = (record: InventarioResponse) => record.statusInventario ?? record.status;
 const isAberto = (record: InventarioResponse) => Number(statusValue(record)) === StatusInventario.Aberto || String(statusValue(record)).toLowerCase() === 'aberto';
-const canStartCounting = (record: InventarioResponse) => isAberto(record);
-const canCount = (record: InventarioResponse) => isAberto(record) || isInventarioEmContagem(statusValue(record));
+const canCount = (record: InventarioResponse) => isAberto(record);
 
 export const InventariosEstoquePage = () => {
     const runWithToast = useMutationWithToast();
@@ -42,16 +41,15 @@ export const InventariosEstoquePage = () => {
     const [detailRecord, setDetailRecord] = useState<InventarioResponse | null>(null);
     const [reasonState, setReasonState] = useState<{ action: 'concluir' | 'cancelar'; record: InventarioResponse } | null>(null);
     const inventariosQuery = useInventariosEstoque(filters);
-    const detalheQuery = useInventarioEstoqueDetalhe(detailRecord?.id ?? null);
     const locaisQuery = useLocaisEstoque({ empresaId: filters.empresaId, filialId: filters.filialId });
     const produtosQuery = useProdutos({ empresaId: filters.empresaId, filialId: filters.filialId });
-    const { abrirMutation, adicionarItemMutation, iniciarContagemMutation, concluirMutation, cancelarMutation } = useInventarioEstoqueMutations();
+    const { abrirMutation, adicionarItemMutation, fecharMutation, cancelarMutation } = useInventarioEstoqueMutations();
     const records = useMemo(() => filterLocalRecords(inventariosQuery.data ?? [], localSearch), [inventariosQuery.data, localSearch]);
     const visibleRecords = useMemo(() => records.slice(first, first + rows), [records, first, rows]);
     const localLabelMap = useMemo(() => new Map((locaisQuery.data ?? []).map((local) => [local.id, `${local.codigo} • ${local.nome}`])), [locaisQuery.data]);
     const produtoLabelMap = useMemo(() => new Map((produtosQuery.data ?? []).map((produto) => [produto.id, `${produto.codigo} • ${produto.descricao}`])), [produtosQuery.data]);
     const resumo = useMemo(() => calcularResumoInventarios(records), [records]);
-    const detalhe = detalheQuery.data ?? detailRecord;
+    const detalhe = detailRecord;
 
     if (!hasPermission('ESTOQUE_INVENTARIO_GERENCIAR')) return <UnauthorizedState description="Inventários exigem ESTOQUE_INVENTARIO_GERENCIAR." />;
     const updateFilter = (name: keyof EstoqueListQuery, value: string | null) => { setFirst(0); setFilters((current) => ({ ...current, [name]: value || null })); };
@@ -77,18 +75,11 @@ export const InventariosEstoquePage = () => {
         );
     };
 
-    const iniciarContagem = async (record: InventarioResponse) => {
-        await runWithToast(
-            () => iniciarContagemMutation.mutateAsync(record.id),
-            { success: { summary: 'Contagem iniciada', detail: 'Inventário movido para contagem.' }, error: { summary: 'Erro ao iniciar contagem', detail: 'Não foi possível iniciar a contagem.' } }
-        );
-    };
-
     const executarMotivo = async (motivo: string) => {
         if (!reasonState) return;
         await runWithToast(
             async () => {
-                if (reasonState.action === 'concluir') await concluirMutation.mutateAsync({ id: reasonState.record.id, motivo });
+                if (reasonState.action === 'concluir') await fecharMutation.mutateAsync({ id: reasonState.record.id, motivo });
                 if (reasonState.action === 'cancelar') await cancelarMutation.mutateAsync({ id: reasonState.record.id, motivo });
                 setReasonState(null);
             },
@@ -107,8 +98,7 @@ export const InventariosEstoquePage = () => {
             </div>
             {detalhe ? (
                 <Card className="mb-3" title={`Detalhe do inventário ${detalhe.codigo}`}>
-                    {detalheQuery.error ? <ApiErrorPanel error={mapApiError(detalheQuery.error)} /> : null}
-                    <DataTableServer<ItemInventarioResponse> value={detalhe.itens ?? []} totalRecords={detalhe.itens?.length ?? 0} loading={detalheQuery.isFetching} first={0} rows={5} onPage={() => undefined} emptyMessage="Nenhum item no inventário.">
+                    <DataTableServer<ItemInventarioResponse> value={detalhe.itens ?? []} totalRecords={detalhe.itens?.length ?? 0} loading={inventariosQuery.isFetching} first={0} rows={5} onPage={() => undefined} emptyMessage="Nenhum item no inventário.">
                         <Column header="Produto" body={(item: ItemInventarioResponse) => produtoLabelMap.get(item.produtoId) ?? item.produtoId} />
                         <Column field="quantidadeContada" header="Quantidade contada" />
                         <Column field="observacao" header="Observação" />
@@ -123,13 +113,13 @@ export const InventariosEstoquePage = () => {
                     <Column field="descricao" header="Descrição" />
                     <Column header="Status" body={(row: InventarioResponse) => <Tag value={inventarioStatusLabel(statusValue(row))} severity={inventarioStatusSeverity(statusValue(row))} />} />
                     <Column header="Itens" body={(row: InventarioResponse) => row.itens?.length ?? 0} />
-                    <Column header="Ações" alignHeader="right" body={(row: InventarioResponse) => <DataTableActions actions={[{ key: 'detalhe', label: 'Detalhes', icon: 'pi pi-eye', permission: 'ESTOQUE_INVENTARIO_GERENCIAR', onClick: () => setDetailRecord(row) }, { key: 'iniciar', label: 'Iniciar contagem', icon: 'pi pi-play', permission: 'ESTOQUE_INVENTARIO_GERENCIAR', disabled: !canStartCounting(row), onClick: () => iniciarContagem(row) }, { key: 'item', label: 'Adicionar item', icon: 'pi pi-list', permission: 'ESTOQUE_INVENTARIO_GERENCIAR', disabled: !canCount(row), onClick: () => setItemRecord(row) }, { key: 'concluir', label: 'Concluir', icon: 'pi pi-check', permission: 'ESTOQUE_INVENTARIO_GERENCIAR', disabled: !canCount(row), onClick: () => setReasonState({ action: 'concluir', record: row }) }, { key: 'cancelar', label: 'Cancelar', icon: 'pi pi-ban', severity: 'danger', permission: 'ESTOQUE_INVENTARIO_GERENCIAR', disabled: !canCount(row), onClick: () => setReasonState({ action: 'cancelar', record: row }) }]} />} />
+                    <Column header="Ações" alignHeader="right" body={(row: InventarioResponse) => <DataTableActions actions={[{ key: 'detalhe', label: 'Detalhes', icon: 'pi pi-eye', permission: 'ESTOQUE_INVENTARIO_GERENCIAR', onClick: () => setDetailRecord(row) }, { key: 'item', label: 'Adicionar item', icon: 'pi pi-list', permission: 'ESTOQUE_INVENTARIO_GERENCIAR', disabled: !canCount(row), onClick: () => setItemRecord(row) }, { key: 'fechar', label: 'Fechar', icon: 'pi pi-check', permission: 'ESTOQUE_INVENTARIO_GERENCIAR', disabled: !canCount(row), onClick: () => setReasonState({ action: 'concluir', record: row }) }, { key: 'cancelar', label: 'Cancelar', icon: 'pi pi-ban', severity: 'danger', permission: 'ESTOQUE_INVENTARIO_GERENCIAR', disabled: !canCount(row), onClick: () => setReasonState({ action: 'cancelar', record: row }) }]} />} />
                 </DataTableServer>
                 {!inventariosQuery.isLoading && records.length === 0 ? <EmptyState title="Nenhum inventário" description="Abra um inventário ou ajuste os filtros." /> : null}
             </Card>
             <InventarioFormDialog visible={createVisible} locais={locaisQuery.data ?? []} loading={abrirMutation.isPending} onHide={() => setCreateVisible(false)} onSubmit={abrir} />
             <InventarioItemDialog visible={Boolean(itemRecord)} produtos={produtosQuery.data ?? []} loading={adicionarItemMutation.isPending} onHide={() => setItemRecord(null)} onSubmit={adicionarItem} />
-            <ReasonDialog visible={Boolean(reasonState)} title={reasonState?.action === 'concluir' ? 'Motivo para concluir inventário' : 'Motivo do cancelamento'} confirmLabel={reasonState?.action === 'concluir' ? 'Concluir' : 'Cancelar'} loading={concluirMutation.isPending || cancelarMutation.isPending} onHide={() => setReasonState(null)} onConfirm={executarMotivo} />
+            <ReasonDialog visible={Boolean(reasonState)} title={reasonState?.action === 'concluir' ? 'Motivo para fechar inventário' : 'Motivo do cancelamento'} confirmLabel={reasonState?.action === 'concluir' ? 'Fechar' : 'Cancelar'} loading={fecharMutation.isPending || cancelarMutation.isPending} onHide={() => setReasonState(null)} onConfirm={executarMotivo} />
         </>
     );
 };

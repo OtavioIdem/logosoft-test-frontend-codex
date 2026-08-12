@@ -1,5 +1,5 @@
-import { BloqueiosEstoquePage } from '@/features/estoque/components/BloqueiosEstoquePage';
+import { redirect } from 'next/navigation';
 
 export default function Page() {
-    return <BloqueiosEstoquePage />;
+    redirect('/estoque/avancado');
 }

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from 'primereact/button';
+import { Checkbox } from 'primereact/checkbox';
 import { Dialog } from 'primereact/dialog';
 import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
@@ -11,9 +12,9 @@ import { EmpresaFilialFields } from '@/components/forms/EmpresaFilialFields';
 import { DateTimeInput } from '@/components/forms/DateTimeInput';
 import { FieldError } from '@/components/forms/FieldError';
 import { MoneyInput } from '@/components/forms/MoneyInput';
-import { useCondicoesPagamentoOptions } from '@/features/financeiro/hooks/useFinanceiroResources';
+import { useCondicoesPagamentoOptions, useFormasPagamentoOptions } from '@/features/financeiro/hooks/useFinanceiroResources';
 import { usePedidosVenda } from '@/features/vendas/hooks/useVendasResources';
-import { BaixarContaFinanceiraRequest, ContaPagarResponse, ContaReceberResponse, EstornarContaFinanceiraRequest, GerarContaReceberPedidoRequest, PagarContaRequest, ReceberContaRequest } from '@/features/financeiro/types/financeiro.types';
+import { ContaPagarResponse, ContaReceberResponse, EstornarPagamentoRequest, EstornarRecebimentoRequest, GerarContaReceberPedidoRequest, PagarContaRequest, ReceberContaRequest } from '@/features/financeiro/types/financeiro.types';
 import { formatMoney } from '@/features/financeiro/components/financeiroUiUtils';
 import { SelectOption } from '@/types/erp';
 
@@ -32,7 +33,7 @@ type EstornoDialogProps = {
     conta?: ContaReceberResponse | ContaPagarResponse | null;
     loading?: boolean;
     onHide: () => void;
-    onSubmit: (values: EstornarContaFinanceiraRequest) => void;
+    onSubmit: (values: EstornarRecebimentoRequest | EstornarPagamentoRequest) => void;
 };
 
 type GerarPedidoVendaDialogProps = {
@@ -42,31 +43,45 @@ type GerarPedidoVendaDialogProps = {
     onSubmit: (pedidoVendaId: string, values: GerarContaReceberPedidoRequest) => void;
 };
 
-type BaixaValues = {
-    dataBaixa: Date;
-    valor: number;
-    observacao?: string | null;
-};
-
 export const BaixaFinanceiraDialog = ({ type, visible, conta, loading, onHide, onSubmit }: ReceberDialogProps) => {
-    const [values, setValues] = useState<BaixaValues>({ dataBaixa: new Date(), valor: 0, observacao: '' });
+    const [parcelaId, setParcelaId] = useState('');
+    const [formaPagamentoId, setFormaPagamentoId] = useState('');
+    const [data, setData] = useState(new Date());
+    const [valor, setValor] = useState(0);
+    const [valorJuros, setValorJuros] = useState(0);
+    const [valorMulta, setValorMulta] = useState(0);
+    const [valorDesconto, setValorDesconto] = useState(0);
+    const [gerarMovimentoCaixa, setGerarMovimentoCaixa] = useState(false);
+    const [gerarMovimentoBancario, setGerarMovimentoBancario] = useState(false);
+    const [observacao, setObservacao] = useState('');
+    const parcelas = conta?.parcelas ?? [];
+    const formasQuery = useFormasPagamentoOptions(conta?.empresaId, type === 'receber' ? 'recebimento' : 'pagamento');
 
     useEffect(() => {
         if (!visible) return;
-        setValues({ dataBaixa: new Date(), valor: Number(conta?.saldo ?? conta?.valorTotal ?? 0), observacao: '' });
-    }, [conta, visible]);
+        const parcela = parcelas[0];
+        setParcelaId(parcela?.id ?? '');
+        setFormaPagamentoId('');
+        setData(new Date());
+        setValor(Number(parcela?.saldo ?? parcela?.valor ?? conta?.saldo ?? conta?.valorTotal ?? 0));
+        setValorJuros(0); setValorMulta(0); setValorDesconto(0);
+        setGerarMovimentoCaixa(false); setGerarMovimentoBancario(false); setObservacao('');
+    }, [conta, visible, parcelas]);
+    const submit = () => onSubmit(type === 'receber' ? { parcelaId, formaPagamentoId, dataRecebimento: data, valorRecebido: valor, valorJuros, valorMulta, valorDesconto, gerarMovimentoCaixa, gerarMovimentoBancario, observacao } : { parcelaId, formaPagamentoId, dataPagamento: data, valorPago: valor, valorJuros, valorMulta, valorDesconto, gerarMovimentoCaixa, gerarMovimentoBancario, observacao });
 
-    const update = <K extends keyof BaixaValues>(key: K, value: BaixaValues[K]) => setValues((current) => ({ ...current, [key]: value }));
-    const submit = () => onSubmit({ valor: values.valor, dataBaixa: values.dataBaixa, observacao: values.observacao ?? null } as BaixarContaFinanceiraRequest);
-
-    const footer = <div className="flex justify-content-end gap-2"><Button label="Cancelar" icon="pi pi-times" text onClick={onHide} disabled={loading} /><Button label={type === 'receber' ? 'Receber' : 'Pagar'} icon="pi pi-check" onClick={submit} loading={loading} /></div>;
+    const footer = <div className="flex justify-content-end gap-2"><Button label="Cancelar" icon="pi pi-times" text onClick={onHide} disabled={loading} /><Button label={type === 'receber' ? 'Receber' : 'Pagar'} icon="pi pi-check" onClick={submit} loading={loading} disabled={!parcelaId || !formaPagamentoId || parcelas.length === 0} /></div>;
 
     return (
         <Dialog header={type === 'receber' ? 'Baixar conta a receber' : 'Baixar conta a pagar'} visible={visible} modal style={{ width: 'min(36rem, 96vw)' }} onHide={onHide} footer={footer}>
             <div className="grid formgrid p-fluid">
-                <div className="field col-12 md:col-6"><label className="font-medium">Data da baixa</label><DateTimeInput value={values.dataBaixa} onChange={(value) => update('dataBaixa', value ?? new Date())} disabled={loading} /></div>
-                <div className="field col-12 md:col-6"><label className="font-medium">Valor</label><MoneyInput value={values.valor} onChange={(value) => update('valor', value ?? 0)} disabled={loading} /></div>
-                <div className="field col-12"><label className="font-medium">Observação</label><InputTextarea value={values.observacao ?? ''} onChange={(event) => update('observacao', event.target.value)} rows={3} disabled={loading} /></div>
+                <div className="field col-12"><label className="font-medium">Parcela *</label><Dropdown value={parcelaId} options={parcelas.map((parcela) => ({ label: `Parcela ${parcela.numero} — ${formatMoney(parcela.saldo ?? parcela.valor)}`, value: parcela.id }))} optionLabel="label" optionValue="value" className="w-full" onChange={(event) => { setParcelaId(event.value); const parcela = parcelas.find((item) => item.id === event.value); setValor(Number(parcela?.saldo ?? parcela?.valor ?? 0)); }} disabled={loading || parcelas.length === 0} emptyMessage="Nenhuma parcela retornada pelo backend." /></div>
+                <div className="field col-12"><label className="font-medium">Forma de pagamento *</label><Dropdown value={formaPagamentoId} options={formasQuery.options} optionLabel="label" optionValue="value" className="w-full" onChange={(event) => setFormaPagamentoId(event.value)} disabled={loading || formasQuery.isFetching || !conta?.empresaId} emptyMessage="Nenhuma forma de pagamento disponível." /></div>
+                <div className="field col-12 md:col-6"><label className="font-medium">Data</label><DateTimeInput value={data} onChange={(value) => setData(value ?? new Date())} disabled={loading} /></div>
+                <div className="field col-12 md:col-6"><label className="font-medium">Valor</label><MoneyInput value={valor} onChange={(value) => setValor(value ?? 0)} disabled={loading} /></div>
+                <div className="field col-12 md:col-4"><label className="font-medium">Juros</label><MoneyInput value={valorJuros} onChange={(value) => setValorJuros(value ?? 0)} disabled={loading} /></div><div className="field col-12 md:col-4"><label className="font-medium">Multa</label><MoneyInput value={valorMulta} onChange={(value) => setValorMulta(value ?? 0)} disabled={loading} /></div><div className="field col-12 md:col-4"><label className="font-medium">Desconto</label><MoneyInput value={valorDesconto} onChange={(value) => setValorDesconto(value ?? 0)} disabled={loading} /></div>
+                <div className="field-checkbox col-12 md:col-6"><Checkbox inputId="gerarMovimentoCaixa" checked={gerarMovimentoCaixa} onChange={(event) => setGerarMovimentoCaixa(Boolean(event.checked))} disabled={loading} /><label htmlFor="gerarMovimentoCaixa">Gerar movimento de caixa</label></div><div className="field-checkbox col-12 md:col-6"><Checkbox inputId="gerarMovimentoBancario" checked={gerarMovimentoBancario} onChange={(event) => setGerarMovimentoBancario(Boolean(event.checked))} disabled={loading} /><label htmlFor="gerarMovimentoBancario">Gerar movimento bancário</label></div>
+                <div className="field col-12"><label className="font-medium">Observação</label><InputTextarea value={observacao} onChange={(event) => setObservacao(event.target.value)} rows={3} disabled={loading} /></div>
+                {parcelas.length === 0 ? <small className="col-12 text-color-secondary">A baixa está indisponível porque a listagem não retornou uma parcela selecionável.</small> : null}
             </div>
             <small className="text-color-secondary">A forma de pagamento, caixa e banco devem ser tratados pelo backend/financeiro operacional quando o contrato expuser esses campos.</small>
         </Dialog>
@@ -75,15 +90,14 @@ export const BaixaFinanceiraDialog = ({ type, visible, conta, loading, onHide, o
 
 export const EstornoFinanceiroDialog = ({ type, visible, conta, loading, onHide, onSubmit }: EstornoDialogProps) => {
     const [baixaId, setBaixaId] = useState('');
-    const [dataEstorno, setDataEstorno] = useState(new Date());
     const [motivo, setMotivo] = useState('');
     const movimentos = useMemo(() => (type === 'recebimento' ? (conta as ContaReceberResponse | undefined)?.recebimentos ?? [] : (conta as ContaPagarResponse | undefined)?.pagamentos ?? []), [conta, type]);
     const options = useMemo(() => movimentos.map((movimento) => ({ label: `${type === 'recebimento' ? 'Recebimento' : 'Pagamento'} • ${formatMoney('valorRecebido' in movimento ? movimento.valorRecebido : movimento.valorPago)}`, value: movimento.id })), [movimentos, type]);
 
-    useEffect(() => { if (visible) { setBaixaId(options[0]?.value ?? ''); setDataEstorno(new Date()); setMotivo(''); } }, [options, visible]);
+    useEffect(() => { if (visible) { setBaixaId(options[0]?.value ?? ''); setMotivo(''); } }, [options, visible]);
 
-    const footer = <div className="flex justify-content-end gap-2"><Button label="Cancelar" icon="pi pi-times" text onClick={onHide} disabled={loading} /><Button label="Estornar" icon="pi pi-undo" severity="warning" onClick={() => onSubmit({ baixaId, dataEstorno, motivo })} disabled={!baixaId || !motivo.trim()} loading={loading} /></div>;
-    return <Dialog header={type === 'recebimento' ? 'Estornar recebimento' : 'Estornar pagamento'} visible={visible} modal style={{ width: 'min(36rem, 96vw)' }} onHide={onHide} footer={footer}><div className="field"><label className="font-medium">Baixa</label><Dropdown value={baixaId} options={options} optionLabel="label" optionValue="value" className="w-full" onChange={(event) => setBaixaId(event.value)} disabled={loading} /><FieldError message={options.length === 0 ? 'Nenhuma baixa disponível para estorno.' : undefined} /></div><div className="field"><label className="font-medium">Data do estorno</label><DateTimeInput value={dataEstorno} onChange={(value) => setDataEstorno(value ?? new Date())} disabled={loading} /></div><div className="field"><label className="font-medium">Motivo</label><InputTextarea value={motivo} onChange={(event) => setMotivo(event.target.value)} rows={4} className="w-full" disabled={loading} /></div></Dialog>;
+    const footer = <div className="flex justify-content-end gap-2"><Button label="Cancelar" icon="pi pi-times" text onClick={onHide} disabled={loading} /><Button label="Estornar" icon="pi pi-undo" severity="warning" onClick={() => onSubmit(type === 'recebimento' ? { recebimentoId: baixaId, motivo } : { pagamentoId: baixaId, motivo })} disabled={!baixaId || !motivo.trim()} loading={loading} /></div>;
+    return <Dialog header={type === 'recebimento' ? 'Estornar recebimento' : 'Estornar pagamento'} visible={visible} modal style={{ width: 'min(36rem, 96vw)' }} onHide={onHide} footer={footer}><div className="field"><label className="font-medium">Baixa</label><Dropdown value={baixaId} options={options} optionLabel="label" optionValue="value" className="w-full" onChange={(event) => setBaixaId(event.value)} disabled={loading} /><FieldError message={options.length === 0 ? 'Nenhuma baixa disponível para estorno.' : undefined} /></div><div className="field"><label className="font-medium">Motivo</label><InputTextarea value={motivo} onChange={(event) => setMotivo(event.target.value)} rows={4} className="w-full" disabled={loading} /></div></Dialog>;
 };
 
 export const GerarContaReceberPedidoDialog = ({ visible, loading, onHide, onSubmit }: GerarPedidoVendaDialogProps) => {

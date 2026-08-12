@@ -6,4 +6,11 @@ describe('permissions', () => {
     it('valida permissão simples', () => expect(hasPermission(user, 'PRODUTOS_CONSULTAR')).toBe(true));
     it('valida qualquer permissão', () => expect(hasAnyPermission(user, ['CLIENTES_CONSULTAR', 'PRODUTOS_GERENCIAR'])).toBe(true));
     it('valida todas as permissões', () => expect(hasAllPermissions(user, ['PRODUTOS_CONSULTAR', 'PRODUTOS_GERENCIAR'])).toBe(true));
+    it.each([
+        [{ ...user, isMaster: true, permissoes: [] }, 'PRODUTOS_GERENCIAR'],
+        [{ ...user, permissoes: ['*'] as never }, 'PRODUTOS_GERENCIAR'],
+        [{ ...user, permissoes: ['MASTER_GOD'] as never }, 'PRODUTOS_GERENCIAR']
+    ])('nao concede bypass para claim administrativa fora do catalogo', (currentUser, requiredPermission) => {
+        expect(hasPermission(currentUser, requiredPermission as never)).toBe(false);
+    });
 });

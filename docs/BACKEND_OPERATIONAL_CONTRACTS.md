@@ -1,5 +1,10 @@
 # Contratos operacionais read-only frontend/backend
 
+> Escopo específico: smoke contracts read-only de Vendas, Estoque, Financeiro e
+> Auditoria. Este documento não é a fonte canônica geral de rotas, payloads,
+> permissões ou enums. Para integração atual, prevalece
+> `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md`.
+
 ## Objetivo
 
 A versão `v1.11.0a8b31` adiciona contratos operacionais read-only para validar o frontend contra backend real/controlado nos módulos prioritários de integração:

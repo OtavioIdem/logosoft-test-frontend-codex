@@ -7,9 +7,7 @@ import {
     atualizarLocalEstoqueSchema,
     baixarReservaEstoqueSchema,
     cancelarReservaEstoqueSchema,
-    bloqueioEstoqueAcaoSchema,
-    concluirInventarioSchema,
-    criarBloqueioEstoqueSchema,
+    fecharInventarioSchema,
     criarLocalEstoqueSchema,
     criarReservaEstoqueSchema,
     motivoSchema,
@@ -23,7 +21,6 @@ import {
     AtualizarLocalEstoqueRequest,
     BaixarReservaEstoqueRequest,
     CancelarReservaEstoqueRequest,
-    CriarBloqueioEstoqueRequest,
     CriarLocalEstoqueRequest,
     CriarReservaEstoqueRequest,
     EstoqueListQuery,
@@ -33,7 +30,7 @@ import {
     MovimentoEstoqueResponse,
     MovimentoManualEstoqueRequest,
     MotivoRequest,
-    ConcluirInventarioRequest,
+    FecharInventarioRequest,
     AbrirInventarioRequest,
     ReservaEstoqueResponse,
     TransferenciaEstoqueRequest
@@ -58,14 +55,12 @@ export const buildAtualizarLocalEstoquePayload = (values: unknown): AtualizarLoc
 export const buildMovimentoManualEstoquePayload = (values: unknown): MovimentoManualEstoqueRequest => parseSchema(movimentoManualEstoqueSchema, values);
 export const buildAjusteEstoquePayload = (values: unknown): AjusteEstoqueRequest => parseSchema(ajusteEstoqueSchema, values);
 export const buildTransferenciaEstoquePayload = (values: unknown): TransferenciaEstoqueRequest => parseSchema(transferenciaEstoqueSchema, values);
-export const buildCriarBloqueioEstoquePayload = (values: unknown): CriarBloqueioEstoqueRequest => parseSchema(criarBloqueioEstoqueSchema, values);
 export const buildCriarReservaEstoquePayload = (values: unknown): CriarReservaEstoqueRequest => parseSchema(criarReservaEstoqueSchema, values);
 export const buildBaixarReservaEstoquePayload = (values: unknown): BaixarReservaEstoqueRequest => parseSchema(baixarReservaEstoqueSchema, values);
 export const buildCancelarReservaEstoquePayload = (values: unknown): CancelarReservaEstoqueRequest => parseSchema(cancelarReservaEstoqueSchema, values);
 export const buildAbrirInventarioPayload = (values: unknown): AbrirInventarioRequest => parseSchema(abrirInventarioSchema, values);
 export const buildAdicionarItemInventarioPayload = (values: unknown): AdicionarItemInventarioRequest => parseSchema(adicionarItemInventarioSchema, values);
-export const buildConcluirInventarioPayload = (motivo: string): ConcluirInventarioRequest => parseSchema(concluirInventarioSchema, { motivoAjuste: motivo });
-export const buildBloqueioEstoqueAcaoPayload = (values: unknown): { bloqueioId: string; motivo: string } => parseSchema(bloqueioEstoqueAcaoSchema, values);
+export const buildFecharInventarioPayload = (motivo: string): FecharInventarioRequest => parseSchema(fecharInventarioSchema, { motivo });
 export const buildMotivoPayload = (motivo: string): MotivoRequest => parseSchema(motivoSchema, { motivo });
 
 export const estoqueApi = {
@@ -135,25 +130,6 @@ export const estoqueApi = {
             return response.data;
         });
     },
-    async criarBloqueio(values: unknown) {
-        const payload = buildCriarBloqueioEstoquePayload(values);
-        return runEstoqueRequest(async () => {
-            const response = await httpClient.post<MovimentoEstoqueResponse>('/api/estoque/bloqueios', payload);
-            return response.data;
-        });
-    },
-    async liberarBloqueio(id: string, motivo: string) {
-        const payload = buildMotivoPayload(motivo);
-        return runEstoqueRequest(async () => {
-            await httpClient.post<void>(`/api/estoque/bloqueios/${id}/liberar`, payload);
-        });
-    },
-    async cancelarBloqueio(id: string, motivo: string) {
-        const payload = buildMotivoPayload(motivo);
-        return runEstoqueRequest(async () => {
-            await httpClient.post<void>(`/api/estoque/bloqueios/${id}/cancelar`, payload);
-        });
-    },
     async listarReservas(query?: EstoqueListQuery) {
         return runEstoqueRequest(async () => {
             const response = await httpClient.get<ReservaEstoqueResponse[]>('/api/estoque/reservas', { params: params(query) });
@@ -187,12 +163,6 @@ export const estoqueApi = {
             return response.data;
         });
     },
-    async obterInventario(id: string) {
-        return runEstoqueRequest(async () => {
-            const response = await httpClient.get<InventarioResponse>(`/api/estoque/inventarios/${id}`);
-            return response.data;
-        });
-    },
     async abrirInventario(values: unknown) {
         const payload = buildAbrirInventarioPayload(values);
         return runEstoqueRequest(async () => {
@@ -207,16 +177,10 @@ export const estoqueApi = {
             return response.data;
         });
     },
-    async iniciarContagemInventario(id: string) {
+    async fecharInventario(id: string, motivo: string) {
+        const payload = buildFecharInventarioPayload(motivo);
         return runEstoqueRequest(async () => {
-            const response = await httpClient.post<InventarioResponse>(`/api/estoque/inventarios/${id}/iniciar-contagem`);
-            return response.data;
-        });
-    },
-    async concluirInventario(id: string, motivo: string) {
-        const payload = buildConcluirInventarioPayload(motivo);
-        return runEstoqueRequest(async () => {
-            const response = await httpClient.post<InventarioResponse>(`/api/estoque/inventarios/${id}/concluir`, payload);
+            const response = await httpClient.post<InventarioResponse>(`/api/estoque/inventarios/${id}/fechar`, payload);
             return response.data;
         });
     },

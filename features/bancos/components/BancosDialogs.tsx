@@ -1,19 +1,17 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
+import { Message } from 'primereact/message';
 import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
 import { classNames } from 'primereact/utils';
 import { z } from 'zod';
 import { EmpresaFilialFields } from '@/components/forms/EmpresaFilialFields';
-import { EntitySelect } from '@/components/forms/EntitySelect';
 import { FieldError } from '@/components/forms/FieldError';
 import { FormGrid } from '@/components/forms/FormGrid';
-import { SelectOption } from '@/types/erp';
 import { criarBancoSchema, criarCarteiraSchema, criarContaBancariaSchema, criarConvenioSchema } from '@/features/bancos/schemas/bancosSchemas';
-import { useBancos, useContasBancarias, useConvenios } from '@/features/bancos/hooks/useBancosResources';
 import { BancoFormValues, CarteiraFormValues, ContaBancariaFormValues, ConvenioFormValues, TipoCobranca } from '@/features/bancos/types/bancos.types';
 import { tipoCobrancaOptions } from '@/features/bancos/components/bancosLabels';
 
@@ -79,9 +77,6 @@ export const ContaBancariaDialog = ({ visible, loading, onHide, onSubmit }: { vi
     const [values, setValues] = useState<ContaBancariaFormValues>(initialConta);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    const bancosQuery = useBancos(visible);
-    const bancoOptions = useMemo<SelectOption<string>[]>(() => (bancosQuery.data ?? []).map((banco) => ({ label: `${banco.codigo} - ${banco.nome}`, value: banco.id })), [bancosQuery.data]);
-
     useEffect(() => {
         if (visible) {
             setValues(initialConta());
@@ -111,7 +106,7 @@ export const ContaBancariaDialog = ({ visible, loading, onHide, onSubmit }: { vi
                 <EmpresaFilialFields empresaId={values.empresaId || null} filialId={values.filialId || null} empresaError={errors.empresaId} filialError={errors.filialId} empresaCol="col-12 md:col-6" filialCol="col-12 md:col-6" onEmpresaChange={(value) => update('empresaId', value)} onFilialChange={(value) => update('filialId', value)} />
                 <div className="field col-12 md:col-6">
                     <label htmlFor="contaBanco" className="font-medium">Banco *</label>
-                    <EntitySelect id="contaBanco" entityName="banco" value={values.bancoId || null} options={bancoOptions} loading={bancosQuery.isFetching} onChange={(value) => update('bancoId', value ?? '')} />
+                    <Message className="w-full" severity="warn" text="Seleção de banco indisponível: o backend não oferece consulta de bancos nesta versão." />
                     <FieldError message={errors.bancoId} />
                 </div>
                 <div className="field col-8 md:col-3">
@@ -143,8 +138,6 @@ export const ConvenioDialog = ({ visible, loading, onHide, onSubmit }: { visible
     const [values, setValues] = useState<ConvenioFormValues>(initialConvenio);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    const contasQuery = useContasBancarias({}, visible);
-    const contaOptions = useMemo<SelectOption<string>[]>(() => (contasQuery.data ?? []).map((conta) => ({ label: `Ag ${conta.agencia} / Cc ${conta.conta}`, value: conta.id })), [contasQuery.data]);
 
     useEffect(() => {
         if (visible) {
@@ -174,7 +167,7 @@ export const ConvenioDialog = ({ visible, loading, onHide, onSubmit }: { visible
             <FormGrid>
                 <div className="field col-12 md:col-6">
                     <label htmlFor="convConta" className="font-medium">Conta bancária *</label>
-                    <EntitySelect id="convConta" entityName="conta" value={values.contaBancariaId || null} options={contaOptions} loading={contasQuery.isFetching} onChange={(value) => update('contaBancariaId', value ?? '')} />
+                    <Message className="w-full" severity="warn" text="Seleção de conta indisponível: o backend não oferece consulta de contas nesta versão." />
                     <FieldError message={errors.contaBancariaId} />
                 </div>
                 <div className="field col-6 md:col-3">
@@ -197,8 +190,6 @@ export const CarteiraDialog = ({ visible, loading, onHide, onSubmit }: { visible
     const [values, setValues] = useState<CarteiraFormValues>(initialCarteira);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
-    const conveniosQuery = useConvenios(visible);
-    const convenioOptions = useMemo<SelectOption<string>[]>(() => (conveniosQuery.data ?? []).map((convenio) => ({ label: `${convenio.numeroConvenio}${convenio.cedente ? ` - ${convenio.cedente}` : ''}`, value: convenio.id })), [conveniosQuery.data]);
 
     useEffect(() => {
         if (visible) {
@@ -228,7 +219,7 @@ export const CarteiraDialog = ({ visible, loading, onHide, onSubmit }: { visible
             <FormGrid>
                 <div className="field col-12 md:col-6">
                     <label htmlFor="cartConvenio" className="font-medium">Convênio *</label>
-                    <EntitySelect id="cartConvenio" entityName="convênio" value={values.convenioBancarioId || null} options={convenioOptions} loading={conveniosQuery.isFetching} onChange={(value) => update('convenioBancarioId', value ?? '')} />
+                    <Message className="w-full" severity="warn" text="Seleção de convênio indisponível: o backend não oferece consulta de convênios nesta versão." />
                     <FieldError message={errors.convenioBancarioId} />
                 </div>
                 <div className="field col-6 md:col-3">

@@ -1,4 +1,17 @@
-# logosoft Frontend v1.11.0a8b45
+# logosoft Frontend v1.11.0a8b45.c1
+
+## v1.11.0a8b45.c1 — Reconciliação do contrato backend atual
+
+A corretiva `.c1` preserva o `HEAD 398298d` como corte técnico auditado, sem promovê-lo a base aprovada, e substitui o gate documental B38 por uma comparação estrita entre as chamadas HTTP do frontend e o catálogo canônico de `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md`.
+
+Esta versão permanece bloqueada enquanto houver rotas, métodos ou expressões dinâmicas incompatíveis. A Onda 0 não altera APIs, telas, hooks, schemas nem fluxos produtivos.
+
+### Validação da Onda 0
+
+```bash
+npm run test:unit -- tests/unit/backendContractMap.test.ts
+npm run validate:backend-contract-map
+```
 
 
 ## v1.11.0a8b45 — Auditoria avançada

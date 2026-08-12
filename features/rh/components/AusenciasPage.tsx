@@ -51,7 +51,7 @@ const FeriasTab = () => {
     const [motivoDialog, setMotivoDialog] = useState<{ id: string; acao: FeriasAcao } | null>(null);
 
     const feriasQuery = useFerias(filters);
-    const colaboradorOptions = useColaboradorOptions(filters.empresaId ?? null, filters.filialId ?? null);
+    const colaboradorOptions = useColaboradorOptions(filters.empresaId ?? null, null);
     const { solicitarMutation, acaoMutation } = useFeriasMutations();
 
     const colaboradorLabel = useMemo(() => {
@@ -90,7 +90,7 @@ const FeriasTab = () => {
     return (
         <>
             <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center mb-3">
-                <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
+                <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={() => undefined} showFilial={false} />
                 <Dropdown value={filters.status ?? null} options={statusFeriasFilterOptions} onChange={(event) => updateFilter('status', event.value)} aria-label="Filtrar por status" />
                 <PermissionGuard permission="RH_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Solicitar férias" icon="pi pi-plus" disabled={disabled} onClick={() => setFormVisible(true)} />}</PermissionGuard>
             </div>
@@ -118,7 +118,7 @@ const AfastamentosTab = () => {
     const [dataFimReal, setDataFimReal] = useState<Date | null>(null);
 
     const afastamentosQuery = useAfastamentos(filters);
-    const colaboradorOptions = useColaboradorOptions(filters.empresaId ?? null, filters.filialId ?? null);
+    const colaboradorOptions = useColaboradorOptions(filters.empresaId ?? null, null);
     const { registrarMutation, encerrarMutation } = useAfastamentoMutations();
 
     const colaboradorLabel = useMemo(() => {
@@ -145,7 +145,7 @@ const AfastamentosTab = () => {
     return (
         <>
             <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center mb-3">
-                <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
+                <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={() => undefined} showFilial={false} />
                 <Dropdown value={filters.status ?? null} options={statusAfastamentoFilterOptions} onChange={(event) => updateFilter('status', event.value)} aria-label="Filtrar por status" />
                 <PermissionGuard permission="RH_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Registrar afastamento" icon="pi pi-plus" disabled={disabled} onClick={() => setFormVisible(true)} />}</PermissionGuard>
             </div>

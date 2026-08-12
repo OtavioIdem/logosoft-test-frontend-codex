@@ -16,17 +16,17 @@ describe('relatórios B44 structure', () => {
 
         expect(page).toContain('RelatoriosPage');
         expect(page).not.toContain('ModulePlaceholderPage');
-        expect(component).toContain('RELATORIOS_CONSULTAR');
+        expect(component).toContain('RELATORIOS_OPERACIONAIS_CONSULTAR');
         expect(menu).toContain('/relatorios');
-        expect(menu).toContain('RELATORIOS_CONSULTAR');
+        expect(menu).toContain('RELATORIOS_OPERACIONAIS_CONSULTAR');
         expect(routes).toContain('^\\/relatorios');
-        expect(erpTypes).toContain("'RELATORIOS_CONSULTAR'");
+        expect(erpTypes).toContain("'RELATORIOS_OPERACIONAIS_CONSULTAR'");
     });
 
     it('cobre endpoints operacionais e gerenciais por módulo', () => {
         const api = read('features/relatorios/api/relatoriosApi.ts');
 
-        expect(api).toContain('/api/relatorios/operacionais');
+        expect(api).toContain('/api/relatorios/operacional/geral');
         expect(api).toContain('/api/relatorios/gerenciais/vendas');
         expect(api).toContain('/api/relatorios/gerenciais/compras');
         expect(api).toContain('/api/relatorios/gerenciais/financeiro');
@@ -65,14 +65,14 @@ describe('relatórios B44 structure', () => {
         expect(entries.some((entry) => entry.value === '44444444-4444-4444-4444-444444444444')).toBe(false);
     });
 
-    it('classifica relatórios como implementado no mapa B44', () => {
+    it('mantém relatórios sem exceções no mapa de contrato', () => {
         const allowlist = read('scripts/backend-contract-map.allowlist.json');
-        const contractDoc = read('docs/CONTRATO_FRONTEND_BACKEND_B38.md');
+        const contractDoc = read('docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md');
 
-        expect(allowlist).toContain('RELATORIOS_AUSENTE_FRONTEND');
-        expect(allowlist).toContain('IMPLEMENTADO_B44');
-        expect(contractDoc).toContain('IMPLEMENTADO_B44');
-        expect(contractDoc).toContain('/api/relatorios/operacionais');
-        expect(contractDoc).toContain('/api/relatorios/gerenciais/{modulo}');
+        expect(JSON.parse(allowlist).documentedDivergences).toEqual([]);
+        expect(contractDoc).toContain('### `api/relatorios/operacional`');
+        expect(contractDoc).toContain('| `GET` | `/geral`');
+        expect(contractDoc).toContain('### `api/relatorios/gerenciais`');
+        expect(contractDoc).toContain('| `GET` | `/exportar`');
     });
 });
