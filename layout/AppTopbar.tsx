@@ -11,6 +11,7 @@ import { LayoutContext } from './context/layoutcontext';
 import { usePaginaAtual } from './context/pageheadercontext';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { NotificacoesBell } from '@/features/notificacoes/components/NotificacoesBell';
+import { OrganizationalContextSelector } from '@/components/organizational/OrganizationalContextSelector';
 
 const AppTopbar = forwardRef<AppTopbarRef>((_, ref) => {
     const { layoutConfig, layoutState, setLayoutConfig, onMenuToggle, showProfileSidebar } = useContext(LayoutContext);
@@ -72,6 +73,7 @@ const AppTopbar = forwardRef<AppTopbarRef>((_, ref) => {
             </button>
 
             <div ref={topbarmenuRef} className={classNames('layout-topbar-menu', { 'layout-topbar-menu-mobile-active': layoutState.profileSidebarVisible })}>
+                <OrganizationalContextSelector />
                 <NotificacoesBell />
                 <button type="button" className="p-link layout-topbar-button" onClick={toggleTheme} aria-label="Alternar tema claro e escuro">
                     <i className={layoutConfig.colorScheme === 'light' ? 'pi pi-moon' : 'pi pi-sun'}></i>

@@ -720,11 +720,11 @@ Transversais: `NOTIFICACOES_CONSULTAR`, `ANEXOS_CONSULTAR/GERENCIAR/BAIXAR`, `RE
 | Precedência de regras de rota/menu | Regra específica antes da genérica (padrão `/estoque/*`). |
 
 ## E.4 Próximos passos imediatos
-1. Confirmar códigos de permissão da Onda 0.5/0 e do piloto contra o backend.
-2. Executar **Onda 0.5** (correções de base).
-3. Implementar **Notificações + Anexos** (Onda 0).
-4. Rodar o **piloto** (PDV/Serviços) ponta a ponta com o padrão corrigido; congelar como template.
-5. Escalar pelas Ondas 1→5.
+1. Preservar como concluídas as Ondas 0.5, 0 e 1 registradas neste documento.
+2. Usar `docs/PLANO-ADEQUACAO-FRONTEND-AO-BACKEND-ATUAL.md` como sequência corrente de estabilização contratual.
+3. Continuar a Onda 1 transversal pela política explícita de contexto por request após o provider global da `v1.11.0a8b47`.
+4. Validar os fluxos ponta a ponta pendentes somente em ambiente controlado.
+5. Não iniciar novas telas antes de concluir autenticação, contexto, autorização e tratamento de erros.
 
 ---
 

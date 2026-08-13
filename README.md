@@ -1,4 +1,34 @@
-# logosoft Frontend v1.11.0a8b45.c1
+# logosoft Frontend v1.11.0a8b47
+
+## v1.11.0a8b47 — Contexto organizacional global
+
+A v1.11.0a8b47 adiciona um contexto organizacional derivado exclusivamente da identidade validada por `/api/auth/me`. Usuários comuns permanecem vinculados à empresa e filial da sessão; master inicia em contexto global e seleciona empresa e filial no topbar. Mudanças efetivas invalidam queries dependentes e trocas de identidade limpam o cache compartilhado.
+
+Esta fatia prepara o estado global e a interface. A aplicação automática do contexto em requests continua bloqueada até existir uma política explícita por endpoint.
+
+### Validação da B47
+
+```bash
+npm run validate:source
+npm run typecheck
+npm run lint
+npm run test:unit -- tests/components/OrganizationalContextProvider.test.tsx
+npm run build
+```
+
+## v1.11.0a8b46 — Bootstrap efetivo da sessão
+
+A v1.11.0a8b46 conecta `GET /api/auth/me` à restauração e ao login. O shell protegido só é liberado depois que identidade, contexto organizacional e permissões são validados pela API. Respostas 401 ou payloads inválidos encerram a sessão local; falhas transitórias mantêm o shell bloqueado com opção de nova tentativa.
+
+### Validação da B46
+
+```bash
+npm run validate:source
+npm run typecheck
+npm run lint
+npm run test:unit
+npm run build
+```
 
 ## v1.11.0a8b45.c1 — Reconciliação do contrato backend atual
 

@@ -4,7 +4,7 @@ Data da análise: 2026-08-12
 
 Fonte normativa principal: `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md`, levantada diretamente do backend na branch `feat/v1.18.0-g1-identidade-fiscal-do-item`.
 
-Execução iniciada em `v1.11.0a8b45.c1`, preservando o `HEAD 398298d` como corte técnico auditado. A base continua bloqueada e não foi promovida a versão funcional nova.
+Execução iniciada em `v1.11.0a8b45.c1`, preservando o `HEAD 398298d` como corte técnico auditado. A Onda 0 regularizou o contrato, a `v1.11.0a8b46` iniciou a Onda 1 com o bootstrap por `/api/auth/me` e a `v1.11.0a8b47` adicionou o contexto organizacional global.
 
 ## 1. Resultado executivo
 
@@ -27,15 +27,13 @@ O maior risco atual não é falta de tela. É uma tela existente parecer funcion
 | Item | Estado encontrado |
 | --- | --- |
 | Projeto | Next.js 13.4.8, React 18, TypeScript, React Query, Axios, Zod e PrimeReact |
-| Versão declarada | `1.11.0a8b45.c1` em `package.json` e `config/app.ts` |
-| Branch atual | `codex/v1.11.0a5-sidebar-search` |
-| HEAD | contém motor de tributação e alteração de autenticação posteriores à documentação B45 |
-| Worktree | já estava suja antes desta análise; alterações do usuário foram preservadas |
-| Contrato novo | presente como arquivo não rastreado em `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md` |
+| Versão declarada | `1.11.0a8b47` em `package.json` e `config/app.ts` |
+| Branch integrada | `codex/v1.10.15a1-login-ux-final` |
+| Corte integrado | merge do PR #8, incluindo o bootstrap de autenticação B46 |
+| Worktree auditada | limpa após a sincronização com o remoto |
+| Contrato atual | versionado em `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md` |
 
-Há uma inconsistência de base: nome da branch, versão declarada e conteúdo do HEAD não representam o mesmo corte funcional. Antes de qualquer correção, é obrigatório decidir qual commit é a base aprovada.
-
-Se a B45 ainda estiver bloqueada, a próxima entrega deve ser corretiva `.cN`. Não deve ser aberta uma B46 funcional até a correção ser aprovada e commitada.
+A inconsistência de base registrada na análise inicial foi resolvida pela integração das correções contratuais e do bootstrap B46. Os itens restantes da Onda 1 continuam obrigatórios antes de novas telas de negócio.
 
 ### 2.2 Dimensão do contrato atual
 
@@ -627,13 +625,12 @@ Cada onda deve ser pequena, revisável e aprovada antes da seguinte. Não juntar
 
 ## 13. Próxima ação objetiva
 
-Iniciar pela Onda 0 e produzir um relatório de base contendo:
+Continuar a Onda 1 pela política explícita de contexto por request:
 
-1. commit aprovado escolhido;
-2. sufixo corretivo aplicável;
-3. lista oficial das 26 rotas a corrigir;
-4. catálogo de 177 permissões convertido em snapshot versionado;
-5. relatório dos enums divergentes usados pelo runtime;
-6. novo gate falhando corretamente no estado atual.
+1. definir metadata explícita para endpoints globais, escopados e incompatíveis com injeção automática;
+2. aplicar empresa e filial apenas nos locais aceitos formalmente pelo contrato;
+3. incluir o contexto nas query keys dependentes para impedir reuso de cache entre empresas;
+4. bloquear mutações escopadas de master enquanto nenhuma empresa estiver selecionada;
+5. cobrir injeção, omissão, troca de contexto e isolamento de cache com testes.
 
-Somente após esse relatório deve começar a alteração do runtime.
+Não adicionar `empresaId` ou `filialId` genericamente a qualquer body: cada endpoint deve declarar onde o contexto é aceito.

@@ -1,6 +1,6 @@
 {
     "schemaVersion": 1,
-    "version": "1.11.0a8b46",
+    "version": "1.11.0a8b47",
     "status": "audit-only-no-suppressions",
     "contractDocument": "docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md",
     "sourceDate": "2026-08-12",

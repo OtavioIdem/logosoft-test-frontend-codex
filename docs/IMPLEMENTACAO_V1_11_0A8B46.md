@@ -22,6 +22,6 @@ Antes, `AuthProvider` considerava a identidade persistida localmente suficiente 
 
 - `npm run typecheck` — passou.
 - `npm run lint` — passou.
-- `npm run validate:source` — passou após alinhar os artefatos de governança à versão `1.11.0a8b46`.
+- `npm run validate:source` — havia passado na implementação original; a revalidação do corte integrado depende das dependências locais do projeto.
 
-Testes, E2E, build, commit e publicação ficaram fora desta fatia.
+Testes, E2E e build ficaram fora da implementação original. O commit e a publicação foram concluídos pelo PR #8.

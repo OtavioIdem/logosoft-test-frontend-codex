@@ -5,6 +5,16 @@ const root = process.cwd();
 const failures = [];
 const workflowPath = '.github/workflows/frontend-ci.yml';
 const packagePath = 'package.json';
+const currentVersionFiles = [
+    '.env.example',
+    '.env.test',
+    '.env.backend-controlled.example',
+    'scripts/backend-contract-map.allowlist.json',
+    'scripts/backend-permissions.snapshot.json',
+    'tests/evidence/integrated-e2e.assisted-evidence.example.json',
+    'README.md',
+    'CHANGELOG.md'
+];
 const read = (path) => readFileSync(join(root, path), 'utf8');
 const requireFile = (path, reason) => {
     if (!existsSync(join(root, path))) failures.push(`${path}: ${reason}`);
@@ -12,12 +22,58 @@ const requireFile = (path, reason) => {
 const requireIncludes = (path, fragment, reason) => {
     if (!read(path).includes(fragment)) failures.push(`${path}: ${reason}`);
 };
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const requireSingleMatch = (path, pattern, reason) => {
+    const matches = read(path).match(pattern) ?? [];
+    if (matches.length !== 1) failures.push(`${path}: ${reason}`);
+};
+const readJson = (path) => {
+    try {
+        return JSON.parse(read(path));
+    } catch (error) {
+        failures.push(`${path}: JSON inválido (${error instanceof Error ? error.message : 'erro desconhecido'})`);
+        return null;
+    }
+};
 
 requireFile(workflowPath, 'pipeline CI obrigatório ausente');
 requireFile(packagePath, 'package.json obrigatório ausente');
+for (const path of currentVersionFiles) {
+    requireFile(path, 'artefato corrente de versão ausente');
+}
 
 const packageJson = JSON.parse(read(packagePath));
+const currentVersion = packageJson.logosoftVersion;
 const scripts = packageJson.scripts ?? {};
+
+if (typeof currentVersion !== 'string' || currentVersion.length === 0) {
+    failures.push('package.json: logosoftVersion obrigatória ausente');
+} else {
+    for (const envPath of ['.env.example', '.env.test', '.env.backend-controlled.example']) {
+        if (existsSync(join(root, envPath))) {
+            requireSingleMatch(envPath, new RegExp(`^NEXT_PUBLIC_APP_VERSION=${escapeRegExp(currentVersion)}$`, 'gm'), `deve haver uma única declaração ativa de NEXT_PUBLIC_APP_VERSION=${currentVersion}`);
+        }
+    }
+
+    if (existsSync(join(root, workflowPath))) {
+        requireSingleMatch(workflowPath, new RegExp(`^\\s+NEXT_PUBLIC_APP_VERSION:\\s*${escapeRegExp(currentVersion)}\\s*$`, 'gm'), `deve haver uma única declaração ativa de NEXT_PUBLIC_APP_VERSION: ${currentVersion}`);
+    }
+
+    for (const jsonPath of ['scripts/backend-contract-map.allowlist.json', 'scripts/backend-permissions.snapshot.json', 'tests/evidence/integrated-e2e.assisted-evidence.example.json']) {
+        if (!existsSync(join(root, jsonPath))) continue;
+        const artifact = readJson(jsonPath);
+        if (artifact && artifact.version !== currentVersion) {
+            failures.push(`${jsonPath}: version deve acompanhar ${currentVersion}`);
+        }
+    }
+
+    if (existsSync(join(root, 'README.md')) && !read('README.md').startsWith(`# logosoft Frontend v${currentVersion}`)) {
+        failures.push(`README.md: título deve declarar v${currentVersion}`);
+    }
+    if (existsSync(join(root, 'CHANGELOG.md')) && !read('CHANGELOG.md').startsWith(`# v${currentVersion}`)) {
+        failures.push(`CHANGELOG.md: primeira entrada deve declarar v${currentVersion}`);
+    }
+}
 const requiredPackageScripts = [
     'validate:source',
     'validate:ci',

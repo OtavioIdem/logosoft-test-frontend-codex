@@ -7,7 +7,7 @@ import { compareContractMap, normalizePath, parseBackendCatalog, readContractMap
 const root = process.cwd();
 const read = (path: string) => readFileSync(join(root, path), 'utf8');
 
-describe('backend contract map v1.11.0a8b45.c1', () => {
+describe('backend contract map', () => {
     it('mantém gate, allowlist e contrato canônico versionados', () => {
         const packageJson = JSON.parse(read('package.json'));
         const allowlist = JSON.parse(read('scripts/backend-contract-map.allowlist.json'));
@@ -98,7 +98,7 @@ describe('backend contract map v1.11.0a8b45.c1', () => {
         ]
         };
         const issues = validateAuditAllowlist(invalid, {
-            version: '1.11.0a8b45.c1',
+            version: base.version,
             contractDocument: 'docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md',
             now: new Date('2026-08-12T12:00:00-03:00')
         });

@@ -1,3 +1,45 @@
+# v1.11.0a8b47
+
+## Contexto organizacional global
+
+- Criados `OrganizationalContextProvider` e `useOrganizationalContext` a partir da identidade validada por `/api/auth/me`.
+- Mantidos empresa e filial imutáveis para usuário comum.
+- Adicionado seletor responsivo de empresa e filial para master no topbar.
+- Preservada a seleção do mesmo master durante refresh e zerado o contexto na troca de identidade.
+- Adicionada limpeza de cache entre identidades e invalidação posterior a mudanças organizacionais efetivas.
+- Criados testes de contexto comum, master, troca de identidade e uso incorreto fora do provider.
+- Fortalecido o gate de versão para workflow, ambientes, snapshots, evidências, README e CHANGELOG.
+
+## Validações esperadas
+
+```bash
+npm run validate:source
+npm run typecheck
+npm run lint
+npm run test:unit -- tests/components/OrganizationalContextProvider.test.tsx
+npm run build
+```
+
+# v1.11.0a8b46
+
+## Bootstrap efetivo da sessão
+
+- Integrado `GET /api/auth/me` ao ciclo de restauração e login.
+- O shell protegido aguarda a validação de identidade, contexto organizacional e permissões pela API.
+- Respostas 401 e payloads inválidos limpam a sessão; falhas transitórias bloqueiam o shell com nova tentativa.
+- Preservados `status`, `code` e `traceId` nos erros do bootstrap de autenticação.
+- Sincronizados os artefatos correntes de versão e os gates de governança em `1.11.0a8b46`.
+
+## Validações esperadas
+
+```bash
+npm run validate:source
+npm run typecheck
+npm run lint
+npm run test:unit
+npm run build
+```
+
 # v1.11.0a8b45.c1
 
 ## Reconciliação do contrato backend atual
