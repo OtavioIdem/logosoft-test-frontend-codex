@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
@@ -28,6 +28,7 @@ import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { formatDocumento } from '@/lib/formatters/display';
 import { EntityStatus } from '@/types/erp';
+import { useOrganizationalContext } from '@/hooks/useOrganizationalContext';
 
 const statusLabel = (status: unknown) => {
     const value = Number(status ?? EntityStatus.Ativo);
@@ -82,17 +83,24 @@ export const AdministracaoPage = ({ resourceKey }: { resourceKey: AdministracaoR
     const config = administracaoPageConfigs[resourceKey];
     const runWithToast = useMutationWithToast();
     const { hasPermission } = usePermissions();
+    const context = useOrganizationalContext();
+    const [filters, setFilters] = useState<AdministracaoListQuery>(() => context.snapshot.empresaId ? { empresaId: context.snapshot.empresaId, filialId: context.snapshot.filialId } : {});
+    const alignedFilters = config.showEmpresaFilter && context.snapshot.empresaId ? { ...filters, empresaId: context.snapshot.empresaId, filialId: context.snapshot.filialId } : filters;
     const empresasOptions = useEmpresasOptions();
-    const filiaisOptions = useTodasFiliaisOptions();
+    const filiaisOptions = useTodasFiliaisOptions(alignedFilters.empresaId);
     const setoresOptions = useTodosSetoresOptions();
-    const [filters, setFilters] = useState<AdministracaoListQuery>({});
     const [localSearch, setLocalSearch] = useState('');
     const [first, setFirst] = useState(0);
     const [rows, setRows] = useState(10);
     const [formVisible, setFormVisible] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState<Record<string, unknown> | null>(null);
     const [reasonRecord, setReasonRecord] = useState<Record<string, unknown> | null>(null);
-    const { listQuery, saveMutation, inativarMutation } = useAdministracaoResource(resourceKey, filters);
+    const { listQuery, saveMutation, inativarMutation, blocked, blockedMessage } = useAdministracaoResource(resourceKey, alignedFilters);
+
+    useEffect(() => {
+        if (!config.showEmpresaFilter || !context.snapshot.empresaId) return;
+        setFilters((current) => ({ ...current, empresaId: context.snapshot.empresaId, filialId: context.snapshot.filialId }));
+    }, [config.showEmpresaFilter, context.snapshot.empresaId, context.snapshot.filialId]);
 
     const records = useMemo(() => filterLocal(listQuery.data ?? [], localSearch), [listQuery.data, localSearch]);
     const visibleRecords = useMemo(() => records.slice(first, first + rows), [first, records, rows]);
@@ -107,6 +115,19 @@ export const AdministracaoPage = ({ resourceKey }: { resourceKey: AdministracaoR
 
     if (!hasPermission('ADMINISTRACAO_CONSULTAR')) {
         return <UnauthorizedState description="As rotinas de Administração exigem a permissão ADMINISTRACAO_CONSULTAR." />;
+    }
+
+    if (resourceKey === 'filiais' && blocked) {
+        return (
+            <>
+                <PageHeader title={config.title} description={config.description} />
+                <Message
+                    className="w-full"
+                    severity="warn"
+                    text={`${blockedMessage ?? 'Selecione uma empresa no contexto organizacional.'} Use o botão "Selecionar contexto" no topo da tela para continuar.`}
+                />
+            </>
+        );
     }
 
     const openCreate = () => {
@@ -173,6 +194,7 @@ export const AdministracaoPage = ({ resourceKey }: { resourceKey: AdministracaoR
         <>
             <PageHeader title={config.title} description={config.description} actions={headerActions} />
             <Message className="w-full mb-3" severity="info" text={config.listDescription} />
+            {blocked ? <Message className="w-full mb-3" severity="warn" text={blockedMessage} /> : null}
             <OperationalGovernancePanel title="Governança da estrutura organizacional" description="Resumo operacional dos registros carregados para apoiar revisão de status, vínculos por empresa/filial e rastreabilidade administrativa." records={records} complianceNote="Cadastros administrativos não são excluídos fisicamente; inativação exige motivo e permanece rastreável para módulos comerciais, financeiros, estoque e auditoria." />
             <Card>
                 {listQuery.error ? <ApiErrorPanel error={mapApiError(listQuery.error)} /> : null}

@@ -4,7 +4,7 @@ Data da análise: 2026-08-12
 
 Fonte normativa principal: `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md`, levantada diretamente do backend na branch `feat/v1.18.0-g1-identidade-fiscal-do-item`.
 
-Execução iniciada em `v1.11.0a8b45.c1`, preservando o `HEAD 398298d` como corte técnico auditado. A Onda 0 regularizou o contrato, a `v1.11.0a8b46` iniciou a Onda 1 com o bootstrap por `/api/auth/me` e a `v1.11.0a8b47` adicionou o contexto organizacional global.
+Execução iniciada em `v1.11.0a8b45.c1`, preservando o `HEAD 398298d` como corte técnico auditado. A Onda 0 regularizou o contrato, a `v1.11.0a8b46` iniciou a Onda 1 com o bootstrap por `/api/auth/me`, a `v1.11.0a8b47` adicionou o contexto organizacional global e a `v1.11.0a8b47.c1` iniciou a política explícita por request com rollout restrito a Administração.
 
 ## 1. Resultado executivo
 
@@ -27,7 +27,7 @@ O maior risco atual não é falta de tela. É uma tela existente parecer funcion
 | Item | Estado encontrado |
 | --- | --- |
 | Projeto | Next.js 13.4.8, React 18, TypeScript, React Query, Axios, Zod e PrimeReact |
-| Versão declarada | `1.11.0a8b47` em `package.json` e `config/app.ts` |
+| Versão declarada | `1.11.0a8b47.c1` em `package.json` e `config/app.ts` |
 | Branch integrada | `codex/v1.10.15a1-login-ux-final` |
 | Corte integrado | merge do PR #8, incluindo o bootstrap de autenticação B46 |
 | Worktree auditada | limpa após a sincronização com o remoto |
@@ -625,10 +625,10 @@ Cada onda deve ser pequena, revisável e aprovada antes da seguinte. Não juntar
 
 ## 13. Próxima ação objetiva
 
-Continuar a Onda 1 pela política explícita de contexto por request:
+Continuar a Onda 1 pela expansão controlada da política explícita de contexto por request iniciada na `v1.11.0a8b47.c1`:
 
-1. definir metadata explícita para endpoints globais, escopados e incompatíveis com injeção automática;
-2. aplicar empresa e filial apenas nos locais aceitos formalmente pelo contrato;
+1. ampliar metadata explícita para endpoints globais, escopados e incompatíveis com injeção automática;
+2. aplicar empresa e filial apenas nos locais aceitos formalmente pelo contrato; a fatia c1 ativou somente empresas e filiais administrativas;
 3. incluir o contexto nas query keys dependentes para impedir reuso de cache entre empresas;
 4. bloquear mutações escopadas de master enquanto nenhuma empresa estiver selecionada;
 5. cobrir injeção, omissão, troca de contexto e isolamento de cache com testes.

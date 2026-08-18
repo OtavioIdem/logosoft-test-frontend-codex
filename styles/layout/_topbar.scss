@@ -83,6 +83,14 @@
         .layout-topbar-button {
             margin-left: 1rem;
         }
+
+        .organizational-context-button--attention {
+            color: var(--orange-500);
+
+            &:hover {
+                color: var(--orange-600);
+            }
+        }
     }
 
     // Centralizado em relação ao topbar inteiro, e não ao espaço que sobra entre logo e ações — por isso

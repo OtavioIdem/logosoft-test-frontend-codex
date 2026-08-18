@@ -1,32 +1,32 @@
 'use client';
 
-import { EmpresaSelect } from '@/components/forms/EmpresaSelect';
-import { FilialSelect } from '@/components/forms/FilialSelect';
+import { useState } from 'react';
+import { Button } from 'primereact/button';
+import { OrganizationalContextDialog } from '@/components/organizational/OrganizationalContextDialog';
 import { useOrganizationalContext } from '@/hooks/useOrganizationalContext';
 
 export const OrganizationalContextSelector = () => {
     const context = useOrganizationalContext();
+    const [visible, setVisible] = useState(false);
+    const label = context.isGlobal ? 'Selecionar contexto' : 'Alterar contexto';
+    const ariaLabel = context.isGlobal
+        ? 'Selecionar contexto organizacional. Nenhuma empresa está ativa.'
+        : 'Alterar contexto organizacional. Há uma empresa ativa.';
 
-    if (!context.canChangeOrganization) {
-        return (
-            <span className="layout-topbar-button" aria-label="Contexto organizacional definido pela sessão">
-                <i className="pi pi-lock" aria-hidden="true" />
-                <span>Contexto da sessão</span>
-            </span>
-        );
-    }
+    if (!context.canChangeOrganization) return null;
 
     return (
-        <div className="flex flex-column lg:flex-row align-items-stretch lg:align-items-center gap-2 px-2 w-full lg:w-auto" aria-label="Selecionar contexto organizacional">
-            <div className="w-full lg:w-12rem">
-                <label htmlFor="organizational-empresa" className="p-sr-only">Empresa ativa</label>
-                <EmpresaSelect id="organizational-empresa" value={context.empresaId} required onChange={context.setEmpresaId} />
-            </div>
-            <div className="w-full lg:w-12rem">
-                <label htmlFor="organizational-filial" className="p-sr-only">Filial ativa</label>
-                <FilialSelect id="organizational-filial" empresaId={context.empresaId} value={context.filialId} disabled={!context.empresaId} onChange={context.setFilialId} />
-            </div>
-            {context.isGlobal ? <small className="text-orange-500 white-space-nowrap" role="status" aria-live="polite">Selecione uma empresa</small> : null}
-        </div>
+        <>
+            <Button
+                type="button"
+                className={`p-link layout-topbar-button organizational-context-button${context.isGlobal ? ' organizational-context-button--attention' : ''}`}
+                icon="pi pi-building"
+                label={label}
+                onClick={() => setVisible(true)}
+                aria-label={ariaLabel}
+                text
+            />
+            <OrganizationalContextDialog visible={visible} onHide={() => setVisible(false)} />
+        </>
     );
 };

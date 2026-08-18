@@ -6,6 +6,9 @@ import { administracaoApi } from '@/features/administracao/api/administracaoApi'
 import { EmpresaResponse, FilialResponse, SetorResponse } from '@/features/administracao/types/administracao.types';
 import { SelectOption } from '@/types/erp';
 import { normalizeGuidOrNull } from '@/lib/http/requestUtils';
+import { useOrganizationalContext } from '@/hooks/useOrganizationalContext';
+import { usePermissions } from '@/features/auth/hooks/usePermissions';
+import { organizationalScopeKey } from '@/lib/http/organizationalContextPolicy';
 
 const empresaLabel = (empresa: EmpresaResponse) => [empresa.nomeFantasia, empresa.razaoSocial, empresa.documento].filter(Boolean).join(' • ');
 const filialLabel = (filial: FilialResponse) => [filial.nome, filial.documento].filter(Boolean).join(' • ');
@@ -22,21 +25,42 @@ export const useEmpresasOptions = () => {
 
 export const useFiliaisOptions = (empresaId?: string | null) => {
     const normalizedEmpresaId = normalizeGuidOrNull(empresaId);
+    const context = useOrganizationalContext();
+    const { hasPermission } = usePermissions();
+    const canConsultRemotely = context.snapshot.isMaster || hasPermission('ADMINISTRACAO_CONSULTAR');
+    const contextMatches = Boolean(context.snapshot.empresaId && context.snapshot.empresaId === normalizedEmpresaId);
+    const localFiliais: FilialResponse[] = !canConsultRemotely && context.snapshot.filialId && contextMatches ? [{ id: context.snapshot.filialId, empresaId: normalizedEmpresaId as string, nome: 'Filial atual', documento: '' }] : [];
+    const blocked = Boolean(normalizedEmpresaId) && (!contextMatches || (!canConsultRemotely && !context.snapshot.filialId));
+    const blockedMessage = !context.snapshot.empresaId ? 'Selecione a empresa no contexto organizacional antes de consultar filiais.' : !contextMatches ? 'A empresa selecionada diverge do contexto ativo.' : 'Seu usuário não possui acesso para consultar filiais.';
     const query = useQuery({
-        queryKey: ['administracao', 'filiais', 'select', normalizedEmpresaId],
-        queryFn: () => administracaoApi.listarFiliais({ empresaId: normalizedEmpresaId }),
-        enabled: Boolean(normalizedEmpresaId),
+        queryKey: ['administracao', 'filiais', 'select', organizationalScopeKey(context.snapshot), normalizedEmpresaId],
+        queryFn: () => administracaoApi.listarFiliais({ empresaId: normalizedEmpresaId as string }, context.snapshot),
+        enabled: Boolean(normalizedEmpresaId) && canConsultRemotely && contextMatches,
         placeholderData: [],
         staleTime: 5 * 60 * 1000
     });
-    const options = useMemo<SelectOption<string>[]>(() => optionsFrom(query.data, filialLabel), [query.data]);
-    return { ...query, options };
+    const options = useMemo<SelectOption<string>[]>(() => localFiliais.length ? optionsFrom(localFiliais, filialLabel) : optionsFrom(query.data, filialLabel), [localFiliais, query.data]);
+    return { ...query, data: localFiliais.length ? localFiliais : query.data, options, blocked, blockedMessage };
 };
 
-export const useTodasFiliaisOptions = () => {
-    const query = useQuery({ queryKey: ['administracao', 'filiais', 'select', 'todas'], queryFn: () => administracaoApi.listarFiliais(), placeholderData: [], staleTime: 5 * 60 * 1000 });
-    const options = useMemo<SelectOption<string>[]>(() => optionsFrom(query.data, filialLabel), [query.data]);
-    return { ...query, options };
+export const useTodasFiliaisOptions = (empresaId?: string | null) => {
+    const normalizedEmpresaId = normalizeGuidOrNull(empresaId);
+    const context = useOrganizationalContext();
+    const { hasPermission } = usePermissions();
+    const canConsultRemotely = context.snapshot.isMaster || hasPermission('ADMINISTRACAO_CONSULTAR');
+    const contextMatches = Boolean(context.snapshot.empresaId && context.snapshot.empresaId === normalizedEmpresaId);
+    const localFiliais: FilialResponse[] = !canConsultRemotely && context.snapshot.filialId && contextMatches ? [{ id: context.snapshot.filialId, empresaId: normalizedEmpresaId as string, nome: 'Filial atual', documento: '' }] : [];
+    const blocked = Boolean(normalizedEmpresaId) && (!contextMatches || (!canConsultRemotely && !context.snapshot.filialId));
+    const blockedMessage = !context.snapshot.empresaId ? 'Selecione a empresa no contexto organizacional antes de consultar filiais.' : !contextMatches ? 'A empresa selecionada diverge do contexto ativo.' : 'Seu usuário não possui acesso para consultar filiais.';
+    const query = useQuery({
+        queryKey: ['administracao', 'filiais', 'select', 'todas', organizationalScopeKey(context.snapshot), normalizedEmpresaId],
+        queryFn: () => administracaoApi.listarFiliais({ empresaId: normalizedEmpresaId as string }, context.snapshot),
+        enabled: Boolean(normalizedEmpresaId) && canConsultRemotely && contextMatches,
+        placeholderData: [],
+        staleTime: 5 * 60 * 1000
+    });
+    const options = useMemo<SelectOption<string>[]>(() => localFiliais.length ? optionsFrom(localFiliais, filialLabel) : optionsFrom(query.data, filialLabel), [localFiliais, query.data]);
+    return { ...query, data: localFiliais.length ? localFiliais : query.data, options, blocked, blockedMessage };
 };
 
 export const useSetoresOptions = (empresaId?: string | null, filialId?: string | null) => {

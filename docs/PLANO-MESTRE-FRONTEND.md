@@ -722,7 +722,7 @@ Transversais: `NOTIFICACOES_CONSULTAR`, `ANEXOS_CONSULTAR/GERENCIAR/BAIXAR`, `RE
 ## E.4 Próximos passos imediatos
 1. Preservar como concluídas as Ondas 0.5, 0 e 1 registradas neste documento.
 2. Usar `docs/PLANO-ADEQUACAO-FRONTEND-AO-BACKEND-ATUAL.md` como sequência corrente de estabilização contratual.
-3. Continuar a Onda 1 transversal pela política explícita de contexto por request após o provider global da `v1.11.0a8b47`.
+3. Continuar a Onda 1 transversal pela expansão controlada da política explícita de contexto por request após a `v1.11.0a8b47.c1`.
 4. Validar os fluxos ponta a ponta pendentes somente em ambiente controlado.
 5. Não iniciar novas telas antes de concluir autenticação, contexto, autorização e tratamento de erros.
 
