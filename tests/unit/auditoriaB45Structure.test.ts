@@ -53,13 +53,9 @@ describe('auditoria B45 structure', () => {
         expect(display).toContain('vínculo técnico');
     });
 
-    it('classifica auditoria operacional como implementada no mapa B45', () => {
-        const allowlist = read('scripts/backend-contract-map.allowlist.json');
-        const contractDoc = read('docs/CONTRATO_FRONTEND_BACKEND_B38.md');
-        expect(allowlist).toContain('AUDITORIA_OPERACIONAL_AUSENTE_FRONTEND');
-        expect(allowlist).toContain('IMPLEMENTADO_B45');
-        expect(contractDoc).toContain('IMPLEMENTADO_B45');
-        expect(contractDoc).toContain('/api/auditoria/operacional');
-        expect(contractDoc).toContain('/api/auditoria/eventos-recentes');
+    it('mantém o mapa de contrato em auditoria sem supressões históricas', () => {
+        const allowlist = JSON.parse(read('scripts/backend-contract-map.allowlist.json')) as { status: string; suppressions: unknown[] };
+        expect(allowlist.status).toBe('audit-only-no-suppressions');
+        expect(allowlist.suppressions).toEqual([]);
     });
 });

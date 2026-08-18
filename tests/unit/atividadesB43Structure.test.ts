@@ -61,12 +61,9 @@ describe('atividades B43 structure', () => {
         expect(page).not.toContain(' • ${row.entidadeOrigemId}');
     });
 
-    it('classifica atividades como implementado no mapa B43', () => {
-        const allowlist = read('scripts/backend-contract-map.allowlist.json');
-        const contractDoc = read('docs/CONTRATO_FRONTEND_BACKEND_B38.md');
-        expect(allowlist).toContain('ATIVIDADES_AUSENTE_FRONTEND');
-        expect(allowlist).toContain('IMPLEMENTADO_B43');
-        expect(contractDoc).toContain('IMPLEMENTADO_B43');
-        expect(contractDoc).toContain('/api/atividades');
+    it('mantém o mapa de contrato em auditoria sem supressões históricas', () => {
+        const allowlist = JSON.parse(read('scripts/backend-contract-map.allowlist.json')) as { status: string; suppressions: unknown[] };
+        expect(allowlist.status).toBe('audit-only-no-suppressions');
+        expect(allowlist.suppressions).toEqual([]);
     });
 });

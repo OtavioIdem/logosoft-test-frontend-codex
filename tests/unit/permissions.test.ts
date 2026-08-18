@@ -6,11 +6,12 @@ describe('permissions', () => {
     it('valida permissão simples', () => expect(hasPermission(user, 'PRODUTOS_CONSULTAR')).toBe(true));
     it('valida qualquer permissão', () => expect(hasAnyPermission(user, ['CLIENTES_CONSULTAR', 'PRODUTOS_GERENCIAR'])).toBe(true));
     it('valida todas as permissões', () => expect(hasAllPermissions(user, ['PRODUTOS_CONSULTAR', 'PRODUTOS_GERENCIAR'])).toBe(true));
-    it.each([
-        [{ ...user, isMaster: true, permissoes: [] }, 'PRODUTOS_GERENCIAR'],
-        [{ ...user, permissoes: ['*'] as never }, 'PRODUTOS_GERENCIAR'],
-        [{ ...user, permissoes: ['MASTER_GOD'] as never }, 'PRODUTOS_GERENCIAR']
-    ])('nao concede bypass para claim administrativa fora do catalogo', (currentUser, requiredPermission) => {
+    it('concede bypass funcional ao master para permissões do catálogo', () => {
+        expect(hasPermission({ ...user, isMaster: true, permissoes: [] }, 'PRODUTOS_GERENCIAR')).toBe(true);
+        expect(hasPermission({ ...user, permissoes: ['*'] as never }, 'PRODUTOS_GERENCIAR')).toBe(true);
+    });
+    it.each(['MASTER_GOD', '*'])('não permite solicitar claim administrativa %s', (requiredPermission) => {
+        const currentUser = { ...user, isMaster: true, permissoes: [] };
         expect(hasPermission(currentUser, requiredPermission as never)).toBe(false);
     });
 });

@@ -4,6 +4,7 @@ import { clearSession, getRefreshToken, getSession, isAccessTokenExpired, isRefr
 import { AuthTokens } from '@/types/erp';
 import { normalizeRefreshSession } from '@/features/auth/api/authResponseMapper';
 import { sanitizePayload } from '@/lib/http/requestUtils';
+import { applyOrganizationalContextPolicy } from '@/lib/http/organizationalContextPolicy';
 
 export const rawHttpClient = axios.create({
     baseURL: appConfig.apiUrl,
@@ -45,6 +46,8 @@ const clearRefreshPromise = () => {
 const isAuthenticationRequest = (url?: string) => Boolean(url && ['/api/auth/login', '/api/auth/refresh'].some((endpoint) => url.includes(endpoint)));
 
 httpClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
+    config = applyOrganizationalContextPolicy(config);
+
     if (config.data && typeof config.data === 'object' && !(config.data instanceof FormData)) {
         config.data = sanitizePayload(config.data);
     }

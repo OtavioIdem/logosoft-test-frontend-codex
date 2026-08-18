@@ -136,7 +136,16 @@ export const mapApiError = (error: unknown): ApiError => {
     }
 
     if (error instanceof Error) {
-        return { message: error.message };
+        const structured = error as Error & Partial<ApiError>;
+        return {
+            code: structured.code,
+            message: error.message,
+            status: structured.status,
+            traceId: structured.traceId,
+            details: structured.details,
+            fieldErrors: structured.fieldErrors,
+            validationErrors: structured.validationErrors
+        };
     }
 
     return {
