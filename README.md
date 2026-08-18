@@ -1,4 +1,17 @@
-# logosoft Frontend v1.11.0a8b47
+# logosoft Frontend v1.11.0a8b47.c2
+
+## v1.11.0a8b47.c2 — Consulta segura de filiais
+
+A corretiva aplica metadata explícita por request no cliente HTTP. Nesta fatia, somente empresas (global) e filiais (query obrigatória por empresa) estão ativadas em produção. O contexto master é selecionado em Dialog PrimeReact; o topbar permanece reservado ao título da página e às ações compactas.
+
+### Validação da B47.c1
+
+```bash
+npm run validate:source
+npm run typecheck
+npm run lint
+npm run test:unit -- tests/unit/organizationalContextPolicy.test.ts tests/unit/organizationalContextTopbarStructure.test.ts tests/components/OrganizationalContextProvider.test.tsx
+```
 
 ## v1.11.0a8b47 — Contexto organizacional global
 

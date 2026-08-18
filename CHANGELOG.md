@@ -1,4 +1,30 @@
-# v1.11.0a8b47
+# v1.11.0a8b47.c2
+
+## Consulta segura de filiais
+
+- Removido o singleton assíncrono do contexto organizacional; cada request escopado carrega snapshot imutável na própria metadata.
+- Criado o escopo `lookup` exclusivo para `GET /api/administracao/filiais`, com `empresaId` explícito, sem `filialId` e sem body.
+- Corrigido o bypass funcional de master no catálogo de permissões, mantendo `MASTER_GOD` e `*` fora do bypass solicitado.
+- Selects de filial distinguem vazio, erro recuperável e ausência de acesso, com retry explícito.
+
+# v1.11.0a8b47.c1
+
+## Política de contexto organizacional
+
+- Publicada política HTTP discriminada por metadata (`global`, `query`, `body` e `resource`) com snapshot somente leitura e chave estável.
+- Ativadas apenas `GET /api/administracao/empresas` como global e `GET /api/administracao/filiais?empresaId` como query obrigatória.
+- Movidos os selects de empresa e filial do topbar para Dialog PrimeReact; a faixa de título continua exibindo somente a página atual e ajuda.
+- Corrigidos os testes estruturais legados para a política `audit-only-no-suppressions`.
+- Mantida a Onda 1 em andamento; nenhum endpoint operacional adicional foi ativado.
+
+## Validação esperada
+
+```bash
+npm run validate:source
+npm run typecheck
+npm run lint
+npm run test:unit -- tests/unit/organizationalContextPolicy.test.ts tests/unit/organizationalContextTopbarStructure.test.ts
+```
 
 ## Contexto organizacional global
 

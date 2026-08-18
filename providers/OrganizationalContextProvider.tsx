@@ -4,6 +4,7 @@ import { createContext, useCallback, useEffect, useMemo, useRef, useState } from
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { normalizeGuidOrNull } from '@/lib/http/requestUtils';
+import { organizationalScopeKey as buildOrganizationalScopeKey } from '@/lib/http/organizationalContextPolicy';
 
 const EMPTY_GUID = '00000000-0000-0000-0000-000000000000';
 
@@ -18,6 +19,8 @@ export type OrganizationalContextValue = {
     isGlobal: boolean;
     canChangeOrganization: boolean;
     requiresOrganizationSelection: boolean;
+    snapshot: Readonly<{ empresaId: string | null; filialId: string | null; isMaster: boolean; revision: number }>;
+    organizationalScopeKey: string;
     setEmpresaId: (empresaId: string | null) => void;
     setFilialId: (filialId: string | null) => void;
 };
@@ -47,6 +50,8 @@ export const OrganizationalContextProvider = ({ children }: { children: React.Re
     const masterSelection = selection.identityKey === identityKey ? selection : { identityKey, empresaId: null, filialId: null, revision: 0 };
     const empresaId = isMaster ? masterSelection.empresaId : claimedEmpresaId;
     const filialId = isMaster ? masterSelection.filialId : claimedFilialId;
+    const snapshot = useMemo(() => Object.freeze({ empresaId, filialId, isMaster, revision: masterSelection.revision }), [empresaId, filialId, isMaster, masterSelection.revision]);
+    const scopeKey = useMemo(() => buildOrganizationalScopeKey(snapshot), [snapshot]);
 
     useEffect(() => {
         if (previousIdentityKey.current === identityKey) return;
@@ -94,9 +99,11 @@ export const OrganizationalContextProvider = ({ children }: { children: React.Re
         isGlobal: isMaster && !empresaId,
         canChangeOrganization: isMaster,
         requiresOrganizationSelection: isMaster && !empresaId,
+        snapshot,
+        organizationalScopeKey: scopeKey,
         setEmpresaId,
         setFilialId
-    }), [empresaId, filialId, isMaster, setEmpresaId, setFilialId]);
+    }), [empresaId, filialId, isMaster, scopeKey, setEmpresaId, setFilialId, snapshot]);
 
     if (publishedIdentityKey !== identityKey) {
         return <div role="status" aria-live="polite">Atualizando contexto organizacional...</div>;

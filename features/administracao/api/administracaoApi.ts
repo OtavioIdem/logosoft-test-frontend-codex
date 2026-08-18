@@ -1,5 +1,6 @@
 import { httpClient } from '@/lib/http/httpClient';
 import { mapApiError } from '@/lib/http/apiError';
+import type { OrganizationalContextSnapshot } from '@/lib/http/organizationalContextPolicy';
 import { cleanQueryParams, sanitizePayload } from '@/lib/http/requestUtils';
 import {
     AdministracaoListQuery,
@@ -33,13 +34,25 @@ import {
     criarSetorSchema,
     motivoAdministracaoSchema
 } from '@/features/administracao/schemas/administracaoSchemas';
+import type { ApiError, Guid } from '@/types/erp';
+
+export class AdministracaoApiError extends Error {
+    readonly apiError: ApiError;
+
+    constructor(apiError: ApiError) {
+        super(apiError.message);
+        this.name = 'AdministracaoApiError';
+        this.apiError = apiError;
+        Object.setPrototypeOf(this, AdministracaoApiError.prototype);
+    }
+}
 
 const runAdministracaoRequest = async <T>(request: () => Promise<T>) => {
     try {
         return await request();
     } catch (error) {
         const apiError = mapApiError(error);
-        throw new Error(apiError.message);
+        throw new AdministracaoApiError(apiError);
     }
 };
 
@@ -61,7 +74,7 @@ export const buildAtualizarCentroCustoPayload = (values: unknown): AtualizarCent
 export const administracaoApi = {
     async listarEmpresas() {
         return runAdministracaoRequest(async () => {
-            const response = await httpClient.get<EmpresaResponse[]>('/api/administracao/empresas');
+            const response = await httpClient.get<EmpresaResponse[]>('/api/administracao/empresas', { organizationalContext: { scope: 'global' } });
             return response.data;
         });
     },
@@ -85,9 +98,12 @@ export const administracaoApi = {
             await httpClient.post<void>(`/api/administracao/empresas/${id}/inativar`, payload);
         });
     },
-    async listarFiliais(query?: AdministracaoListQuery) {
+    async listarFiliais(query: AdministracaoListQuery & { empresaId: Guid }, snapshot: OrganizationalContextSnapshot) {
         return runAdministracaoRequest(async () => {
-            const response = await httpClient.get<FilialResponse[]>('/api/administracao/filiais', { params: params(query) });
+            const response = await httpClient.get<FilialResponse[]>('/api/administracao/filiais', {
+                params: cleanQueryParams({ empresaId: query?.empresaId }),
+                organizationalContext: { scope: 'lookup', required: true, includeFilial: false, snapshot }
+            });
             return response.data;
         });
     },

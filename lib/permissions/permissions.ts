@@ -5,6 +5,7 @@ const NON_BYPASS_PERMISSION_CODES = new Set<string>(['MASTER_GOD', '*']);
 export const hasPermission = (user: CurrentUser | null | undefined, permission?: PermissionCode) => {
     if (!permission) return true;
     if (NON_BYPASS_PERMISSION_CODES.has(permission)) return false;
+    if (user?.isMaster === true || user?.permissoes?.includes('*' as PermissionCode)) return true;
     return Boolean(user?.permissoes?.includes(permission));
 };
 
