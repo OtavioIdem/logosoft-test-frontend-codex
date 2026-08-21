@@ -77,15 +77,15 @@ const AppTopbar = forwardRef<AppTopbarRef>((_, ref) => {
                 <NotificacoesBell />
                 <button type="button" className="p-link layout-topbar-button" onClick={toggleTheme} aria-label="Alternar tema claro e escuro">
                     <i className={layoutConfig.colorScheme === 'light' ? 'pi pi-moon' : 'pi pi-sun'}></i>
-                    <span>{layoutConfig.colorScheme === 'light' ? 'Tema escuro' : 'Tema claro'}</span>
+                    <span className="layout-topbar-button-label">{layoutConfig.colorScheme === 'light' ? 'Tema escuro' : 'Tema claro'}</span>
                 </button>
                 <button type="button" className="p-link layout-topbar-button" aria-label="Perfil do usuário">
                     <i className="pi pi-user"></i>
-                    <span>{user?.nome ?? 'Perfil'}</span>
+                    <span className="layout-topbar-button-label">{user?.nome ?? 'Perfil'}</span>
                 </button>
                 <button type="button" className="p-link layout-topbar-button" onClick={logout} aria-label="Sair da aplicação">
                     <i className="pi pi-sign-out"></i>
-                    <span>Sair</span>
+                    <span className="layout-topbar-button-label">Sair</span>
                 </button>
             </div>
         </div>

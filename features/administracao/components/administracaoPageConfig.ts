@@ -20,7 +20,6 @@ export type AdministracaoPageConfig = {
     resourceKey: AdministracaoResourceKey;
     title: string;
     description: string;
-    listDescription: string;
     createTitle: string;
     updateTitle: string;
     createSchema: ZodType<unknown>;
@@ -41,7 +40,6 @@ export const administracaoPageConfigs: Record<AdministracaoResourceKey, Administ
         resourceKey: 'empresas',
         title: 'Empresas',
         description: 'Cadastro de empresas, base para multiempresa e permissões corporativas.',
-        listDescription: 'Use esta rotina para cadastrar, editar e inativar empresas. O documento só é enviado na criação conforme contrato v9.8.',
         createTitle: 'Nova empresa',
         updateTitle: 'Editar empresa',
         createSchema: criarEmpresaSchema,
@@ -66,7 +64,6 @@ export const administracaoPageConfigs: Record<AdministracaoResourceKey, Administ
         resourceKey: 'filiais',
         title: 'Filiais',
         description: 'Cadastro de filiais por empresa, usado pelos módulos operacionais.',
-        listDescription: 'Filiais são consultadas por empresa. Na edição, documento e empresa não são enviados.',
         createTitle: 'Nova filial',
         updateTitle: 'Editar filial',
         createSchema: criarFilialSchema,
@@ -92,7 +89,6 @@ export const administracaoPageConfigs: Record<AdministracaoResourceKey, Administ
         resourceKey: 'setores',
         title: 'Setores',
         description: 'Cadastro de setores por empresa e, opcionalmente, por filial.',
-        listDescription: 'Setores podem ser globais da empresa ou específicos de uma filial.',
         createTitle: 'Novo setor',
         updateTitle: 'Editar setor',
         createSchema: criarSetorSchema,
@@ -117,7 +113,6 @@ export const administracaoPageConfigs: Record<AdministracaoResourceKey, Administ
         resourceKey: 'cargos',
         title: 'Cargos',
         description: 'Cadastro de cargos e nível hierárquico para regras futuras de segurança e organograma.',
-        listDescription: 'Cargos podem estar vinculados a setor, empresa e filial. O nível hierárquico deve ser numérico.',
         createTitle: 'Novo cargo',
         updateTitle: 'Editar cargo',
         createSchema: criarCargoSchema,
@@ -146,7 +141,6 @@ export const administracaoPageConfigs: Record<AdministracaoResourceKey, Administ
         resourceKey: 'centros-custo',
         title: 'Centros de custo',
         description: 'Cadastro de centros de custo usados por financeiro, compras, vendas e controladoria.',
-        listDescription: 'Centros de custo exigem código na criação e não sofrem exclusão física; use inativação com motivo.',
         createTitle: 'Novo centro de custo',
         updateTitle: 'Editar centro de custo',
         createSchema: criarCentroCustoSchema,

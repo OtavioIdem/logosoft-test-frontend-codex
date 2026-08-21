@@ -5,7 +5,6 @@ import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
 import { SearchInput } from '@/components/forms/SearchInput';
-import { Message } from 'primereact/message';
 import { PageHeader } from '@/components/common/PageHeader';
 import { OperationalGovernancePanel } from '@/components/common/OperationalGovernancePanel';
 import { EmpresaFilialFilter } from '@/components/forms/EmpresaFilialFilter';
@@ -116,7 +115,6 @@ export const CatalogoProdutoPage = ({ kind }: { kind: CatalogoKind }) => {
     return (
         <>
             <PageHeader title={config.title} description={config.description} actions={headerActions} />
-            <Message className="w-full mb-3" severity="info" text="O backend valida unicidade por empresa e impede alteração de registros inativos." />
             <OperationalGovernancePanel title="Governança do cadastro auxiliar" description="Resumo dos registros carregados para manter categorias, unidades e marcas consistentes com o catálogo de produtos." records={records} complianceNote="Registros auxiliares inativos não devem ser selecionados em novos produtos; alterações permanecem controladas por permissão e validação do backend." />
             <Card>
                 {query.error ? <ApiErrorPanel error={mapApiError(query.error)} /> : null}

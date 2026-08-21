@@ -6,7 +6,6 @@ import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
 import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
-import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTableServer } from '@/components/data/DataTableServer';
@@ -104,10 +103,9 @@ export const AuditoriaEventosPage = () => {
         <>
             <PageHeader
                 title="Eventos de auditoria"
-                description="Consulta operacional auditável avançada, com filtros por contexto, usuário, módulo, entidade, ação, período e termo."
+                description="Consulta operacional auditável avançada, com filtros por contexto, usuário, módulo, entidade, ação, período e termo. A auditoria é consultiva e não expõe GUID bruto."
                 actions={<Button label="Atualizar" icon="pi pi-refresh" outlined loading={operacionalQuery.isFetching || recentesQuery.isFetching} onClick={refresh} />}
             />
-            <Message severity="info" className="w-full mb-3" text="A auditoria é consultiva. O frontend não expõe GUID bruto; identificadores técnicos são exibidos como vínculo técnico ou contexto protegido." />
 
             <div className="grid">
                 <div className="col-12 md:col-6 xl:col-3"><Card><span className="block text-color-secondary mb-2">Eventos operacionais</span><strong className="text-2xl">{(operacionalQuery.data?.totalItems ?? 0).toLocaleString('pt-BR')}</strong><small className="block text-color-secondary mt-2">Total retornado pela consulta paginada.</small></Card></div>

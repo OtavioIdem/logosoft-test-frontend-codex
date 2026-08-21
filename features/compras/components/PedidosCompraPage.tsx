@@ -7,7 +7,6 @@ import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
 import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
-import { Message } from 'primereact/message';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTableActions } from '@/components/data/DataTableActions';
 import { DataTableServer } from '@/components/data/DataTableServer';
@@ -74,8 +73,7 @@ export const PedidosCompraPage = () => {
 
     return (
         <>
-            <PageHeader title="Pedidos de compra" description="Fluxo de rascunho, aprovação, cancelamento e recebimento com impacto em estoque e financeiro." actions={headerActions} />
-            <Message className="w-full mb-3" severity="info" text="Pedidos recebidos ou cancelados não devem ser alterados diretamente. Recebimento pode gerar entrada de estoque e conta a pagar conforme payload." />
+            <PageHeader title="Pedidos de compra" description="Fluxo de rascunho, aprovação, cancelamento e recebimento com impacto em estoque e financeiro. Pedidos recebidos ou cancelados não devem ser alterados diretamente." actions={headerActions} />
             <div className="grid mb-3">
                 <div className="col-12 md:col-3"><Card className="h-full"><span className="block text-color-secondary mb-2">Pedidos listados</span><strong className="text-2xl">{summary.totalPedidos}</strong></Card></div>
                 <div className="col-12 md:col-3"><Card className="h-full"><span className="block text-color-secondary mb-2">Aguardando aprovação</span><strong className="text-2xl">{summary.aguardandoAprovacao}</strong></Card></div>

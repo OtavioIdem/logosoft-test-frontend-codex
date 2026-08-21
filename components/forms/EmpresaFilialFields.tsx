@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { EmpresaSelect } from '@/components/forms/EmpresaSelect';
 import { FieldError } from '@/components/forms/FieldError';
 import { FilialSelect } from '@/components/forms/FilialSelect';
+import { SelecionarContextoButton } from '@/components/organizational/SelecionarContextoButton';
 import { useFiliaisOptions } from '@/features/administracao/hooks/useEmpresaFilialOptions';
 import { useOrganizationalContext } from '@/hooks/useOrganizationalContext';
 import { normalizeGuidOrNull } from '@/lib/http/requestUtils';
@@ -93,7 +94,12 @@ export const EmpresaFilialFields = ({
                 </label>
                 <EmpresaSelect id="empresaId" value={alignedEmpresaId} required={empresaRequired} disabled={disabled || empresaLocked} onChange={(value) => { onEmpresaChange(value); onFilialChange(null); }} />
                 <small className="text-color-secondary">A empresa é definida pelo contexto organizacional ativo.</small>
-                {!context.snapshot.empresaId ? <Message className="w-full mt-2" severity="warn" text={'Selecione uma empresa pelo botão "Selecionar contexto" no topo antes de preencher este formulário.'} /> : null}
+                {!context.snapshot.empresaId ? (
+                    <div className="flex flex-column gap-2 mt-2">
+                        <Message className="w-full" severity="warn" text={'Selecione uma empresa pelo botão "Selecionar contexto" no topo antes de preencher este formulário.'} />
+                        <SelecionarContextoButton variant="inline" />
+                    </div>
+                ) : null}
                 <FieldError message={empresaError} />
             </div>
             {showFilial ? (

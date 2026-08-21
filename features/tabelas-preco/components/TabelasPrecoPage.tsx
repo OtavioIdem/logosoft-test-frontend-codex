@@ -121,7 +121,6 @@ export const TabelasPrecoPage = () => {
     return (
         <>
             <PageHeader title="Tabelas de preço" description="Política comercial com vigência, preço mínimo, margem e consulta de preço vigente por produto." actions={headerActions} />
-            <Message className="w-full mb-3" severity="info" text="Inativação de tabela e item exige motivo para auditoria. A consulta de preço vigente usa o endpoint específico do backend." />
 
             <div className="grid">
                 <div className="col-12 lg:col-7">

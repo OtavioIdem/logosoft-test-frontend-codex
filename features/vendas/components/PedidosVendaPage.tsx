@@ -7,7 +7,6 @@ import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
 import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
-import { Message } from 'primereact/message';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTableActions } from '@/components/data/DataTableActions';
 import { DataTableServer } from '@/components/data/DataTableServer';
@@ -68,8 +67,7 @@ export const PedidosVendaPage = () => {
 
     return (
         <>
-            <PageHeader title="Pedidos de venda" description="Fluxo de rascunho, aprovação, cancelamento e faturamento com impacto em estoque e financeiro." actions={headerActions} />
-            <Message className="w-full mb-3" severity="info" text="Pedidos faturados ou cancelados não devem ser alterados diretamente. Aprovação pode reservar estoque e faturamento pode baixar estoque conforme payload." />
+            <PageHeader title="Pedidos de venda" description="Fluxo de rascunho, aprovação, cancelamento e faturamento com impacto em estoque e financeiro. Pedidos faturados ou cancelados não devem ser alterados diretamente." actions={headerActions} />
             <div className="grid mb-3">
                 <div className="col-12 md:col-3"><Card><span className="block text-color-secondary mb-1">Pedidos listados</span><strong className="text-xl">{summary.totalPedidos}</strong></Card></div>
                 <div className="col-12 md:col-3"><Card><span className="block text-color-secondary mb-1">Aguardando aprovação</span><strong className="text-xl">{summary.aguardandoAprovacao}</strong></Card></div>

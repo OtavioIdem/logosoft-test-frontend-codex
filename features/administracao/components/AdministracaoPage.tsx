@@ -9,6 +9,7 @@ import { EmpresaFilialFilter } from '@/components/forms/EmpresaFilialFilter';
 import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
 import { PageHeader } from '@/components/common/PageHeader';
+import { SelecionarContextoButton } from '@/components/organizational/SelecionarContextoButton';
 import { OperationalGovernancePanel } from '@/components/common/OperationalGovernancePanel';
 import { AuditInfoPanel } from '@/components/common/AuditInfoPanel';
 import { DataTableActions } from '@/components/data/DataTableActions';
@@ -122,10 +123,11 @@ export const AdministracaoPage = ({ resourceKey }: { resourceKey: AdministracaoR
             <>
                 <PageHeader title={config.title} description={config.description} />
                 <Message
-                    className="w-full"
+                    className="w-full mb-3"
                     severity="warn"
-                    text={`${blockedMessage ?? 'Selecione uma empresa no contexto organizacional.'} Use o botão "Selecionar contexto" no topo da tela para continuar.`}
+                    text={blockedMessage ?? 'Selecione uma empresa no contexto organizacional.'}
                 />
+                <SelecionarContextoButton variant="inline" />
             </>
         );
     }
@@ -193,7 +195,6 @@ export const AdministracaoPage = ({ resourceKey }: { resourceKey: AdministracaoR
     return (
         <>
             <PageHeader title={config.title} description={config.description} actions={headerActions} />
-            <Message className="w-full mb-3" severity="info" text={config.listDescription} />
             {blocked ? <Message className="w-full mb-3" severity="warn" text={blockedMessage} /> : null}
             <OperationalGovernancePanel title="Governança da estrutura organizacional" description="Resumo operacional dos registros carregados para apoiar revisão de status, vínculos por empresa/filial e rastreabilidade administrativa." records={records} complianceNote="Cadastros administrativos não são excluídos fisicamente; inativação exige motivo e permanece rastreável para módulos comerciais, financeiros, estoque e auditoria." />
             <Card>

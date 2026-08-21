@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
-import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
 import { PageHeader } from '@/components/common/PageHeader';
 import { OperationalGovernancePanel } from '@/components/common/OperationalGovernancePanel';
@@ -146,8 +145,7 @@ export const ProdutosPage = () => {
 
     return (
         <>
-            <PageHeader title="Produtos" description="Cadastro de produtos com dados comerciais, fiscais, códigos de barras e fornecedor." actions={headerActions} />
-            <Message className="w-full mb-3" severity="info" text="Produto inativo não deve ser comprado, vendido ou movimentado. O backend valida unicidade de código, preço/custo não negativos e vínculo obrigatório com unidade." />
+            <PageHeader title="Produtos" description="Cadastro de produtos com dados comerciais, fiscais, códigos de barras e fornecedor. Produto inativo não deve ser comprado, vendido ou movimentado." actions={headerActions} />
             <OperationalGovernancePanel title="Governança de catálogo" description="Resumo dos produtos carregados, com foco em disponibilidade operacional, dados fiscais e impacto em vendas, compras e estoque." records={records} activeLabel="Disponíveis" inactiveLabel="Bloqueados" complianceNote="Produtos inativos não devem ser utilizados em venda, compra ou movimentação; preço, custo e dados fiscais seguem validação do backend." />
             <Card>
                 {produtosQuery.error ? <ApiErrorPanel error={mapApiError(produtosQuery.error)} /> : null}

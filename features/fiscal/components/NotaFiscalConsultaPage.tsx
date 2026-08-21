@@ -219,7 +219,6 @@ export const NotaFiscalConsultaPage = () => {
     return (
         <>
             <PageHeader title="Notas fiscais" description="Listagem fiscal operacional, filtros avançados, ação principal e exportação auditada conforme contrato v1.10.0a18." actions={actions} />
-            <Message severity="info" className="w-full mb-3" text="A tela usa a listagem leve do backend. Regras críticas de emissão, cancelamento, baixa, financeiro e DANFE são dirigidas por resumo/workflow do backend no detalhe." />
             <Card className="mb-3">
                 <div className="grid formgrid p-fluid">
                     <div className="field col-12 lg:col-5">

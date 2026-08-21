@@ -48,6 +48,7 @@ describe('controles empresa/filial B47.c2', () => {
         expect(screen.getByTestId('empresa')).toBeDisabled();
         expect(screen.getByTestId('empresa')).toHaveTextContent('empresa-vazia');
         expect(screen.getByRole('status')).toHaveTextContent('Selecionar contexto');
+        expect(screen.getByRole('button', { name: /selecionar contexto/i })).toBeEnabled();
     });
 
     it('usa a empresa ativa do contexto e bloqueia os campos do formulário sem contexto', () => {
@@ -58,6 +59,7 @@ describe('controles empresa/filial B47.c2', () => {
         expect(screen.getByTestId('empresa')).toBeDisabled();
         expect(screen.getByTestId('filial')).toBeDisabled();
         expect(screen.getByRole('status')).toHaveTextContent('Selecionar contexto');
+        expect(screen.getByRole('button', { name: /selecionar contexto/i })).toBeEnabled();
     });
 
     it('ignora empresa local quando existe contexto ativo', () => {

@@ -5,7 +5,6 @@ import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
 import { SearchInput } from '@/components/forms/SearchInput';
-import { Message } from 'primereact/message';
 import { PageHeader } from '@/components/common/PageHeader';
 import { OperationalGovernancePanel } from '@/components/common/OperationalGovernancePanel';
 import { EmpresaFilialFilter } from '@/components/forms/EmpresaFilialFilter';
@@ -93,7 +92,6 @@ export const FornecedoresPage = () => {
     return (
         <>
             <PageHeader title="Fornecedores" description="Cadastro de fornecedores vinculado ao cadastro mestre de pessoas, com inativação e auditoria operacional por motivo." actions={headerActions} />
-            <Message className="w-full mb-3" severity="info" text="Fornecedor é vinculado a uma pessoa ativa. O backend valida código único por empresa e bloqueios de alteração quando inativo." />
             <OperationalGovernancePanel title="Governança de fornecedores" description="Resumo dos fornecedores carregados, mantendo foco em status, vínculo com pessoa e impacto em compras/financeiro." records={records} activeLabel="Aptos" inactiveLabel="Restritos" complianceNote="Fornecedor inativo não deve ser usado em novos pedidos de compra; inativação exige motivo e deve permanecer auditável." sensitiveDataNote="Dados cadastrais do fornecedor podem conter informações pessoais e fiscais da pessoa vinculada." />
             <Card>
                 {listQuery.error ? <ApiErrorPanel error={mapApiError(listQuery.error)} /> : null}

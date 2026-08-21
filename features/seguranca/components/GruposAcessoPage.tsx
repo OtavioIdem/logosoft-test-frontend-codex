@@ -5,7 +5,6 @@ import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
 import { InputText } from 'primereact/inputtext';
-import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTableActions } from '@/components/data/DataTableActions';
@@ -85,7 +84,6 @@ export const GruposAcessoPage = () => {
     return (
         <>
             <PageHeader title="Grupos de acesso" description="RBAC operacional com grupos, permissões granulares e manutenção auditável." actions={headerActions} />
-            <Message className="w-full mb-3" severity="info" text="Permissões devem continuar sendo validadas pelo backend. O frontend apenas administra contratos e melhora a experiência operacional." />
 
             <Card>
                 {gruposQuery.error ? <ApiErrorPanel error={mapApiError(gruposQuery.error)} /> : null}

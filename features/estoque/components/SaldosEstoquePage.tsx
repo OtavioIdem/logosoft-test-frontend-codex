@@ -3,7 +3,6 @@
 import { useMemo, useState } from 'react';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
-import { Message } from 'primereact/message';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTableServer } from '@/components/data/DataTableServer';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
@@ -40,7 +39,6 @@ export const SaldosEstoquePage = () => {
     return (
         <>
             <PageHeader title="Saldos de estoque" description="Consulta de saldo atual, reservado e disponível por produto e local." actions={<EstoqueFilterBar filters={filters} produtos={produtosQuery.data ?? []} locais={locaisQuery.data ?? []} showProduto showLocal search={localSearch} onSearchChange={(value) => { setFirst(0); setLocalSearch(value); }} onFilterChange={updateFilter} />} />
-            <Message className="w-full mb-3" severity="info" text="Saldo é consequência dos movimentos; não há alteração direta pela tela de consulta." />
             {saldosQuery.isLoading ? (
                 <LoadingState variant="metrics" cards={4} className="mb-3" />
             ) : (

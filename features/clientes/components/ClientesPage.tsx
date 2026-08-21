@@ -5,7 +5,6 @@ import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
 import { SearchInput } from '@/components/forms/SearchInput';
-import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
 import { PageHeader } from '@/components/common/PageHeader';
 import { OperationalGovernancePanel } from '@/components/common/OperationalGovernancePanel';
@@ -103,7 +102,6 @@ export const ClientesPage = () => {
     return (
         <>
             <PageHeader title="Clientes" description="Cadastro comercial de clientes com limite de crédito, bloqueio/desbloqueio e inativação com motivo." actions={headerActions} />
-            <Message className="w-full mb-3" severity="info" text="Cliente é vinculado a uma pessoa ativa. O backend valida código único por empresa e regras de crédito." />
             <OperationalGovernancePanel title="Governança comercial e de crédito" description="Resumo da carteira de clientes carregada, com controle visual de status e atenção ao bloqueio de crédito." records={records} activeLabel="Operacionais" inactiveLabel="Restritos" complianceNote="Bloqueio, desbloqueio e inativação exigem motivo para preservar rastreabilidade comercial e financeira." sensitiveDataNote="Cliente herda dados pessoais da pessoa vinculada; documentos devem ser exibidos de forma minimizada quando possível." />
             <Card>
                 {listQuery.error ? <ApiErrorPanel error={mapApiError(listQuery.error)} /> : null}

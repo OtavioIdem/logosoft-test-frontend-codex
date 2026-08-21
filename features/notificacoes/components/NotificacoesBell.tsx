@@ -71,7 +71,7 @@ export const NotificacoesBell = () => {
             >
                 <i className="pi pi-bell" />
                 {naoLidas > 0 ? <Badge value={naoLidas > 99 ? '99+' : naoLidas} severity="danger" /> : null}
-                <span>Notificações</span>
+                <span className="layout-topbar-button-label">Notificações</span>
             </button>
 
             <OverlayPanel ref={overlayRef} onShow={() => setAberto(true)} onHide={() => setAberto(false)} style={{ width: 'min(28rem, 96vw)' }} className="notificacoes-overlay">

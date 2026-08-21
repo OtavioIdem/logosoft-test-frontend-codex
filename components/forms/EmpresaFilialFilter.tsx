@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { EmpresaSelect } from '@/components/forms/EmpresaSelect';
 import { FilialSelect } from '@/components/forms/FilialSelect';
+import { SelecionarContextoButton } from '@/components/organizational/SelecionarContextoButton';
 import { useFiliaisOptions } from '@/features/administracao/hooks/useEmpresaFilialOptions';
 import { useOrganizationalContext } from '@/hooks/useOrganizationalContext';
 import { normalizeGuidOrNull } from '@/lib/http/requestUtils';
@@ -63,7 +64,12 @@ export const EmpresaFilialFilter = ({ empresaId, filialId, onEmpresaChange, onFi
             <div className="min-w-18rem">
                 <EmpresaSelect value={alignedEmpresaId} disabled={empresaLocked} onChange={(value) => { onEmpresaChange(value); onFilialChange(null); }} />
             </div>
-            {context.isGlobal ? <Message className="w-full" severity="warn" text={'Selecione a empresa pelo botão "Selecionar contexto" no topo da tela.'} /> : null}
+            {context.isGlobal ? (
+                <div className="flex flex-column gap-2 w-full">
+                    <Message className="w-full" severity="warn" text={'Selecione a empresa pelo botão "Selecionar contexto" no topo da tela.'} />
+                    <SelecionarContextoButton variant="inline" />
+                </div>
+            ) : null}
             {showFilial ? (
                 <div className="min-w-18rem">
                     <FilialSelect empresaId={alignedEmpresaId} value={normalizedFilialId} disabled={!alignedEmpresaId} onChange={onFilialChange} />

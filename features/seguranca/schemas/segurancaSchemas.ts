@@ -39,6 +39,24 @@ export const vincularGrupoUsuarioSchema = z.object({
     motivo: z.string().trim().min(5, 'Informe o motivo do vínculo.')
 });
 
+const origemPermissaoEfetivaSchema = z.object({
+    escopo: z.union([z.literal(1), z.literal(2)]).catch(1),
+    cargoAcessoId: z.string(),
+    grupoAcessoId: z.string(),
+    permissionCode: z.string(),
+    permitido: z.boolean().catch(true)
+});
+
+// Schema de leitura: tolerante de propósito. O backend pode omitir `origens` — nesse caso a tela
+// mostra o estado "origem indisponível" em vez de quebrar.
+export const permissoesEfetivasUsuarioSchema = z.object({
+    usuarioId: z.string(),
+    empresaId: z.string(),
+    filialId: z.string().nullable().optional().transform((value) => value ?? null),
+    permissoes: z.array(z.string()).optional().transform((value) => value ?? []),
+    origens: z.array(origemPermissaoEfetivaSchema).optional().transform((value) => value ?? [])
+});
+
 export const grupoAcessoSchema = z.object({
     empresaId: z.string().refine((value) => isValidGuid(value), 'Selecione uma empresa válida.'),
     filialId: optionalGuidSchema,

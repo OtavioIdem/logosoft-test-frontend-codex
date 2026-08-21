@@ -1,6 +1,6 @@
-# logosoft Frontend v1.11.0a8b47.c2
+# logosoft Frontend v1.11.0a8b47.c3
 
-## v1.11.0a8b47.c2 — Consulta segura de filiais
+## v1.11.0a8b47.c3 — Consulta segura de filiais
 
 A corretiva aplica metadata explícita por request no cliente HTTP. Nesta fatia, somente empresas (global) e filiais (query obrigatória por empresa) estão ativadas em produção. O contexto master é selecionado em Dialog PrimeReact; o topbar permanece reservado ao título da página e às ações compactas.
 
