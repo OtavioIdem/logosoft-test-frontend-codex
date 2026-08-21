@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { InputTextarea } from 'primereact/inputtextarea';
-import { Message } from 'primereact/message';
 import { PageHeader } from '@/components/common/PageHeader';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { EmpresaSelect } from '@/components/forms/EmpresaSelect';
@@ -68,8 +67,7 @@ export const TransferenciaEstoquePage = () => {
 
     return (
         <>
-            <PageHeader title="Transferências de estoque" description="Movimenta saldo entre filiais/locais gerando saída na origem e entrada no destino." />
-            <Message className="w-full mb-3" severity="info" text="A transferência não altera saldo diretamente no frontend. O backend deve registrar os movimentos transacionais de saída e entrada." />
+            <PageHeader title="Transferências de estoque" description="Movimenta saldo entre filiais/locais gerando saída na origem e entrada no destino. O backend registra os movimentos transacionais; o frontend não altera saldo." />
             <Card title="Nova transferência">
                 <FormGrid>
                     <div className="field col-12 md:col-4"><label htmlFor="empresaTransferencia" className="font-medium">Empresa *</label><EmpresaSelect id="empresaTransferencia" value={textValue(values.empresaId) || null} onChange={(value) => update('empresaId', value ?? '')} /><FieldError message={errors.empresaId} /></div>

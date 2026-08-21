@@ -1,3 +1,44 @@
+# v1.11.0a8b47.c3
+
+## Contexto organizacional acessível
+
+- Corrigida a regra `.layout-topbar-button span { display: none }`, que era seletor de elemento e apagava o ícone e o rótulo de qualquer componente PrimeReact aninhado no topbar. O rótulo passa a ser ocultado pela classe `.layout-topbar-button-label`.
+- O botão "Selecionar contexto" existia no DOM mas renderizava como um círculo vazio e invisível, deixando o usuário master sem nenhuma forma de escolher empresa/filial. Ele virou `<button>` nativo com `<i>`, no mesmo padrão dos irmãos do topbar.
+- Pelo mesmo motivo, o contador de notificações não lidas (`Badge` do PrimeReact) estava invisível no desktop e voltou a aparecer.
+- Novo `SelecionarContextoButton` compartilhado: além do topbar, o CTA aparece dentro do estado bloqueado de Filiais e ao lado dos filtros Empresa/Filial travados, eliminando o beco sem saída.
+- A política de contexto de `b47.c1/.c2` foi preservada: `empresaLocked` continua `true` e os filtros seguem alinhados ao snapshot, sem segunda fonte de verdade.
+
+## Explicação de tela concentrada no tooltip
+
+- Removidos 21 banners `Message severity="info"` estáticos do topo das telas; a explicação já é servida pelo tooltip do título no topbar, com fallback no cabeçalho compacto abaixo de 992px.
+- Regras de negócio que viviam apenas nesses banners (bloqueio por status, LGPD de auditoria, não recálculo de indicadores) migraram para a `description` do `PageHeader`, sem perda de conteúdo.
+- Removido o campo `listDescription` de `administracaoPageConfig` e o `pageText.info` de `MovimentoOperacionalPage`.
+- Preservadas as mensagens condicionais de estado, de workflow do backend, de compliance fiscal em abas de detalhe e as de cards/diálogos sem `PageHeader`.
+
+## Vínculo de grupo de acesso visível
+
+- A tela de Usuários guardava `UsuarioResponse` congelado em `useState`; passou a guardar o id e derivar o usuário da listagem, eliminando o snapshot velho por construção.
+- `UsuarioResponse` não devolve grupos em nenhum endpoint do contrato. O acesso efetivo passa a ser consultado em `GET /api/seguranca/usuarios/{id}/permissoes-efetivas`, e os grupos vinculados são derivados de `origens[].grupoAcessoId`.
+- Após vincular um grupo, o diálogo de gestão reabre com o acesso efetivo recarregado, em vez de apenas emitir um toast e fechar.
+- "Remover grupo" deixou de assumir "o primeiro grupo" e ganhou diálogo próprio com escolha do grupo vinculado e motivo. Quando indisponível, o motivo é escrito na tela em vez de o botão ficar cinza e mudo.
+- Removida a coluna "Grupos" da listagem, que era sempre `-` com o contrato atual.
+- Registrada a permissão `SEGURANCA_PERMISSOES_CONSULTAR`, que já existia no snapshot do backend e faltava no frontend.
+
+## Pendências de backend registradas
+
+- `UsuarioResponse` não expõe `GruposAcesso`; enquanto isso, os grupos dependem de `origens` de `permissoes-efetivas`.
+- `OrigemPermissaoEfetivaResponse.CargoAcessoId` é não anulável, o que sugere que apenas o caminho cargo → grupo aparece em `origens`. A tela trata explicitamente o caso "origem indisponível".
+- `AtribuirGrupoUsuarioRequest` não tem `Motivo`, embora `RemoverGrupoUsuarioRequest` tenha. O frontend segue enviando o campo, mas parou de prometer auditoria que o backend descarta.
+- `buildCriarUsuarioPayload` envia `login` e `gruposAcessoIds`, ausentes do contrato — provável segunda ocorrência do mesmo defeito, não alterada nesta versão.
+
+## Validação executada
+
+```bash
+npm run validate:source
+npm run typecheck
+npm run lint
+```
+
 # v1.11.0a8b47.c2
 
 ## Consulta segura de filiais

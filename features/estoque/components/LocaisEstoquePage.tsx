@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
-import { Message } from 'primereact/message';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTableActions } from '@/components/data/DataTableActions';
 import { DataTableServer } from '@/components/data/DataTableServer';
@@ -79,7 +78,6 @@ export const LocaisEstoquePage = () => {
     return (
         <>
             <PageHeader title="Locais de estoque" description="Cadastro de locais usados em saldos, movimentos, reservas e inventários." actions={headerActions} />
-            <Message className="w-full mb-3" severity="info" text="Campos de Empresa e Filial são selecionados por dropdown alimentado do banco; o vínculo interno é enviado automaticamente." />
             <div className="grid mb-3">
                 <div className="col-12 md:col-4"><Card><span className="block text-color-secondary mb-2">Locais listados</span><strong className="text-2xl">{resumo.total}</strong></Card></div>
                 <div className="col-12 md:col-4"><Card><span className="block text-color-secondary mb-2">Ativos</span><strong className="text-2xl">{resumo.ativos}</strong></Card></div>

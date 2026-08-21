@@ -177,7 +177,6 @@ export const AtividadesPage = () => {
     return (
         <>
             <PageHeader title="Atividades" description="Workflow operacional com responsável, prioridade, status, comentários e vínculo de origem." actions={headerActions} />
-            <Message className="w-full mb-3" severity="info" text="Toda atribuição, alteração de status, comentário e cancelamento é enviada para endpoints específicos para preservar histórico e auditoria operacional." />
 
             <Card className="mb-3">
                 <div className="grid formgrid p-fluid">

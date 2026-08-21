@@ -5,7 +5,6 @@ import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
 import { SearchInput } from '@/components/forms/SearchInput';
-import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
 import { PageHeader } from '@/components/common/PageHeader';
 import { OperationalGovernancePanel } from '@/components/common/OperationalGovernancePanel';
@@ -108,7 +107,6 @@ export const PessoasPage = () => {
     return (
         <>
             <PageHeader title="Pessoas" description="Cadastro mestre de pessoas físicas e jurídicas com CPF/CNPJ, CNPJ alfanumérico, LGPD visual e inativação com motivo." actions={headerActions} />
-            <Message className="w-full mb-3" severity="info" text="CPF/CNPJ é preservado no payload; o backend continua sendo a fonte final de validação documental." />
             <OperationalGovernancePanel title="Governança de dados pessoais" description="Resumo da base de pessoas carregada, com atenção a status, documentos e uso compartilhado por clientes, fornecedores e demais módulos." records={records} complianceNote="Pessoa inativa não deve ser alterada nem vinculada a novos papéis operacionais; a validação definitiva permanece no backend." sensitiveDataNote="Documentos pessoais são mascarados na listagem e devem ser exibidos integralmente apenas quando houver permissão e necessidade operacional." />
             <Card>
                 {listQuery.error ? <ApiErrorPanel error={mapApiError(listQuery.error)} /> : null}

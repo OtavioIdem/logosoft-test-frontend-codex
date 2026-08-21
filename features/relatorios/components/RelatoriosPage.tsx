@@ -113,8 +113,7 @@ export const RelatoriosPage = () => {
 
     return (
         <>
-            <PageHeader title="Relatórios" description="Indicadores operacionais e gerenciais por módulo, consumindo endpoints consolidados do backend." />
-            <Message className="w-full mb-3" severity="info" text="Os relatórios são consultivos. O frontend não recalcula indicadores e não expõe IDs técnicos; os KPIs vêm consolidados do backend." />
+            <PageHeader title="Relatórios" description="Indicadores operacionais e gerenciais por módulo, consumindo endpoints consolidados do backend. O frontend não recalcula indicadores e não expõe IDs técnicos." />
 
             <Card className="mb-3" title="Filtros">
                 <div className="flex flex-column lg:flex-row gap-3 lg:align-items-end">

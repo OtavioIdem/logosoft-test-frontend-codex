@@ -7,6 +7,7 @@ import {
     CriarUsuarioRequest,
     GrupoAcessoFormValues,
     GrupoAcessoResponse,
+    PermissoesEfetivasUsuarioResponse,
     RemoverGrupoUsuarioRequest,
     ResetSenhaUsuarioFormValues,
     ResetSenhaUsuarioRequest,
@@ -17,7 +18,7 @@ import {
     VincularGrupoUsuarioFormValues,
     VincularGrupoUsuarioRequest
 } from '@/features/seguranca/types/seguranca.types';
-import { grupoAcessoSchema, motivoSegurancaSchema, resetSenhaUsuarioSchema, vincularGrupoUsuarioSchema } from '@/features/seguranca/schemas/segurancaSchemas';
+import { grupoAcessoSchema, motivoSegurancaSchema, permissoesEfetivasUsuarioSchema, resetSenhaUsuarioSchema, vincularGrupoUsuarioSchema } from '@/features/seguranca/schemas/segurancaSchemas';
 import { PermissionCode } from '@/types/erp';
 
 const runSecurityRequest = async <T>(request: () => Promise<T>) => {
@@ -140,6 +141,20 @@ export const segurancaApi = {
         const payload = buildVincularGrupoUsuarioPayload(values);
         return runSecurityRequest(async () => {
             await httpClient.post<void>(`/api/seguranca/usuarios/${id}/grupos-acesso`, payload);
+        });
+    },
+
+    /**
+     * Único endpoint do contrato que relaciona grupo de acesso a usuário. `UsuarioResponse` não
+     * devolve grupos (nem na listagem, nem em GET /{id}), então a tela de gestão resolve o vínculo
+     * por aqui, como recomenda docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md §5.2.
+     */
+    async obterPermissoesEfetivasUsuario(id: string, scope: { empresaId: string; filialId?: string | null }) {
+        return runSecurityRequest(async () => {
+            const response = await httpClient.get<PermissoesEfetivasUsuarioResponse>(`/api/seguranca/usuarios/${id}/permissoes-efetivas`, {
+                params: cleanQueryParams({ empresaId: scope.empresaId, filialId: normalizeGuidOrNull(scope.filialId ?? null) ?? undefined })
+            });
+            return permissoesEfetivasUsuarioSchema.parse(response.data) as PermissoesEfetivasUsuarioResponse;
         });
     },
 

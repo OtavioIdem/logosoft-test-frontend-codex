@@ -9,6 +9,7 @@ export const PERMISSOES_CATALOGO: Record<PermissionCode, PermissaoCatalogoItem> 
     // Segurança
     SEGURANCA_USUARIOS_CONSULTAR: { grupo: 'Segurança', label: 'Usuários · Consultar' },
     SEGURANCA_USUARIOS_GERENCIAR: { grupo: 'Segurança', label: 'Usuários · Gerenciar' },
+    SEGURANCA_PERMISSOES_CONSULTAR: { grupo: 'Segurança', label: 'Acesso efetivo · Consultar' },
     SEGURANCA_PERMISSOES_GERENCIAR: { grupo: 'Segurança', label: 'Grupos de acesso · Gerenciar' },
     SEGURANCA_SESSOES_GERENCIAR: { grupo: 'Segurança', label: 'Sessões · Gerenciar' },
     // Administração

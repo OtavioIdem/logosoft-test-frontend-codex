@@ -7,6 +7,38 @@ export type UsuarioGrupoAcessoResumo = {
     descricao?: string | null;
 };
 
+/**
+ * Escopo de um vínculo de acesso: 1 = Empresa, 2 = Filial.
+ */
+export type EscopoAcesso = 1 | 2;
+
+export type OrigemPermissaoEfetivaResponse = {
+    escopo: EscopoAcesso;
+    cargoAcessoId: Guid;
+    grupoAcessoId: Guid;
+    permissionCode: string;
+    permitido: boolean;
+};
+
+export type PermissoesEfetivasUsuarioResponse = {
+    usuarioId: Guid;
+    empresaId: Guid;
+    filialId: Guid | null;
+    permissoes: string[];
+    origens: OrigemPermissaoEfetivaResponse[];
+};
+
+/**
+ * Projeção de tela do acesso efetivo. `origemIndisponivel` marca o caso em que o backend
+ * confirma permissões mas não devolve a origem por grupo — a tela precisa dizer isso
+ * explicitamente em vez de exibir "-" e parecer que o vínculo não existe.
+ */
+export type AcessoEfetivoUsuario = {
+    grupos: Array<{ id: Guid; nome: string }>;
+    totalPermissoes: number;
+    origemIndisponivel: boolean;
+};
+
 export type UsuarioResponse = {
     id: Guid;
     nome: string;
@@ -17,6 +49,8 @@ export type UsuarioResponse = {
     ativo: boolean;
     bloqueado?: boolean;
     ultimoLoginEm?: IsoDateTime | null;
+    // Campo tolerado, ausente do contrato atual (UsuarioResponse do backend não devolve grupos).
+    // Mantido para ser preferido automaticamente caso o backend passe a enviá-lo.
     gruposAcesso?: UsuarioGrupoAcessoResumo[];
 };
 

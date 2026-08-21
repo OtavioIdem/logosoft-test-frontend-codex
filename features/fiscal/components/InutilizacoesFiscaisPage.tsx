@@ -125,7 +125,6 @@ export const InutilizacoesFiscaisPage = () => {
         <>
             <PageHeader title="Inutilização fiscal" description="Registre inutilização de faixa de numeração NF-e/NFC-e com chamada ao ambiente autorizador configurado." />
             <Message severity="warn" className="w-full mb-3" text="Use somente para quebras reais de sequência e após validação fiscal. O frontend não decide regra legal de inutilização; ele envia o contrato ao backend autorizado." />
-            <Message severity="info" className="w-full mb-3" text="Empresa e filial devem ser selecionadas por lista/API. O correlationId é gerado pelo frontend para auditoria e idempotência da tentativa." />
             <ApiErrorPanel error={formError} title="Não foi possível transmitir a inutilização fiscal." />
 
             <div className="grid">
