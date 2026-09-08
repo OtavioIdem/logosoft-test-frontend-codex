@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import yaml from 'js-yaml';
 
 const root = process.cwd();
 const failures = [];
@@ -42,6 +43,69 @@ for (const path of currentVersionFiles) {
     requireFile(path, 'artefato corrente de versão ausente');
 }
 
+// O workflow é a fonte de verdade do pipeline: precisa ser carregado como
+// documento YAML de verdade (não como texto cru), senão indentação quebrada
+// (ou qualquer outro erro de sintaxe) passa despercebida por checagens
+// baseadas em regex/includes sobre o texto do arquivo.
+const FRONTEND_GATES_JOB = 'frontend-gates';
+// Jobs permitidos no workflow sem revisão adicional. Para adicionar um novo
+// job, revise-o e inclua o nome aqui.
+const allowedWorkflowJobs = [FRONTEND_GATES_JOB];
+// Chaves de env permitidas no job frontend-gates. Para adicionar uma nova
+// variável de ambiente ao job, inclua a chave aqui.
+const allowedFrontendGatesEnvKeys = [
+    'CI',
+    'NEXT_TELEMETRY_DISABLED',
+    'NEXT_PUBLIC_API_URL',
+    'NEXT_PUBLIC_APP_NAME',
+    'NEXT_PUBLIC_APP_ENV',
+    'NEXT_PUBLIC_APP_VERSION'
+];
+let workflowDoc = null;
+if (existsSync(join(root, workflowPath))) {
+    try {
+        workflowDoc = yaml.load(read(workflowPath));
+    } catch (error) {
+        failures.push(`${workflowPath}: YAML inválido (${error instanceof Error ? error.message : 'erro desconhecido'}) — corrija a sintaxe/indentação do arquivo antes de prosseguir`);
+    }
+}
+const frontendGatesJob = workflowDoc?.jobs?.[FRONTEND_GATES_JOB] ?? null;
+if (workflowDoc && !frontendGatesJob) {
+    failures.push(`${workflowPath}: jobs.${FRONTEND_GATES_JOB} ausente — o gate obrigatório precisa existir com esse nome`);
+}
+if (workflowDoc) {
+    const declaredJobs = Object.keys(workflowDoc.jobs ?? {});
+    for (const jobName of declaredJobs) {
+        if (!allowedWorkflowJobs.includes(jobName)) {
+            failures.push(`${workflowPath}: job '${jobName}' não está na lista de jobs revisados (${allowedWorkflowJobs.join(', ')}) — revise o job e adicione-o a allowedWorkflowJobs em scripts/validate-ci-gates.mjs`);
+        }
+    }
+}
+if (frontendGatesJob) {
+    const envKeys = Object.keys(frontendGatesJob.env ?? {});
+    for (const key of envKeys) {
+        if (!allowedFrontendGatesEnvKeys.includes(key)) {
+            failures.push(`${workflowPath}: jobs.${FRONTEND_GATES_JOB}.env declara a chave não permitida '${key}' — remova-a ou adicione-a a allowedFrontendGatesEnvKeys em scripts/validate-ci-gates.mjs`);
+        }
+    }
+}
+// Linhas de comando (steps[].run) do job frontend-gates, uma por linha,
+// já normalizadas — usadas para validar que um comando obrigatório é de
+// fato executado (e não apenas citado num comentário do workflow).
+const frontendGatesRunLines = new Set();
+if (frontendGatesJob) {
+    const steps = Array.isArray(frontendGatesJob.steps) ? frontendGatesJob.steps : [];
+    for (const step of steps) {
+        if (typeof step?.run === 'string') {
+            for (const line of step.run.split('\n')) {
+                const trimmed = line.trim();
+                if (trimmed) frontendGatesRunLines.add(trimmed);
+            }
+        }
+    }
+}
+const isRunCommandFragment = (fragment) => fragment.startsWith('npm run ') || fragment.startsWith('npx ');
+
 const packageJson = JSON.parse(read(packagePath));
 const currentVersion = packageJson.logosoftVersion;
 const scripts = packageJson.scripts ?? {};
@@ -55,8 +119,13 @@ if (typeof currentVersion !== 'string' || currentVersion.length === 0) {
         }
     }
 
-    if (existsSync(join(root, workflowPath))) {
-        requireSingleMatch(workflowPath, new RegExp(`^\\s+NEXT_PUBLIC_APP_VERSION:\\s*${escapeRegExp(currentVersion)}\\s*$`, 'gm'), `deve haver uma única declaração ativa de NEXT_PUBLIC_APP_VERSION: ${currentVersion}`);
+    if (frontendGatesJob) {
+        const workflowVersion = frontendGatesJob.env?.NEXT_PUBLIC_APP_VERSION;
+        if (workflowVersion !== currentVersion) {
+            failures.push(`${workflowPath}: jobs.${FRONTEND_GATES_JOB}.env.NEXT_PUBLIC_APP_VERSION deve ser '${currentVersion}' (encontrado: ${JSON.stringify(workflowVersion ?? null)}) — ajuste a chave no bloco env do job`);
+        }
+    } else if (existsSync(join(root, workflowPath)) && workflowDoc) {
+        failures.push(`${workflowPath}: não foi possível localizar jobs.${FRONTEND_GATES_JOB}.env.NEXT_PUBLIC_APP_VERSION para validar a versão`);
     }
 
     for (const jsonPath of ['scripts/backend-contract-map.allowlist.json', 'scripts/backend-permissions.snapshot.json', 'tests/evidence/integrated-e2e.assisted-evidence.example.json']) {
@@ -186,7 +255,21 @@ if (existsSync(join(root, workflowPath))) {
     ];
 
     for (const fragment of requiredWorkflowFragments) {
-        requireIncludes(workflowPath, fragment, `workflow deve conter ${fragment}`);
+        if (isRunCommandFragment(fragment)) {
+            // Fragmentos de comando precisam ser o valor real de um step
+            // run: do job frontend-gates — não basta aparecer em qualquer
+            // lugar do arquivo (ex.: dentro de um comentário).
+            if (frontendGatesJob) {
+                if (!frontendGatesRunLines.has(fragment)) {
+                    failures.push(`${workflowPath}: jobs.${FRONTEND_GATES_JOB} deve ter um step cujo run seja (ou contenha na própria linha) '${fragment}' — adicione o step ou corrija o step existente`);
+                }
+            } else if (workflowDoc) {
+                failures.push(`${workflowPath}: jobs.${FRONTEND_GATES_JOB}.steps ausente ou inválido — não foi possível validar o comando '${fragment}'`);
+            }
+            // Se o YAML não parseou, a falha já foi registrada acima; evita duplicar.
+        } else {
+            requireIncludes(workflowPath, fragment, `workflow deve conter ${fragment}`);
+        }
     }
 
     const workflow = read(workflowPath);
