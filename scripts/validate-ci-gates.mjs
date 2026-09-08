@@ -233,7 +233,6 @@ if (existsSync(join(root, workflowPath))) {
         'actions/checkout@v4',
         'actions/setup-node@v4',
         'node-version-file: .node-version',
-        'cache: npm',
         'npm install',
         'npm run validate:source',
         'npm run validate:mocks-isolation',
