@@ -1,7 +1,7 @@
 {
     "name": "logosoft-frontend",
-    "version": "1.11.0-a.8.b47.c3",
-    "logosoftVersion": "1.11.0a8b47.c3",
+    "version": "1.11.0-a.8.b48",
+    "logosoftVersion": "1.11.0a8b48",
     "private": true,
     "scripts": {
         "dev": "next dev",
@@ -25,7 +25,7 @@
         "test:e2e:fiscal:backend": "playwright test --config=playwright.backend-e2e.config.ts",
         "validate:fiscal:production": "node scripts/validate-fiscal-production.mjs",
         "validate:guid-references": "node scripts/validate-guid-references.mjs",
-        "ci:gates": "npm run validate:source && npm run validate:skills && npm run validate:mocks-isolation && npm run validate:backend-controlled && npm run validate:controlled-seeds && npm run validate:integrated-runbook && npm run validate:backend-seed-reset && npm run validate:assisted-e2e && npm run validate:integrated-e2e && npm run validate:operational-contracts && npm run validate:backend-contract-map && npm run validate:guid-references && npm run validate:fiscal:production && npm run typecheck && npm run lint && npm run test:unit && npm run build && npx playwright install chromium && npm run test:e2e:fiscal && npm run test:contract:fiscal && npm run test:contract:operational && npm run test:e2e:fiscal:backend",
+        "ci:gates": "npm run validate:source && npm run validate:skills && npm run validate:mocks-isolation && npm run validate:backend-controlled && npm run validate:controlled-seeds && npm run validate:integrated-runbook && npm run validate:backend-seed-reset && npm run validate:assisted-e2e && npm run validate:integrated-e2e && npm run validate:operational-contracts && npm run validate:backend-contract-map && npm run validate:backend-permissions && npm run validate:guid-references && npm run validate:fiscal:production && npm run typecheck && npm run lint && npm run test:unit && npm run build && npx playwright install chromium && npm run test:e2e:fiscal && npm run test:contract:fiscal && npm run test:contract:operational && npm run test:e2e:fiscal:backend",
         "validate:skills": "node scripts/validate-skills.mjs",
         "validate:mocks-isolation": "node scripts/validate-mocks-isolation.mjs",
         "validate:backend-controlled": "node scripts/validate-backend-controlled.mjs",
@@ -40,7 +40,10 @@
         "validate:assisted-e2e": "node scripts/validate-assisted-e2e.mjs",
         "report:e2e:integrated:assisted": "node scripts/create-integrated-e2e-assisted-report.mjs",
         "validate:backend-contract-map": "node scripts/validate-backend-contract-map.mjs",
-        "report:backend-contract-map": "node scripts/validate-backend-contract-map.mjs --report"
+        "report:backend-contract-map": "node scripts/validate-backend-contract-map.mjs --report",
+        "validate:backend-permissions": "node scripts/validate-backend-permissions.mjs",
+        "report:backend-permissions": "node scripts/validate-backend-permissions.mjs --report",
+        "generate:backend-permissions-snapshot": "node scripts/generate-backend-permissions-snapshot.mjs"
     },
     "dependencies": {
         "@hookform/resolvers": "^3.9.0",
@@ -63,6 +66,7 @@
         "@testing-library/jest-dom": "^6.6.3",
         "@testing-library/react": "^16.0.1",
         "@testing-library/user-event": "^14.5.2",
+        "@types/js-yaml": "^4.0.9",
         "@types/node": "^24.0.0",
         "@types/react": "18.2.12",
         "@types/react-dom": "18.2.5",

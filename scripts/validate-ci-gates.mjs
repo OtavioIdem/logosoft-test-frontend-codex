@@ -12,6 +12,7 @@ const currentVersionFiles = [
     '.env.backend-controlled.example',
     'scripts/backend-contract-map.allowlist.json',
     'scripts/backend-permissions.snapshot.json',
+    'scripts/backend-permissions.allowlist.json',
     'tests/evidence/integrated-e2e.assisted-evidence.example.json',
     'README.md',
     'CHANGELOG.md'
@@ -128,7 +129,7 @@ if (typeof currentVersion !== 'string' || currentVersion.length === 0) {
         failures.push(`${workflowPath}: não foi possível localizar jobs.${FRONTEND_GATES_JOB}.env.NEXT_PUBLIC_APP_VERSION para validar a versão`);
     }
 
-    for (const jsonPath of ['scripts/backend-contract-map.allowlist.json', 'scripts/backend-permissions.snapshot.json', 'tests/evidence/integrated-e2e.assisted-evidence.example.json']) {
+    for (const jsonPath of ['scripts/backend-contract-map.allowlist.json', 'scripts/backend-permissions.snapshot.json', 'scripts/backend-permissions.allowlist.json', 'tests/evidence/integrated-e2e.assisted-evidence.example.json']) {
         if (!existsSync(join(root, jsonPath))) continue;
         const artifact = readJson(jsonPath);
         if (artifact && artifact.version !== currentVersion) {
@@ -156,6 +157,8 @@ const requiredPackageScripts = [
     'validate:integrated-e2e',
     'validate:operational-contracts',
     'validate:backend-contract-map',
+    'validate:backend-permissions',
+    'report:backend-permissions',
     'typecheck',
     'lint',
     'test:unit',
@@ -186,6 +189,7 @@ const requiredCiGatesFragments = [
     'npm run validate:integrated-e2e',
     'npm run validate:operational-contracts',
     'npm run validate:backend-contract-map',
+    'npm run validate:backend-permissions',
     'npm run validate:guid-references',
     'npm run validate:fiscal:production',
     'npm run typecheck',
@@ -241,6 +245,7 @@ if (existsSync(join(root, workflowPath))) {
     'npm run validate:integrated-e2e',
     'npm run validate:operational-contracts',
     'npm run validate:backend-contract-map',
+    'npm run validate:backend-permissions',
         'npm run validate:guid-references',
         'npm run validate:fiscal:production',
         'npm run typecheck',

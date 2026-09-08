@@ -1,3 +1,32 @@
+# v1.11.0a8b48
+
+## Gate de permissões frontend/backend
+
+- Novo `scripts/lib/backend-permissions.mjs`, extração compartilhada (mesmo padrão de `scripts/lib/backend-contract-map.mjs`): parseia o union `PermissionCode` de `types/erp.ts`, o catálogo `PERMISSOES_CATALOGO` de `features/seguranca/permissoesCatalogo.ts`, as permissões anexadas a cada uma das 579 operações de `docs/backend-v1.23/CONTRATO-API-v1.23.md` e a tabela `Constante C# → Código` da seção "12. Catálogo de permissões" de `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md`.
+- Novo `scripts/generate-backend-permissions-snapshot.mjs` (script `generate:backend-permissions-snapshot`) regenera `scripts/backend-permissions.snapshot.json` como a união nomeada das duas fontes documentais — schemaVersion 2, 179 códigos (177 nomeados + `MASTER_GOD` + `*`), `permissions` ordenado alfabeticamente. `generatedAt` é derivado de `sourceDate` (não do relógio), então a geração é idempotente por construção. O script nunca entra em `ci:gates`.
+- Registradas no snapshot: as permissões novas do contrato v1.23 sem representação prévia (`FISCAL_REPROCESSAR`, `FATURAMENTO_RETOMAR_REVERSAO` — pré-requisitos de F2.5 e F2.1), as permissões do catálogo §12 sem nenhuma operação em v1.23 (`SEGURANCA_SESSOES_GERENCIAR`, `FINANCEIRO_CAIXA_GERENCIAR`, `FINANCEIRO_BANCO_GERENCIAR`, `POLITICA_COMERCIAL_GERENCIAR`, `VENDAS_PRECO_MINIMO_SOBRESCREVER`, mantidas por não haver como provar remoção) e 1 permissão declarada pelo backend (178 no total) que não aparece em nenhuma das duas fontes — `naoConciliado`, não inventada.
+- Novo `scripts/validate-backend-permissions.mjs` (scripts `validate:backend-permissions` e `report:backend-permissions --report`), ligado a `ci:gates`, `validate:source` e ao workflow de CI logo após o gate de mapa de rotas. Compara o union `PermissionCode` contra o snapshot nas duas direções: permissão **fantasma** (no union, fora do snapshot — guard impossível de satisfazer) e **cobertura pendente** (no snapshot, fora do union — permissão do backend sem representação no frontend). Hoje: 3 fantasmas (`ATIVIDADES_GERENCIAR`, `RELATORIOS_CONSULTAR`, `PORTARIA_PRE_AUTORIZAR`) e 36 pendências.
+- Nova `scripts/backend-permissions.allowlist.json`: registro **fechado e monotônico** (não uma supressão) — `suppressions` sempre `[]`, `teto` trava o número de itens hoje, cada entrada exige `usos`/`backendOperacoes` reais e um alvo de onda (`F1.2` para cobertura pendente, `F1.3` para fantasma), e entrada que deixar de corresponder a uma divergência observada reprova o gate (anti-apodrecimento). Diferente do gate de rotas (`backend-contract-map.allowlist.json`, tolerância zero), este nasce vermelho porque já existe dívida medida; a allowlist documenta essa dívida sem escondê-la.
+- Corrigida a indentação de `frontend-ci.yml:31` (bloco `env` do job `frontend-gates`) e reescrito `scripts/validate-ci-gates.mjs` para carregar o workflow com `js-yaml` (parse real, leitura estrutural de `jobs['frontend-gates'].env`, listas fechadas `allowedWorkflowJobs`/`allowedFrontendGatesEnvKeys`), em vez de checagens por regex/`includes` sobre o texto cru do YAML.
+
+## Pendências registradas nesta versão
+
+- `tests/unit/backendContractMap.test.ts:25-26` ainda afirma `permissionsSnapshot.count === 177` (schemaVersion 1); fica vermelho até o teste ser atualizado para o schemaVersion 2 (179).
+- `npm run ci:gates` continua com a dívida herdada de `test:e2e:fiscal` (`tests/e2e/fiscal.spec.ts:27`, timeout no heading "Nota fiscal 1/900001"), fora do escopo desta versão.
+- `SEGURANCA_SESSOES_GERENCIAR` está no union e no snapshot (via catálogo §12) mas sem nenhuma operação no contrato v1.23 — não é divergência hoje, mas é candidata a virar um 4º fantasma se o catálogo §12 for podado sem uma operação v1.23 equivalente.
+
+## Validação executada
+
+```bash
+npm run generate:backend-permissions-snapshot
+npm run validate:backend-permissions
+npm run report:backend-permissions
+npm run validate:ci
+npm run validate:source
+npm run typecheck
+npm run lint
+```
+
 # v1.11.0a8b47.c3
 
 ## Contexto organizacional acessível
