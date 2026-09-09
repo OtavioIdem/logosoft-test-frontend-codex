@@ -101,8 +101,8 @@ export const AtividadesPage = () => {
     const usuarioLabelMap = useMemo(() => new Map(usuarios.map((usuario) => [usuario.id, `${usuario.nome} • ${usuario.email}`])), [usuarios]);
     const detalhe = detalheQuery.data ?? selected;
 
-    if (!hasAnyPermission(['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'])) {
-        return <UnauthorizedState description="A rotina Atividades exige ATIVIDADES_CONSULTAR ou ATIVIDADES_GERENCIAR." />;
+    if (!hasAnyPermission(['ATIVIDADES_CONSULTAR', 'ATIVIDADES_CRIAR', 'ATIVIDADES_ATUALIZAR', 'ATIVIDADES_CANCELAR', 'ATIVIDADES_COMENTAR', 'ATIVIDADES_ATRIBUIR'])) {
+        return <UnauthorizedState description="A rotina Atividades exige ATIVIDADES_CONSULTAR ou uma das permissões granulares (criar, atualizar, cancelar, comentar, atribuir)." />;
     }
 
     const updateFilter = (name: keyof AtividadesListQuery, value: string | number | null) => {
@@ -168,7 +168,7 @@ export const AtividadesPage = () => {
     const headerActions = (
         <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             <SearchInput ariaLabel="Buscar atividade" defaultValue={search} onChange={(term) => { setSearch(term); setFirst(0); }} />
-            <PermissionGuard permission="ATIVIDADES_GERENCIAR" mode="disable">
+            <PermissionGuard permission="ATIVIDADES_CRIAR" mode="disable">
                 {({ disabled }) => <Button label="Nova atividade" icon="pi pi-plus" disabled={disabled} onClick={() => { setSelected(null); setFormVisible(true); }} />}
             </PermissionGuard>
         </div>
@@ -199,11 +199,11 @@ export const AtividadesPage = () => {
                             <Column header="Origem" body={(row: AtividadeResponse) => row.entidadeOrigem ? `${row.entidadeOrigem}${row.entidadeOrigemId ? ' • vínculo técnico' : ''}` : '-'} />
                             <Column header="Ações" alignHeader="right" body={(row: AtividadeResponse) => <DataTableActions actions={[
                                 { key: 'detalhe', label: 'Detalhe', icon: 'pi pi-eye', permission: 'ATIVIDADES_CONSULTAR', onClick: () => setSelected(row) },
-                                { key: 'editar', label: 'Editar', icon: 'pi pi-pencil', permission: 'ATIVIDADES_GERENCIAR', disabled: !canOperate(row), onClick: () => { setSelected(row); setFormVisible(true); } },
-                                { key: 'atribuir', label: 'Atribuir', icon: 'pi pi-user-edit', permission: 'ATIVIDADES_GERENCIAR', disabled: !canOperate(row), onClick: () => { setSelected(row); setAction('atribuir'); } },
-                                { key: 'status', label: 'Status', icon: 'pi pi-sync', permission: 'ATIVIDADES_GERENCIAR', disabled: !canOperate(row), onClick: () => { setSelected(row); setAction('status'); } },
-                                { key: 'comentario', label: 'Comentar', icon: 'pi pi-comment', permission: 'ATIVIDADES_GERENCIAR', disabled: getStatus(row) === 'Cancelada', onClick: () => { setSelected(row); setAction('comentario'); } },
-                                { key: 'cancelar', label: 'Cancelar', icon: 'pi pi-ban', permission: 'ATIVIDADES_GERENCIAR', severity: 'danger', disabled: !canOperate(row), onClick: () => { setSelected(row); setAction('cancelar'); } }
+                                { key: 'editar', label: 'Editar', icon: 'pi pi-pencil', permission: 'ATIVIDADES_ATUALIZAR', disabled: !canOperate(row), onClick: () => { setSelected(row); setFormVisible(true); } },
+                                { key: 'atribuir', label: 'Atribuir', icon: 'pi pi-user-edit', permission: 'ATIVIDADES_ATRIBUIR', disabled: !canOperate(row), onClick: () => { setSelected(row); setAction('atribuir'); } },
+                                { key: 'status', label: 'Status', icon: 'pi pi-sync', permission: 'ATIVIDADES_ATUALIZAR', disabled: !canOperate(row), onClick: () => { setSelected(row); setAction('status'); } },
+                                { key: 'comentario', label: 'Comentar', icon: 'pi pi-comment', permission: 'ATIVIDADES_COMENTAR', disabled: getStatus(row) === 'Cancelada', onClick: () => { setSelected(row); setAction('comentario'); } },
+                                { key: 'cancelar', label: 'Cancelar', icon: 'pi pi-ban', permission: 'ATIVIDADES_CANCELAR', severity: 'danger', disabled: !canOperate(row), onClick: () => { setSelected(row); setAction('cancelar'); } }
                             ]} />} />
                         </DataTableServer>
                         {!atividadesQuery.isLoading && totalRecords === 0 ? <EmptyState title="Nenhuma atividade" description="Crie uma atividade ou ajuste os filtros." /> : null}

@@ -1,4 +1,36 @@
-# logosoft Frontend v1.11.0a8b49
+# logosoft Frontend v1.11.0a8b50
+
+## v1.11.0a8b50 — União e catálogo de permissões fechados (F1.2, F1.3)
+
+Onda F1 (parte 2) do plano `docs/backend-v1.23/PLANO-FRONTEND-v1.23.md`: fecha os 3 fantasmas e
+as 36 coberturas pendentes que o gate `validate:backend-permissions` registrou em b48/b49.
+`types/erp.ts` e `features/seguranca/permissoesCatalogo.ts` ganham as 36 permissões que o
+backend já concede e que o frontend não nomeava (Atividades granular, Segurança/Grupos de
+acesso, Parâmetros, Infraestrutura, Integrações, Fiscal séries/modelos/cadastros/reprocessar,
+Transportadoras, Financeiro caixa/banco, Tabelas de preço ativar/inativar/itens, Política
+comercial, Preço mínimo, Faturamento retomar reversão, Pessoas bloquear/dados fiscais,
+Classificações de pessoa, Auditoria operacional). `ATIVIDADES_GERENCIAR` e
+`RELATORIOS_CONSULTAR` são removidos (nunca existiram no backend); `PORTARIA_PRE_AUTORIZAR`
+é corrigido para `PORTARIA_PREAUTORIZAR` (grafia real da constante C#
+`PortariaPreAutorizar`). Todos os consumidores de produção (`lib/security/routePermissions.ts`,
+`layout/AppMenu.tsx`, `features/atividades/components/AtividadesPage.tsx`,
+`features/portaria/components/{PortariaPage,PreAutorizacoesTab}.tsx`,
+`features/seguranca/components/GruposAcessoPage.tsx`) passam a usar os códigos corretos —
+Atividades ganha guard e ações por permissão granular (criar/atualizar/cancelar/comentar/
+atribuir) em vez de um `ATIVIDADES_GERENCIAR` que o backend nunca concede; Grupos de acesso
+passa a exigir `SEGURANCA_GRUPOS_ACESSO_CONSULTAR`/`GERENCIAR` em vez do rótulo mentiroso de
+`SEGURANCA_PERMISSOES_GERENCIAR` (que guarda Cargos de acesso, não Grupos de acesso). Mudança de
+acesso visível: quem tinha só `SEGURANCA_PERMISSOES_GERENCIAR` perde a tela de Grupos de acesso;
+quem tem `SEGURANCA_GRUPOS_ACESSO_CONSULTAR`/`GERENCIAR` passa a vê-la. `scripts/backend-permissions.allowlist.json`
+zera `fantasmasConhecidos`/`coberturaPendente` (teto 0/0) — o registro de b48/b49 se fecha
+integralmente nesta versão. `tests/mocks/auth/mockAuthClient.ts` e `tests/e2e/fixtures/logosoft.ts`
+acompanham os códigos novos para não quebrar o typecheck nem os fixtures E2E. Reescrita dos
+testes que a mudança torna vermelhos (`tests/unit/backendPermissions.test.ts`,
+`routePermissions.test.ts`, `portariaStructure.test.ts`, `atividadesB43Structure.test.ts`,
+`segurancaB39Structure.test.ts`) e o teste novo `permissoesUnionCatalogo.test.ts` ficam para a
+próxima entrega. **Ambiguidade registrada, não resolvida**: o contrato declara 178 permissões
+nomeadas; a união medida das duas fontes documentais dá 177 — uma permissão do backend segue
+sem nome em nenhuma fonte (`naoConciliado.quantidade: 1` no snapshot), não inventada aqui.
 
 ## v1.11.0a8b49 — Contrato monetário do Financeiro e origem morta em Contas a Pagar (F1.1, F1.5)
 

@@ -51,10 +51,10 @@ const AppMenu = () => {
             },
             {
                 label: 'Segurança',
-                anyPermissions: ['SEGURANCA_USUARIOS_CONSULTAR', 'SEGURANCA_USUARIOS_GERENCIAR', 'SEGURANCA_PERMISSOES_GERENCIAR'],
+                anyPermissions: ['SEGURANCA_USUARIOS_CONSULTAR', 'SEGURANCA_USUARIOS_GERENCIAR', 'SEGURANCA_PERMISSOES_GERENCIAR', 'SEGURANCA_GRUPOS_ACESSO_CONSULTAR', 'SEGURANCA_GRUPOS_ACESSO_GERENCIAR'],
                 items: [
                     { label: 'Usuários', icon: 'pi pi-fw pi-users', to: '/seguranca/usuarios', anyPermissions: ['SEGURANCA_USUARIOS_CONSULTAR', 'SEGURANCA_USUARIOS_GERENCIAR'] },
-                    { label: 'Grupos de acesso', icon: 'pi pi-fw pi-shield', to: '/seguranca/grupos-acesso', permission: 'SEGURANCA_PERMISSOES_GERENCIAR' }
+                    { label: 'Grupos de acesso', icon: 'pi pi-fw pi-shield', to: '/seguranca/grupos-acesso', anyPermissions: ['SEGURANCA_GRUPOS_ACESSO_CONSULTAR', 'SEGURANCA_GRUPOS_ACESSO_GERENCIAR'] }
                 ]
             },
             {
@@ -170,8 +170,8 @@ const AppMenu = () => {
             },
             {
                 label: 'Portaria',
-                anyPermissions: ['PORTARIA_CONSULTAR', 'PORTARIA_PRE_AUTORIZAR', 'PORTARIA_OPERAR'],
-                items: [{ label: 'Controle de acesso', icon: 'pi pi-fw pi-id-card', to: '/portaria', anyPermissions: ['PORTARIA_CONSULTAR', 'PORTARIA_PRE_AUTORIZAR', 'PORTARIA_OPERAR'] }]
+                anyPermissions: ['PORTARIA_CONSULTAR', 'PORTARIA_PREAUTORIZAR', 'PORTARIA_OPERAR'],
+                items: [{ label: 'Controle de acesso', icon: 'pi pi-fw pi-id-card', to: '/portaria', anyPermissions: ['PORTARIA_CONSULTAR', 'PORTARIA_PREAUTORIZAR', 'PORTARIA_OPERAR'] }]
             },
             {
                 label: 'Alimentar',
@@ -225,8 +225,8 @@ const AppMenu = () => {
             },
             {
                 label: 'Atividades',
-                anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'],
-                items: [{ label: 'Workflow operacional', icon: 'pi pi-fw pi-check-square', to: '/atividades', anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'] }]
+                anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_CRIAR', 'ATIVIDADES_ATUALIZAR', 'ATIVIDADES_CANCELAR', 'ATIVIDADES_COMENTAR', 'ATIVIDADES_ATRIBUIR'],
+                items: [{ label: 'Workflow operacional', icon: 'pi pi-fw pi-check-square', to: '/atividades', anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_CRIAR', 'ATIVIDADES_ATUALIZAR', 'ATIVIDADES_CANCELAR', 'ATIVIDADES_COMENTAR', 'ATIVIDADES_ATRIBUIR'] }]
             },
             {
                 label: 'Contábil',

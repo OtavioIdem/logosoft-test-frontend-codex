@@ -23,7 +23,7 @@ import { mapApiError } from '@/lib/http/apiError';
 
 export const GruposAcessoPage = () => {
     const runWithToast = useMutationWithToast();
-    const { hasPermission } = usePermissions();
+    const { hasAnyPermission } = usePermissions();
     const gruposQuery = useGruposAcessoSeguranca();
     const criarGrupo = useCriarGrupoAcessoSeguranca();
     const atualizarGrupo = useAtualizarGrupoAcessoSeguranca();
@@ -40,8 +40,8 @@ export const GruposAcessoPage = () => {
         return grupos.filter((grupo) => `${grupo.nome} ${grupo.descricao ?? ''} ${(grupo.permissoes ?? []).join(' ')}`.toLowerCase().includes(term));
     }, [grupos, search]);
 
-    if (!hasPermission('SEGURANCA_PERMISSOES_GERENCIAR')) {
-        return <UnauthorizedState description="A rotina Grupos de acesso exige a permissão SEGURANCA_PERMISSOES_GERENCIAR." />;
+    if (!hasAnyPermission(['SEGURANCA_GRUPOS_ACESSO_CONSULTAR', 'SEGURANCA_GRUPOS_ACESSO_GERENCIAR'])) {
+        return <UnauthorizedState description="A rotina Grupos de acesso exige a permissão SEGURANCA_GRUPOS_ACESSO_CONSULTAR ou SEGURANCA_GRUPOS_ACESSO_GERENCIAR." />;
     }
 
     const submitGrupo = async (values: GrupoAcessoFormValues) => {
@@ -75,7 +75,7 @@ export const GruposAcessoPage = () => {
     const headerActions = (
         <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             <span className="p-input-icon-left"><i className="pi pi-search" /><InputText placeholder="Buscar grupo" value={search} onChange={(event) => setSearch(event.target.value)} /></span>
-            <PermissionGuard permission="SEGURANCA_PERMISSOES_GERENCIAR" mode="disable">
+            <PermissionGuard permission="SEGURANCA_GRUPOS_ACESSO_GERENCIAR" mode="disable">
                 {({ disabled }) => <Button label="Novo grupo" icon="pi pi-shield" onClick={() => { setSelectedGrupo(null); setFormVisible(true); }} disabled={disabled} />}
             </PermissionGuard>
         </div>
@@ -98,8 +98,8 @@ export const GruposAcessoPage = () => {
                         body={(grupo: GrupoAcessoResponse) => (
                             <DataTableActions
                                 actions={[
-                                    { key: 'editar', label: 'Editar', icon: 'pi pi-pencil', permission: 'SEGURANCA_PERMISSOES_GERENCIAR', onClick: () => { setSelectedGrupo(grupo); setFormVisible(true); } },
-                                    { key: 'inativar', label: 'Inativar', icon: 'pi pi-ban', permission: 'SEGURANCA_PERMISSOES_GERENCIAR', severity: 'danger', disabled: !grupo.ativo, onClick: () => { setSelectedGrupo(grupo); setReasonVisible(true); } }
+                                    { key: 'editar', label: 'Editar', icon: 'pi pi-pencil', permission: 'SEGURANCA_GRUPOS_ACESSO_GERENCIAR', onClick: () => { setSelectedGrupo(grupo); setFormVisible(true); } },
+                                    { key: 'inativar', label: 'Inativar', icon: 'pi pi-ban', permission: 'SEGURANCA_GRUPOS_ACESSO_GERENCIAR', severity: 'danger', disabled: !grupo.ativo, onClick: () => { setSelectedGrupo(grupo); setReasonVisible(true); } }
                                 ]}
                             />
                         )}

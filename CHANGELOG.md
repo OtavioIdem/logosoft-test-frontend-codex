@@ -1,3 +1,95 @@
+# v1.11.0a8b50
+
+## União e catálogo de permissões fechados (F1.2, F1.3)
+
+Onda F1 (parte 2) de `docs/backend-v1.23/PLANO-FRONTEND-v1.23.md` §5. Fecha o registro auditável
+aberto em b48/b49 (`scripts/backend-permissions.allowlist.json`): 3 permissões fantasma e 36
+coberturas pendentes.
+
+- `types/erp.ts` (union `PermissionCode`): removidas `ATIVIDADES_GERENCIAR`,
+  `RELATORIOS_CONSULTAR` (nunca existiram no backend) e `PORTARIA_PRE_AUTORIZAR` (grafia
+  incorreta). Acrescentadas as 36 permissões que `npm run report:backend-permissions` listava em
+  `coberturaPendente`, agrupadas junto do módulo vizinho já existente no union: 5 granulares de
+  Atividades (`CRIAR`/`ATUALIZAR`/`CANCELAR`/`COMENTAR`/`ATRIBUIR`), `AUDITORIA_OPERACIONAL_CONSULTAR`,
+  `INFRAESTRUTURA_CONSULTAR`/`BACKUP_CONSULTAR`, `SEGURANCA_USUARIOS_INATIVAR`/`RESETAR_SENHA`,
+  `SEGURANCA_GRUPOS_ACESSO_CONSULTAR`/`GERENCIAR`, `SEGURANCA_PARAMETROS_CONSULTAR`/`GERENCIAR`,
+  `PESSOAS_BLOQUEAR`, `PESSOAS_DADOS_FISCAIS_GERENCIAR`, `CLASSIFICACOES_PESSOA_GERENCIAR`,
+  `TRANSPORTADORAS_CONSULTAR`/`GERENCIAR`, `TABELAS_PRECO_ATIVAR`/`INATIVAR`/`ITENS_GERENCIAR`,
+  `POLITICA_COMERCIAL_GERENCIAR`, `VENDAS_PRECO_MINIMO_SOBRESCREVER`,
+  `FINANCEIRO_CAIXA_GERENCIAR`/`BANCO_GERENCIAR`, `FISCAL_REPROCESSAR`,
+  `FISCAL_CADASTROS_GERENCIAR`, `FISCAL_SERIES_CONSULTAR`/`GERENCIAR`, `FISCAL_MODELOS_CONSULTAR`,
+  `INTEGRACOES_CONSULTAR`/`GERENCIAR`/`REPROCESSAR`, `FATURAMENTO_RETOMAR_REVERSAO` e
+  `PORTARIA_PREAUTORIZAR` (substitui a grafia incorreta na mesma posição). Union: 144 → 177.
+- `features/seguranca/permissoesCatalogo.ts`: catálogo `Record<PermissionCode, …>` acompanha o
+  union — mesmas 3 remoções, mesmas 36 adições, com `{ grupo, label }`. Corrigido também o rótulo
+  mentiroso de `SEGURANCA_PERMISSOES_GERENCIAR` (`"Grupos de acesso · Gerenciar"` →
+  `"Cargos de acesso · Gerenciar"`): essa permissão guarda Cargos de acesso, não Grupos de acesso
+  — origem documental do P2 do plano. Catálogo: 144 → 177.
+- `lib/security/routePermissions.ts`: `/seguranca/grupos-acesso` passa a exigir
+  `anyOf: ['SEGURANCA_GRUPOS_ACESSO_CONSULTAR', 'SEGURANCA_GRUPOS_ACESSO_GERENCIAR']` em vez de
+  `SEGURANCA_PERMISSOES_GERENCIAR`; `/portaria` corrige a grafia para `PORTARIA_PREAUTORIZAR`;
+  `/atividades` troca `ATIVIDADES_GERENCIAR` pelas cinco permissões granulares.
+- `layout/AppMenu.tsx`: item de menu "Grupos de acesso" passa a exigir
+  `SEGURANCA_GRUPOS_ACESSO_CONSULTAR`/`GERENCIAR` (mantido `SEGURANCA_PERMISSOES_GERENCIAR` no
+  `anyPermissions` do grupo pai "Segurança", que também cobre outros itens do menu); "Portaria" e
+  "Atividades" acompanham a grafia/granularidade corrigidas em `routePermissions.ts`.
+- `features/seguranca/components/GruposAcessoPage.tsx`: guard de página passa a
+  `hasAnyPermission(['SEGURANCA_GRUPOS_ACESSO_CONSULTAR', 'SEGURANCA_GRUPOS_ACESSO_GERENCIAR'])`
+  com texto de `UnauthorizedState` atualizado; "Novo grupo", "Editar" e "Inativar" passam a exigir
+  `SEGURANCA_GRUPOS_ACESSO_GERENCIAR`. **Mudança de acesso visível**: quem tem
+  `SEGURANCA_GRUPOS_ACESSO_*` mas não `SEGURANCA_PERMISSOES_GERENCIAR` passa a ver a tela; quem só
+  tinha `SEGURANCA_PERMISSOES_GERENCIAR` perde a tela — é a correção do P2, não uma regressão.
+- `features/portaria/components/PortariaPage.tsx` e `PreAutorizacoesTab.tsx`: guard de página,
+  item "Nova pré-autorização" e ação "Cancelar" trocam `PORTARIA_PRE_AUTORIZAR` por
+  `PORTARIA_PREAUTORIZAR` (grafia real da constante C# `PortariaPreAutorizar`, catálogo §12 e
+  `POST /api/portaria/pre-autorizacoes`).
+- `features/atividades/components/AtividadesPage.tsx`: guard de página exige
+  `['ATIVIDADES_CONSULTAR', 'ATIVIDADES_CRIAR', 'ATIVIDADES_ATUALIZAR', 'ATIVIDADES_CANCELAR',
+  'ATIVIDADES_COMENTAR', 'ATIVIDADES_ATRIBUIR']`; "Nova atividade" exige `ATIVIDADES_CRIAR`;
+  ações da tabela mapeadas por operação real do backend: "Editar"/"Status" →
+  `ATIVIDADES_ATUALIZAR` (`PUT /api/atividades/{id}` e `POST /api/atividades/{id}/status`
+  atualizam o mesmo agregado), "Atribuir" → `ATIVIDADES_ATRIBUIR`, "Comentar" →
+  `ATIVIDADES_COMENTAR`, "Cancelar" → `ATIVIDADES_CANCELAR`. "Detalhe" continua exigindo só
+  `ATIVIDADES_CONSULTAR` (é leitura).
+- `scripts/backend-permissions.allowlist.json`: `fantasmasConhecidos` e `coberturaPendente`
+  esvaziados; `teto` passa de `{ fantasmas: 3, coberturaPendente: 36 }` para `{ fantasmas: 0,
+  coberturaPendente: 0 }` — tolerância zero a partir de agora; `version` → `1.11.0a8b50`.
+- `scripts/backend-permissions.snapshot.json`: regenerado via
+  `npm run generate:backend-permissions-snapshot` com `version: 1.11.0a8b50` (conteúdo nomeado
+  inalterado — só a versão do artefato muda).
+- `tests/mocks/auth/mockAuthClient.ts` e `tests/e2e/fixtures/logosoft.ts`: `mockPermissions` /
+  `ADMIN_PERMISSIONS` trocam `ATIVIDADES_GERENCIAR` pelas cinco granulares, removem
+  `RELATORIOS_CONSULTAR` e acrescentam `SEGURANCA_GRUPOS_ACESSO_CONSULTAR`/`GERENCIAR`;
+  `CONSULTA_PERMISSIONS` apenas perde `RELATORIOS_CONSULTAR`. Sem esse ajuste o typecheck não
+  fecha (os mocks são tipados por `PermissionCode`) e os fixtures E2E concederiam uma string morta.
+- `docs/CI_GATES_FRONTEND.md` §8: os números "3 e 36" e a frase "o gate de permissões nasce
+  vermelho por desenho" (verdadeiros em b48/b49) passam a descrever o estado fechado: nasceu
+  vermelho em b48 com 3 fantasmas + 36 coberturas pendentes; zerado nesta versão (F1.2/F1.3); o
+  teto `0/0` é agora tolerância zero.
+- Ritual de versão (`package.json`, `config/app.ts`, `.env.example`, `.env.test`,
+  `.env.backend-controlled.example`, `.github/workflows/frontend-ci.yml`, `README.md`,
+  `scripts/backend-contract-map.allowlist.json`,
+  `tests/evidence/integrated-e2e.assisted-evidence.example.json`) atualizado para
+  `1.11.0a8b50`.
+- **Testes que ficam vermelhos por desenho ao fim desta versão** (reescrita é do
+  `engenheiro-testes`, não desta entrega): `tests/unit/backendPermissions.test.ts` (contadores de
+  fantasma/cobertura pendente e os `toContain` das 3 strings fantasma),
+  `tests/unit/routePermissions.test.ts` (`ATIVIDADES_GERENCIAR`), `tests/unit/portariaStructure.test.ts`
+  e `tests/unit/atividadesB43Structure.test.ts` (grafia/granularidade),
+  `tests/unit/segurancaB39Structure.test.ts` (`SEGURANCA_PERMISSOES_GERENCIAR` →
+  `SEGURANCA_GRUPOS_ACESSO_GERENCIAR`). Teste novo pendente:
+  `tests/unit/permissoesUnionCatalogo.test.ts`.
+- **Fora do escopo desta versão** (nominalmente, ver plano): `features/tabelas-preco/`,
+  `features/seguranca/components/SegurancaActionDialogs.tsx`, `features/auditoria/` (guards com
+  permissão existente porém errada — F1.6); `features/fiscal/` (`FISCAL_REPROCESSAR` sem guard —
+  F2.5); `features/faturamento/` (`FATURAMENTO_RETOMAR_REVERSAO` sem consumidor — F2.1);
+  `features/shared/config/erpFeatureCatalog.ts` (F5.6); `scripts/validate-backend-permissions.mjs`
+  e `scripts/lib/backend-permissions.mjs` (o script não muda, só os dados da allowlist);
+  `lib/formatters/money.ts` e o restante de F1.4 (versão b51).
+- **Ambiguidade registrada, não resolvida nesta versão**: o contrato declara 178 permissões
+  nomeadas; a união medida entre as duas fontes documentais dá 177 — uma permissão do backend
+  segue sem nome em nenhuma fonte (`naoConciliado.quantidade: 1` no snapshot). Não foi inventada.
+
 # v1.11.0a8b49
 
 ## Contrato monetário do Financeiro (F1.1)

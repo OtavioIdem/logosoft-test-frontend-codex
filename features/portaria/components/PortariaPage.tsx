@@ -11,7 +11,7 @@ import { OcorrenciasTab } from '@/features/portaria/components/OcorrenciasTab';
 export const PortariaPage = () => {
     const { hasAnyPermission } = usePermissions();
 
-    if (!hasAnyPermission(['PORTARIA_CONSULTAR', 'PORTARIA_PRE_AUTORIZAR', 'PORTARIA_OPERAR'])) {
+    if (!hasAnyPermission(['PORTARIA_CONSULTAR', 'PORTARIA_PREAUTORIZAR', 'PORTARIA_OPERAR'])) {
         return <UnauthorizedState description="A Portaria exige uma permissão de portaria (consulta, pré-autorização ou operação)." />;
     }
 

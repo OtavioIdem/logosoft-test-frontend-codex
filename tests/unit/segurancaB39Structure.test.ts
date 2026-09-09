@@ -13,7 +13,7 @@ describe('segurança B39', () => {
 
         expect(gruposPage).toContain('GruposAcessoPage');
         expect(gruposPage).not.toContain('ModulePlaceholderPage');
-        expect(gruposComponent).toContain('SEGURANCA_PERMISSOES_GERENCIAR');
+        expect(gruposComponent).toContain('SEGURANCA_GRUPOS_ACESSO_GERENCIAR');
         expect(api).toContain('/api/seguranca/grupos-acesso');
     });
 

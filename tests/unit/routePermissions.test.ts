@@ -26,10 +26,14 @@ describe('route permission rules', () => {
         expect(rule?.anyOf).toContain('RELATORIOS_EXPORTAR');
     });
 
-    it('protege atividades por permissões do workflow operacional', () => {
+    it('protege atividades por permissões granulares do workflow operacional', () => {
         const rule = findRoutePermissionRule('/atividades');
         expect(rule?.anyOf).toContain('ATIVIDADES_CONSULTAR');
-        expect(rule?.anyOf).toContain('ATIVIDADES_GERENCIAR');
+        expect(rule?.anyOf).toContain('ATIVIDADES_CRIAR');
+        expect(rule?.anyOf).toContain('ATIVIDADES_ATUALIZAR');
+        expect(rule?.anyOf).toContain('ATIVIDADES_CANCELAR');
+        expect(rule?.anyOf).toContain('ATIVIDADES_COMENTAR');
+        expect(rule?.anyOf).toContain('ATIVIDADES_ATRIBUIR');
     });
 
     it('protege inutilizações fiscais por permissão específica', () => {
