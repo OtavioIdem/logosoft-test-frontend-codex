@@ -231,8 +231,50 @@ const pedidoCompra = {
     itens: [{ id: 'pc-item-1', produtoId, localEstoqueId: localId, quantidade: 3, valorUnitario: 266.67, valorDesconto: 0, valorTotal: 800 }]
 };
 
-const contasReceber = [{ id: 'cr-1', codigo: 'CR-PV-001', cliente: 'Cliente demonstração LTDA', clienteId, valorTotal: 251, saldo: 251, status: 'ABERTO', statusConta: 1, origem: 'Pedido venda PV-001' }];
-const contasPagar = [{ id: 'cp-1', codigo: 'CP-PC-001', fornecedor: 'Fornecedor base SA', fornecedorId, valorTotal: 800, saldo: 800, status: 'ABERTO', statusConta: 1, origem: 'Pedido compra PC-001' }];
+// Formato do wire real (`ContaReceberResponse`/`ContaPagarResponse`, v1.23): a fixture já
+// mentiu uma vez com `valorTotal`/`saldo`/`statusConta`, os mesmos campos inexistentes que o
+// frontend lia antes de v1.11.0a8b49. O saldo de R$ 251,00 é o que a coluna "Saldo" precisa
+// exibir de verdade — não o placeholder de R$ 0,00 que o defeito produzia.
+const contasReceber = [{
+    id: 'cr-1',
+    empresaId,
+    filialId,
+    clienteId,
+    documento: 'CR-PV-001',
+    origem: 2,
+    origemId: pedidoVenda.id,
+    dataEmissao: '2026-05-08T12:00:00.000Z',
+    observacao: null,
+    valorOriginal: 251,
+    valorRecebido: 0,
+    valorJuros: 0,
+    valorMulta: 0,
+    valorDesconto: 0,
+    valorSaldo: 251,
+    status: 1,
+    parcelas: [{ id: 'cr-1-parcela-1', numero: 1, vencimento: '2026-06-07T12:00:00.000Z', valorOriginal: 251, valorPago: 0, valorJuros: 0, valorMulta: 0, valorDesconto: 0, valorSaldo: 251, status: 1 }],
+    recebimentos: []
+}];
+const contasPagar = [{
+    id: 'cp-1',
+    empresaId,
+    filialId,
+    fornecedorId,
+    documento: 'CP-PC-001',
+    origem: 4,
+    origemId: pedidoCompra.id,
+    dataEmissao: '2026-05-08T12:00:00.000Z',
+    observacao: null,
+    valorOriginal: 800,
+    valorPago: 0,
+    valorJuros: 0,
+    valorMulta: 0,
+    valorDesconto: 0,
+    valorSaldo: 800,
+    status: 1,
+    parcelas: [{ id: 'cp-1-parcela-1', numero: 1, vencimento: '2026-06-07T12:00:00.000Z', valorOriginal: 800, valorPago: 0, valorJuros: 0, valorMulta: 0, valorDesconto: 0, valorSaldo: 800, status: 1 }],
+    pagamentos: []
+}];
 const auditoria = [{ id: 'aud-1', modulo: 'Vendas', entidade: 'PedidoVenda', entidadeId: pedidoVenda.id, acao: 1, descricao: 'Pedido de venda criado', usuario: 'Administrador E2E', usuarioId: e2eUsuarioId, empresaId, filialId, criadoEm: '2026-05-08T12:00:00.000Z' }];
 
 const notaFiscalId = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
@@ -634,6 +676,14 @@ export const mockApiRoutes = async (page: Page) => {
         if (path.includes('/api/compras/pedidos')) return route.fulfill(json([pedidoCompra]));
         if (path.includes('/api/financeiro/formas-pagamento')) return route.fulfill(json([{ id: 'fp-1', nome: 'PIX', permiteReceber: true, permitePagar: true, permiteRecebimento: true, permitePagamento: true, status: 'ATIVO' }]));
         if (path.includes('/api/financeiro/condicoes-pagamento')) return route.fulfill(json([{ id: 'cond-1', nome: '30/60/90', parcelas: 3, intervaloDias: 30, quantidadeParcelas: 3, status: 'ATIVO' }]));
+        if (path.match(/\/api\/financeiro\/contas-receber\/[^/]+$/)) {
+            const conta = contasReceber.find((item) => item.id === path.split('/').pop());
+            return conta ? route.fulfill(json(conta)) : route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ message: 'Conta a receber não encontrada.' }) });
+        }
+        if (path.match(/\/api\/financeiro\/contas-pagar\/[^/]+$/)) {
+            const conta = contasPagar.find((item) => item.id === path.split('/').pop());
+            return conta ? route.fulfill(json(conta)) : route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ message: 'Conta a pagar não encontrada.' }) });
+        }
         if (path.includes('/api/financeiro/contas-receber')) return route.fulfill(json(contasReceber));
         if (path.includes('/api/financeiro/contas-pagar')) return route.fulfill(json(contasPagar));
         if (path.includes('/api/auditoria/eventos')) return route.fulfill(json(auditoria));

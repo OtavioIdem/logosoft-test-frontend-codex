@@ -40,14 +40,18 @@ export type ParcelaReceberResponse = {
     id: Guid;
     numero: number;
     vencimento: IsoDateTime;
-    valor: number;
-    saldo?: number | null;
+    valorOriginal: number;
+    valorPago: number;
+    valorJuros?: number;
+    valorMulta?: number;
+    valorDesconto?: number;
+    valorSaldo: number;
     status?: StatusParcelaFinanceira | number;
 };
 
 export type RecebimentoResponse = {
     id: Guid;
-    parcelaId: Guid;
+    parcelaReceberId: Guid;
     formaPagamentoId: Guid;
     dataRecebimento: IsoDateTime;
     valorRecebido: number;
@@ -67,10 +71,13 @@ export type ContaReceberResponse = {
     origemId?: Guid | null;
     dataEmissao: IsoDateTime;
     observacao?: string | null;
-    valorTotal?: number | null;
-    saldo?: number | null;
-    status?: EntityStatus | number;
-    statusConta?: StatusContaFinanceira | number;
+    valorOriginal?: number | null;
+    valorRecebido?: number | null;
+    valorJuros?: number | null;
+    valorMulta?: number | null;
+    valorDesconto?: number | null;
+    valorSaldo?: number | null;
+    status?: StatusContaFinanceira | number;
     parcelas?: ParcelaReceberResponse[];
     recebimentos?: RecebimentoResponse[];
 };
@@ -79,14 +86,18 @@ export type ParcelaPagarResponse = {
     id: Guid;
     numero: number;
     vencimento: IsoDateTime;
-    valor: number;
-    saldo?: number | null;
+    valorOriginal: number;
+    valorPago: number;
+    valorJuros?: number;
+    valorMulta?: number;
+    valorDesconto?: number;
+    valorSaldo: number;
     status?: StatusParcelaFinanceira | number;
 };
 
 export type PagamentoResponse = {
     id: Guid;
-    parcelaId: Guid;
+    parcelaPagarId: Guid;
     formaPagamentoId: Guid;
     dataPagamento: IsoDateTime;
     valorPago: number;
@@ -106,10 +117,13 @@ export type ContaPagarResponse = {
     origemId?: Guid | null;
     dataEmissao: IsoDateTime;
     observacao?: string | null;
-    valorTotal?: number | null;
-    saldo?: number | null;
-    status?: EntityStatus | number;
-    statusConta?: StatusContaFinanceira | number;
+    valorOriginal?: number | null;
+    valorPago?: number | null;
+    valorJuros?: number | null;
+    valorMulta?: number | null;
+    valorDesconto?: number | null;
+    valorSaldo?: number | null;
+    status?: StatusContaFinanceira | number;
     parcelas?: ParcelaPagarResponse[];
     pagamentos?: PagamentoResponse[];
 };

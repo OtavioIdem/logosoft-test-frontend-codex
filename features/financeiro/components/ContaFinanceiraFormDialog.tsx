@@ -54,14 +54,13 @@ const initialValues = (type: 'receber' | 'pagar'): FormValues => ({
     parcelas: [defaultParcela()]
 });
 
-const financialOriginOptions = (type: 'receber' | 'pagar') =>
-    origemFinanceiraOptions.filter((option) => {
-        if (type === 'receber') {
-            return option.value !== OrigemFinanceira.Compra;
-        }
+const financialOriginOptions = (type: 'receber' | 'pagar') => {
+    if (type === 'pagar') {
+        return origemFinanceiraOptions.filter((option) => option.value === OrigemFinanceira.Manual);
+    }
 
-        return option.value !== OrigemFinanceira.PedidoVenda;
-    });
+    return origemFinanceiraOptions.filter((option) => option.value !== OrigemFinanceira.Compra);
+};
 
 export const ContaFinanceiraFormDialog = ({ type, visible, loading, onHide, onSubmit }: ContaFinanceiraFormDialogProps) => {
     const [values, setValues] = useState<FormValues>(initialValues(type));
@@ -110,7 +109,7 @@ export const ContaFinanceiraFormDialog = ({ type, visible, loading, onHide, onSu
         onSubmit({ empresaId: values.empresaId, filialId: values.filialId ?? null, fornecedorId: values.fornecedorId ?? '', documento: values.documento, origem: values.origem, origemId: values.origemId ?? null, dataEmissao: values.dataEmissao, observacao: values.observacao ?? null, parcelas: values.parcelas });
     };
 
-    const needsOriginReference = values.origem === OrigemFinanceira.PedidoVenda || values.origem === OrigemFinanceira.Compra;
+    const needsOriginReference = values.origem === OrigemFinanceira.PedidoVenda;
     const unsupportedOriginReference = values.origem !== OrigemFinanceira.Manual && !needsOriginReference;
     const parcelasTotal = useMemo(() => sumMoneyValues(values.parcelas.map((parcela) => parcela.valor)), [values.parcelas]);
     const selectedEntityMissing = type === 'receber' ? !values.clienteId : !values.fornecedorId;
@@ -134,8 +133,12 @@ export const ContaFinanceiraFormDialog = ({ type, visible, loading, onHide, onSu
                 </div>
                 <div className="field col-12 md:col-3"><label htmlFor="documentoFinanceiro" className="font-medium">Documento</label><InputText id="documentoFinanceiro" value={values.documento} onChange={(event) => update('documento', event.target.value)} disabled={loading} /></div>
                 <div className="field col-12 md:col-3"><label htmlFor="dataEmissao" className="font-medium">Data de emissão</label><DateTimeInput id="dataEmissao" value={values.dataEmissao} onChange={(value) => update('dataEmissao', value ?? new Date())} disabled={loading} /></div>
-                <div className="field col-12 md:col-4"><label htmlFor="origem" className="font-medium">Origem</label><Dropdown id="origem" value={values.origem} options={financialOriginOptions(type)} optionLabel="label" optionValue="value" onChange={(event) => changeOrigem(Number(event.value))} disabled={loading} /></div>
-                {needsOriginReference ? <div className="field col-12 md:col-8"><label htmlFor="origemId" className="font-medium">Documento de origem</label><EntitySelect id="origemId" value={values.origemId ?? null} options={originQuery.options} onChange={(value) => update('origemId', value)} entityName={values.origem === OrigemFinanceira.PedidoVenda ? 'pedido de venda' : 'pedido de compra'} disabled={loading || !values.empresaId || originQuery.isLoading || originQuery.isFetching} /><small className="text-600">Selecione pelo número e descrição. O vínculo da origem será enviado automaticamente.</small></div> : null}
+                <div className="field col-12 md:col-4">
+                    <label htmlFor="origem" className="font-medium">Origem</label>
+                    <Dropdown id="origem" value={values.origem} options={financialOriginOptions(type)} optionLabel="label" optionValue="value" onChange={(event) => changeOrigem(Number(event.value))} disabled={loading || type === 'pagar'} />
+                    {type === 'pagar' ? <small className="text-600">A origem de uma conta a pagar é derivada pelo backend a partir do documento que a gerou. O lançamento manual nasce com origem Manual.</small> : null}
+                </div>
+                {needsOriginReference ? <div className="field col-12 md:col-8"><label htmlFor="origemId" className="font-medium">Documento de origem</label><EntitySelect id="origemId" value={values.origemId ?? null} options={originQuery.options} onChange={(value) => update('origemId', value)} entityName="pedido de venda" disabled={loading || !values.empresaId || originQuery.isLoading || originQuery.isFetching} /><small className="text-600">Selecione pelo número e descrição. O vínculo da origem será enviado automaticamente.</small></div> : null}
                 {unsupportedOriginReference ? <div className="col-12 md:col-8 flex align-items-end"><Message className="w-full" severity="info" text="Esta origem ainda não possui busca de referência no frontend; a conta será enviada sem vínculo técnico de origem até o módulo correspondente expor seleção própria." /></div> : null}
                 <div className="field col-12"><label htmlFor="observacaoFinanceira" className="font-medium">Observação</label><InputTextarea id="observacaoFinanceira" value={values.observacao ?? ''} onChange={(event) => update('observacao', event.target.value)} rows={2} disabled={loading} /></div>
                 <div className="col-12 mt-3">

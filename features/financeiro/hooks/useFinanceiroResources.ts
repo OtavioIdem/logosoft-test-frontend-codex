@@ -27,6 +27,8 @@ export const formasPagamentoQueryKey = (empresaId?: string | null) => ['financei
 export const condicoesPagamentoQueryKey = (empresaId?: string | null) => ['financeiro', 'condicoes-pagamento', empresaId ?? null] as const;
 export const contasReceberQueryKey = (query?: FinanceiroListQuery) => ['financeiro', 'contas-receber', query] as const;
 export const contasPagarQueryKey = (query?: FinanceiroListQuery) => ['financeiro', 'contas-pagar', query] as const;
+export const contaReceberQueryKey = (id?: string | null) => ['financeiro', 'conta-receber', id ?? null] as const;
+export const contaPagarQueryKey = (id?: string | null) => ['financeiro', 'conta-pagar', id ?? null] as const;
 
 const formaLabel = (forma: FormaPagamentoResponse) => `${forma.codigo} • ${forma.nome}`;
 const condicaoLabel = (condicao: CondicaoPagamentoResponse) => `${condicao.codigo} • ${condicao.nome}`;
@@ -77,13 +79,33 @@ export const useContasPagar = (query: FinanceiroListQuery = {}) =>
         queryFn: () => financeiroApi.listarContasPagar(query)
     });
 
+export const useContaReceberDetalhe = (id?: string | null, enabled = true) =>
+    useQuery({
+        queryKey: contaReceberQueryKey(id),
+        queryFn: () => financeiroApi.buscarContaReceber(id ?? ''),
+        enabled: Boolean(id) && enabled
+    });
+
+export const useContaPagarDetalhe = (id?: string | null, enabled = true) =>
+    useQuery({
+        queryKey: contaPagarQueryKey(id),
+        queryFn: () => financeiroApi.buscarContaPagar(id ?? ''),
+        enabled: Boolean(id) && enabled
+    });
+
 
 export const useFinanceiroMutations = () => {
     const queryClient = useQueryClient();
     const invalidateFormas = () => queryClient.invalidateQueries({ queryKey: ['financeiro', 'formas-pagamento'] });
     const invalidateCondicoes = () => queryClient.invalidateQueries({ queryKey: ['financeiro', 'condicoes-pagamento'] });
-    const invalidateReceber = () => queryClient.invalidateQueries({ queryKey: ['financeiro', 'contas-receber'] });
-    const invalidatePagar = () => queryClient.invalidateQueries({ queryKey: ['financeiro', 'contas-pagar'] });
+    const invalidateReceber = (id?: string) => {
+        queryClient.invalidateQueries({ queryKey: ['financeiro', 'contas-receber'] });
+        if (id) queryClient.invalidateQueries({ queryKey: contaReceberQueryKey(id) });
+    };
+    const invalidatePagar = (id?: string) => {
+        queryClient.invalidateQueries({ queryKey: ['financeiro', 'contas-pagar'] });
+        if (id) queryClient.invalidateQueries({ queryKey: contaPagarQueryKey(id) });
+    };
 
     const formaSaveMutation = useMutation({
         mutationFn: ({ id, values }: SaveFormaPayload) => (id ? financeiroApi.atualizarFormaPagamento(id, values) : financeiroApi.criarFormaPagamento(values)),
@@ -99,16 +121,16 @@ export const useFinanceiroMutations = () => {
 
     const condicaoInativarMutation = useMutation({ mutationFn: ({ id, motivo }: ReasonPayload) => financeiroApi.inativarCondicaoPagamento(id, motivo), onSuccess: invalidateCondicoes });
 
-    const contaReceberCreateMutation = useMutation({ mutationFn: ({ values }: ContaReceberPayload) => financeiroApi.criarContaReceber(values), onSuccess: invalidateReceber });
-    const gerarContaReceberPedidoMutation = useMutation({ mutationFn: ({ pedidoVendaId, values }: GerarPedidoPayload) => financeiroApi.gerarContaReceberPedido(pedidoVendaId, values), onSuccess: invalidateReceber });
-    const receberMutation = useMutation({ mutationFn: ({ id, values }: ContaActionPayload) => financeiroApi.receberConta(id, values), onSuccess: invalidateReceber });
-    const estornarRecebimentoMutation = useMutation({ mutationFn: ({ id, values }: ContaActionPayload) => financeiroApi.estornarRecebimento(id, values), onSuccess: invalidateReceber });
-    const cancelarReceberMutation = useMutation({ mutationFn: ({ id, motivo }: ContaReasonPayload) => financeiroApi.cancelarContaReceber(id, motivo), onSuccess: invalidateReceber });
+    const contaReceberCreateMutation = useMutation({ mutationFn: ({ values }: ContaReceberPayload) => financeiroApi.criarContaReceber(values), onSuccess: () => invalidateReceber() });
+    const gerarContaReceberPedidoMutation = useMutation({ mutationFn: ({ pedidoVendaId, values }: GerarPedidoPayload) => financeiroApi.gerarContaReceberPedido(pedidoVendaId, values), onSuccess: () => invalidateReceber() });
+    const receberMutation = useMutation({ mutationFn: ({ id, values }: ContaActionPayload) => financeiroApi.receberConta(id, values), onSuccess: (_data, variables) => invalidateReceber(variables.id) });
+    const estornarRecebimentoMutation = useMutation({ mutationFn: ({ id, values }: ContaActionPayload) => financeiroApi.estornarRecebimento(id, values), onSuccess: (_data, variables) => invalidateReceber(variables.id) });
+    const cancelarReceberMutation = useMutation({ mutationFn: ({ id, motivo }: ContaReasonPayload) => financeiroApi.cancelarContaReceber(id, motivo), onSuccess: (_data, variables) => invalidateReceber(variables.id) });
 
-    const contaPagarCreateMutation = useMutation({ mutationFn: ({ values }: ContaPagarPayload) => financeiroApi.criarContaPagar(values), onSuccess: invalidatePagar });
-    const pagarMutation = useMutation({ mutationFn: ({ id, values }: ContaActionPayload) => financeiroApi.pagarConta(id, values), onSuccess: invalidatePagar });
-    const estornarPagamentoMutation = useMutation({ mutationFn: ({ id, values }: ContaActionPayload) => financeiroApi.estornarPagamento(id, values), onSuccess: invalidatePagar });
-    const cancelarPagarMutation = useMutation({ mutationFn: ({ id, motivo }: ContaReasonPayload) => financeiroApi.cancelarContaPagar(id, motivo), onSuccess: invalidatePagar });
+    const contaPagarCreateMutation = useMutation({ mutationFn: ({ values }: ContaPagarPayload) => financeiroApi.criarContaPagar(values), onSuccess: () => invalidatePagar() });
+    const pagarMutation = useMutation({ mutationFn: ({ id, values }: ContaActionPayload) => financeiroApi.pagarConta(id, values), onSuccess: (_data, variables) => invalidatePagar(variables.id) });
+    const estornarPagamentoMutation = useMutation({ mutationFn: ({ id, values }: ContaActionPayload) => financeiroApi.estornarPagamento(id, values), onSuccess: (_data, variables) => invalidatePagar(variables.id) });
+    const cancelarPagarMutation = useMutation({ mutationFn: ({ id, motivo }: ContaReasonPayload) => financeiroApi.cancelarContaPagar(id, motivo), onSuccess: (_data, variables) => invalidatePagar(variables.id) });
 
     return {
         formaSaveMutation,
