@@ -7,6 +7,12 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('navega pelos módulos críticos do ERP', async ({ page }) => {
+    // Onze navegações num teste só, e o `webServer` compila rota sob demanda: o limite padrão de
+    // 30s cobre o teste inteiro, não cada navegação, então num servidor frio ele estoura no meio
+    // do caminho — em rota diferente a cada execução. O teste não afere tempo; declará-lo lento é
+    // o que descreve o que ele é, em vez de deixar o gate mais valioso da suíte intermitente.
+    test.slow();
+
     await expectPageHeading(page, '/dashboard', /Dashboard logosoft/i);
     await expectPageHeading(page, '/administracao/empresas', 'Empresas');
     await expectPageHeading(page, '/pessoas', 'Pessoas');
