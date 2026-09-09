@@ -38,9 +38,9 @@ import {
     statusOrdemProducaoSeverity,
     tipoApontamentoLabel
 } from '@/features/producao/components/producaoLabels';
+import { formatMoneyOptional } from '@/lib/formatters/money';
 
 const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString('pt-BR') : '—');
-const formatMoney = (value?: number | null) => (value == null ? '—' : value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
 
 const filterLocal = (records: OrdemProducaoResumoResponse[], term: string) => {
     const normalized = term.trim().toLowerCase();
@@ -138,7 +138,7 @@ export const OrdensProducaoPage = () => {
                     <div className="flex gap-2 flex-wrap mb-3 align-items-center">
                         <Tag value={statusOrdemProducaoLabel(status)} severity={statusOrdemProducaoSeverity(status) ?? undefined} />
                         <span className="text-color-secondary">Planejado {detalhe.quantidadePlanejada.toLocaleString('pt-BR')}{detalhe.quantidadeProduzida != null ? ` · produzido ${detalhe.quantidadeProduzida.toLocaleString('pt-BR')}` : ''} · {formatDate(detalhe.dataPlanejada)}</span>
-                        {detalhe.custoConsolidado != null ? <Tag value={`Custo ${formatMoney(detalhe.custoConsolidado)}`} severity="info" /> : null}
+                        {detalhe.custoConsolidado != null ? <Tag value={`Custo ${formatMoneyOptional(detalhe.custoConsolidado)}`} severity="info" /> : null}
                         <div className="flex-1" />
                         {ordemPodeLiberar(status) ? <PermissionGuard permission="PRODUCAO_ORDENS_LIBERAR" mode="disable">{({ disabled }) => <Button label="Liberar" icon="pi pi-play" size="small" disabled={disabled} loading={liberarMutation.isPending} onClick={liberar} />}</PermissionGuard> : null}
                         {ordemPodeApontar(status) ? <PermissionGuard permission="PRODUCAO_ORDENS_APONTAR" mode="disable">{({ disabled }) => <Button label="Apontar" icon="pi pi-pencil" size="small" severity="secondary" disabled={disabled} onClick={() => setApontamentoVisible(true)} />}</PermissionGuard> : null}

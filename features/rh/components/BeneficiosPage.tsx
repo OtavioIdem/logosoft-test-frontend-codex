@@ -21,8 +21,8 @@ import { useBeneficioMutations, useBeneficios, useColaboradorOptions, useConcess
 import { BeneficioFormValues, BeneficioResponse, BeneficiosListQuery, ConcessaoBeneficioResponse, ConcessaoFormValues, ConcessoesListQuery } from '@/features/rh/types/rh.types';
 import { BeneficioFormDialog, ConcessaoDialog } from '@/features/rh/components/RhDialogs';
 import { concessaoPodeEncerrar, statusConcessaoLabel, statusConcessaoSeverity, tipoBeneficioLabel } from '@/features/rh/components/rhLabels';
+import { formatMoneyOptional } from '@/lib/formatters/money';
 
-const formatMoney = (value?: number | null) => (value == null ? '—' : value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
 const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString('pt-BR') : '—');
 
 const BeneficiosTab = () => {
@@ -57,7 +57,7 @@ const BeneficiosTab = () => {
             <DataTableServer<BeneficioResponse> value={visibleRecords} totalRecords={records.length} loading={beneficiosQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhum benefício.">
                 <Column field="nome" header="Nome" />
                 <Column header="Tipo" body={(row: BeneficioResponse) => tipoBeneficioLabel(Number(row.tipo))} />
-                <Column header="Valor padrão" body={(row: BeneficioResponse) => formatMoney(row.valor)} />
+                <Column header="Valor padrão" body={(row: BeneficioResponse) => formatMoneyOptional(row.valor)} />
                 <Column header="Situação" body={(row: BeneficioResponse) => <Tag value={row.ativo ? 'Ativo' : 'Inativo'} severity={row.ativo ? 'success' : undefined} />} />
             </DataTableServer>
             <BeneficioFormDialog visible={formVisible} loading={criarMutation.isPending} onHide={() => setFormVisible(false)} onSubmit={criar} />
@@ -116,7 +116,7 @@ const ConcessoesTab = () => {
                 <Column header="Colaborador" body={(row: ConcessaoBeneficioResponse) => colaboradorLabel(row.colaboradorId)} />
                 <Column header="Benefício" body={(row: ConcessaoBeneficioResponse) => beneficioLabel(row.beneficioId)} />
                 <Column header="Início" headerClassName="hidden md:table-cell" bodyClassName="hidden md:table-cell" body={(row: ConcessaoBeneficioResponse) => formatDate(row.dataInicio)} />
-                <Column header="Valor" body={(row: ConcessaoBeneficioResponse) => formatMoney(row.valor)} />
+                <Column header="Valor" body={(row: ConcessaoBeneficioResponse) => formatMoneyOptional(row.valor)} />
                 <Column header="Status" body={(row: ConcessaoBeneficioResponse) => <Tag value={statusConcessaoLabel(Number(row.status))} severity={statusConcessaoSeverity(Number(row.status)) ?? undefined} />} />
                 <Column header="Ações" alignHeader="right" body={(row: ConcessaoBeneficioResponse) => (
                     concessaoPodeEncerrar(Number(row.status)) ? <DataTableActions actions={[{ key: 'encerrar', label: 'Encerrar', icon: 'pi pi-flag', permission: 'RH_GERENCIAR', onClick: () => { setEncerrarAlvo(row.id); setDataFim(null); } }]} /> : <span className="text-color-secondary">—</span>

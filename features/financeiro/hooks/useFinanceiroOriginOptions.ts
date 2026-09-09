@@ -2,14 +2,13 @@
 
 import { useMemo } from 'react';
 import { usePedidosVenda } from '@/features/vendas/hooks/useVendasResources';
+import { formatMoney } from '@/lib/formatters/money';
 import { OrigemFinanceira, SelectOption } from '@/types/erp';
 
 type OriginQuery = {
     empresaId?: string | null;
     filialId?: string | null;
 };
-
-const formatMoney = (value?: number | null) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value ?? 0);
 
 export const useFinanceiroOriginOptions = (origem: number, query: OriginQuery) => {
     const pedidosVendaQuery = usePedidosVenda(

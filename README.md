@@ -1,4 +1,28 @@
-# logosoft Frontend v1.11.0a8b50
+# logosoft Frontend v1.11.0a8b51
+
+## v1.11.0a8b51 — `formatMoney` deixa de mascarar ausência com R$ 0,00 (F1.4)
+
+Onda F1 (parte 3) do plano `docs/backend-v1.23/PLANO-FRONTEND-v1.23.md`: `lib/formatters/money.ts`
+passa a expor duas funções em vez de uma. `formatMoney(value)` é para campo que o contrato do
+backend declara obrigatório — ausência denuncia na própria célula em desenvolvimento
+(`process.env.NODE_ENV !== 'production'`) e degrada para `—` em produção, em vez do antigo
+`value ?? 0` que mascarava com `R$ 0,00` plausível. `formatMoneyOptional(value, fallback?)` é
+para campo declaradamente opcional e rende `—` em silêncio (decisão travada em `D1` de
+`docs/arquitetura/DECISOES.md`). `zero` legítimo continua `"R$ 0,00"` — a linha inteira da versão
+é distinguir ausência de zero, não tratar os dois como o mesmo caso. As três cópias locais em
+`features/financeiro/components/financeiroUiUtils.ts`,
+`features/compras/components/comprasUiUtils.ts` e `features/vendas/components/vendasUiUtils.ts`
+passam a reexportar as duas funções da lib, mantendo os importadores existentes intactos. A cópia
+de `features/financeiro/hooks/useFinanceiroOriginOptions.ts` e a de
+`features/tabelas-preco/components/TabelasPrecoPage.tsx` são removidas em favor de
+`formatMoney` importado da lib. As quatro cópias que já renderizavam `—` manualmente
+(`features/patrimonio/components/BensPage.tsx`, `features/contratos/components/ContratosPage.tsx`,
+`features/producao/components/OrdensProducaoPage.tsx`, `features/rh/components/BeneficiosPage.tsx`)
+são removidas e os call sites passam a chamar `formatMoneyOptional` explicitamente — são a
+evidência empírica de que aquele campo já era ausência legítima. As 24 cópias com assinatura
+`(value: number)` (que lançam `TypeError` com `undefined` em vez de mascarar) ficam congeladas
+por teto de teste e são drenadas em `b52`; `lib/formatters/display.ts` (camada órfã de F5.6)
+também fica fora desta versão.
 
 ## v1.11.0a8b50 — União e catálogo de permissões fechados (F1.2, F1.3)
 

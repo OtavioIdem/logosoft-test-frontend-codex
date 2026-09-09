@@ -1,3 +1,63 @@
+# v1.11.0a8b51
+
+## `formatMoney` deixa de mascarar ausência com R$ 0,00 (F1.4)
+
+Onda F1 (parte 3) de `docs/backend-v1.23/PLANO-FRONTEND-v1.23.md` §5. Decisão de desenho travada
+em `D1` de `docs/arquitetura/DECISOES.md`: duas funções em vez de uma assinatura com opções.
+
+- `lib/formatters/money.ts`: contrato novo. `formatMoney(value: number | null | undefined): string`
+  — para campo que o contrato do backend declara obrigatório. Remove o `?? 0` que mascarava
+  ausência com `R$ 0,00` plausível (o defeito P1 da onda F1.1). Ausência (`null`/`undefined`/`NaN`)
+  denuncia na própria célula em desenvolvimento com o texto `"valor ausente (contrato)"` e degrada
+  para exatamente `"—"` em produção. O sinal de ambiente é `process.env.NODE_ENV`, lido dentro da
+  função (não `appConfig.env`/`NEXT_PUBLIC_APP_ENV`, que nunca vale `production` neste
+  repositório — embarcaria o modo ruidoso em produção). Sem `console` (proibido por
+  `validate:source`) e sem `throw` (derrubaria a `DataTable` inteira em vez da célula).
+  `formatMoneyOptional(value, fallback = '—'): string` — para campo que o contrato declara
+  opcional; ausência rende o `fallback` em silêncio, sem denúncia em nenhum ambiente. Invariante
+  que a mudança não quebra: `formatMoney(0)` continua `"R$ 0,00"` — zero legítimo é diferente de
+  campo ausente.
+- `features/financeiro/components/financeiroUiUtils.ts`, `features/compras/components/comprasUiUtils.ts`,
+  `features/vendas/components/vendasUiUtils.ts`: a cópia local de `formatMoney` (que fazia
+  `?? 0`/`Number(value ?? 0)`) é removida; os três arquivos passam a reexportar `formatMoney` e
+  `formatMoneyOptional` de `@/lib/formatters/money`. Os importadores existentes (financeiro: 3;
+  compras: 4; vendas: 3) continuam intactos — diff pequeno, mesmo nome, contrato novo.
+- `features/financeiro/hooks/useFinanceiroOriginOptions.ts`: apaga a cópia local de `formatMoney`
+  (fazia `value ?? 0` sobre `pedido.valorTotal`, um campo que o autor supôs obrigatório); importa
+  `formatMoney` de `@/lib/formatters/money`.
+- `features/tabelas-preco/components/TabelasPrecoPage.tsx`: apaga a cópia local; `precoVenda` e
+  `precoMinimo` passam a usar `formatMoney` (importado da lib) nos dois pontos de exibição (itens
+  da tabela e preço vigente). Ambiguidade registrada: não há confirmação do backend de que
+  `precoMinimo` seja opcional — decisão de falhar para o lado ruidoso (`formatMoney`, não
+  `formatMoneyOptional`), porque se o campo for de fato opcional a denúncia em dev provoca
+  pergunta; se for obrigatório e eu tivesse suposto opcional, o defeito voltaria a ser silencioso.
+- `features/patrimonio/components/BensPage.tsx`, `features/contratos/components/ContratosPage.tsx`,
+  `features/producao/components/OrdensProducaoPage.tsx`, `features/rh/components/BeneficiosPage.tsx`:
+  as quatro cópias locais que já renderizavam `value == null ? '—' : ...` (evidência empírica de
+  ausência legítima) são removidas; os call sites (`valorContabil`/`valorAquisicao`,
+  `valorTotal`/`franquia`/`valorExcedente`/`valorFixo`, `custoConsolidado`, `valor` de benefício e
+  concessão) passam a chamar `formatMoneyOptional` importado de `@/lib/formatters/money`
+  explicitamente — a intenção declarada fica visível no diff e auditável por
+  `grep formatMoneyOptional`, em vez de reimplementada célula a célula.
+- Ritual de versão (`package.json`, `config/app.ts`, `.env.example`, `.env.test`,
+  `.env.backend-controlled.example`, `.github/workflows/frontend-ci.yml`, `README.md`,
+  `scripts/backend-contract-map.allowlist.json`, `scripts/backend-permissions.snapshot.json`,
+  `scripts/backend-permissions.allowlist.json`,
+  `tests/evidence/integrated-e2e.assisted-evidence.example.json`) atualizado para `1.11.0a8b51`.
+- **Teste novo, fora desta entrega** (é do `engenheiro-testes`):
+  `tests/unit/moneyFormatter.test.ts`, que fixa o contrato acima (AC-1 a AC-5 do plano) e o teto
+  monotônico de cópias locais `(value: number) =>` restantes (24, medidas por
+  `grep -rn "const formatMoney" features lib` — ver "Fora do escopo").
+- **Fora do escopo desta versão** (nominalmente, ver plano `b51`): as 24 cópias locais com
+  assinatura `(value: number)` em `bancos`, `clientes`, `compras-avancado`, `contabil`, `crm`,
+  `faturamento`, `financeiro-avancado`, `frota`, `patrimonio/DepreciacaoPage`, `pdv`, `produtos`,
+  `rh/ColaboradoresPage`, `rh/EventosPage`, `servicos` — elas não mascaram: com `undefined` lançam
+  `TypeError` e derrubam o render da linha, classe de defeito diferente (barulhenta, não
+  silenciosa), congelada por teto de teste e drenada em `b52`. `lib/formatters/display.ts`
+  (`formatDisplayValue`, `Number(value ?? 0)` para `type === 'money'`) — mesmo defeito, mas só a
+  camada órfã de F5.6 o consome; some junto com ela. Guards de permissão errados (F1.6) — versão
+  seguinte.
+
 # v1.11.0a8b50
 
 ## União e catálogo de permissões fechados (F1.2, F1.3)

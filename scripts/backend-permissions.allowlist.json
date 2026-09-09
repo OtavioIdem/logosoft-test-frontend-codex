@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "1.11.0a8b50",
+  "version": "1.11.0a8b51",
   "status": "registro-fechado-monotonico",
   "snapshotDocument": "scripts/backend-permissions.snapshot.json",
   "auditPolicy": {

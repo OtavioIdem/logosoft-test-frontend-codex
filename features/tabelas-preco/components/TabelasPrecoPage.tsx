@@ -27,8 +27,8 @@ import { usePrecoVigente, useTabelaPrecoDetalhe, useTabelaPrecoMutations, useTab
 import { TabelaPrecoFormValues, TabelaPrecoItemFormValues, TabelaPrecoItemResponse, TabelaPrecoListQuery, TabelaPrecoResponse } from '@/features/tabelas-preco/types/tabelasPreco.types';
 import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
+import { formatMoney } from '@/lib/formatters/money';
 
-const formatMoney = (value?: number | null) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value ?? 0);
 const formatDate = (value?: string | null) => (value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : '-');
 const isTabelaAtiva = (tabela: TabelaPrecoResponse) => tabela.ativo === true || String(tabela.status ?? '').toLowerCase() === 'ativa' || Number(tabela.status) === 1;
 
