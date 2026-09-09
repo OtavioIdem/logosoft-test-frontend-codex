@@ -1,5 +1,16 @@
 import { expect, Page } from '@playwright/test';
 
+/**
+ * O usuario mockado precisa de um GUID de verdade: meResponseSchema valida usuarioId,
+ * empresaId e filialId com authGuidSchema, e um id livre faz o /me reprovar no Zod,
+ * limpar a sessao e mandar a navegacao para o login.
+ */
+const e2eUsuarioId = '33333333-3333-3333-3333-333333333333';
+
+// Estado compartilhado para armazenar opções de sessão por página
+// Usado para que writeSession() possa configurar a resposta de /api/auth/me em mockApiRoutes()
+const sessionConfigByPage = new WeakMap<Page, { usuarioId: string; nome: string; email: string; empresaId: string; filialId: string; permissoes: string[] }>();
+
 export const ADMIN_PERMISSIONS = [
     'AUDITORIA_CONSULTAR',
     'ATIVIDADES_CONSULTAR',
@@ -80,23 +91,39 @@ type SessionOptions = {
 
 export const writeSession = async (page: Page, options: SessionOptions = {}) => {
     const expires = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-    await page.addInitScript((session) => {
-        window.localStorage.setItem('logosoft.session', JSON.stringify(session));
-    }, {
+    const sessionUser = {
+        id: e2eUsuarioId,
+        nome: options.name ?? 'Administrador E2E',
+        email: options.email ?? 'admin@logosoft.local',
+        empresaId: '11111111-1111-1111-1111-111111111111',
+        filialId: '22222222-2222-2222-2222-222222222222',
+        permissoes: options.permissions ?? ADMIN_PERMISSIONS
+    };
+
+    const sessionData = {
         accessToken: 'e2e-access-token',
         accessTokenExpiraEm: expires,
         refreshToken: 'e2e-refresh-token',
         refreshTokenExpiraEm: expires,
         expiresAt: expires,
-        user: {
-            id: 'e2e-user-id',
-            nome: options.name ?? 'Administrador E2E',
-            email: options.email ?? 'admin@logosoft.local',
-            empresaId: '11111111-1111-1111-1111-111111111111',
-            filialId: '22222222-2222-2222-2222-222222222222',
-            permissoes: options.permissions ?? ADMIN_PERMISSIONS
-        }
+        user: sessionUser
+    };
+
+    // Armazenar configuração de sessão para que mockApiRoutes() possa usá-la na resposta de /api/auth/me
+    sessionConfigByPage.set(page, {
+        usuarioId: sessionUser.id,
+        nome: sessionUser.nome,
+        email: sessionUser.email,
+        empresaId: sessionUser.empresaId,
+        filialId: sessionUser.filialId,
+        permissoes: sessionUser.permissoes
     });
+
+    // Usar page.addInitScript para escrever a sessão em localStorage ANTES de qualquer script de página
+    const sessionJson = JSON.stringify(sessionData);
+    await page.addInitScript((sessionJson) => {
+        window.localStorage.setItem('logosoft.session', sessionJson);
+    }, sessionJson);
 };
 
 export const loginByForm = async (page: Page) => {
@@ -201,7 +228,7 @@ const pedidoCompra = {
 
 const contasReceber = [{ id: 'cr-1', codigo: 'CR-PV-001', cliente: 'Cliente demonstração LTDA', clienteId, valorTotal: 251, saldo: 251, status: 'ABERTO', statusConta: 1, origem: 'Pedido venda PV-001' }];
 const contasPagar = [{ id: 'cp-1', codigo: 'CP-PC-001', fornecedor: 'Fornecedor base SA', fornecedorId, valorTotal: 800, saldo: 800, status: 'ABERTO', statusConta: 1, origem: 'Pedido compra PC-001' }];
-const auditoria = [{ id: 'aud-1', modulo: 'Vendas', entidade: 'PedidoVenda', entidadeId: pedidoVenda.id, acao: 1, descricao: 'Pedido de venda criado', usuario: 'Administrador E2E', usuarioId: 'e2e-user-id', empresaId, filialId, criadoEm: '2026-05-08T12:00:00.000Z' }];
+const auditoria = [{ id: 'aud-1', modulo: 'Vendas', entidade: 'PedidoVenda', entidadeId: pedidoVenda.id, acao: 1, descricao: 'Pedido de venda criado', usuario: 'Administrador E2E', usuarioId: e2eUsuarioId, empresaId, filialId, criadoEm: '2026-05-08T12:00:00.000Z' }];
 
 const notaFiscalId = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
 const documentoAuxiliarId = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
@@ -263,7 +290,7 @@ const createFiscalNote = (overrides: Record<string, unknown> = {}) => ({
         }
     ],
     xmls: [],
-    eventos: [{ id: 'nf-evento-criacao', tipo: 1, codigo: 'CRIACAO', descricao: 'Nota fiscal criada para E2E', protocolo: null, dataEvento: '2026-05-08T12:00:00.000Z', usuarioId: 'e2e-user-id' }],
+    eventos: [{ id: 'nf-evento-criacao', tipo: 1, codigo: 'CRIACAO', descricao: 'Nota fiscal criada para E2E', protocolo: null, dataEvento: '2026-05-08T12:00:00.000Z', usuarioId: e2eUsuarioId }],
     ...overrides
 });
 
@@ -318,6 +345,18 @@ export const mockApiRoutes = async (page: Page) => {
     let contaReceberGerada = false;
     let documentoAuxiliar: Record<string, unknown> | null = null;
     const fiscalLogs: Record<string, unknown>[] = [];
+
+    // Obter configuração de sessão que foi setada por writeSession(), ou usar padrão
+    const getSessionConfig = () =>
+        sessionConfigByPage.get(page) ?? {
+            usuarioId: e2eUsuarioId,
+            nome: 'Administrador E2E',
+            email: 'admin@logosoft.local',
+            empresaId: '11111111-1111-1111-1111-111111111111',
+            filialId: '22222222-2222-2222-2222-222222222222',
+            permissoes: ADMIN_PERMISSIONS
+        };
+
 
     const appendFiscalLog = (operacao: string, statusIntegracao: number, mensagem: string, podeReprocessar = false) => {
         fiscalLogs.unshift({
@@ -417,6 +456,19 @@ export const mockApiRoutes = async (page: Page) => {
         const url = new URL(request.url());
         const path = url.pathname;
 
+        if (path === '/api/auth/me') {
+            const config = getSessionConfig();
+            return route.fulfill(json({
+                usuarioId: config.usuarioId,
+                nome: config.nome,
+                email: config.email,
+                empresaId: config.empresaId,
+                filialId: config.filialId,
+                isMaster: false,
+                permissoes: config.permissoes
+            }));
+        }
+
         if (path === '/api/auth/login') return route.fulfill(json({
             accessToken: 'e2e-access-token',
             refreshToken: 'e2e-refresh-token',
@@ -424,7 +476,7 @@ export const mockApiRoutes = async (page: Page) => {
             refreshTokenExpiraEm: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
             expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
             usuario: {
-                id: 'e2e-user-id',
+                id: e2eUsuarioId,
                 nome: 'Administrador E2E',
                 email: 'admin@logosoft.local',
                 empresaId,
@@ -432,7 +484,7 @@ export const mockApiRoutes = async (page: Page) => {
                 permissoes: ADMIN_PERMISSIONS
             },
             user: {
-                id: 'e2e-user-id',
+                id: e2eUsuarioId,
                 nome: 'Administrador E2E',
                 email: 'admin@logosoft.local',
                 empresaId,
@@ -476,7 +528,7 @@ export const mockApiRoutes = async (page: Page) => {
         if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}/workflow-operacional` && method === 'GET') return route.fulfill(json(workflowFiscal()));
         if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}/integracoes` && method === 'GET') return route.fulfill(json(fiscalLogs));
         if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}/validar` && method === 'POST') {
-            notaFiscal = { ...notaFiscal, statusFiscal: 2, eventos: [...notaFiscal.eventos, { id: 'nf-evento-validacao', tipo: 2, codigo: 'VALIDADA', descricao: 'Nota validada no E2E', protocolo: null, dataEvento: new Date().toISOString(), usuarioId: 'e2e-user-id' }] };
+            notaFiscal = { ...notaFiscal, statusFiscal: 2, eventos: [...notaFiscal.eventos, { id: 'nf-evento-validacao', tipo: 2, codigo: 'VALIDADA', descricao: 'Nota validada no E2E', protocolo: null, dataEvento: new Date().toISOString(), usuarioId: e2eUsuarioId }] };
             appendFiscalLog('ValidacaoFiscal', 2, 'Nota fiscal validada.');
             return route.fulfill(json(notaFiscal));
         }
@@ -486,7 +538,7 @@ export const mockApiRoutes = async (page: Page) => {
             return route.fulfill(json({ notaFiscalId: notaFiscal.id, tipoDocumento: 1, statusFiscal: notaFiscal.statusFiscal, tipoXml: 1, conteudoXml: '<NFe><infNFe Id="e2e" /></NFe>', schemaSetName: 'NFe-4.00', schemaValidado: false, armazenado: true, alertas: [] }));
         }
         if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}/assinar-xml-envio` && method === 'POST') {
-            notaFiscal = { ...notaFiscal, statusFiscal: 3, eventos: [...notaFiscal.eventos, { id: 'nf-evento-assinatura', tipo: 3, codigo: 'ASSINADA', descricao: 'XML assinado no E2E', protocolo: null, dataEvento: new Date().toISOString(), usuarioId: 'e2e-user-id' }] };
+            notaFiscal = { ...notaFiscal, statusFiscal: 3, eventos: [...notaFiscal.eventos, { id: 'nf-evento-assinatura', tipo: 3, codigo: 'ASSINADA', descricao: 'XML assinado no E2E', protocolo: null, dataEvento: new Date().toISOString(), usuarioId: e2eUsuarioId }] };
             appendFiscalLog('AssinarXmlEnvio', 2, 'XML de envio assinado.');
             return route.fulfill(json({ notaFiscalId: notaFiscal.id, tipoDocumento: 1, statusFiscal: 3, tipoXml: 1, conteudoXml: '<NFe assinatura="mock" />', schemaSetName: 'NFe-4.00', schemaValidado: false, armazenado: true, alertas: [] }));
         }
@@ -498,13 +550,13 @@ export const mockApiRoutes = async (page: Page) => {
                 protocoloAutorizacao: protocoloFiscal,
                 autorizadaEm: new Date().toISOString(),
                 xmls: [...notaFiscal.xmls, { id: 'xml-autorizado-1', tipo: 2, hashSha256: 'hash-autorizado-e2e', protocolo: protocoloFiscal, chaveAcesso: chaveAcessoFiscal, armazenadoEm: new Date().toISOString() }],
-                eventos: [...notaFiscal.eventos, { id: 'nf-evento-autorizacao', tipo: 5, codigo: '100', descricao: 'Autorizado no E2E mockado', protocolo: protocoloFiscal, dataEvento: new Date().toISOString(), usuarioId: 'e2e-user-id' }]
+                eventos: [...notaFiscal.eventos, { id: 'nf-evento-autorizacao', tipo: 5, codigo: '100', descricao: 'Autorizado no E2E mockado', protocolo: protocoloFiscal, dataEvento: new Date().toISOString(), usuarioId: e2eUsuarioId }]
             };
             appendFiscalLog('NFeAutorizacao', 2, 'Autorização mockada concluída.');
             return route.fulfill(json({ notaFiscalId: notaFiscal.id, statusFiscal: 5, comunicacaoOk: true, autorizada: true, codigoStatus: '100', motivo: 'Autorizado', protocolo: protocoloFiscal, chaveAcesso: chaveAcessoFiscal, deveReprocessar: false }));
         }
         if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}/danfe` && method === 'POST') {
-            documentoAuxiliar = { id: documentoAuxiliarId, notaFiscalId: notaFiscal.id, tipo: 1, formato: 2, nomeArquivo: 'danfe-1-900001.html', contentType: 'text/html', hashSha256: 'hash-danfe-e2e', tamanhoBytes: 12345, geradoEm: new Date().toISOString(), geradoPor: 'e2e-user-id', alertas: [] };
+            documentoAuxiliar = { id: documentoAuxiliarId, notaFiscalId: notaFiscal.id, tipo: 1, formato: 2, nomeArquivo: 'danfe-1-900001.html', contentType: 'text/html', hashSha256: 'hash-danfe-e2e', tamanhoBytes: 12345, geradoEm: new Date().toISOString(), geradoPor: e2eUsuarioId, alertas: [] };
             appendFiscalLog('GerarDanfe', 2, 'Documento auxiliar gerado.');
             return route.fulfill(json(documentoAuxiliar));
         }
