@@ -63,7 +63,7 @@ describe('CI workflow YAML', () => {
             'npm run test:unit',
             'npm run build',
             'npx playwright install chromium',
-            'npm run test:e2e:fiscal',
+            'npm run test:e2e',
             'npm run test:contract:fiscal',
             'npm run test:contract:operational',
             'npm run test:e2e:fiscal:backend'

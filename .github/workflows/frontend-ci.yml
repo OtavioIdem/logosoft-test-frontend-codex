@@ -96,8 +96,8 @@ jobs:
       - name: Instalar Chromium do Playwright
         run: npx playwright install chromium
 
-      - name: E2E fiscal mockado
-        run: npm run test:e2e:fiscal
+      - name: E2E mockado
+        run: npm run test:e2e
 
       - name: Contrato fiscal backend opt-in
         run: npm run test:contract:fiscal

@@ -55,11 +55,19 @@ npm run lint
 npm run test:unit
 npm run build
 npx playwright install chromium
-npm run test:e2e:fiscal
+npm run test:e2e
 npm run test:contract:fiscal
 npm run test:contract:operational
 npm run test:e2e:fiscal:backend
 ```
+
+> **A partir da `v1.11.0a8b48`, o passo de E2E do CI é `npm run test:e2e` — a suíte mockada
+> inteira, e não só a spec fiscal.** A configuração padrão do Playwright é a da suíte mockada: ela
+> ignora por nome as duas specs que exigem backend real (`fiscal-backend` e `integrated-backend`,
+> que têm config própria), de modo que **uma spec mockada nova entra no gate sozinha** em vez de
+> nunca rodar. A execução é serial no CI porque o `webServer` sobe o servidor de desenvolvimento,
+> que compila rota sob demanda: com workers concorrentes, o primeiro acesso estoura o timeout da
+> asserção e a falha é intermitente, sem ser defeito do teste.
 
 `npm run validate:source` já executa a maior parte desses gates internamente (ver `scripts/validate-source.mjs`), então rodá-lo localmente antes de abrir um PR pega a maioria das regressões antes do CI.
 
@@ -75,7 +83,7 @@ npm run validate:ci
 
 Esse comando valida que o workflow existe e contém os gates obrigatórios. O `validate:source` também executa essa validação, tornando regressão do pipeline bloqueante.
 
-A partir da correção `v1.11.0a8b28.c1`, essa validação também garante que o script local `ci:gates` contenha `npx playwright install chromium` antes de `npm run test:e2e:fiscal`, para que uma máquina limpa consiga reproduzir localmente a sequência do CI sem depender de instalação manual prévia do navegador.
+A partir da correção `v1.11.0a8b28.c1`, essa validação também garante que o script local `ci:gates` contenha `npx playwright install chromium` antes de `npm run test:e2e`, para que uma máquina limpa consiga reproduzir localmente a sequência do CI sem depender de instalação manual prévia do navegador.
 
 ## 6. Regras de segurança
 

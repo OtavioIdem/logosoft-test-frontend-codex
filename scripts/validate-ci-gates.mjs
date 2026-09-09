@@ -163,6 +163,7 @@ const requiredPackageScripts = [
     'lint',
     'test:unit',
     'build',
+    'test:e2e',
     'test:e2e:fiscal',
     'test:contract:fiscal',
     'test:contract:operational',
@@ -197,21 +198,28 @@ const requiredCiGatesFragments = [
     'npm run test:unit',
     'npm run build',
     'npx playwright install chromium',
-    'npm run test:e2e:fiscal',
+    'npm run test:e2e',
     'npm run test:contract:fiscal',
     'npm run test:contract:operational',
     'npm run test:e2e:fiscal:backend'
 ];
 const ciGatesScript = scripts['ci:gates'] ?? '';
+/**
+ * Comparacao exata por segmento, e nao `includes`: `npm run test:e2e` e substring de
+ * `npm run test:e2e:fiscal:backend`, entao a verificacao por substring daria verde sem que
+ * a suite mockada estivesse na cadeia. E a mesma classe de defeito que deixou este workflow
+ * quebrado por duas versoes.
+ */
+const ciGatesCommands = ciGatesScript.split('&&').map((command) => command.trim());
 for (const fragment of requiredCiGatesFragments) {
-    if (!ciGatesScript.includes(fragment)) {
-        failures.push(`package.json: script ci:gates deve conter ${fragment}`);
+    if (!ciGatesCommands.includes(fragment)) {
+        failures.push(`package.json: script ci:gates deve conter o comando ${fragment}`);
     }
 }
-const playwrightInstallIndex = ciGatesScript.indexOf('npx playwright install chromium');
-const fiscalE2eIndex = ciGatesScript.indexOf('npm run test:e2e:fiscal');
-if (playwrightInstallIndex < 0 || fiscalE2eIndex < 0 || playwrightInstallIndex > fiscalE2eIndex) {
-    failures.push('package.json: script ci:gates deve instalar Chromium do Playwright antes do E2E fiscal');
+const playwrightInstallIndex = ciGatesCommands.indexOf('npx playwright install chromium');
+const mockedE2eIndex = ciGatesCommands.indexOf('npm run test:e2e');
+if (playwrightInstallIndex < 0 || mockedE2eIndex < 0 || playwrightInstallIndex > mockedE2eIndex) {
+    failures.push('package.json: script ci:gates deve instalar Chromium do Playwright antes da suite E2E mockada');
 }
 
 if (ciGatesScript.includes('npm run test:e2e:integrated:backend')) {
@@ -252,7 +260,7 @@ if (existsSync(join(root, workflowPath))) {
         'npm run test:unit',
         'npm run build',
         'npx playwright install chromium',
-        'npm run test:e2e:fiscal',
+        'npm run test:e2e',
         'npm run test:contract:fiscal',
     'npm run test:contract:operational',
         'npm run test:e2e:fiscal:backend'
