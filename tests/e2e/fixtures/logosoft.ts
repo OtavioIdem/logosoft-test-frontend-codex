@@ -136,8 +136,13 @@ export const loginByForm = async (page: Page) => {
 
 export const expectPageHeading = async (page: Page, url: string, heading: string | RegExp) => {
     await page.goto(url);
-    await expect(page.getByRole('heading', { name: heading })).toBeVisible();
+    // Verificar especificamente o título no topbar usando a classe específica
+    // para evitar ambiguidade com headings do conteúdo principal da página.
+    // O topbar renderiza h1.layout-topbar-title-text com o título da página.
+    const topbarHeading = page.locator('h1.layout-topbar-title-text');
+    await expect(topbarHeading).toHaveText(heading);
 };
+
 
 export const openNewDialog = async (page: Page, url: string, heading: string | RegExp) => {
     await expectPageHeading(page, url, heading);
