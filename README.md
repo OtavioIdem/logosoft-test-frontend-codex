@@ -1,4 +1,37 @@
-# logosoft Frontend v1.11.0a8b48
+# logosoft Frontend v1.11.0a8b49
+
+## v1.11.0a8b49 — Contrato monetário do Financeiro e origem morta em Contas a Pagar (F1.1, F1.5)
+
+Onda F1 (parte 1) do plano `docs/backend-v1.23/PLANO-FRONTEND-v1.23.md`: corrige o **P1** da
+seção 2 — Contas a Pagar/Receber exibiam **R$ 0,00 em toda listagem** porque o frontend lia
+`valorTotal`/`saldo`/`parcela.valor`/`parcela.saldo`/`pagamento.parcelaId`, campos que não
+existem no wire. `features/financeiro/types/financeiro.types.ts` passa a declarar o contrato
+real (`valorOriginal`, `valorJuros`, `valorMulta`, `valorDesconto`, `valorSaldo`,
+`ContaReceberResponse.valorRecebido`, `ContaPagarResponse.valorPago`, `status` único,
+`RecebimentoResponse.parcelaReceberId`, `PagamentoResponse.parcelaPagarId`), com os
+consumidores atualizados: listagem e cards de resumo (`ContasFinanceirasPage.tsx`), dashboard
+(`features/dashboard/api/dashboardApi.ts`) e o diálogo de boleto (`BancosOperacoesDialogs.tsx`).
+O diálogo de baixa (`BaixaFinanceiraDialog`) deixa de confiar no registro da lista e passa a
+consumir um hook de detalhe dedicado (`useContaReceberDetalhe`/`useContaPagarDetalhe`, novo em
+`useFinanceiroResources.ts`), com estados de carregamento, erro bloqueante e sucesso (invalida
+lista **e** detalhe); o valor nasce do saldo real da parcela, com validação de UX
+`valor > 0` (a regra de teto contra o saldo é do backend, via 400 mapeado por `mapApiError`).
+
+Também remove o **P3**: o seletor "Origem = Compra" em Contas a Pagar, morto desde a
+v1.23.2/G5 (D7) — o backend recusa qualquer origem manual diferente de `Manual`. Contas a
+Receber preserva `Origem = Pedido de venda`, que continua válida. Detalhes e ambiguidades do
+contrato (`parcela`/`pagamento` não expandidos, `ValorRecebido` vs. o `valorPago` genérico do
+plano) em `docs/IMPLEMENTACAO_V1_11_0A8B49.md`.
+
+### Validação da B49
+
+```bash
+npm run validate:source
+npm run typecheck
+npm run lint
+npx vitest run tests/unit/financeiroPayload.test.ts tests/unit/financeiroB42Structure.test.ts
+npx playwright test tests/e2e/financeiro-estoque.spec.ts
+```
 
 ## v1.11.0a8b48 — Gate de permissões frontend/backend (F0)
 
