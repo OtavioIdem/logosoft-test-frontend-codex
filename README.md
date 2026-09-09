@@ -1,4 +1,20 @@
-# logosoft Frontend v1.11.0a8b47.c3
+# logosoft Frontend v1.11.0a8b48
+
+## v1.11.0a8b48 — Gate de permissões frontend/backend (F0)
+
+Onda F0 do plano `docs/backend-v1.23/PLANO-FRONTEND-v1.23.md`: novo snapshot auditável de permissões (`scripts/backend-permissions.snapshot.json`, schemaVersion 2, 179 códigos — 177 nomeados mais as sentinelas `MASTER_GOD` e `*`), gerado por `npm run generate:backend-permissions-snapshot` a partir da união de `docs/backend-v1.23/CONTRATO-API-v1.23.md` e do catálogo §12 de `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md`. Novo gate `npm run validate:backend-permissions`, ligado a `ci:gates`, `validate:source` e ao workflow de CI, compara o union `PermissionCode` (`types/erp.ts`) contra o snapshot e reprova qualquer permissão fantasma (guard impossível de satisfazer) ou cobertura pendente (permissão do backend sem representação no frontend) que não esteja registrada, com motivo e alvo, em `scripts/backend-permissions.allowlist.json` — um registro fechado e monotônico, não uma supressão. Também corrigida a indentação de `frontend-ci.yml` e reescrito `scripts/validate-ci-gates.mjs` para parsear o workflow como YAML de verdade.
+
+### Validação da B48
+
+```bash
+npm run generate:backend-permissions-snapshot
+npm run validate:backend-permissions
+npm run report:backend-permissions
+npm run validate:ci
+npm run validate:source
+npm run typecheck
+npm run lint
+```
 
 ## v1.11.0a8b47.c3 — Consulta segura de filiais
 

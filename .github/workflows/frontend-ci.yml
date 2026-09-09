@@ -28,7 +28,7 @@ jobs:
       NEXT_PUBLIC_API_URL: http://localhost:8080
       NEXT_PUBLIC_APP_NAME: logosoft
       NEXT_PUBLIC_APP_ENV: test
-          NEXT_PUBLIC_APP_VERSION: 1.11.0a8b47.c3
+      NEXT_PUBLIC_APP_VERSION: 1.11.0a8b48
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,7 +37,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
-          cache: npm
 
       - name: Instalar dependências
         run: npm install
@@ -73,6 +72,9 @@ jobs:
       - name: Validar mapa de contratos frontend/backend
         run: npm run validate:backend-contract-map
 
+      - name: Validar permissões frontend/backend
+        run: npm run validate:backend-permissions
+
       - name: Validar referências por select/API
         run: npm run validate:guid-references
 
@@ -94,8 +96,8 @@ jobs:
       - name: Instalar Chromium do Playwright
         run: npx playwright install chromium
 
-      - name: E2E fiscal mockado
-        run: npm run test:e2e:fiscal
+      - name: E2E mockado
+        run: npm run test:e2e
 
       - name: Contrato fiscal backend opt-in
         run: npm run test:contract:fiscal

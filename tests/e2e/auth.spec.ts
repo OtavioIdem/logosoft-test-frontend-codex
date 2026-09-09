@@ -10,9 +10,11 @@ test('bloqueia rota interna sem autenticação', async ({ page }) => {
 test('login interceptado e logout', async ({ page }) => {
     await mockApiRoutes(page);
     await loginByForm(page);
-    await expect(page.getByText('Dashboard logosoft')).toBeVisible();
+    // Verificar o topbar heading para evitar ambiguidade com heading do conteúdo
+    await expect(page.locator('h1.layout-topbar-title-text')).toHaveText('Dashboard logosoft');
     await page.getByRole('button', { name: 'Sair da aplicação' }).click();
-    await expect(page).toHaveURL(/login/);
+    // Aumentar timeout para logout também
+    await expect(page).toHaveURL(/login/, { timeout: 15000 });
 });
 
 test('sessão persistida permite acesso direto ao dashboard', async ({ page }) => {

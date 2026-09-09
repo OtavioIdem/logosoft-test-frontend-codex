@@ -11,7 +11,6 @@ describe('backend contract map', () => {
     it('mantém gate, allowlist e contrato canônico versionados', () => {
         const packageJson = JSON.parse(read('package.json'));
         const allowlist = JSON.parse(read('scripts/backend-contract-map.allowlist.json'));
-        const permissionsSnapshot = JSON.parse(read('scripts/backend-permissions.snapshot.json'));
         const canonicalDoc = read('docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md');
         const legacyDoc = read('docs/CONTRATO_FRONTEND_BACKEND_B38.md');
 
@@ -21,9 +20,6 @@ describe('backend contract map', () => {
         expect(allowlist.version).toBe(packageJson.logosoftVersion);
         expect(allowlist.documentedDivergences).toEqual([]);
         expect(allowlist.suppressions).toEqual([]);
-        expect(permissionsSnapshot.version).toBe(packageJson.logosoftVersion);
-        expect(permissionsSnapshot.count).toBe(177);
-        expect(permissionsSnapshot.permissions).toHaveLength(177);
         expect(canonicalDoc).toContain('## 9. Catálogo de rotas');
         expect(legacyDoc).toContain('Documento histórico');
     });

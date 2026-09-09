@@ -350,6 +350,13 @@ try {
 }
 
 try {
+    statSync(join(root, 'scripts/validate-backend-permissions.mjs'));
+    execFileSync(process.execPath, [join(root, 'scripts/validate-backend-permissions.mjs')], { stdio: 'inherit' });
+} catch {
+    failures.push('scripts/validate-backend-permissions.mjs: validação de permissões frontend/backend falhou ou está ausente');
+}
+
+try {
     statSync(join(root, 'scripts/validate-backend-controlled.mjs'));
     execFileSync(process.execPath, [join(root, 'scripts/validate-backend-controlled.mjs')], { stdio: 'inherit' });
 } catch {
