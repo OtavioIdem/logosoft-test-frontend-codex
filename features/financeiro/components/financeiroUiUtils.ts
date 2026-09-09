@@ -56,4 +56,4 @@ export const defaultParcela = () => ({ numero: 1, vencimento: new Date(), valor:
 
 
 export const sumMoneyValues = (values: Array<number | null | undefined>): number => values.reduce<number>((total, value) => total + Number(value ?? 0), 0);
-export const countOpenFinancialRecords = <T extends { saldo?: number | null }>(records: T[]): number => records.filter((record) => Number(record.saldo ?? 0) > 0).length;
+export const countOpenFinancialRecords = <T extends { valorSaldo?: number | null }>(records: T[]): number => records.filter((record) => Number(record.valorSaldo ?? 0) > 0).length;

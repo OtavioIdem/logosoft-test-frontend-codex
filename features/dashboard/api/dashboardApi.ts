@@ -4,7 +4,7 @@ import { mapApiError } from '@/lib/http/apiError';
 import { DashboardAuditItem, DashboardData, DashboardMetric } from '@/features/dashboard/types/dashboard.types';
 import { EstoqueSaldo, PedidoCompra, PedidoVenda, StatusContaFinanceira, StatusPedidoCompra, StatusPedidoVenda } from '@/types/erp';
 
-type ContaFinanceiraResumo = { saldo?: number | null; valorTotal?: number | null; statusConta?: number | null; status?: number | string | null };
+type ContaFinanceiraResumo = { valorSaldo?: number | null; valorOriginal?: number | null; status?: number | string | null };
 type AuditoriaEventoResumo = { id: string; modulo: string; entidade: string; acao: number; descricao: string; criadoEm: string };
 type EndpointResult<T> = { data: T; warning?: string };
 
@@ -41,8 +41,8 @@ const buildMetrics = (data: {
     unavailable: Set<string>;
 }): DashboardMetric[] => {
     const vendasPendentes = countBy(data.pedidosVenda, (pedido) => [StatusPedidoVenda.Rascunho, StatusPedidoVenda.AguardandoAprovacao, StatusPedidoVenda.Aprovado].includes(Number(pedido.statusPedido)));
-    const totalReceber = sum(data.contasReceber.filter((conta) => isOpenFinancialStatus(conta.statusConta ?? conta.status)).map((conta) => conta.saldo ?? conta.valorTotal));
-    const totalPagar = sum(data.contasPagar.filter((conta) => isOpenFinancialStatus(conta.statusConta ?? conta.status)).map((conta) => conta.saldo ?? conta.valorTotal));
+    const totalReceber = sum(data.contasReceber.filter((conta) => isOpenFinancialStatus(conta.status)).map((conta) => conta.valorSaldo));
+    const totalPagar = sum(data.contasPagar.filter((conta) => isOpenFinancialStatus(conta.status)).map((conta) => conta.valorSaldo));
     const estoqueAtencao = countBy(data.saldos, (saldo) => Number(saldo.quantidadeDisponivel ?? 0) <= 0);
     const comprasPendentes = countBy(data.pedidosCompra, (pedido) => [StatusPedidoCompra.Rascunho, StatusPedidoCompra.AguardandoAprovacao, StatusPedidoCompra.Aprovado, StatusPedidoCompra.ParcialmenteRecebido].includes(Number(pedido.statusPedido)));
 

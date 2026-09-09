@@ -39,7 +39,7 @@ export const GerarBoletoDialog = ({ visible, loading, carteiraOptions, carteiraL
     const contaOptions = useMemo<SelectOption<string>[]>(() => (contasQuery.data ?? []).map((conta) => ({ label: `${conta.documento}`, value: conta.id })), [contasQuery.data]);
     const parcelaOptions = useMemo<SelectOption<string>[]>(() => {
         const conta = (contasQuery.data ?? []).find((item) => item.id === contaReceberId);
-        return (conta?.parcelas ?? []).map((parcela) => ({ label: `Parcela ${parcela.numero} — venc. ${formatDate(parcela.vencimento)} — ${formatMoney(parcela.valor)}`, value: parcela.id }));
+        return (conta?.parcelas ?? []).map((parcela) => ({ label: `Parcela ${parcela.numero} — venc. ${formatDate(parcela.vencimento)} — ${formatMoney(parcela.valorSaldo)}`, value: parcela.id }));
     }, [contasQuery.data, contaReceberId]);
 
     useEffect(() => {

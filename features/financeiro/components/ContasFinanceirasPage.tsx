@@ -31,7 +31,7 @@ type ContaRecord = ContaReceberResponse | ContaPagarResponse;
 type ActionState = 'baixar' | 'estornar' | 'cancelar' | 'gerarPedido' | null;
 
 const isReceber = (record: ContaRecord): record is ContaReceberResponse => 'clienteId' in record;
-const displayStatus = (record: ContaRecord) => Number(record.statusConta ?? record.status ?? 0) || null;
+const displayStatus = (record: ContaRecord) => Number(record.status ?? 0) || null;
 
 export const ContasFinanceirasPage = ({ type }: ContasFinanceirasPageProps) => {
     const { hasPermission } = usePermissions();
@@ -51,8 +51,8 @@ export const ContasFinanceirasPage = ({ type }: ContasFinanceirasPageProps) => {
     const mutations = useFinanceiroMutations();
     const records = useMemo(() => (query.data ?? []) as ContaRecord[], [query.data]);
     const summary = useMemo(() => ({
-        total: sumMoneyValues(records.map((record) => record.valorTotal)),
-        saldo: sumMoneyValues(records.map((record) => record.saldo)),
+        total: sumMoneyValues(records.map((record) => record.valorOriginal)),
+        saldo: sumMoneyValues(records.map((record) => record.valorSaldo)),
         abertas: countOpenFinancialRecords(records)
     }), [records]);
     const visibleRecords = useMemo(() => records.slice(first, first + rows), [first, records, rows]);
@@ -120,7 +120,7 @@ export const ContasFinanceirasPage = ({ type }: ContasFinanceirasPageProps) => {
             <div className="col-12 md:col-4"><Card className="h-full"><span className="text-600">Saldo em aberto</span><div className="text-2xl font-semibold mt-2">{formatMoney(summary.saldo)}</div></Card></div>
             <div className="col-12 md:col-4"><Card className="h-full"><span className="text-600">Contas com saldo</span><div className="text-2xl font-semibold mt-2">{summary.abertas}</div></Card></div>
         </div>
-        <Card>{query.error ? <ApiErrorPanel error={mapApiError(query.error)} /> : null}<DataTableServer<ContaRecord> value={visibleRecords} totalRecords={records.length} first={first} rows={rows} loading={query.isFetching} onPage={(event) => { setFirst(event.first); setRows(event.rows); }}><Column field="documento" header="Documento" /><Column header={type === 'receber' ? 'Cliente' : 'Fornecedor'} body={(row: ContaRecord) => displayParty(row)} /><Column header="Origem" body={(row: ContaRecord) => origemFinanceiraLabel(Number(row.origem))} /><Column header="Emissão" body={(row: ContaRecord) => formatDate(row.dataEmissao)} /><Column header="Total" body={(row: ContaRecord) => formatMoney(row.valorTotal)} /><Column header="Saldo" body={(row: ContaRecord) => formatMoney(row.saldo)} /><Column header="Status" body={(row: ContaRecord) => <StatusTag status={contaStatusTagValue(displayStatus(row))} />} /><Column header="Ações" body={(row: ContaRecord) => <DataTableActions actions={[{ key: 'baixar', label: baixarLabel, icon: 'pi pi-check-circle', permission: actionPermission, disabled: isContaEncerrada(displayStatus(row)), onClick: () => openAction('baixar', row) }, { key: 'estornar', label: 'Estornar', icon: 'pi pi-undo', permission: 'FINANCEIRO_ESTORNAR', severity: 'warning', onClick: () => openAction('estornar', row) }, { key: 'cancelar', label: 'Cancelar', icon: 'pi pi-ban', permission: 'FINANCEIRO_CANCELAR', severity: 'danger', disabled: isContaEncerrada(displayStatus(row)), onClick: () => openAction('cancelar', row) }]} />} /></DataTableServer></Card>
+        <Card>{query.error ? <ApiErrorPanel error={mapApiError(query.error)} /> : null}<DataTableServer<ContaRecord> value={visibleRecords} totalRecords={records.length} first={first} rows={rows} loading={query.isFetching} onPage={(event) => { setFirst(event.first); setRows(event.rows); }}><Column field="documento" header="Documento" /><Column header={type === 'receber' ? 'Cliente' : 'Fornecedor'} body={(row: ContaRecord) => displayParty(row)} /><Column header="Origem" body={(row: ContaRecord) => origemFinanceiraLabel(Number(row.origem))} /><Column header="Emissão" body={(row: ContaRecord) => formatDate(row.dataEmissao)} /><Column header="Total" body={(row: ContaRecord) => formatMoney(row.valorOriginal)} /><Column header="Saldo" body={(row: ContaRecord) => formatMoney(row.valorSaldo)} /><Column header="Status" body={(row: ContaRecord) => <StatusTag status={contaStatusTagValue(displayStatus(row))} />} /><Column header="Ações" body={(row: ContaRecord) => <DataTableActions actions={[{ key: 'baixar', label: baixarLabel, icon: 'pi pi-check-circle', permission: actionPermission, disabled: isContaEncerrada(displayStatus(row)), onClick: () => openAction('baixar', row) }, { key: 'estornar', label: 'Estornar', icon: 'pi pi-undo', permission: 'FINANCEIRO_ESTORNAR', severity: 'warning', onClick: () => openAction('estornar', row) }, { key: 'cancelar', label: 'Cancelar', icon: 'pi pi-ban', permission: 'FINANCEIRO_CANCELAR', severity: 'danger', disabled: isContaEncerrada(displayStatus(row)), onClick: () => openAction('cancelar', row) }]} />} /></DataTableServer></Card>
         <ContaFinanceiraFormDialog type={type} visible={formVisible} loading={mutations.contaReceberCreateMutation.isPending || mutations.contaPagarCreateMutation.isPending} onHide={() => setFormVisible(false)} onSubmit={createConta} />
         <BaixaFinanceiraDialog type={type} visible={action === 'baixar'} conta={selected} loading={mutations.receberMutation.isPending || mutations.pagarMutation.isPending} onHide={() => openAction(null)} onSubmit={baixar} />
         <EstornoFinanceiroDialog type={type === 'receber' ? 'recebimento' : 'pagamento'} visible={action === 'estornar'} conta={selected} loading={mutations.estornarRecebimentoMutation.isPending || mutations.estornarPagamentoMutation.isPending} onHide={() => openAction(null)} onSubmit={estornar} />

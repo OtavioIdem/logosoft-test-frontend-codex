@@ -1,3 +1,81 @@
+# v1.11.0a8b49
+
+## Contrato monetário do Financeiro (F1.1)
+
+- `features/financeiro/types/financeiro.types.ts`: renomeados os 5 tipos de response afetados
+  pelo P1 (`docs/backend-v1.23/PLANO-FRONTEND-v1.23.md`, §2). `ParcelaReceberResponse` e
+  `ParcelaPagarResponse` passam a declarar `valorOriginal`, `valorPago`, `valorJuros`,
+  `valorMulta`, `valorDesconto`, `valorSaldo` (o contrato não expande esses records; os nomes
+  vêm da prosa do plano). `RecebimentoResponse.parcelaId` → `parcelaReceberId`;
+  `PagamentoResponse.parcelaId` → `parcelaPagarId` (inferência por simetria, sem confirmação
+  literal no contrato). `ContaReceberResponse`/`ContaPagarResponse` trocam
+  `valorTotal`/`saldo`/`status`+`statusConta` por `valorOriginal`/`valorJuros`/`valorMulta`/
+  `valorDesconto`/`valorSaldo`/`status` (campo único) — com uma correção ao texto do plano:
+  o contrato real (`CONTRATO-API-v1.23.md:3268-3450`) declara `ContaPagarResponse.ValorPago`
+  mas `ContaReceberResponse.ValorRecebido`, não `ValorPago` nos dois; o tipo segue o contrato,
+  não a prosa. **Não tocados**: `ParcelaFinanceiraRequest`, `ReceberContaRequest.parcelaId`,
+  `PagarContaRequest.parcelaId` — o rename de `parcelaId` vale só para os records de response.
+- `features/financeiro/components/financeiroUiUtils.ts`: `countOpenFinancialRecords` passa a
+  ler `{ valorSaldo }` em vez de `{ saldo }`. `origemFinanceiraOptions` **não muda** — alimenta
+  tanto o dropdown de criação quanto `origemFinanceiraLabel` da coluna "Origem"; removê-la ali
+  quebraria a coluna para toda conta derivada de compra pelo backend.
+- `features/financeiro/components/ContasFinanceirasPage.tsx`: cards de resumo e colunas
+  "Total"/"Saldo" passam a ler `valorOriginal`/`valorSaldo`; `displayStatus` lê só `record.status`.
+- `features/financeiro/hooks/useFinanceiroResources.ts`: novos `contaReceberQueryKey(id)` /
+  `contaPagarQueryKey(id)` e `useContaReceberDetalhe(id, enabled)` /
+  `useContaPagarDetalhe(id, enabled)` (`enabled: Boolean(id) && enabled`, padrão de
+  `pedidoVendaQueryKey`/`usePedidoVenda`). As mutations de baixa, estorno e cancelamento
+  passam a invalidar o detalhe (`contaReceberQueryKey`/`contaPagarQueryKey`) além da lista.
+- `features/financeiro/components/FinanceiroActionDialogs.tsx`: `BaixaFinanceiraDialog` deixa
+  de confiar no registro selecionado da lista e passa a consumir o hook de detalhe
+  (`enabled: visible`). Estados cobertos: **loading** (dropdown de parcela e confirmar
+  desabilitados, campo Valor sem placeholder monetário — `valor` nasce `null`, não `0`);
+  **erro** ("Não foi possível carregar as parcelas desta conta.", confirmar bloqueado, sem
+  cair para o registro da lista); **sem parcela** (mensagem existente, confirmar bloqueado);
+  **sucesso** (invalida lista e detalhe). Novo campo derivado `valor > 0`: confirmar
+  bloqueado e `FieldError` "Informe um valor maior que zero." — validação de UX; o teto contra
+  o saldo da parcela é regra de domínio do backend, via 400 mapeado por `mapApiError`.
+- `features/dashboard/api/dashboardApi.ts`: `ContaFinanceiraResumo` (consumidor não listado no
+  plano, mas com o mesmo defeito) passa a `{ valorSaldo?, valorOriginal?, status? }`; os cards
+  de "Contas a receber/pagar em aberto" somam `conta.valorSaldo` filtrando por
+  `isOpenFinancialStatus(conta.status)`.
+- `features/bancos/components/BancosOperacoesDialogs.tsx`: dropdown de parcela do diálogo de
+  boleto (outro consumidor não listado no plano) passa a exibir `parcela.valorSaldo`.
+
+## Origem morta em Contas a Pagar (F1.5)
+
+- `features/financeiro/components/ContaFinanceiraFormDialog.tsx`: para `type === 'pagar'`, o
+  dropdown de Origem passa a oferecer só `Manual` (decisão do usuário: Manual-only), fica
+  desabilitado e ganha o texto de apoio "A
+  origem de uma conta a pagar é derivada pelo backend a partir do documento que a gerou. O
+  lançamento manual nasce com origem Manual." `needsOriginReference`/`unsupportedOriginReference`
+  deixam de considerar `OrigemFinanceira.Compra` — como nenhum dos dois tipos oferece mais essa
+  origem no dropdown, o `EntitySelect` de documento de origem e o `Message` que prometia um
+  envio recusado pelo backend nunca mais renderizam. Contas a Receber **não muda**: `Origem =
+  Pedido de venda` continua válida, com `EntitySelect` — o guard do backend não existe lá.
+- `features/financeiro/hooks/useFinanceiroOriginOptions.ts`: removido o ramo
+  `OrigemFinanceira.Compra` (query morta a `/api/compras/pedidos`).
+
+## Fixture E2E consertada (item 10 do plano)
+
+- `tests/e2e/fixtures/logosoft.ts`: `contasReceber`/`contasPagar` liam `valorTotal`/`saldo`/
+  `statusConta`/`status: 'ABERTO'` — a mesma mentira de contrato que o frontend tinha antes
+  desta versão. Reescritas no formato real de `ContaReceberResponse`/`ContaPagarResponse`, com
+  `parcelas[].valorSaldo` preenchido e saldo verificável (`R$ 251,00` em Contas a Receber, a
+  partir do pedido de venda de 251 já existente na fixture). Adicionado roteamento por id
+  (`GET /api/financeiro/contas-{receber,pagar}/{id}`) antes do `.includes()` genérico da lista,
+  necessário para o novo hook de detalhe do diálogo de baixa.
+
+## Validação executada
+
+```bash
+npm run validate:source
+npm run typecheck
+npm run lint
+npx vitest run tests/unit/financeiroPayload.test.ts tests/unit/financeiroB42Structure.test.ts
+npx playwright test tests/e2e/financeiro-estoque.spec.ts
+```
+
 # v1.11.0a8b48
 
 ## Gate de permissões frontend/backend
