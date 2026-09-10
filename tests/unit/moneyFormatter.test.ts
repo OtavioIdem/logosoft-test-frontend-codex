@@ -155,7 +155,7 @@ describe('formatMoney — contrato de campo obrigatório (F1.4)', () => {
             // que lançam TypeError com undefined, não silenciosamente mascaram com "R$ 0,00".
             // Elas são barulhentas, não silenciosas: classe diferente.
             // Este teste garante que o número encolhe (b51 tira importações de lib),
-            // nunca cresce. Drenagem completa planejada para b52.
+            // nunca cresce. Drenagem completa planejada para b54 (D2 remanejou de b52 para b54).
             expect(count).toBeLessThanOrEqual(25);
         });
     });

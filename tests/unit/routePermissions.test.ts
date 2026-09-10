@@ -9,8 +9,8 @@ describe('route permission rules', () => {
     });
 
     it('protege auditoria por permissão específica', () => {
-        expect(findRoutePermissionRule('/auditoria/eventos')?.anyOf).toEqual(['AUDITORIA_CONSULTAR']);
-        expect(findRoutePermissionRule('/auditoria/operacional')?.anyOf).toEqual(['AUDITORIA_CONSULTAR']);
+        expect(findRoutePermissionRule('/auditoria/eventos')?.anyOf).toEqual(['AUDITORIA_CONSULTAR', 'AUDITORIA_OPERACIONAL_CONSULTAR']);
+        expect(findRoutePermissionRule('/auditoria/operacional')?.anyOf).toEqual(['AUDITORIA_CONSULTAR', 'AUDITORIA_OPERACIONAL_CONSULTAR']);
     });
 
     it('protege fluxo de caixa por consulta financeira', () => {

@@ -34,7 +34,7 @@ const isTabelaAtiva = (tabela: TabelaPrecoResponse) => tabela.ativo === true || 
 
 export const TabelasPrecoPage = () => {
     const runWithToast = useMutationWithToast();
-    const { hasAnyPermission } = usePermissions();
+    const { hasPermission } = usePermissions();
     const [search, setSearch] = useState('');
     const [first, setFirst] = useState(0);
     const [rows, setRows] = useState(10);
@@ -56,7 +56,6 @@ export const TabelasPrecoPage = () => {
     const produtosQuery = useProdutos({});
     const precoVigenteQuery = usePrecoVigente({ produtoId: precoProdutoId, empresaId: precoEmpresaId, filialId: precoFilialId, dataReferencia: precoData }, Boolean(precoProdutoId && precoEnabled));
     const mutations = useTabelaPrecoMutations();
-    const canManageTabelaPreco = hasAnyPermission(['TABELAS_PRECO_GERENCIAR', 'VENDAS_GERENCIAR']);
 
     const paged = tabelasQuery.data;
     const tabelas = useMemo(() => paged?.items ?? [], [paged]);
@@ -64,8 +63,8 @@ export const TabelasPrecoPage = () => {
     const produtoOptions = useMemo(() => (produtosQuery.data ?? []).map((produto) => ({ label: `${produto.codigo} - ${produto.descricao}`, value: produto.id })), [produtosQuery.data]);
     const produtoLabelMap = useMemo(() => new Map((produtosQuery.data ?? []).map((produto) => [produto.id, `${produto.codigo} - ${produto.descricao}`])), [produtosQuery.data]);
 
-    if (!hasAnyPermission(['TABELAS_PRECO_CONSULTAR', 'TABELAS_PRECO_GERENCIAR', 'VENDAS_CONSULTAR', 'VENDAS_GERENCIAR'])) {
-        return <UnauthorizedState description="A rotina Tabelas de preço exige permissão comercial para consulta ou gestão." />;
+    if (!hasPermission('TABELAS_PRECO_CONSULTAR')) {
+        return <UnauthorizedState description="A rotina Tabelas de preço exige a permissão TABELAS_PRECO_CONSULTAR." />;
     }
 
     const saveTabela = async (values: TabelaPrecoFormValues) => {
@@ -109,7 +108,7 @@ export const TabelasPrecoPage = () => {
     const headerActions = (
         <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             <SearchInput ariaLabel="Buscar tabela" defaultValue={search} onChange={(term) => { setSearch(term); setFirst(0); }} />
-            <PermissionGuard anyOf={['TABELAS_PRECO_GERENCIAR', 'VENDAS_GERENCIAR']} mode="disable">
+            <PermissionGuard permission="TABELAS_PRECO_GERENCIAR" mode="disable">
                 {({ disabled }) => <Button label="Nova tabela" icon="pi pi-plus" disabled={disabled} onClick={() => { setSelectedTabela(null); setFormVisible(true); }} />}
             </PermissionGuard>
         </div>
@@ -133,11 +132,9 @@ export const TabelasPrecoPage = () => {
                             <Column header="Status" body={(tabela: TabelaPrecoResponse) => <Tag value={isTabelaAtiva(tabela) ? 'Ativa' : 'Inativa'} severity={isTabelaAtiva(tabela) ? 'success' : 'danger'} />} />
                             <Column header="Ações" align="right" body={(tabela: TabelaPrecoResponse) => <DataTableActions actions={[
                                 { key: 'detalhe', label: 'Itens', icon: 'pi pi-list', onClick: () => setSelectedTabela(tabela) },
-                                ...(canManageTabelaPreco ? [
-                                    { key: 'editar', label: 'Editar', icon: 'pi pi-pencil', onClick: () => { setSelectedTabela(tabela); setFormVisible(true); } },
-                                    { key: 'ativar', label: 'Ativar', icon: 'pi pi-check', severity: 'success' as const, disabled: isTabelaAtiva(tabela), onClick: async () => { await runWithToast(() => mutations.ativarMutation.mutateAsync(tabela.id), { success: { summary: 'Tabela ativada', detail: 'A tabela de preço foi ativada.' }, error: { summary: 'Erro ao ativar tabela', detail: 'Não foi possível ativar a tabela.' } }); } },
-                                    { key: 'inativar', label: 'Inativar', icon: 'pi pi-ban', severity: 'danger' as const, disabled: !isTabelaAtiva(tabela), onClick: () => { setSelectedTabela(tabela); setReasonAction('inativar-tabela'); } }
-                                ] : [])
+                                { key: 'editar', label: 'Editar', icon: 'pi pi-pencil', permission: 'TABELAS_PRECO_GERENCIAR', onClick: () => { setSelectedTabela(tabela); setFormVisible(true); } },
+                                { key: 'ativar', label: 'Ativar', icon: 'pi pi-check', permission: 'TABELAS_PRECO_ATIVAR', severity: 'success' as const, disabled: isTabelaAtiva(tabela), onClick: async () => { await runWithToast(() => mutations.ativarMutation.mutateAsync(tabela.id), { success: { summary: 'Tabela ativada', detail: 'A tabela de preço foi ativada.' }, error: { summary: 'Erro ao ativar tabela', detail: 'Não foi possível ativar a tabela.' } }); } },
+                                { key: 'inativar', label: 'Inativar', icon: 'pi pi-ban', permission: 'TABELAS_PRECO_INATIVAR', severity: 'danger' as const, disabled: !isTabelaAtiva(tabela), onClick: () => { setSelectedTabela(tabela); setReasonAction('inativar-tabela'); } }
                             ]} />} />
                         </DataTableServer>
                         {!tabelasQuery.isLoading && totalRecords === 0 ? <EmptyState title="Nenhuma tabela" description="Crie uma tabela ou ajuste a busca." /> : null}
@@ -147,7 +144,7 @@ export const TabelasPrecoPage = () => {
                 <div className="col-12 lg:col-5">
                     <Card title={selectedTabela ? `Itens — ${selectedTabela.nome}` : 'Itens da tabela'}>
                         {selectedTabela ? (
-                            <PermissionGuard anyOf={['TABELAS_PRECO_GERENCIAR', 'VENDAS_GERENCIAR']} mode="hide">
+                            <PermissionGuard permission="TABELAS_PRECO_ITENS_GERENCIAR" mode="hide">
                                 <Button className="mb-3" label="Adicionar item" icon="pi pi-plus" size="small" onClick={() => { setSelectedItem(null); setItemVisible(true); }} />
                             </PermissionGuard>
                         ) : <Message severity="info" text="Selecione uma tabela para visualizar e manter itens." />}
@@ -157,10 +154,10 @@ export const TabelasPrecoPage = () => {
                                 <Column header="Preço" body={(item: TabelaPrecoItemResponse) => formatMoney(item.precoVenda)} />
                                 <Column header="Mínimo" body={(item: TabelaPrecoItemResponse) => formatMoney(item.precoMinimo)} />
                                 <Column header="Margem" body={(item: TabelaPrecoItemResponse) => `${item.margemPercentual.toFixed(2)}%`} />
-                                <Column header="Ações" body={(item: TabelaPrecoItemResponse) => <DataTableActions actions={canManageTabelaPreco ? [
-                                    { key: 'editar-item', label: 'Editar', icon: 'pi pi-pencil', onClick: () => { setSelectedItem(item); setItemVisible(true); } },
-                                    { key: 'inativar-item', label: 'Inativar', icon: 'pi pi-ban', severity: 'danger' as const, disabled: item.ativo === false, onClick: () => { setSelectedItem(item); setReasonAction('inativar-item'); } }
-                                ] : []} />} />
+                                <Column header="Ações" body={(item: TabelaPrecoItemResponse) => <DataTableActions actions={[
+                                    { key: 'editar-item', label: 'Editar', icon: 'pi pi-pencil', permission: 'TABELAS_PRECO_ITENS_GERENCIAR', onClick: () => { setSelectedItem(item); setItemVisible(true); } },
+                                    { key: 'inativar-item', label: 'Inativar', icon: 'pi pi-ban', permission: 'TABELAS_PRECO_ITENS_GERENCIAR', severity: 'danger' as const, disabled: item.ativo === false, onClick: () => { setSelectedItem(item); setReasonAction('inativar-item'); } }
+                                ]} />} />
                             </DataTableServer>
                         ) : null}
                     </Card>

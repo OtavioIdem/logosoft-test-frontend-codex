@@ -141,8 +141,8 @@ export const FiscalIntegracoesTable = ({ logs, loading, onReprocessar, onOpenNot
             <Column
                 header="Ação"
                 body={(row: LogIntegracaoFiscalResponse) => row.podeReprocessar ? (
-                    <PermissionGuard permission="FISCAL_EMITIR" mode="disable">
-                        {({ disabled }) => <Button label="Reprocessar" icon="pi pi-refresh" size="small" outlined disabled={disabled} title={disabled ? 'Permissão necessária: FISCAL_EMITIR.' : undefined} onClick={() => onReprocessar(row)} />}
+                    <PermissionGuard permission="FISCAL_REPROCESSAR" mode="disable">
+                        {({ disabled }) => <Button label="Reprocessar" icon="pi pi-refresh" size="small" outlined disabled={disabled} title={disabled ? 'Permissão necessária: FISCAL_REPROCESSAR.' : undefined} onClick={() => onReprocessar(row)} />}
                     </PermissionGuard>
                 ) : <Tag value="Não reprocessável" />}
             />

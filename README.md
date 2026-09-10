@@ -1,4 +1,29 @@
-# logosoft Frontend v1.11.0a8b51
+# logosoft Frontend v1.11.0a8b52
+
+## v1.11.0a8b52 — Guards de permissão corrigidos: permissão existente, porém errada (F1.6.a)
+
+Onda F1 (parte 4) do plano `docs/backend-v1.23/PLANO-FRONTEND-v1.23.md`, item F1.6. Sequência
+travada em `D2` de `docs/arquitetura/DECISOES.md`: corrige as quatro divergências que a varredura
+arquitetural nomeou (481 chamadas HTTP × 579 operações do contrato v1.23, 4 divergências
+verdadeiras) antes de `b53` construir o gate que fecha a classe inteira. Os seis códigos de
+permissão usados já estavam no union e no catálogo desde `b50` — zero contrato novo, zero
+permissão nova no frontend, `validate:backend-permissions` segue em `0/0`.
+
+`features/tabelas-preco/components/TabelasPrecoPage.tsx`: editar/ativar/inativar tabela e as
+ações de item trocam o guard único `VENDAS_GERENCIAR`/`TABELAS_PRECO_GERENCIAR` pelas permissões
+granulares corretas (`TABELAS_PRECO_GERENCIAR`, `_ATIVAR`, `_INATIVAR`, `_ITENS_GERENCIAR`), via
+o campo `permission` que `RowAction` já tinha. `features/seguranca/components/SegurancaActionDialogs.tsx`:
+o diálogo "Gerenciar usuário" passa de um guard único (`SEGURANCA_USUARIOS_GERENCIAR`) cobrindo
+cinco botões para uma permissão por botão (`_RESETAR_SENHA`, `_GRUPOS_ACESSO_GERENCIAR` × 2,
+`_INATIVAR`; "Reativar" já estava certo). `features/auditoria/components/AuditoriaEventosPage.tsx`:
+a tela passa a exigir `AUDITORIA_OPERACIONAL_CONSULTAR` (a permissão que o endpoint realmente
+cobra), não `AUDITORIA_CONSULTAR`; a rota (`/auditoria`) fica permissiva com as duas, e o menu
+(inclusive o grupo pai, ajuste descoberto na verificação) segue a mesma regra.
+`features/fiscal/components/FiscalOperationalPanels.tsx`: "Reprocessar" passa a exigir
+`FISCAL_REPROCESSAR`, não `FISCAL_EMITIR`. Mocks de permissão em `tests/mocks/auth/mockAuthClient.ts`
+e `tests/e2e/fixtures/logosoft.ts` ganham os nove códigos novos, sem os quais o E2E cairia
+inteiro. Ver a seção operacional completa (tabela ação → permissão e o caminho de
+auto-bloqueio de quem administra Segurança) no `CHANGELOG.md`.
 
 ## v1.11.0a8b51 — `formatMoney` deixa de mascarar ausência com R$ 0,00 (F1.4)
 

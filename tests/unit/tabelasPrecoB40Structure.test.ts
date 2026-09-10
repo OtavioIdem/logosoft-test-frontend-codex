@@ -23,10 +23,12 @@ describe('tabelas de preço B40', () => {
         const component = read('features/tabelas-preco/components/TabelasPrecoPage.tsx');
 
         expect(component).not.toContain("severity={tabela.padrao ? 'info' : 'secondary'}");
-        expect(component).toContain('canManageTabelaPreco');
-        expect(component).toContain("PermissionGuard anyOf={['TABELAS_PRECO_GERENCIAR', 'VENDAS_GERENCIAR']}");
-        expect(component).toContain("...(canManageTabelaPreco ? [");
-        expect(component).toContain('actions={canManageTabelaPreco ? [');
+        expect(component).not.toContain('canManageTabelaPreco');
+        expect(component).toContain("permission: 'TABELAS_PRECO_GERENCIAR'");
+        expect(component).toContain("permission: 'TABELAS_PRECO_ATIVAR'");
+        expect(component).toContain("permission: 'TABELAS_PRECO_INATIVAR'");
+        expect(component).toContain("permission: 'TABELAS_PRECO_ITENS_GERENCIAR'");
+        expect(component).not.toContain('VENDAS_GERENCIAR');
     });
 
     it('cobre endpoints principais de tabelas, itens e preço vigente', () => {
@@ -39,6 +41,17 @@ describe('tabelas de preço B40', () => {
         expect(api).toContain('/api/tabelas-preco/${id}/itens/${itemId}');
         expect(api).toContain('/api/tabelas-preco/${id}/itens/${itemId}/inativar');
         expect(api).toContain('/api/tabelas-preco/produtos/${query.produtoId}/preco-vigente');
+    });
+
+    it('guard de entrada exige permissão de consulta de tabelas sem aceitar permissão de vendas', () => {
+        const component = read('features/tabelas-preco/components/TabelasPrecoPage.tsx');
+        const routes = read('lib/security/routePermissions.ts');
+
+        expect(component).toContain("hasPermission('TABELAS_PRECO_CONSULTAR')");
+        expect(component).toContain('TABELAS_PRECO_CONSULTAR');
+        expect(component).not.toContain('VENDAS_');
+        expect(routes).toContain('TABELAS_PRECO_CONSULTAR');
+        expect(routes).toContain('TABELAS_PRECO_GERENCIAR');
     });
 
     it('mantém o mapa de contrato em auditoria sem supressões históricas', () => {

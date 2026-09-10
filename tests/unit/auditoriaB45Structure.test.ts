@@ -22,8 +22,10 @@ describe('auditoria B45 structure', () => {
         expect(page).not.toContain('ModulePlaceholderPage');
         expect(menu).toContain('/auditoria/operacional');
         expect(menu).toContain('/auditoria/eventos');
+        expect(menu).toContain('AUDITORIA_OPERACIONAL_CONSULTAR');
         expect(routes).toContain('^\\/auditoria');
         expect(routes).toContain('AUDITORIA_CONSULTAR');
+        expect(routes).toContain('AUDITORIA_OPERACIONAL_CONSULTAR');
     });
 
     it('cobre filtros avançados sem campo manual de entidadeId', () => {
