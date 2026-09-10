@@ -118,3 +118,40 @@ Impacto: `features/tabelas-preco/components/TabelasPrecoPage.tsx` (guard de entr
 menu), mais os testes de estrutura e de acesso. **Preparação obrigatória antes do deploy**: os
 grupos que têm permissão de Vendas e precisam de Tabelas de Preço passam a precisar de
 `TABELAS_PRECO_CONSULTAR`, ou o módulo some do menu para o cargo inteiro.
+
+### D4 — as 16 correções que o próprio gate gera entram na `b53`, em vez de virarem exceção
+
+Data: 2026-09-10
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre o plano do
+`arquiteto-frontend` para F1.6.b, que escalou a questão em vez de decidir sozinho.
+Decisão: o gate de `b53` mede também a hierarquia do menu e a coerência entre menu e regra de
+rota. As 16 divergências que ele encontra hoje — 15 de item pai que não cobre a permissão do
+filho, e uma rota de locais de estoque que o menu oferece e a regra recusa — são **corrigidas na
+mesma versão**, e não registradas como exceção.
+Alternativas descartadas:
+1. Registrar as 16 como exceção com alvo numa versão futura — o gate nasceria com teto 18 em vez
+   de 2, e um registro desse tamanho não se drena: apodrece.
+2. Adiar o gate até que as 16 fossem corrigidas em versão própria — inverteria de novo a ordem que
+   D2 acabou de estabelecer, por um ganho de revisão que não existe: as correções são de duas
+   linhas por item.
+Por quê: o argumento de T7, que manda não misturar correção ampla com construção, vale pelo perfil
+do diff, não pela contagem. Estas 16 são **geradas pelo próprio gate**, todas aditivas, confinadas
+a dois arquivos, e nenhuma tira capacidade de ninguém — quem passa a ver o grupo do menu é
+exatamente quem já veria o filho. É o perfil oposto ao das cinco telas da `b52`, que mudavam acesso
+real e mereciam versão própria. O argumento é do `arquiteto-frontend`, com as 15 quebras medidas
+por protótipo executado sobre a árvore.
+Reversível: sim, e sem custo operacional — desfazer devolve o menu ao estado de hoje.
+Gatilho de revisita: o gate medir uma quebra de menu que **retire** permissão de alguém em vez de
+acrescentar; aí deixa de ser correção mecânica e vira decisão de acesso, como foi D3.
+Quem arbitrou: orquestrador
+Impacto: `layout/AppMenu.tsx` (cinco grupos pais ganham códigos em `anyPermissions`, nenhum perde)
+e `lib/security/routePermissions.ts` (uma regra específica de locais de estoque, inserida antes da
+genérica para não ampliar acesso a saldos e movimentos de quebra). Entra junto a mitigação que o
+arquiteto recomendou para o risco A5: o gate reprova quando um diretório de feature com chamada de
+rede não é segmento de rota nem tem dono declarado, para que um módulo novo não desapareça da
+medição em silêncio.
+
+**Limite que fica registrado junto, porque contradiz a intuição:** este gate **não** teria pegado o
+guard de entrada de Tabelas de Preço corrigido por D3. A regra é condição necessária — prova que o
+módulo conhece a permissão, não que a exige no lugar certo — e permissão a mais é invisível a ela.
+Das cinco correções da `b52`, o gate reprova quatro.

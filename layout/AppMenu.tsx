@@ -70,7 +70,7 @@ const AppMenu = () => {
             },
             {
                 label: 'Cadastros',
-                anyPermissions: ['PESSOAS_CONSULTAR', 'CLIENTES_CONSULTAR', 'FORNECEDORES_CONSULTAR', 'PRODUTOS_CONSULTAR'],
+                anyPermissions: ['PESSOAS_CONSULTAR', 'PESSOAS_GERENCIAR', 'CLIENTES_CONSULTAR', 'CLIENTES_GERENCIAR', 'FORNECEDORES_CONSULTAR', 'FORNECEDORES_GERENCIAR', 'PRODUTOS_CONSULTAR', 'PRODUTOS_GERENCIAR', 'CATEGORIAS_PRODUTO_GERENCIAR', 'UNIDADES_MEDIDA_GERENCIAR', 'MARCAS_GERENCIAR'],
                 items: [
                     { label: 'Pessoas', icon: 'pi pi-fw pi-address-book', to: '/pessoas', anyPermissions: ['PESSOAS_CONSULTAR', 'PESSOAS_GERENCIAR'] },
                     { label: 'Clientes', icon: 'pi pi-fw pi-user-plus', to: '/clientes', anyPermissions: ['CLIENTES_CONSULTAR', 'CLIENTES_GERENCIAR'] },
@@ -83,7 +83,7 @@ const AppMenu = () => {
             },
             {
                 label: 'Estoque',
-                anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_MOVIMENTAR', 'ESTOQUE_RESERVAR', 'ESTOQUE_INVENTARIO_GERENCIAR'],
+                anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_MOVIMENTAR', 'ESTOQUE_RESERVAR', 'ESTOQUE_INVENTARIO_GERENCIAR', 'LOCAIS_ESTOQUE_GERENCIAR', 'ESTOQUE_AJUSTAR', 'ESTOQUE_BLOQUEIO_GERENCIAR'],
                 items: [
                     { label: 'Locais de estoque', icon: 'pi pi-fw pi-warehouse', to: '/estoque/locais', anyPermissions: ['ESTOQUE_CONSULTAR', 'LOCAIS_ESTOQUE_GERENCIAR'] },
                     { label: 'Saldos', icon: 'pi pi-fw pi-database', to: '/estoque/saldos', permission: 'ESTOQUE_CONSULTAR' },
@@ -108,7 +108,7 @@ const AppMenu = () => {
             },
             {
                 label: 'Financeiro',
-                anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_GERENCIAR', 'FINANCEIRO_RECEBER', 'FINANCEIRO_PAGAR'],
+                anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_GERENCIAR', 'FINANCEIRO_RECEBER', 'FINANCEIRO_PAGAR', 'FINANCEIRO_FLUXO_CAIXA_CONSULTAR', 'FORMAS_PAGAMENTO_GERENCIAR', 'CONDICOES_PAGAMENTO_GERENCIAR'],
                 items: [
                     { label: 'Contas a receber', icon: 'pi pi-fw pi-arrow-down-left', to: '/financeiro/contas-receber', anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_RECEBER'] },
                     { label: 'Contas a pagar', icon: 'pi pi-fw pi-arrow-up-right', to: '/financeiro/contas-pagar', anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_PAGAR'] },
@@ -120,7 +120,7 @@ const AppMenu = () => {
             },
             {
                 label: 'Compras',
-                anyPermissions: ['COMPRAS_CONSULTAR', 'COMPRAS_GERENCIAR', 'COMPRAS_SOLICITACOES_CONSULTAR', 'COMPRAS_COTACOES_CONSULTAR'],
+                anyPermissions: ['COMPRAS_CONSULTAR', 'COMPRAS_GERENCIAR', 'COMPRAS_SOLICITACOES_CONSULTAR', 'COMPRAS_COTACOES_CONSULTAR', 'COMPRAS_SOLICITACOES_GERENCIAR', 'COMPRAS_COTACOES_GERENCIAR', 'COMPRAS_CONFERENCIA_FISCAL_REGISTRAR'],
                 items: [
                     { label: 'Pedidos de compra', icon: 'pi pi-fw pi-shopping-bag', to: '/compras/pedidos', anyPermissions: ['COMPRAS_CONSULTAR', 'COMPRAS_GERENCIAR'] },
                     { label: 'Solicitações', icon: 'pi pi-fw pi-file-edit', to: '/compras/solicitacoes', anyPermissions: ['COMPRAS_SOLICITACOES_CONSULTAR', 'COMPRAS_SOLICITACOES_GERENCIAR'] },

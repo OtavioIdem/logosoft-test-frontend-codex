@@ -1,6 +1,6 @@
-# logosoft Frontend v1.11.0a8b52
+# logosoft Frontend v1.11.0a8b53
 
-## v1.11.0a8b52 — Guards de permissão corrigidos: permissão existente, porém errada (F1.6.a)
+## v1.11.0a8b53 — Gate de permissões fechado: auditar e bloquear divergências (F1.6.b)
 
 Onda F1 (parte 4) do plano `docs/backend-v1.23/PLANO-FRONTEND-v1.23.md`, item F1.6. Sequência
 travada em `D2` de `docs/arquitetura/DECISOES.md`: corrige as quatro divergências que a varredura
@@ -24,6 +24,21 @@ cobra), não `AUDITORIA_CONSULTAR`; a rota (`/auditoria`) fica permissiva com as
 e `tests/e2e/fixtures/logosoft.ts` ganham os nove códigos novos, sem os quais o E2E cairia
 inteiro. Ver a seção operacional completa (tabela ação → permissão e o caminho de
 auto-bloqueio de quem administra Segurança) no `CHANGELOG.md`.
+
+### Limitações do gate de permissões (F1.6.b)
+
+O validador `npm run validate:guard-permission-map` é uma **condição necessária, mas não suficiente** para a segurança de permissões no frontend. Ele detecta:
+
+- Chamada HTTP sem guard (módulo órfão ou tela pendente)
+- Permissão declarada que não inclui a do contrato
+- Menu desalinhado com o contrato
+
+**Não detecta**:
+
+- **Permissão em excesso**: um guard que aceita `TABELAS_PRECO_GERENCIAR | VENDAS_GERENCIAR` quando o contrato só exige `TABELAS_PRECO_GERENCIAR`. Essa classe foi coberta por varredura manual durante `b52` — a drenagem de permissão redundante (F5.4/F5.5) é responsabilidade de uma onda futura.
+- **Catálogo genérico não mapeado**: caso sintético adicionado em `b53` que simula o problema — um módulo que chama um endpoint sem declarar a permissão exigida pelo contrato.
+
+Se uma auditoria de segurança revelar permissão em excesso em produção, o remédio é o próprio F5.4 — refatoração que unifica e enxuga as gramáticas de permissão. Consulte `docs/arquitetura/DECISOES.md` (D2, D3) e `docs/backend-v1.23/PLANO-FRONTEND-v1.23.md` (seção "Tradeoffs").
 
 ## v1.11.0a8b51 — `formatMoney` deixa de mascarar ausência com R$ 0,00 (F1.4)
 

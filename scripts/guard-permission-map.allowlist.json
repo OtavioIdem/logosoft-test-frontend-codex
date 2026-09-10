@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "version": "1.11.0a8b53",
+  "status": "registro-fechado-monotonico",
+  "contractDocument": "docs/backend-v1.23/CONTRATO-API-v1.23.md",
+  "auditPolicy": {
+    "owner": "Arquitetura Frontend LogoSoft",
+    "expiresAt": "2026-12-31T23:59:59-03:00",
+    "sourceContract": "docs/backend-v1.23/CONTRATO-API-v1.23.md",
+    "target": "F1.6.b — fechar a classe de divergências de permissão por rota"
+  },
+  "suppressions": [],
+  "description": "Registro auditável, fechado e monotônico das divergências entre as permissões que o contrato exige em cada operação HTTP e as permissões que os módulos frontend declaram. Calibração: 9 órfãs registradas nominalmente em C1 — módulos bancos, auditoria e relatorios sem página de rota ativa. Hierarquia de menu: 0. Menu sem regra: 0. Catálogo genérico: 1 (GC-01). Nota: filtro de alcançabilidade desabilitado pois estava eliminando divergências legítimas junto com órfãs.",
+  "teto": {
+    "chamadaSemGuard": 9,
+    "menuHierarquia": 0,
+    "menuSemRegra": 0,
+    "catalogoGenerico": 1
+  },
+  "chamadaSemGuard": [
+    {
+      "id": "chamada-features/auditoria/api/auditoriaApi.ts-GET-/api/auditoria/eventos",
+      "file": "features/auditoria/api/auditoriaApi.ts",
+      "method": "GET",
+      "path": "/api/auditoria/eventos",
+      "module": "auditoria",
+      "requiredPermission": "AUDITORIA_CONSULTAR",
+      "target": "F5.6 — remove código morto",
+      "decision": "órfão: módulo sem página de rota ativa no repositório"
+    },
+    {
+      "id": "chamada-features/bancos/api/bancosApi.ts-POST-/api/bancos",
+      "file": "features/bancos/api/bancosApi.ts",
+      "method": "POST",
+      "path": "/api/bancos",
+      "module": "bancos",
+      "requiredPermission": "BANCOS_GERENCIAR",
+      "target": "F5.6 — remove código morto",
+      "decision": "órfão: módulo sem página de rota ativa no repositório"
+    },
+    {
+      "id": "chamada-features/bancos/api/bancosApi.ts-POST-/api/bancos/contas-bancarias",
+      "file": "features/bancos/api/bancosApi.ts",
+      "method": "POST",
+      "path": "/api/bancos/contas-bancarias",
+      "module": "bancos",
+      "requiredPermission": "BANCOS_GERENCIAR",
+      "target": "F5.6 — remove código morto",
+      "decision": "órfão: módulo sem página de rota ativa no repositório"
+    },
+    {
+      "id": "chamada-features/bancos/api/bancosApi.ts-POST-/api/bancos/convenios",
+      "file": "features/bancos/api/bancosApi.ts",
+      "method": "POST",
+      "path": "/api/bancos/convenios",
+      "module": "bancos",
+      "requiredPermission": "BANCOS_GERENCIAR",
+      "target": "F5.6 — remove código morto",
+      "decision": "órfão: módulo sem página de rota ativa no repositório"
+    },
+    {
+      "id": "chamada-features/bancos/api/bancosApi.ts-POST-/api/bancos/carteiras",
+      "file": "features/bancos/api/bancosApi.ts",
+      "method": "POST",
+      "path": "/api/bancos/carteiras",
+      "module": "bancos",
+      "requiredPermission": "BANCOS_GERENCIAR",
+      "target": "F5.6 — remove código morto",
+      "decision": "órfão: módulo sem página de rota ativa no repositório"
+    },
+    {
+      "id": "chamada-features/bancos/api/bancosApi.ts-POST-/api/bancos/boletos/gerar",
+      "file": "features/bancos/api/bancosApi.ts",
+      "method": "POST",
+      "path": "/api/bancos/boletos/gerar",
+      "module": "bancos",
+      "requiredPermission": "BOLETOS_GERAR",
+      "target": "F5.6 — remove código morto",
+      "decision": "órfão: módulo sem página de rota ativa no repositório"
+    },
+    {
+      "id": "chamada-features/bancos/api/bancosApi.ts-POST-/api/bancos/cnab/remessas",
+      "file": "features/bancos/api/bancosApi.ts",
+      "method": "POST",
+      "path": "/api/bancos/cnab/remessas",
+      "module": "bancos",
+      "requiredPermission": "CNAB_REMESSA_GERAR",
+      "target": "F5.6 — remove código morto",
+      "decision": "órfão: módulo sem página de rota ativa no repositório"
+    },
+    {
+      "id": "chamada-features/bancos/api/bancosApi.ts-POST-/api/bancos/cnab/retornos/importar",
+      "file": "features/bancos/api/bancosApi.ts",
+      "method": "POST",
+      "path": "/api/bancos/cnab/retornos/importar",
+      "module": "bancos",
+      "requiredPermission": "CNAB_RETORNO_PROCESSAR",
+      "target": "F5.6 — remove código morto",
+      "decision": "órfão: módulo sem página de rota ativa no repositório"
+    },
+    {
+      "id": "chamada-features/relatorios/api/relatoriosApi.ts-GET-/api/relatorios/gerenciais/dashboard",
+      "file": "features/relatorios/api/relatoriosApi.ts",
+      "method": "GET",
+      "path": "/api/relatorios/gerenciais/dashboard",
+      "module": "relatorios",
+      "requiredPermission": "RELATORIOS_DASHBOARD_CONSULTAR",
+      "target": "F5.6 — remove código morto",
+      "decision": "órfão: módulo sem página de rota ativa no repositório"
+    }
+  ],
+  "menuHierarquia": [],
+  "menuSemRegra": [],
+  "menuForaDaRegra": [],
+  "catalogoGenerico": [
+    {
+      "id": "GC-01",
+      "resource": "seguranca-grupos",
+      "endpoint": "/api/seguranca/grupos-acesso",
+      "declaredPermission": "SEGURANCA_PERMISSOES_GERENCIAR",
+      "contractPermission": "SEGURANCA_GRUPOS_ACESSO_CONSULTAR / SEGURANCA_GRUPOS_ACESSO_GERENCIAR",
+      "target": "b54 — corrigir ou remover scaffold morto",
+      "decision": "exceção registrada (D2), impacto zero — useGrupos/useUsuarios sem consumidor"
+    }
+  ]
+}

@@ -1,3 +1,28 @@
+# v1.11.0a8b53
+
+## Gate de permissões fechado: auditar e bloquear divergências (F1.6.b)
+
+Onda F1 (parte 5) do plano `docs/backend-v1.23/PLANO-FRONTEND-v1.23.md` §7, item F1.6. Decisão `D2` e `D3` em `docs/arquitetura/DECISOES.md`: constrói o gate que cruza cada chamada HTTP do frontend com a permissão que o contrato declara exigir. A análise abrange 481 chamadas HTTP resolvidas sobre a AST (abstract syntax tree) do repositório, comparadas às 579 operações do contrato v1.23. Zero divergência dentro do escopo — as sete divergências legítimas de `b52` foram corrigidas, e o guard de entrada de Tabelas de Preço segue as novas regras desde então.
+
+**Exceções registradas**: 9 órfãs (módulos sem página de rota ativa) mantidas em lista nominada com teto monotônico. Nenhuma foi corrigida porque o escopo de F1.6 cobre apenas divergências de guard dentro de telas operacionais — a remoção de código morto é responsabilidade de F5.6. As exceções são:
+
+- **Bancos**: 7 chamadas (`POST /api/bancos`, `/api/bancos/contas-bancarias`, `/api/bancos/convenios`, `/api/bancos/carteiras`, `/api/bancos/boletos/gerar`, `/api/bancos/cnab/remessas`, `/api/bancos/cnab/retornos/importar`), nenhuma tem guard.
+- **Auditoria**: 1 chamada (`GET /api/auditoria/eventos`), permissão exigida é `AUDITORIA_CONSULTAR`, não tem guard (a tela que a usa agora exige `AUDITORIA_OPERACIONAL_CONSULTAR`, após `b52`).
+- **Relatórios**: 1 chamada (`GET /api/relatorios/gerenciais/dashboard`), permissão exigida é `RELATORIOS_DASHBOARD_CONSULTAR`, não tem guard.
+
+**Limite do gate**: o validador é condição **necessária** e **não suficiente**. Ele não detecta permissão em **excesso** — isto é, não pega quando um guard aceita mais permissões do que o contrato exige. Esse risco foi coberto por varredura manual (não automatizada) durante `b52` e é responsabilidade de F5.4 e F5.5. Ver comentário no cabeçalho de `scripts/validate-guard-permission-map.mjs` e seção "Limitações" no `README.md`.
+
+**Duas correções de menu e rota constatadas na verificação** (não no plano original, portanto entram nesta versão como achados):
+
+1. `layout/AppMenu.tsx` — item pai "Auditoria": corrige a permissão de `anyPermissions: ['AUDITORIA_CONSULTAR', 'AUDITORIA_OPERACIONAL_CONSULTAR']` para que o menu apareça para quem só tem a permissão nova (adicionado em `b52`).
+2. `lib/security/routePermissions.ts` — rota `/tabelas-preco`: muda para `anyOf: ['TABELAS_PRECO_CONSULTAR', 'TABELAS_PRECO_GERENCIAR']` (não mais aceita `VENDAS_*`), refletindo a decisão `D3` de `b52`.
+
+**Mocks e fixtures**: nenhuma alteração nova; `b52` já preparou os conjuntos (`mockPermissions` em `tests/mocks/auth/mockAuthClient.ts` e `ADMIN_PERMISSIONS` em `tests/e2e/fixtures/logosoft.ts`).
+
+**Testes**: novo teste unitário `tests/unit/guardPermissionMapProofHistoric.test.ts` garante que o gate continua honesto — executa a análise sobre `b52` (1312bc2) e confere que as sete divergências foram de fato corrigidas, e a árvore de hoje tem zero divergência legítima (apenas as 9 órfãs registradas).
+
+**Ritual de versão** (`package.json`, `.env.example`, `.env.test`, `.env.backend-controlled.example`, `scripts/backend-contract-map.allowlist.json`, `scripts/backend-permissions.snapshot.json`, `scripts/backend-permissions.allowlist.json`, `tests/evidence/integrated-e2e.assisted-evidence.example.json`, `README.md`, `CHANGELOG.md`) atualizado para `1.11.0a8b53`.
+
 # v1.11.0a8b52
 
 ## Guards de permissão corrigidos: permissão existente, porém errada (F1.6.a)
