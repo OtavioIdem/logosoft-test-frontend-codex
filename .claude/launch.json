@@ -7,6 +7,12 @@
             "runtimeArgs": ["run", "dev"],
             "port": 3000,
             "autoPort": true
+        },
+        {
+            "name": "logosoft-e2e-isolated",
+            "runtimeExecutable": "npx",
+            "runtimeArgs": ["next", "dev", "-p", "3411"],
+            "port": 3411
         }
     ]
 }
