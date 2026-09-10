@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "ask": [
+      "Bash(docker *)",
+      "Bash(docker-compose *)",
+      "Bash(git checkout *)",
+      "Bash(git switch *)",
+      "Bash(git stash*)",
+      "Bash(git reset *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "grep -qiE 'docker|docker-compose' && printf '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"Regra do projeto: Docker so sob pedido explicito do usuario. Nao subir, nao construir imagem e nao derrubar container alheio sem aprovacao a cada vez.\"}}\\n' || true",
+            "statusMessage": "Verificando se o comando envolve Docker..."
+          },
+          {
+            "type": "command",
+            "command": "grep -qE 'git (checkout|switch|stash|reset)' && printf '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"Trocar a revisao da arvore de trabalho exige aprovacao. Ja aconteceu de um gate rodar git checkout na arvore principal para analisar outra revisao e deixar a cabeca solta, fora do ramo, com uma versao inteira sem commit dentro. Para analisar outra revisao use git worktree add num diretorio temporario, e remova ao final.\"}}\\n' || true",
+            "statusMessage": "Verificando se o comando troca a revisao..."
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "grep -qE '\"file_path\"[[:space:]]*:[[:space:]]*\"[^\"]*(backend-permissions\\.snapshot\\.json|backend-contract-map\\.allowlist\\.json|CONTRATO-API-v1\\.23\\.md)\"' && printf '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Politica de arquivos (.claude/graph/policies.yaml, generated_only): este artefato e GERADO e e a medicao contra a qual os gates comparam. Edita-lo para o gate fechar e fraudar a medicao. Regenere: snapshot de permissoes com npm run generate:backend-permissions-snapshot; mapa de contrato com npm run report:backend-contract-map; o contrato da API e gerado no repositorio do backend. Se o resultado gerado estiver errado, corrija a origem e regenere.\"}}' || true",
+            "statusMessage": "Verificando se a escrita atinge artefato gerado..."
+          }
+        ]
+      }
+    ]
+  }
+}

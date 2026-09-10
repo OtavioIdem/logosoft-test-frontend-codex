@@ -1,0 +1,371 @@
+# Regimes de execução — frontend LogoSoft
+#
+# policies.yaml        -> QUEM pode escrever o quê
+# execution-graph.yaml -> QUANDO cada nó trabalha
+# regimes.yaml (este)  -> QUAL regime a tarefa aciona, e com QUE nível de modelo
+#
+# Portado do modelo do backend (`New project 3/.claude/graph/`), adaptado ao que
+# este repositório de fato tem: nossos agentes, nossos gates, nossas armadilhas.
+#
+# O regime é escolhido pela NATUREZA do trabalho, nunca pelo tamanho aparente.
+# "É só uma linha" não é regime — é estimativa, e estimativa erra.
+#
+# Medido nesta esteira, na onda F1 (b50 a b53): as versões b50/b51/b52 fecharam
+# em uma rodada de cada agente. A b53, que construía um gate, gastou SETE rodadas
+# de engenheiro-testes e duas de QA, e o gate foi entregue medindo zero DUAS vezes.
+# O que denunciou nas duas foi rodar a regra contra uma árvore antiga com defeito
+# conhecido. É por isso que `teste` separa desenho de execução, e por isso o
+# regime `gate` tem regra dura própria.
+
+version: 1
+
+# ---------------------------------------------------------------------------
+# Níveis de modelo — o eixo de custo
+# ---------------------------------------------------------------------------
+#
+# A regra: o nível acompanha o RACIOCÍNIO EXIGIDO, não a importância do
+# resultado. Aplicar uma correção já diagnosticada é trabalho de baixo
+# raciocínio sobre um resultado importante — e vai no nível barato.
+
+tiers:
+
+  L4_arquitetura:
+    model: opus
+    effort: high
+    quem: orquestrador (sessão principal), arquiteto-frontend
+    quando: >
+      Decidir o que fazer, por quê, e o que NÃO fazer. Ler contrato de saída de
+      agente e julgar se procede. Travar decisão (Dn). Escolher regime.
+      Arbitrar divergência entre agentes.
+
+  L3_construcao:
+    model: sonnet
+    effort: high
+    quem: dev-senior-react, designer-ux-erp
+    quando: >
+      Escrever código de produção em features/, lib/, layout/, app/ a partir de
+      um plano. Exige entender o módulo e o contrato do backend, não só editar
+      arquivo.
+
+  L3_julgamento:
+    model: sonnet
+    effort: high
+    quem: >
+      qa-revisor, engenheiro-testes, inventariante-contrato-tela,
+      arquiteto-operacao-erp, arquiteto-plataforma-frontend,
+      arquiteto-escopo-entrega, arquiteto-design-system
+    quando: >
+      Procurar o que teste verde não mostra, e DESENHAR o teste que sabe ficar
+      vermelho. Mesmo nível do dev, de propósito: é aqui que o erro é pego, e
+      revisor mais fraco que o construtor não pega nada.
+      Os quatro do regime `arquitetura` moram aqui pelo mesmo motivo: propor a
+      forma do que ainda não existe exige o raciocínio de quem vai construí-la.
+      Quem arbitra e trava (Dn) é o orquestrador, em L4.
+
+  L2_aplicacao:
+    model: sonnet
+    effort: medium
+    quem: dev-senior-react, com briefing de correção fechado
+    quando: >
+      Aplicar correção JÁ diagnosticada — arquivo, linha, causa e solução vêm
+      escritos. Zero decisão de desenho. Se precisar decidir, o regime está
+      errado, não o modelo.
+    lacuna_conhecida: >
+      O backend tem um agente próprio para isto (`erp-correcao-executor`), com
+      `tools:` que o impedem de decidir desenho. Aqui o mesmo agente que constrói
+      também aplica, então a fronteira é declarada, não imposta. Enquanto for
+      assim, o briefing de correção precisa ser literal: arquivo, linha, o que
+      entra no lugar do quê.
+
+  L1_repeticao:
+    model: haiku
+    effort: low
+    quem: devops-frontend
+    quando: >
+      Rodar comando conhecido, coletar saída, reportar número. Nenhuma
+      interpretação. Falha reprova e ESCALA — nunca tenta consertar.
+
+# ---------------------------------------------------------------------------
+# Os regimes
+# ---------------------------------------------------------------------------
+
+regimes:
+
+  # =========================================================================
+  implementacao:
+    o_que_e: Tela, fluxo ou comportamento novo, ou mudança de comportamento existente.
+    gatilhos:
+      - rota, tela ou feature nova
+      - campo, tipo ou schema Zod que muda contra o contrato do backend
+      - permissão no union, no catálogo, em routePermissions, no menu ou em guard
+      - valor monetário, cálculo ou regra que o operador lê para decidir
+      - padrão visual novo que outras telas vão herdar
+    mecanismo: grafo completo (execution-graph.yaml), com plano de fatia escrito ANTES
+    plano_obrigatorio: true
+    nodes: [planner?, inventario?, design?, builder, tests, gate_estrutural?, qa_review]
+    tiers:
+      planejamento: L4_arquitetura
+      inventario:   L3_julgamento
+      construcao:   L3_construcao
+      teste:        L3_julgamento    # desenha o teste, não só roda
+      revisao:      L3_julgamento
+    quando_NAO_usar: >
+      Defeito já diagnosticado, ajuste de texto, subir a aplicação. Pagar plano,
+      inventário e revisão para trocar uma constante é desperdício, e os nós
+      condicionais existem justamente para não rodar.
+
+  # =========================================================================
+  correcao:
+    o_que_e: Defeito conhecido em código que já existe. O comportamento certo já está definido.
+    gatilhos:
+      - bug reportado pelo uso real
+      - achado de QA que virou fatia corretiva (.cN)
+      - teste vermelho que expõe regra errada
+      - regressão
+    mecanismo: >
+      Modo ASSISTIDO. O peso vai todo para o diagnóstico: o orquestrador levanta
+      os dados, prova a causa, escolhe a alternativa e escreve a correção com
+      arquivo, linha e resultado esperado. O executor só aplica.
+    plano_obrigatorio: false   # o briefing de correção substitui o plano de fatia
+    nodes: [diagnostico, aplicacao, teste, qa_review?]
+    tiers:
+      diagnostico: L4_arquitetura   # <- o trabalho pesado mora aqui
+      aplicacao:   L2_aplicacao
+      teste:       L1_repeticao     # roda o teste que o diagnóstico especificou
+      revisao:     L3_julgamento    # só se o defeito era de permissão, dinheiro ou contrato
+    regra_dura: >
+      O executor NUNCA decide desenho. Briefing que não diz exatamente o que
+      mudar não está pronto para descer de nível — devolve needs_decision.
+      Se a correção revelar que a solução certa é desenho novo, o regime MUDA
+      para implementacao; não se improvisa arquitetura em nível L2.
+    precedente: >
+      Na b52, o dev recebeu um passo que mandava criar quatro variáveis de
+      permissão que, do jeito que os passos seguintes estavam escritos,
+      nasceriam mortas. Ele removeu e relatou. Briefing errado que o executor
+      obedece ao pé da letra vira código morto; briefing errado que ele
+      questiona vira uma linha de relato. A segunda é a que se quer.
+
+  # =========================================================================
+  teste:
+    o_que_e: Provar (ou medir) comportamento. Três papéis distintos, três níveis.
+    mecanismo: >
+      DESENHO, EXECUÇÃO e GATE são separados. O erro caro é tratar os três como
+      a mesma coisa e rebaixar todos.
+    papeis:
+
+      desenho:
+        agente: engenheiro-testes
+        tier: L3_julgamento
+        quando: >
+          A fatia tem armadilha conhecida — dinheiro na tela, permissão,
+          contexto organizacional, estado de diálogo que grava.
+        evidencia: >
+          Na b51, o teste que provava a denúncia de valor ausente foi escrito
+          contra um componente inventado pelo próprio teste. Provava o contrato
+          da função com React em volta, não o comportamento da tela. O QA
+          marcou como não bloqueante e a dívida ficou registrada.
+
+      execucao:
+        agente: devops-frontend
+        tier: L1_repeticao
+        regra_dura: >
+          Vermelho é resultado, não problema a resolver. Reporta e para —
+          nunca edita features/, nunca afrouxa assert, nunca "ajeita" o teste.
+        armadilha_de_ambiente:
+          o_que: >
+            `playwright.config.ts` reusa em silêncio o que estiver servindo a
+            porta configurada, e dois `next dev` do mesmo diretório corrompem o
+            `.next` compartilhado, com HTTP 500 em rota que existe.
+          custo_medido: >
+            Três execuções deram três resultados (6/6, 11/11 e 11 falhas) na
+            mesma versão, e nenhuma era reprodutível. A verdade, com cache limpo
+            e servidor isolado, era 12/12. Custou uma rodada inteira de QA.
+          receita: >
+            Descobrir quem atende a porta antes de crer em qualquer resultado;
+            um servidor só; `preview_start { name: "logosoft-e2e-isolated" }`
+            (porta 3411); aquecer as rotas; rodar com
+            `--config=playwright.isolated.config.ts` e `PLAYWRIGHT_BASE_URL`.
+            Rodar duas vezes antes de aceitar.
+
+      gate:
+        agente: engenheiro-testes
+        tier: L3_julgamento
+        quando: >
+          A fatia precisa impedir que uma CLASSE de defeito volte, e não provar
+          um caso. Catálogo, exaustividade, unicidade, cardinalidade, campo do
+          contrato sem consumidor, permissão sem par.
+        por_que_papel_separado: >
+          Gate ENUMERA o universo e afirma sobre cada item; teste de regra prova
+          um caso. São instrumentos diferentes, e escrever um com a cabeça do
+          outro produz gate que testa amostra — que não é gate.
+        regra_dura: >
+          Gate que nasce vermelho é achado com dono, não coisa a acomodar. Não
+          se afrouxa gate existente, não se cria etapa futura inexistente para
+          justificar divergência, e não se ajusta a regra até o número bater.
+        prova_obrigatoria: >
+          TODO gate novo precisa provar que sabe ficar VERMELHO, rodando contra
+          uma árvore antiga que contém o defeito conhecido, com asserção por
+          item nominal — nunca por total.
+        evidencia: >
+          O gate de guard × permissão (b53) foi entregue "verde" duas vezes
+          medindo zero: primeiro por um truncamento de um caractere no nome do
+          módulo, depois por um filtro de alcançabilidade largo demais. Nas duas
+          vezes os testes do próprio gate passaram. O que denunciou foi rodar
+          contra a árvore da b51 e não achar as sete divergências que estavam
+          lá. Hoje isso é o `tests/unit/guardPermissionMapProofHistoric.test.ts`,
+          com sete asserções nominais de cada lado, e foi verificado que ele
+          reprova nomeando os pares ausentes quando apontado para a árvore errada.
+
+  # =========================================================================
+  qualidade:
+    o_que_e: Revisão da entrega antes do commit — escopo, gates, comportamento.
+    mecanismo: nó `qa_review` do grafo, sempre presente
+    tier: L3_julgamento    # equiparado ao dev, por decisão explícita
+    racional: >
+      Revisor mais barato que o construtor não acha o que o construtor errou —
+      ele confirma o que já está escrito.
+    evidencia: >
+      Na b52 o QA se recusou a aprovar com E2E cujo resultado ninguém sabia
+      explicar, e estava certo: a causa era corrupção de cache, não código.
+      Na b53 ele bloqueou por ritual de versão faltando em nove arquivos e por
+      um teste que não testava — os dois procedentes.
+    nao_cortar_quando: a fatia toca permissão, dinheiro na tela ou contrato do backend
+    regra_dura: >
+      Explicação de ambiente sem prova não é conclusão. Resultado de teste
+      inexplicado bloqueia até alguém medir.
+
+  # =========================================================================
+  arquitetura:
+    o_que_e: >
+      Decidir a FORMA do que ainda não existe — padrão de tela, fronteira de
+      feature, sequência de entrega, trade-off. Vem ANTES do plano de fatia e
+      produz o material de que o plano se alimenta. Não escreve código.
+    gatilhos:
+      - abrir um módulo novo, ou um padrão de tela que outras vão herdar
+      - reestruturar o planejamento de várias entregas de uma vez
+      - decisão cujo erro só se corrige refazendo telas
+      - divergência de desenho que duas versões seguidas não resolveram
+    mecanismo: >
+      DUAS ETAPAS, não uma. Primeiro o `inventariante-contrato-tela` produz a
+      LISTA — tela, rota, endpoint, campo, tipo, permissão, estado, com destino
+      declarado por item. Depois o QUARTETO discute a FORMA em paralelo, com
+      incentivos opostos de propósito e com a lista na mão: operação (o fluxo
+      real fechar ponta a ponta), plataforma (o que sobrevive ao ano cinco),
+      escopo (o que entra em produção), design system (o que vira padrão).
+      Cada um escreve UM arquivo próprio em docs/arquitetura/debate/, em caminho
+      disjunto. O orquestrador arbitra, trava as decisões (Dn) e escreve a síntese.
+    plano_obrigatorio: false   # o produto DELE é que vira plano depois
+    nodes: [inventario, arquitetura x4, sintese]
+    tiers:
+      inventario:  L3_julgamento
+      arquitetura: L3_julgamento
+      sintese:     L4_arquitetura   # arbitrar e travar é do orquestrador
+    regra_dura: >
+      Arquiteto PROPÕE com id (Dn) e argumento; nunca decide. E toda posição
+      carrega "o que eu abro mão" — posição sem custo declarado é lista de
+      desejos, não arquitetura.
+      A rodada só fecha com os arquivos do inventariante e do quarteto escritos:
+      quarteto sem inventário discute forma sem lista, e inventário sem quarteto
+      produz lista sem forma.
+    licao_de_metodo: >
+      Rodar um arquiteto só devolve um lado da questão com cara de conclusão.
+      Detalhe do mecanismo em skills/projeto/.
+
+  # =========================================================================
+  infraestrutura:
+    o_que_e: Plataforma — dev server, build, imagem, CI, configuração de teste.
+    mecanismo: dois sub-regimes, e a diferença entre eles é o que decide o custo
+    sub_regimes:
+
+      bootstrap:
+        o_que_e: >
+          Montar ou mudar a topologia — porta, servidor isolado, pipeline de
+          gates, configuração de Playwright, variável de ambiente nova.
+        agente: devops-frontend
+        tier: L3_construcao
+        racional: >
+          Aqui se decide o que o teste enxerga. Errar isso produz verde falso, e
+          verde falso é pior que vermelho — foi o que custou uma rodada de QA
+          na b52.
+
+      rebuild:
+        o_que_e: Rodar o mesmo comando de sempre, trocando só a versão.
+        agente: devops-frontend
+        tier: L1_repeticao
+        racional: Comando conhecido, saída conhecida, zero decisão.
+        escalation:
+          gatilho: falha de compilação, de build ou de subida
+          acao: >
+            PARA e reporta a saída bruta. O orquestrador reabre em
+            L3_construcao (ou regime `correcao`) com o erro em mãos.
+            O nível barato NUNCA tenta diagnosticar build quebrado.
+
+    regra_do_projeto: >
+      Docker só quando o usuário pedir explicitamente. Não subir, não construir
+      imagem, não derrubar container alheio. O hook de `.claude/settings.json`
+      pede aprovação a cada execução que envolva Docker.
+
+# ---------------------------------------------------------------------------
+# Troca de regime no meio do caminho
+# ---------------------------------------------------------------------------
+
+transicoes:
+
+  implementacao_para_correcao:
+    gatilho: QA devolve BLOQUEADO, ou aparece defeito durante a fatia
+    acao: >
+      Abre fatia corretiva (.cN) em regime `correcao` — NÃO retoma o agente
+      original e não sobe o bloco inteiro de novo. O diagnóstico é do
+      orquestrador (L4); a aplicação desce para L2.
+
+  correcao_para_implementacao:
+    gatilho: >
+      O diagnóstico conclui que a correção certa exige desenho novo — tela nova,
+      mudança de contrato, padrão visual novo.
+    acao: >
+      PARA. Escreve plano de fatia e entra em regime `implementacao`.
+      Nunca se improvisa desenho dentro de um briefing de correção.
+
+  L1_escala_para_L3:
+    gatilho: build vermelho, teste vermelho inesperado, comando que falhou
+    acao: >
+      O nível barato reporta a saída bruta e para. O orquestrador decide se
+      reabre em `correcao` (defeito conhecido) ou `implementacao` (desenho).
+    regra_dura: >
+      Agente L1 que tenta consertar o que quebrou é o pior gasto possível:
+      paga barato por muitas tentativas erradas e ainda suja o diff.
+
+  gate_que_nao_mede:
+    gatilho: >
+      Um gate novo não acusa o defeito conhecido na árvore antiga, ou acusa
+      divergência que ninguém sabe explicar.
+    acao: >
+      Trata-se como DEFEITO DO GATE até prova em contrário, nunca como pendência
+      de escopo. Não se cria etapa futura para acomodar o número, e não se ajusta
+      a regra até bater. Se a regra do plano não se sustentar, isso é achado para
+      o orquestrador decidir.
+    racional: >
+      Foi assim duas vezes na b53. Nas duas, a primeira explicação oferecida era
+      escopo, e a causa real era calibração.
+
+# ---------------------------------------------------------------------------
+# Como o orquestrador escolhe — tabela de decisão
+# ---------------------------------------------------------------------------
+
+selecao:
+  ordem_de_avaliacao:
+    - pergunta: A mudança altera permissão, contrato do backend, valor monetário exibido ou padrão de tela?
+      se_sim: implementacao
+    - pergunta: Existe comportamento novo, ou só comportamento errado a consertar?
+      se_novo: implementacao
+      se_errado: correcao
+    - pergunta: É impedir que uma CLASSE de defeito volte?
+      se_sim: teste/gate
+    - pergunta: É rodar comando conhecido com saída conhecida?
+      se_sim: infraestrutura/rebuild ou teste/execucao
+    - pergunta: É decidir a forma do que ainda não existe?
+      se_sim: arquitetura
+  default: implementacao
+  racional_do_default: >
+    Na dúvida, sobe o nível. Errar para cima custa tokens; errar para baixo
+    custa uma versão refeita.

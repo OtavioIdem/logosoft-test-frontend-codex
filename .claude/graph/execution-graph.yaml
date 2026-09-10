@@ -1,0 +1,293 @@
+# Grafos de execução — frontend LogoSoft
+#
+# QUEM trabalha está em policies.yaml. Aqui está QUANDO cada um trabalha.
+#
+# Este arquivo contém DOIS grafos, porque são dois trabalhos diferentes:
+#   `nodes:`             -> grafo da FATIA (regimes implementacao/correcao/
+#                           teste/qualidade). Constrói comportamento.
+#   `graph_arquitetura:` -> grafo da RODADA (regime arquitetura). Decide a forma
+#                           do que ainda não existe, e vem ANTES do plano.
+# O regime escolhido em regimes.yaml decide qual dos dois vale.
+#
+# Não existe pipeline fixo. Um nó só entra no grafo se a sua `condition` for
+# verdadeira; as condições são alimentadas pelos flags `requirements` da seção 0
+# do plano de fatia.
+#
+# O executor deste grafo é o orquestrador (sessão principal). Ele lê o plano,
+# resolve as condições, aciona um nó por vez via a ferramenta Agent, valida o
+# contrato de saída (contratos.md) e grava o estado na seção 9 do plano.
+
+version: 1
+
+inputs:
+  requirements:
+    contractChange:       bool   # tipo, campo ou schema muda contra o contrato do backend
+    permissionChange:     bool   # union PermissionCode, catálogo, routePermissions, menu ou guard
+    moneyOnScreen:        bool   # valor monetário ou cálculo que o operador lê para decidir
+    uiPattern:            bool   # padrão visual novo que outras telas vão herdar
+    organizationalContext: bool  # empresaId/filialId, query key, enabled, cache por contexto
+    navigationChange:     bool   # rota, item de menu, guard de rota — muda o que a pessoa alcança
+    structuralGate:       bool   # a fatia CRIA ou altera gate em scripts/
+    platformChange:       bool   # CI, Docker, next.config, playwright config, variável de ambiente
+    newScreen:            bool   # tela que não existia
+  risk: LOW | MEDIUM | HIGH | CRITICAL   # ver risk.yaml
+
+nodes:
+
+  planner:
+    agent: arquiteto-frontend
+    optional: true
+    skip_when: >
+      o orquestrador já conhece o gap e escreve o plano direto (fatia corretiva,
+      fatia derivada de achado de QA, fatia de uma linha)
+    produces: [requirements, risk, decisions, acceptanceCriteria, testPlan, blocos]
+
+  inventario:
+    agent: inventariante-contrato-tela
+    depends_on: [planner]
+    condition:
+      any_of:
+        - requirements.contractChange: true
+        - requirements.newScreen: true
+    # Existe porque a F1.1 provou que a UI lia campos que o backend não entrega,
+    # e a tela mostrava R$ 0,00 sem ninguém perceber.
+    gates:
+      conta_de_campos: a soma fecha, ou o contrato é `blocked`
+
+  design:
+    agent: designer-ux-erp
+    depends_on: [planner, inventario]
+    condition:
+      any_of:
+        - requirements.uiPattern: true
+        - requirements.newScreen: true
+
+  builder:
+    agent: dev-senior-react
+    depends_on: [planner, inventario, design]
+    always: true
+    gates:
+      fonte: npm run validate:source
+      tipos: npm run typecheck
+      lint: npm run lint
+
+  gate_estrutural:
+    agent: engenheiro-testes
+    depends_on: [builder]
+    condition:
+      requirements.structuralGate: true
+    gates:
+      enumera: o gate lista o universo inteiro e afirma sobre cada item
+      prova_vermelha: >
+        roda contra árvore antiga com defeito conhecido e acusa os itens
+        NOMINAIS esperados, um a um. Sem essa prova o nó não fecha.
+      registro: >
+        divergência que sobra entra no registro de exceção uma a uma, com alvo,
+        e o teto bate exatamente com o tamanho da lista
+    then: tests
+
+  tests:
+    agent: engenheiro-testes
+    depends_on: [builder, gate_estrutural]
+    always: true
+    gates:
+      escopo: só os testes do módulo e do fluxo — nunca a suíte completa
+      cobertura: todo AC-xxx da fatia referenciado por ao menos um teste
+      componente: todo diálogo que grava tem teste de componente
+
+  e2e:
+    agent: devops-frontend
+    depends_on: [tests]
+    condition:
+      any_of:
+        - requirements.navigationChange: true
+        - requirements.permissionChange: true
+        - requirements.newScreen: true
+    receita_obrigatoria: >
+      um servidor só, isolado (`logosoft-e2e-isolated`, porta 3411), rotas
+      aquecidas, `--config=playwright.isolated.config.ts` com
+      PLAYWRIGHT_BASE_URL. Conferir QUEM atende a porta antes de crer no
+      resultado, e rodar duas vezes.
+    regra_dura: >
+      Resultado inexplicado não vira conclusão. Verde falso e vermelho falso já
+      custaram uma rodada de QA nesta esteira.
+
+  plataforma:
+    agent: devops-frontend
+    depends_on: [planner]
+    condition:
+      requirements.platformChange: true
+    escalation: >
+      falha de build no sub-regime rebuild PARA e sobe para L3_construcao com a
+      saída bruta — o nível barato nunca diagnostica build quebrado
+
+  qa_review:
+    agent: qa-revisor
+    depends_on: [tests, e2e, plataforma]
+    always: true
+    nao_cortar_quando: a fatia toca permissão, dinheiro na tela ou contrato do backend
+    checks:
+      - escopo por diff contra a lista de arquivos do plano
+      - gates do recorte rodados pelo próprio QA, sem confiar no relato dos agentes
+      - asserção invertida está certa; asserção afrouxada ou removida, não
+      - mudança de acesso em produção dita no CHANGELOG, para quem administra grupos
+    verdict: APROVADO | APROVADO_COM_RESSALVA | BLOQUEADO
+
+  correction:
+    # NÃO é retomada do agente original: é bloco novo e enxuto
+    agent: <o dono do achado>
+    depends_on: [qa_review]
+    condition:
+      verdict: BLOQUEADO
+    input: correctionSlice (ver contratos.md)
+    then: tests -> qa_review
+
+  release:
+    owner: orquestrador
+    depends_on: [qa_review]
+    condition:
+      releaseGate: passed
+
+retry:
+  max_attempts: 3        # por nó
+  on_exhausted:
+    status: blocked
+    owner: usuário
+    action: parar e relatar; não tentar um quarto caminho sozinho
+  evidencia: >
+    Na b53 o nó de gate estrutural consumiu SETE rodadas. O limite de três teria
+    forçado a devolver ao orquestrador na terceira, que foi exatamente quando a
+    causa raiz (calibração, não escopo) já estava visível no relato.
+
+releaseGate:
+  fonte: npm run validate:source        passed
+  tipos: npm run typecheck              passed
+  lint:  npm run lint                   passed
+  ci:    npm run validate:ci            passed
+  build: npm run build                  passed
+  permissoes: npm run validate:backend-permissions   passed | not_required
+  guards:     npm run validate:guard-permission-map  passed | not_required
+  contrato:   npm run validate:backend-contract-map  passed | not_required
+  testes_do_recorte: passed
+  e2e: passed | not_required
+  qa.verdict: APROVADO | APROVADO_COM_RESSALVA
+  blockers.count: 0
+  acceptanceCriteria: todos implementados e cobertos
+  ritual_de_versao: >
+    os arquivos de `currentVersionFiles` em scripts/validate-ci-gates.mjs
+    carimbados na versão nova. É o bloqueio mais banal e o que mais reincide:
+    reprovou a b53 em nove arquivos.
+  documento_vivo: >
+    CHANGELOG.md com entrada descritiva da versão. NÃO criar docs/IMPLEMENTACAO_*
+    novo — §7.6 do plano da onda.
+  mudanca_de_acesso: >
+    se a fatia mexe em permissão, o CHANGELOG traz seção operacional dizendo
+    quais permissões conceder a quais grupos ANTES do deploy.
+
+# ===========================================================================
+# Grafo da RODADA DE ARQUITETURA (regime `arquitetura`)
+#
+# Não tem `requirements` e não produz código. O que ele produz é o material de
+# que o plano de fatia se alimenta depois. O mecanismo detalhado está em
+# skills/projeto/ e o catálogo de decisões em docs/arquitetura/DECISOES.md.
+# ===========================================================================
+
+graph_arquitetura:
+
+  inputs:
+    rodada: NN
+    assunto: o recorte em debate, em kebab-case
+    fontes: >
+      contrato do backend, plano da onda, e as telas que o recorte atravessa.
+      Vai no briefing dos quatro, idêntico.
+
+  nodes:
+
+    inventario:
+      agent: inventariante-contrato-tela
+      always: true
+      produces: [inventario-de-telas, inventario-de-campos, destino-por-item]
+      writes: docs/arquitetura/debate/NN-inventario-<assunto>.md
+      gates:
+        conta_de_campos: >
+          o que a UI lê = campos entregues + divergências apontadas + itens sem
+          destino. Se não fecha, o contrato é `blocked`.
+
+    arquitetura:
+      # Quatro agentes, EM PARALELO entre si, cada um no seu arquivo.
+      agents: [arquiteto-operacao-erp, arquiteto-plataforma-frontend, arquiteto-escopo-entrega, arquiteto-design-system]
+      parallel: true
+      depends_on: [inventario]
+      briefing: >
+        idêntico para os quatro, e inclui o arquivo do inventariante. Briefing
+        que não põe os quatro sobre a MESMA decisão produz concordância falsa.
+      writes:
+        - docs/arquitetura/debate/NN-operacao-<assunto>.md
+        - docs/arquitetura/debate/NN-plataforma-<assunto>.md
+        - docs/arquitetura/debate/NN-escopo-<assunto>.md
+        - docs/arquitetura/debate/NN-design-<assunto>.md
+      gates:
+        custo_declarado: >
+          toda posição carrega "o que eu abro mão". Posição sem custo declarado
+          é lista de desejos — devolver ao agente, não sintetizar.
+
+    sintese:
+      owner: orquestrador             # L4 — arbitrar e travar é dele, não do agente
+      depends_on: [inventario, arquitetura]
+      produces: [decisoes-travadas, divergencias-arbitradas, perguntas-ao-backend]
+      writes:
+        - docs/arquitetura/DECISOES.md    # Dn, com alternativas descartadas e gatilho de revisita
+      regra_de_convergencia: >
+        Adota-se a conclusão que mais se repete entre os cinco. Divergência
+        isolada só prevalece com evidência que os outros não tinham — e nesse
+        caso entra no registro a EVIDÊNCIA, não o voto.
+
+  rodadaGate:
+    arquivos: os 5 de debate/ escritos
+    conta_de_campos: fecha
+    divergencias: todas nomeadas e arbitradas, cada uma com id
+    perguntas_ao_backend: separadas do que se resolve lendo o contrato
+    decisoes: registradas em DECISOES.md com gatilho de revisita
+
+# ---------------------------------------------------------------------------
+# Forma canônica do grafo da fatia
+#
+#                         planner
+#                            |
+#                 contractChange | newScreen? --sim--> inventario
+#                            |                              |
+#                 uiPattern | newScreen? --sim--> design <--+
+#                            |
+#                            v
+#                         builder
+#                            |
+#                 structuralGate? --sim--> gate_estrutural
+#                            v                    |
+#                          tests <----------------+
+#                            |
+#          navigationChange | permissionChange | newScreen? --sim--> e2e
+#                            |
+#                            v
+#                        qa_review
+#                       /          \
+#                 APROVADO        BLOQUEADO
+#                     |               |
+#                     v               v
+#                  release      correction -> tests -> qa_review
+# ---------------------------------------------------------------------------
+#
+# Forma canônica do grafo da rodada de arquitetura
+#
+#                      inventario        (a LISTA: item a item, com destino)
+#                           |
+#        +----------+-------+-------+----------+
+#        v          v               v          v
+#    operacao   plataforma       escopo     design    (a FORMA, em paralelo)
+#        +----------+-------+-------+----------+
+#                           |
+#                           v
+#                        sintese         (orquestrador: arbitra e trava Dn)
+#                           |
+#                           v
+#                     DECISOES.md
+# ---------------------------------------------------------------------------
