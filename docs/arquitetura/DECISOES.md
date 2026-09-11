@@ -280,3 +280,31 @@ sobre uma worktree cujo `node_modules` era uma **junção** (`mklink /J`) para o
 árvore principal recursou pela junção e apagou parte do `node_modules` real antes de falhar. O
 reparo foi `npm install`, que trouxe 45 pacotes de volta. Quem usar worktree para medir outra
 revisão deve remover a junção **antes** do `git worktree remove`, ou não usar junção.
+
+### D9 — o `checkout` do CI passa a trazer o histórico inteiro, porque a prova histórica da `b53` depende dele
+
+Data: 2026-09-11
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre a reprovação do CI na
+execução `34616705056`, medida no log do próprio workflow.
+Decisão: `.github/workflows/frontend-ci.yml` passa a chamar `actions/checkout@v4` com
+`fetch-depth: 0`. Entra como commit de acompanhamento da própria `b54`, que ainda não foi
+mesclada, seguindo o precedente de `980111a` na `b53`.
+Alternativas descartadas:
+1. Fazer o teste pular quando `CI` está definido — é a armadilha `gate que só sabe ficar verde`,
+   e pior: faria a prova histórica desligar exatamente no único lugar onde ela protege o trabalho
+   de todo mundo. `risk.yaml` nomeia isso em `gateRisk.regra_de_aceite`.
+2. Trocar a prova por leitura do registro de exceções, sem worktree — é a armadilha
+   `teste_que_le_o_registro`, também já nomeada em `risk.yaml`.
+Por quê: `tests/unit/guardPermissionMapProofHistoric.test.ts`, que a `b53` criou para provar que o
+gate de guard sabe ficar vermelho, roda `git worktree add --detach <dir> 1312bc2` sobre a árvore da
+`b51`. `actions/checkout@v4` clona raso por padrão (`fetch-depth: 1`), então esse commit não existe
+no runner e o comando falha. Medido no log: `Error: Command failed: git worktree add --detach
+"/tmp/gate-prova-wzjRas/b51" 1312bc2`, com `1 failed | 104 passed`. **A prova histórica da `b53`
+nunca rodou no CI** — ela só funcionava na máquina de quem tem o histórico completo. O próprio
+arquivo já dizia, no comentário da linha 89, que sem a árvore certa "todo o resto do arquivo é
+teatro"; faltava alguém reparar que no CI a árvore certa nunca chegava.
+Reversível: sim. Gatilho de revisita: o clone completo passar a custar tempo relevante no CI, o que
+hoje não é o caso — a execução inteira leva pouco mais de um minuto.
+Quem arbitrou: orquestrador
+Impacto: `.github/workflows/frontend-ci.yml`. Junto com os quatro erros `TS2802` que a `b54` já
+corrigiu, fecha as duas razões pelas quais o CI desta branch estava vermelho desde a `b53`.
