@@ -37,9 +37,9 @@ import {
     statusContratoSeverity,
     tipoFaturamentoLabel
 } from '@/features/contratos/components/contratosLabels';
+import { formatMoneyOptional } from '@/lib/formatters/money';
 
 const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString('pt-BR') : '—');
-const formatMoney = (value?: number | null) => (value == null ? '—' : value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }));
 
 const filterLocal = (records: ContratoResponse[], term: string) => {
     const normalized = term.trim().toLowerCase();
@@ -145,7 +145,7 @@ export const ContratosPage = () => {
                         {contratoPodeCancelar(status) ? <PermissionGuard permission="CONTRATOS_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Cancelar" icon="pi pi-ban" size="small" severity="danger" outlined disabled={disabled} onClick={() => setDialog('cancelar')} />}</PermissionGuard> : null}
                     </div>
 
-                    {ultimoFaturamento ? <Message className="w-full mb-3" severity="success" text={`Faturamento ${ultimoFaturamento.competencia} gerado — conta a receber ${ultimoFaturamento.contaReceberId} (${formatMoney(ultimoFaturamento.valorTotal)}).`} /> : null}
+                    {ultimoFaturamento ? <Message className="w-full mb-3" severity="success" text={`Faturamento ${ultimoFaturamento.competencia} gerado — conta a receber ${ultimoFaturamento.contaReceberId} (${formatMoneyOptional(ultimoFaturamento.valorTotal)}).`} /> : null}
 
                     <div className="grid">
                         <div className="col-12"><span className="block text-color-secondary text-sm">Descrição</span>{detalhe.descricao}</div>
@@ -153,11 +153,11 @@ export const ContratosPage = () => {
                         <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Fim</span>{formatDate(detalhe.dataFim)}</div>
                         {consumo ? (
                             <>
-                                <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Franquia</span>{formatMoney(detalhe.franquia)}</div>
-                                <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Valor excedente</span>{formatMoney(detalhe.valorExcedente)}</div>
+                                <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Franquia</span>{formatMoneyOptional(detalhe.franquia)}</div>
+                                <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Valor excedente</span>{formatMoneyOptional(detalhe.valorExcedente)}</div>
                             </>
                         ) : (
-                            <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Valor fixo</span><strong>{formatMoney(detalhe.valorFixo)}</strong></div>
+                            <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Valor fixo</span><strong>{formatMoneyOptional(detalhe.valorFixo)}</strong></div>
                         )}
                     </div>
                 </Card>

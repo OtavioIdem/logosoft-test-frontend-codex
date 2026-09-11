@@ -20,8 +20,8 @@ import { useDivergenciasRecebimento, useRecebimentoCompra, useRecebimentosCompra
 import { ConferenciaFiscalFormValues, ItemRecebimentoCompraResponse, RecebimentoDivergenciaResponse, StatusConferenciaFiscalEntrada } from '@/features/compras-avancado/types/comprasAvancado.types';
 import { ConferenciaFiscalDialog } from '@/features/compras-avancado/components/ConferenciaFiscalDialog';
 import { tipoDivergenciaLabel } from '@/features/compras-avancado/components/comprasAvancadoLabels';
+import { formatMoney } from '@/lib/formatters/money';
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatDateTime = (value?: string | null) => (value ? new Date(value).toLocaleString('pt-BR') : '—');
 
 export const RecebimentosCompraPage = () => {

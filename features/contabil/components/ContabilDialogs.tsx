@@ -34,6 +34,7 @@ import {
     TipoPartida
 } from '@/features/contabil/types/contabil.types';
 import { naturezaOptions, tipoContaOptions, tipoEventoOptions, tipoPartidaLabel, tipoPartidaOptions } from '@/features/contabil/components/contabilLabels';
+import { formatMoney } from '@/lib/formatters/money';
 
 const buildErrors = (error: z.ZodError) => {
     const map: Record<string, string> = {};
@@ -51,7 +52,6 @@ const footer = (label: string, loading: boolean | undefined, onHide: () => void,
     </div>
 );
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const initialConta = (): ContaContabilFormValues => ({ empresaId: '', filialId: null, codigo: '', nome: '', tipo: TipoContaContabil.Ativo, natureza: NaturezaConta.Devedora, analitica: true, contaPaiId: null });
 

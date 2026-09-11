@@ -25,8 +25,8 @@ import { useFormasPagamentoOptions } from '@/features/financeiro/hooks/useFinanc
 import { useCaixas, useVendasPdvMutations } from '@/features/pdv/hooks/usePdvResources';
 import { ItemVendaFormValues, MeioPagamento, PagamentoVendaFormValues, StatusCaixa, VendaPdvResponse } from '@/features/pdv/types/pdv.types';
 import { meioPagamentoLabel, meioPagamentoOptions } from '@/features/pdv/components/pdvLabels';
+import { formatMoney } from '@/lib/formatters/money';
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const itemLiquido = (item: ItemVendaFormValues) => item.quantidade * item.valorUnitario - item.valorDesconto;
 
 export const VendaPdvPage = () => {

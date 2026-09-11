@@ -32,6 +32,7 @@ import {
     QualificarLeadFormValues
 } from '@/features/crm/types/crm.types';
 import { motivoPerdaOptions, origemLeadOptions } from '@/features/crm/components/crmLabels';
+import { formatMoney } from '@/lib/formatters/money';
 
 const buildErrors = (error: z.ZodError) => {
     const map: Record<string, string> = {};
@@ -49,7 +50,6 @@ const footer = (label: string, loading: boolean | undefined, onHide: () => void,
     </div>
 );
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const tipoPedidoOptions = [
     { label: 'Orçamento', value: TipoPedidoVenda.Orcamento },

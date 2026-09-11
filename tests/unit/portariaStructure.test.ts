@@ -22,7 +22,7 @@ describe('Portaria (Onda 2) — estrutura e scaffold', () => {
     it('registra as 3 permissões de Portaria no union PermissionCode', () => {
         const erp = read('types/erp.ts');
         expect(erp).toContain("'PORTARIA_CONSULTAR'");
-        expect(erp).toContain("'PORTARIA_PRE_AUTORIZAR'");
+        expect(erp).toContain("'PORTARIA_PREAUTORIZAR'");
         expect(erp).toContain("'PORTARIA_OPERAR'");
     });
 
@@ -39,10 +39,10 @@ describe('Portaria (Onda 2) — estrutura e scaffold', () => {
 
     it('abas gateiam ações por permissão de operação/pré-autorização', () => {
         const preAut = read('features/portaria/components/PreAutorizacoesTab.tsx');
-        expect(preAut).toContain('permission="PORTARIA_PRE_AUTORIZAR"');
+        expect(preAut).toContain('permission="PORTARIA_PREAUTORIZAR"');
         const registros = read('features/portaria/components/RegistrosAcessoTab.tsx');
         expect(registros).toContain("permission: 'PORTARIA_OPERAR'");
         const page = read('features/portaria/components/PortariaPage.tsx');
-        expect(page).toContain("hasAnyPermission(['PORTARIA_CONSULTAR', 'PORTARIA_PRE_AUTORIZAR', 'PORTARIA_OPERAR'])");
+        expect(page).toContain("hasAnyPermission(['PORTARIA_CONSULTAR', 'PORTARIA_PREAUTORIZAR', 'PORTARIA_OPERAR'])");
     });
 });

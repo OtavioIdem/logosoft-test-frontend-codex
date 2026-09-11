@@ -20,8 +20,8 @@ import { useContaAvancado, useContasAvancado, useContasAvancadoMutations } from 
 import { BaixarContaFormValues, ContaFinanceiraResumoResponse, ContasListQuery, CriarContaFormValues, EstornarBaixaFormValues, TipoConta } from '@/features/financeiro-avancado/types/financeiroAvancado.types';
 import { BaixarContaDialog, CriarContaDialog, EstornarBaixaDialog } from '@/features/financeiro-avancado/components/ContaDialogs';
 import { contaPodeBaixar, contaPodeCancelar, statusContaLabel, statusContaOptions, statusContaSeverity } from '@/features/financeiro-avancado/components/financeiroAvancadoLabels';
+import { formatMoney } from '@/lib/formatters/money';
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString('pt-BR') : '—');
 
 export const ContasAvancadoTab = ({ tipo, baixarPermission, gerenciarPermission }: { tipo: TipoConta; baixarPermission: PermissionCode; gerenciarPermission: PermissionCode }) => {

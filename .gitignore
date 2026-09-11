@@ -33,3 +33,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# ide
+.vs/
+
+# claude code
+# O gitignore global da máquina ignora .claude/settings.local.json; aqui a regra é
+# revertida de propósito para o arquivo ser versionado junto do projeto.
+!.claude/settings.local.json
+
+# saida do playwright
+/test-results/
+/playwright-report/

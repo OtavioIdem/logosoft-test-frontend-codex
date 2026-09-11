@@ -61,7 +61,7 @@ export const PreAutorizacoesTab = () => {
                 <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
                 <Dropdown value={filters.status ?? null} options={statusPreAutorizacaoFilterOptions} onChange={(event) => updateFilter('status', event.value)} aria-label="Filtrar por status" />
                 <SearchInput ariaLabel="Buscar pré-autorização" defaultValue={localSearch} onChange={(term) => { setFirst(0); setLocalSearch(term); }} />
-                <PermissionGuard permission="PORTARIA_PRE_AUTORIZAR" mode="disable">{({ disabled }) => <Button label="Nova pré-autorização" icon="pi pi-plus" disabled={disabled} onClick={() => setFormVisible(true)} />}</PermissionGuard>
+                <PermissionGuard permission="PORTARIA_PREAUTORIZAR" mode="disable">{({ disabled }) => <Button label="Nova pré-autorização" icon="pi pi-plus" disabled={disabled} onClick={() => setFormVisible(true)} />}</PermissionGuard>
             </div>
 
             {listQuery.error ? <ApiErrorPanel error={mapApiError(listQuery.error)} /> : null}
@@ -72,7 +72,7 @@ export const PreAutorizacoesTab = () => {
                 <Column header="Validade" body={(row: PreAutorizacaoResponse) => `${formatDate(row.validadeInicio)} — ${formatDate(row.validadeFim)}`} />
                 <Column header="Status" body={(row: PreAutorizacaoResponse) => <Tag value={statusPreAutorizacaoLabel(Number(row.status))} severity={statusPreAutorizacaoSeverity(Number(row.status)) ?? undefined} />} />
                 <Column header="Ações" alignHeader="right" body={(row: PreAutorizacaoResponse) => (
-                    preAutorizacaoPodeCancelar(Number(row.status)) ? <DataTableActions actions={[{ key: 'cancelar', label: 'Cancelar', icon: 'pi pi-ban', severity: 'danger', permission: 'PORTARIA_PRE_AUTORIZAR', onClick: () => setCancelarAlvo(row.id) }]} /> : <span className="text-color-secondary">—</span>
+                    preAutorizacaoPodeCancelar(Number(row.status)) ? <DataTableActions actions={[{ key: 'cancelar', label: 'Cancelar', icon: 'pi pi-ban', severity: 'danger', permission: 'PORTARIA_PREAUTORIZAR', onClick: () => setCancelarAlvo(row.id) }]} /> : <span className="text-color-secondary">—</span>
                 )} />
             </DataTableServer>
 

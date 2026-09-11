@@ -52,8 +52,8 @@ import {
     tipoVeiculoLabel,
     veiculoPodeStatus
 } from '@/features/frota/components/frotaLabels';
+import { formatMoney } from '@/lib/formatters/money';
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString('pt-BR') : '—');
 const formatOdometro = (value?: number | null) => (value == null ? '—' : value.toLocaleString('pt-BR'));
 

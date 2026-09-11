@@ -1,5 +1,7 @@
 import { OrigemFinanceira, SelectOption, StatusContaFinanceira, StatusParcelaFinanceira } from '@/types/erp';
 
+export { formatMoney, formatMoneyOptional } from '@/lib/formatters/money';
+
 export const origemFinanceiraOptions: SelectOption<number>[] = [
     { label: 'Manual', value: OrigemFinanceira.Manual },
     { label: 'Pedido de venda', value: OrigemFinanceira.PedidoVenda },
@@ -44,7 +46,6 @@ export const contaStatusTagValue = (value?: number | null) => {
 
 export const isContaEncerrada = (value?: number | null) => value === StatusContaFinanceira.Quitada || value === StatusContaFinanceira.Cancelada || value === StatusContaFinanceira.Estornada;
 
-export const formatMoney = (value?: number | null) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value ?? 0);
 export const formatDate = (value?: string | Date | null) => {
     if (!value) return '-';
     const date = value instanceof Date ? value : new Date(value);

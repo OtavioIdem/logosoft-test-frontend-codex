@@ -105,20 +105,26 @@ export const GerenciarUsuarioDialog = ({ visible, usuario, empresaLabel, acesso,
             </div>
 
             <span className="block text-color-secondary text-sm mb-2">Ações</span>
-            <PermissionGuard permission="SEGURANCA_USUARIOS_GERENCIAR" mode="disable">
-                {({ disabled }) => (
-                    <div className="flex flex-column sm:flex-row flex-wrap gap-2">
-                        <Button label="Resetar senha" icon="pi pi-key" severity="secondary" outlined disabled={disabled} onClick={acoes.onResetSenha} />
-                        <Button label="Vincular grupo" icon="pi pi-shield" severity="secondary" outlined disabled={disabled} onClick={acoes.onVincularGrupo} />
-                        <Button label="Remover grupo" icon="pi pi-minus-circle" severity="warning" outlined disabled={disabled || Boolean(motivoSemRemocao)} onClick={acoes.onRemoverGrupo} title={motivoSemRemocao ?? undefined} />
-                        {usuario.ativo ? (
-                            <Button label="Inativar" icon="pi pi-user-minus" severity="danger" outlined disabled={disabled} onClick={acoes.onInativar} />
-                        ) : (
-                            <Button label="Reativar" icon="pi pi-user-plus" severity="success" outlined disabled={disabled} onClick={acoes.onReativar} />
-                        )}
-                    </div>
+            <div className="flex flex-column sm:flex-row flex-wrap gap-2">
+                <PermissionGuard permission="SEGURANCA_USUARIOS_RESETAR_SENHA" mode="disable">
+                    {({ disabled }) => <Button label="Resetar senha" icon="pi pi-key" severity="secondary" outlined disabled={disabled} title={disabled ? 'Permissão necessária: SEGURANCA_USUARIOS_RESETAR_SENHA.' : undefined} onClick={acoes.onResetSenha} />}
+                </PermissionGuard>
+                <PermissionGuard permission="SEGURANCA_GRUPOS_ACESSO_GERENCIAR" mode="disable">
+                    {({ disabled }) => <Button label="Vincular grupo" icon="pi pi-shield" severity="secondary" outlined disabled={disabled} title={disabled ? 'Permissão necessária: SEGURANCA_GRUPOS_ACESSO_GERENCIAR.' : undefined} onClick={acoes.onVincularGrupo} />}
+                </PermissionGuard>
+                <PermissionGuard permission="SEGURANCA_GRUPOS_ACESSO_GERENCIAR" mode="disable">
+                    {({ disabled }) => <Button label="Remover grupo" icon="pi pi-minus-circle" severity="warning" outlined disabled={disabled || Boolean(motivoSemRemocao)} onClick={acoes.onRemoverGrupo} title={motivoSemRemocao ?? (disabled ? 'Permissão necessária: SEGURANCA_GRUPOS_ACESSO_GERENCIAR.' : undefined)} />}
+                </PermissionGuard>
+                {usuario.ativo ? (
+                    <PermissionGuard permission="SEGURANCA_USUARIOS_INATIVAR" mode="disable">
+                        {({ disabled }) => <Button label="Inativar" icon="pi pi-user-minus" severity="danger" outlined disabled={disabled} title={disabled ? 'Permissão necessária: SEGURANCA_USUARIOS_INATIVAR.' : undefined} onClick={acoes.onInativar} />}
+                    </PermissionGuard>
+                ) : (
+                    <PermissionGuard permission="SEGURANCA_USUARIOS_GERENCIAR" mode="disable">
+                        {({ disabled }) => <Button label="Reativar" icon="pi pi-user-plus" severity="success" outlined disabled={disabled} onClick={acoes.onReativar} />}
+                    </PermissionGuard>
                 )}
-            </PermissionGuard>
+            </div>
             {motivoSemRemocao ? <span className="block text-color-secondary text-sm mt-2">Remover grupo indisponível: {motivoSemRemocao}</span> : null}
         </Dialog>
     );

@@ -1,0 +1,198 @@
+# Política de autoridade por agente — frontend LogoSoft
+#
+# O prompt orienta; esta política é a autoridade efetiva. Quando o mecanismo de
+# execução consegue impor (frontmatter `tools:` do agente, hook PreToolUse), a
+# violação é impossível. Onde não consegue, o orquestrador é o enforcer: NÃO
+# monte um bloco cujo escopo de escrita saia da lista `write` do agente.
+#
+# Enforcement real hoje:
+#   - `tools:` sem Edit/Write  -> agente read-only de fato (arquitetos, QA,
+#     inventariante). É o que sustenta "quem revisa não corrige".
+#   - hook PreToolUse em .claude/settings.json -> nega escrita nos artefatos
+#     GERADOS (snapshot de permissões, mapa de contrato) e pede aprovação em
+#     Docker e em comando que troca revisão do git.
+#   - o resto é fronteira declarada: o bloco do plano lista os caminhos, e o
+#     qa-revisor confere o diff contra a lista no fechamento.
+
+version: 1
+
+agents:
+
+  arquiteto-frontend:
+    role: Plano da versão — módulo, telas, endpoints, contratos, permissões, gates
+    readonly: true
+    read: [features/**, app/**, lib/**, layout/**, components/**, tests/**, docs/**, scripts/**, package.json]
+    write: []
+    tools: [Read, Grep, Glob, Bash, WebSearch, WebFetch]
+    blocked: [Edit, Write, git commit, git push, git checkout, git stash]
+    owns: [risk, requirements, decisions, acceptanceCriteria, blocos, sequenciamento]
+    regra: >
+      Mede antes de afirmar. Número que vem de protótipo executado é medição;
+      número que vem de leitura é estimativa, e precisa ser rotulado como tal.
+
+  inventariante-contrato-tela:
+    role: Inventário que sustenta a rodada — tela, rota, endpoint, campo, tipo, permissão, estado
+    readonly: true
+    read: [features/**, app/**, lib/**, layout/**, docs/**, tests/**]
+    write: [docs/arquitetura/debate/NN-inventario-*.md]
+    tools: [Read, Grep, Glob, Bash, Write]
+    blocked: [Edit em código, git commit, git push]
+    owns: [inventario, divergencia-ui-x-backend, destino-por-item]
+    gate: >
+      Conta de campos: o que a UI lê = campos que o backend entrega + campos com
+      divergência apontada + campos sem destino declarado. Se a soma não fecha,
+      o contrato é `blocked` — campo sumido sem decisão é o defeito que este
+      inventário existe para evitar.
+
+  arquiteto-operacao-erp:
+    role: Posição de operação na rodada de projeto
+    readonly: true
+    read: [features/**, app/**, docs/**]
+    write: [docs/arquitetura/debate/NN-operacao-*.md]
+    tools: [Read, Grep, Glob, Bash, Write]
+    blocked: [Edit em código, git commit, git push]
+
+  arquiteto-plataforma-frontend:
+    role: Posição de sustentação na rodada de projeto
+    readonly: true
+    read: [features/**, lib/**, providers/**, hooks/**, docs/**]
+    write: [docs/arquitetura/debate/NN-plataforma-*.md]
+    tools: [Read, Grep, Glob, Bash, Write]
+    blocked: [Edit em código, git commit, git push]
+
+  arquiteto-escopo-entrega:
+    role: Posição de escopo e sequência na rodada de projeto
+    readonly: true
+    read: [features/**, docs/**, CHANGELOG.md]
+    write: [docs/arquitetura/debate/NN-escopo-*.md]
+    tools: [Read, Grep, Glob, Bash, Write]
+    blocked: [Edit em código, git commit, git push]
+
+  arquiteto-design-system:
+    role: Posição de padrão visual na rodada de projeto
+    readonly: true
+    read: [features/**, components/**, layout/**, styles/**, docs/**]
+    write: [docs/arquitetura/debate/NN-design-*.md]
+    tools: [Read, Grep, Glob, Bash, Write, mcp__Claude_Browser__*]
+    blocked: [Edit em código, git commit, git push]
+
+  dev-senior-react:
+    role: Código de produção — telas, features, hooks, clients, schemas
+    readonly: false
+    read: [features/**, app/**, lib/**, layout/**, components/**, docs/**, tests/**]
+    write:
+      - features/**
+      - app/**
+      - lib/**
+      - layout/**
+      - components/**
+      - hooks/**
+      - providers/**
+      - types/**
+      - styles/**
+      - tests/mocks/**          # mock tipado que o typecheck exige
+      - tests/e2e/fixtures/**   # fixture que acompanha o código novo
+    blocked:
+      - tests/unit/**
+      - tests/components/**
+      - tests/e2e/*.spec.ts
+      - scripts/**
+      - git commit
+      - git push
+      - git checkout
+      - git stash
+    owns: [telas, features, hooks, clients, schemas, guards, ritual-de-versao]
+    regra: >
+      Não conserta teste vermelho que a própria mudança causou por desenho — o
+      teste é do engenheiro-testes. Relata quais ficaram vermelhos e por quê.
+
+  designer-ux-erp:
+    role: Camada visual e UX dentro do padrão PrimeReact/Sakai
+    readonly: false
+    read: [features/**, components/**, layout/**, styles/**, docs/**]
+    write: [features/**/components/**, components/**, layout/**, styles/**]
+    blocked: [features/**/api/**, features/**/hooks/**, tests/**, scripts/**, git commit, git push]
+    owns: [layout, densidade, hierarquia, estados-de-tela, acessibilidade, responsividade]
+
+  engenheiro-testes:
+    role: Testes do recorte e gates estruturais
+    readonly: false
+    read: [features/**, app/**, lib/**, layout/**, components/**, docs/**, scripts/**]
+    write:
+      - tests/**
+      - scripts/**              # gates estruturais e seus dados
+    blocked:
+      - features/**
+      - app/**
+      - lib/**
+      - layout/**
+      - components/**
+      - git commit
+      - git push
+      - git checkout
+      - git stash
+    owns: [cobertura, baseline, gates-estruturais, registro-de-excecao]
+    regra: >
+      Diagnostica, não conserta. Regra errada em features/ devolve status=failed,
+      type=BUSINESS_RULE_MISMATCH, owner=dev-senior-react — jamais editar o
+      código de produção, nem afrouxar asserção, para o teste passar.
+    regra_de_gate: >
+      Gate novo prova que sabe ficar VERMELHO antes de ser aceito, rodando contra
+      árvore antiga com defeito conhecido, com asserção por item nominal. Gate que
+      só sabe ficar verde é decoração — e já foi entregue assim duas vezes.
+
+  devops-frontend:
+    role: Subir, buildar, empacotar, e o pipeline de gates
+    readonly: false
+    read: [**]
+    write:
+      - .github/workflows/**
+      - Dockerfile
+      - .claude/launch.json
+      - playwright*.config.ts
+      - next.config.js
+      - .env*.example
+    blocked: [features/**, lib/**, layout/**, tests/**, git commit, git push]
+    owns: [dev-server, build, imagem, pipeline, isolamento-de-e2e]
+    regra_do_projeto: >
+      Docker só sob pedido explícito do usuário. Servidor deixado por outro
+      agente pode ser parado, dizendo que parou e por quê; container alheio, não.
+
+  qa-revisor:
+    role: Review da entrega antes do commit — escopo por diff, gates, comportamento
+    readonly: true
+    read: [**, git diff]
+    write: []
+    tools: [Read, Grep, Glob, Bash, mcp__Claude_Browser__*]
+    blocked: [Edit, Write, git commit, git push]
+    owns: [veredito, achados, conferencia-de-escopo]
+    verdict: APROVADO | APROVADO_COM_RESSALVA | BLOQUEADO
+    regra_dura: >
+      Não implementa correção. E não aceita explicação de ambiente sem prova:
+      resultado de teste que ninguém sabe reproduzir bloqueia até alguém medir.
+
+# ---------------------------------------------------------------------------
+# Artefatos gerados — ninguém escreve à mão
+# ---------------------------------------------------------------------------
+#
+# São a medição contra a qual os gates comparam. Editar um deles para o gate
+# fechar é fraudar a medição, e é o risco central de toda fatia de permissão.
+# O hook PreToolUse nega a escrita; a regeneração é por comando.
+
+generated_only:
+  scripts/backend-permissions.snapshot.json:
+    gerar_com: npm run generate:backend-permissions-snapshot
+  scripts/backend-contract-map.allowlist.json:
+    carimbar_com: npm run stamp:backend-contract-map-version
+    regra: >
+      Este arquivo NAO e gerado: `generatedAt`, `sourceDate` e a politica de
+      auditoria sao escritos a mao, e a lista de rotas e medicao. So o campo
+      `version` se move a cada fatia, e so o carimbador acima o move. O comando
+      `npm run report:backend-contract-map` apenas VALIDA e imprime relatorio —
+      ele nunca escreveu em disco, e a classificacao anterior, que o apontava
+      como origem, tornou o ritual de versao impossivel desde 867b7fd. Ver D7.
+  docs/backend-v1.23/CONTRATO-API-v1.23.md:
+    origem: gerado no repositório do backend (scripts/gerar-contrato-frontend.mjs)
+    regra: >
+      Fonte documental do gate. Regenerar a cada fatia do backend que mexa em
+      rota, permissão ou record. Editar aqui para o gate fechar é fraude.

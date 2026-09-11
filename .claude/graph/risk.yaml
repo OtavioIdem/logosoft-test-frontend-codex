@@ -1,0 +1,163 @@
+# Risk engine — o risco da fatia controla esforço, nós extras e gates.
+#
+# Quem classifica: o arquiteto-frontend (ou o orquestrador, quando escreve o
+# plano direto). Onde fica: seção 0 do plano de fatia, junto dos flags
+# `requirements`. Para que serve: evitar pagar plano, inventário e revisão
+# tripla numa listagem read-only, e evitar entregar tela de dinheiro com
+# esforço de cadastro auxiliar.
+
+version: 1
+
+sliceRisk:
+
+  LOW:
+    exemplos: [ajuste de texto, coluna nova numa listagem, filtro, ordenação, estado vazio]
+    nos_extras: []
+    gates: [validate:source, typecheck, lint, testes do módulo]
+
+  MEDIUM:
+    exemplos: [CRUD operacional, diálogo que grava, cadastro auxiliar, tela derivada de padrão existente]
+    nos_extras: [qa_review]
+    gates: [+ validate:ci, build]
+
+  HIGH:
+    exemplos:
+      - valor monetário ou cálculo que o operador lê para decidir
+      - permissão em guard, rota ou menu
+      - contrato do backend que muda tipo ou campo
+      - contexto organizacional (empresa/filial) em query key ou cache
+      - padrão visual novo que outras telas vão herdar
+    nos_extras: [inventario, qa_review, e2e]
+    gates: [+ validate:backend-permissions, validate:guard-permission-map, E2E isolado]
+    testEffort: high
+
+  CRITICAL:
+    exemplos:
+      - emissão ou reprocessamento de documento fiscal
+      - baixa, estorno ou cancelamento financeiro
+      - mudança que RETIRA acesso de um cargo em produção
+      - gate estrutural novo, que passa a reprovar o trabalho de todo mundo
+    nos_extras: [inventario, gate_estrutural?, qa_review, e2e]
+    gates: [todos os de HIGH + seção operacional no CHANGELOG + aprovação humana antes do release]
+    testEffort: high
+    regra: fatia CRITICAL não fecha com ressalva pendente — só APROVADO limpo.
+
+# O que o risco realmente muda na prática:
+#   - quais nós condicionais entram no grafo
+#   - o tamanho do bloco: risco alto => bloco menor e fronteira mais estreita
+#   - a profundidade do plano de testes (categorias exigidas em testPlan)
+#   - se a fatia precisa de prova ao vivo, e não só de teste automatizado
+
+# ---------------------------------------------------------------------------
+# Risco de acesso — específico deste frontend, e o que mais dói em produção
+# ---------------------------------------------------------------------------
+#
+# Guard é a única coisa aqui que, ao ser CORRIGIDA, tira capacidade de alguém.
+# Por isso tem escala própria: a pergunta não é "o guard está certo?", é "quem
+# perde o botão quando ele ficar certo?".
+
+accessRisk:
+
+  NENHUM:
+    o_que_e: o guard só ganha permissão, ninguém perde nada
+    exemplo: item pai do menu passa a listar a permissão que só o filho listava
+    exige: nada além do gate normal
+
+  ILUSAO:
+    o_que_e: >
+      alguém perde o botão, mas aquele botão já era recusado pelo backend com
+      403. Perde-se a promessa, não a capacidade.
+    exemplo: os cinco guards corrigidos na b52
+    exige: >
+      CHANGELOG dizendo, com todas as letras, que nenhuma operação que hoje
+      conclui deixa de concluir
+
+  CAPACIDADE:
+    o_que_e: alguém perde acesso que hoje funciona
+    exemplo: >
+      o guard de entrada de Tabelas de Preço deixou de aceitar permissão de
+      Vendas, e o módulo sumiu do menu para o cargo inteiro (D3)
+    exige:
+      - decisão explícita do usuário, registrada como Dn
+      - item PRÓPRIO na seção operacional do CHANGELOG, separado dos demais
+      - a permissão a conceder, nomeada, e a ordem: conceder ANTES do deploy
+
+  AUTO_BLOQUEIO:
+    o_que_e: >
+      a mudança pode tirar de alguém a permissão necessária para se
+      redar a permissão de volta
+    exemplo: >
+      o administrador que só tem SEGURANCA_USUARIOS_GERENCIAR e é o único capaz
+      de editar grupos: sem SEGURANCA_GRUPOS_ACESSO_GERENCIAR concedida antes,
+      o desbloqueio passa a exigir intervenção no backend
+    exige:
+      - alerta em negrito no CHANGELOG
+      - a ordem de concessão escrita como pré-requisito de deploy
+      - confirmação do usuário antes do release
+
+# ---------------------------------------------------------------------------
+# Risco do gate — quando a fatia CRIA um gate
+# ---------------------------------------------------------------------------
+#
+# Gate errado é pior que gate ausente: ele dá a sensação de proteção. Foram dois
+# gates vácuos entregues na b53 antes de um medir de verdade.
+
+gateRisk:
+
+  regra_de_aceite: >
+    Nenhum gate é aceito por ficar verde. É aceito por FICAR VERMELHO onde deve:
+    rodado contra uma árvore que contém o defeito conhecido, acusando os itens
+    nominais esperados, um a um.
+
+  armadilhas_medidas:
+    conjunto_universal: >
+      Somar ao conjunto declarado algo que vale para tudo — o arquivo do union de
+      permissões, ou todas as regras de rota em vez da regra do módulo — torna a
+      regra vacuamente verdadeira. Sintoma: uma única calibração "resolve" dezenas
+      de divergências de módulos sem relação entre si.
+    filtro_largo: >
+      Filtro de alcançabilidade mal fechado elimina as divergências legítimas
+      junto com as órfãs. Sintoma: zero nas duas árvores.
+    teste_que_le_o_registro: >
+      Teste que confere o arquivo de exceções em vez de executar a análise passa
+      com o gate cego por baixo. Sintoma: o teste continua verde depois de alguém
+      quebrar o gate.
+    escopo_inventado: >
+      Divergência que ninguém sabe explicar sendo atribuída a uma etapa futura
+      que não existe em plano nenhum. Sintoma: teto zerado convivendo com
+      divergência observada.
+
+  registro_de_excecao:
+    forma: >
+      uma entrada por item, nominal, com identificação, arquivo, o que diverge e
+      ALVO real (onda ou versão que existe no plano)
+    teto: >
+      bate EXATAMENTE com o tamanho da lista, e entrada que não corresponde mais
+      a divergência observada REPROVA. Quem corrige é obrigado a baixar o teto no
+      mesmo diff — catraca de sentido único.
+    proibido:
+      - descrição genérica cobrindo um grupo de divergências
+      - teto zerado com divergência observada
+      - supressão de qualquer tipo
+
+testEffort:
+  default: medium
+  high_quando:
+    - valor monetário na tela
+    - permissão
+    - contexto organizacional
+    - fiscal
+    - diálogo que grava
+    - fluxo que atravessa módulos
+    - gate estrutural
+
+testCategories:
+  # a fatia declara quais se aplicam, em testPlan (seção 0 do plano)
+  - UNIT
+  - COMPONENT              # todo diálogo que grava
+  - E2E_MOCKADO
+  - CONTRATO               # tipo do frontend contra o contrato do backend
+  - PERMISSAO              # sessão com permissão X vê/não vê Y
+  - CONTEXTO_ORGANIZACIONAL
+  - GATE_ESTRUTURAL
+  - REGRESSAO_TEXTUAL      # string que não pode voltar a aparecer

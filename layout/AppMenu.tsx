@@ -51,10 +51,10 @@ const AppMenu = () => {
             },
             {
                 label: 'Segurança',
-                anyPermissions: ['SEGURANCA_USUARIOS_CONSULTAR', 'SEGURANCA_USUARIOS_GERENCIAR', 'SEGURANCA_PERMISSOES_GERENCIAR'],
+                anyPermissions: ['SEGURANCA_USUARIOS_CONSULTAR', 'SEGURANCA_USUARIOS_GERENCIAR', 'SEGURANCA_PERMISSOES_GERENCIAR', 'SEGURANCA_GRUPOS_ACESSO_CONSULTAR', 'SEGURANCA_GRUPOS_ACESSO_GERENCIAR'],
                 items: [
                     { label: 'Usuários', icon: 'pi pi-fw pi-users', to: '/seguranca/usuarios', anyPermissions: ['SEGURANCA_USUARIOS_CONSULTAR', 'SEGURANCA_USUARIOS_GERENCIAR'] },
-                    { label: 'Grupos de acesso', icon: 'pi pi-fw pi-shield', to: '/seguranca/grupos-acesso', permission: 'SEGURANCA_PERMISSOES_GERENCIAR' }
+                    { label: 'Grupos de acesso', icon: 'pi pi-fw pi-shield', to: '/seguranca/grupos-acesso', anyPermissions: ['SEGURANCA_GRUPOS_ACESSO_CONSULTAR', 'SEGURANCA_GRUPOS_ACESSO_GERENCIAR'] }
                 ]
             },
             {
@@ -70,7 +70,7 @@ const AppMenu = () => {
             },
             {
                 label: 'Cadastros',
-                anyPermissions: ['PESSOAS_CONSULTAR', 'CLIENTES_CONSULTAR', 'FORNECEDORES_CONSULTAR', 'PRODUTOS_CONSULTAR'],
+                anyPermissions: ['PESSOAS_CONSULTAR', 'PESSOAS_GERENCIAR', 'CLIENTES_CONSULTAR', 'CLIENTES_GERENCIAR', 'FORNECEDORES_CONSULTAR', 'FORNECEDORES_GERENCIAR', 'PRODUTOS_CONSULTAR', 'PRODUTOS_GERENCIAR', 'CATEGORIAS_PRODUTO_GERENCIAR', 'UNIDADES_MEDIDA_GERENCIAR', 'MARCAS_GERENCIAR'],
                 items: [
                     { label: 'Pessoas', icon: 'pi pi-fw pi-address-book', to: '/pessoas', anyPermissions: ['PESSOAS_CONSULTAR', 'PESSOAS_GERENCIAR'] },
                     { label: 'Clientes', icon: 'pi pi-fw pi-user-plus', to: '/clientes', anyPermissions: ['CLIENTES_CONSULTAR', 'CLIENTES_GERENCIAR'] },
@@ -83,7 +83,7 @@ const AppMenu = () => {
             },
             {
                 label: 'Estoque',
-                anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_MOVIMENTAR', 'ESTOQUE_RESERVAR', 'ESTOQUE_INVENTARIO_GERENCIAR'],
+                anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_MOVIMENTAR', 'ESTOQUE_RESERVAR', 'ESTOQUE_INVENTARIO_GERENCIAR', 'LOCAIS_ESTOQUE_GERENCIAR', 'ESTOQUE_AJUSTAR', 'ESTOQUE_BLOQUEIO_GERENCIAR'],
                 items: [
                     { label: 'Locais de estoque', icon: 'pi pi-fw pi-warehouse', to: '/estoque/locais', anyPermissions: ['ESTOQUE_CONSULTAR', 'LOCAIS_ESTOQUE_GERENCIAR'] },
                     { label: 'Saldos', icon: 'pi pi-fw pi-database', to: '/estoque/saldos', permission: 'ESTOQUE_CONSULTAR' },
@@ -103,12 +103,12 @@ const AppMenu = () => {
                 anyPermissions: ['VENDAS_CONSULTAR', 'VENDAS_GERENCIAR', 'TABELAS_PRECO_CONSULTAR', 'TABELAS_PRECO_GERENCIAR'],
                 items: [
                     { label: 'Pedidos de venda', icon: 'pi pi-fw pi-shopping-cart', to: '/vendas/pedidos', anyPermissions: ['VENDAS_CONSULTAR', 'VENDAS_GERENCIAR'] },
-                    { label: 'Tabelas de preço', icon: 'pi pi-fw pi-tags', to: '/tabelas-preco', anyPermissions: ['TABELAS_PRECO_CONSULTAR', 'TABELAS_PRECO_GERENCIAR', 'VENDAS_CONSULTAR', 'VENDAS_GERENCIAR'] }
+                    { label: 'Tabelas de preço', icon: 'pi pi-fw pi-tags', to: '/tabelas-preco', anyPermissions: ['TABELAS_PRECO_CONSULTAR', 'TABELAS_PRECO_GERENCIAR'] }
                 ]
             },
             {
                 label: 'Financeiro',
-                anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_GERENCIAR', 'FINANCEIRO_RECEBER', 'FINANCEIRO_PAGAR'],
+                anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_GERENCIAR', 'FINANCEIRO_RECEBER', 'FINANCEIRO_PAGAR', 'FINANCEIRO_FLUXO_CAIXA_CONSULTAR', 'FORMAS_PAGAMENTO_GERENCIAR', 'CONDICOES_PAGAMENTO_GERENCIAR'],
                 items: [
                     { label: 'Contas a receber', icon: 'pi pi-fw pi-arrow-down-left', to: '/financeiro/contas-receber', anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_RECEBER'] },
                     { label: 'Contas a pagar', icon: 'pi pi-fw pi-arrow-up-right', to: '/financeiro/contas-pagar', anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_PAGAR'] },
@@ -120,7 +120,7 @@ const AppMenu = () => {
             },
             {
                 label: 'Compras',
-                anyPermissions: ['COMPRAS_CONSULTAR', 'COMPRAS_GERENCIAR', 'COMPRAS_SOLICITACOES_CONSULTAR', 'COMPRAS_COTACOES_CONSULTAR'],
+                anyPermissions: ['COMPRAS_CONSULTAR', 'COMPRAS_GERENCIAR', 'COMPRAS_SOLICITACOES_CONSULTAR', 'COMPRAS_COTACOES_CONSULTAR', 'COMPRAS_SOLICITACOES_GERENCIAR', 'COMPRAS_COTACOES_GERENCIAR', 'COMPRAS_CONFERENCIA_FISCAL_REGISTRAR'],
                 items: [
                     { label: 'Pedidos de compra', icon: 'pi pi-fw pi-shopping-bag', to: '/compras/pedidos', anyPermissions: ['COMPRAS_CONSULTAR', 'COMPRAS_GERENCIAR'] },
                     { label: 'Solicitações', icon: 'pi pi-fw pi-file-edit', to: '/compras/solicitacoes', anyPermissions: ['COMPRAS_SOLICITACOES_CONSULTAR', 'COMPRAS_SOLICITACOES_GERENCIAR'] },
@@ -170,8 +170,8 @@ const AppMenu = () => {
             },
             {
                 label: 'Portaria',
-                anyPermissions: ['PORTARIA_CONSULTAR', 'PORTARIA_PRE_AUTORIZAR', 'PORTARIA_OPERAR'],
-                items: [{ label: 'Controle de acesso', icon: 'pi pi-fw pi-id-card', to: '/portaria', anyPermissions: ['PORTARIA_CONSULTAR', 'PORTARIA_PRE_AUTORIZAR', 'PORTARIA_OPERAR'] }]
+                anyPermissions: ['PORTARIA_CONSULTAR', 'PORTARIA_PREAUTORIZAR', 'PORTARIA_OPERAR'],
+                items: [{ label: 'Controle de acesso', icon: 'pi pi-fw pi-id-card', to: '/portaria', anyPermissions: ['PORTARIA_CONSULTAR', 'PORTARIA_PREAUTORIZAR', 'PORTARIA_OPERAR'] }]
             },
             {
                 label: 'Alimentar',
@@ -225,8 +225,8 @@ const AppMenu = () => {
             },
             {
                 label: 'Atividades',
-                anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'],
-                items: [{ label: 'Workflow operacional', icon: 'pi pi-fw pi-check-square', to: '/atividades', anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'] }]
+                anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_CRIAR', 'ATIVIDADES_ATUALIZAR', 'ATIVIDADES_CANCELAR', 'ATIVIDADES_COMENTAR', 'ATIVIDADES_ATRIBUIR'],
+                items: [{ label: 'Workflow operacional', icon: 'pi pi-fw pi-check-square', to: '/atividades', anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_CRIAR', 'ATIVIDADES_ATUALIZAR', 'ATIVIDADES_CANCELAR', 'ATIVIDADES_COMENTAR', 'ATIVIDADES_ATRIBUIR'] }]
             },
             {
                 label: 'Contábil',
@@ -262,10 +262,10 @@ const AppMenu = () => {
             },
             {
                 label: 'Auditoria',
-                permission: 'AUDITORIA_CONSULTAR',
+                anyPermissions: ['AUDITORIA_CONSULTAR', 'AUDITORIA_OPERACIONAL_CONSULTAR'],
                 items: [
-                    { label: 'Auditoria operacional', icon: 'pi pi-fw pi-search', to: '/auditoria/operacional', permission: 'AUDITORIA_CONSULTAR' },
-                    { label: 'Eventos de auditoria', icon: 'pi pi-fw pi-history', to: '/auditoria/eventos', permission: 'AUDITORIA_CONSULTAR' }
+                    { label: 'Auditoria operacional', icon: 'pi pi-fw pi-search', to: '/auditoria/operacional', permission: 'AUDITORIA_OPERACIONAL_CONSULTAR' },
+                    { label: 'Eventos de auditoria', icon: 'pi pi-fw pi-history', to: '/auditoria/eventos', permission: 'AUDITORIA_OPERACIONAL_CONSULTAR' }
                 ]
             },
             {

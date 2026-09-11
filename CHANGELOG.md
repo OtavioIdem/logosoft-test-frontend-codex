@@ -1,3 +1,475 @@
+# v1.11.0a8b54
+
+## Drenagem das 25 cópias locais de `formatMoney` — fecha `D1` e o bloco da onda F1
+
+Item F1.4 do plano `docs/backend-v1.23/PLANO-FRONTEND-v1.23.md`. Fecha a dívida que `D1` abriu na
+`b51` e que `D2` remanejou para esta versão. As 25 cópias locais, todas com o mesmo corpo
+(`value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })`), saem de `features/`, e
+os 69 pontos de chamada em 13 módulos passam a importar `formatMoney` de `lib/formatters/money.ts`.
+
+**Nenhum ponto de chamada usa `formatMoneyOptional`, e isso foi medido, não presumido.** O nó
+`inventario` classificou os 69 um a um contra a declaração C# do record de response do backend,
+citando arquivo, linha, campo e record em cada linha:
+
+| Classificação | Pontos | Função |
+| --- | ---: | --- |
+| Campo que o contrato declara obrigatório (`decimal`) | 47 | `formatMoney` |
+| Campo que o contrato declara opcional (`decimal?`) | 0 | — |
+| Valor calculado na própria tela | 11 | `formatMoney`, por `D6` |
+| Valor de formulário antes do submit | 7 | `formatMoney`, por `D6` |
+| Campo sem par no record do backend | 4 | `formatMoney`, por `D5` |
+
+`D6` decidiu os 18 pontos das duas linhas do meio: `isAbsent`, em `lib/formatters/money.ts`, trata
+`NaN` como ausência, e total que vira `NaN` porque um operando chegou indefinido é a mesma classe
+de defeito monetário silencioso que `D1` existe para fechar. `formatMoneyOptional` renderia `—` e
+engoliria o caso.
+
+**Armadilha de medição registrada, porque quase inverteu a fatia inteira**: o
+`CONTRATO-API-v1.23.md` traz dois blocos por operação, e só o de response (```csharp```) discrimina
+optionality. O bloco de request marca 1458 campos com `?` contra 9 sem — classificar por ele
+tornaria todos os 69 pontos opcionais e esvaziaria o mecanismo de `D1`. No bloco de response a
+discriminação é real: 533 campos `decimal` contra 48 `decimal?`.
+
+**Comportamento observável muda, e para melhor.** A cópia local chamava `toLocaleString` sobre o
+campo ausente, o que lançava `TypeError` e derrubava a tela inteira. A função nova denuncia na
+célula em desenvolvimento e rende `—` em produção.
+
+### Três telas leem campo monetário que o backend não entrega (achado, não corrigido aqui)
+
+Decisão `D5`. São quatro pontos de chamada, em três telas alcançáveis pelo menu, todos confirmados
+contra o record C# real do backend e não só contra o documento de contrato:
+
+- **Boletos** — `features/bancos/components/BoletosPage.tsx` e `BancosOperacoesDialogs.tsx` leem
+  `valor`. `BancosContracts.cs` tem `ValorTitulo` (obrigatório) e `ValorPago` (opcional). Não tem
+  `Valor`.
+- **Lançamentos contábeis** — `features/contabil/components/LancamentosPage.tsx` lê `valorTotal`.
+  `LancamentoContabilContracts.cs` tem `TotalDebito` e `TotalCredito`. Não tem total.
+- **Depreciação** — `features/patrimonio/components/DepreciacaoPage.tsx` lê `valorTotal` de um tipo
+  (`DepreciacaoResultadoResponse`) cujos quatro campos não batem em nome com nenhum campo de
+  `ProcessarDepreciacaoPeriodoResponse`, que é o record que o endpoint devolve.
+
+É a classe do defeito `P1` da onda, encontrada por esta fatia e **não corrigida por ela**. Os
+quatro pontos ficam com `formatMoney` e um comentário no ponto de chamada apontando o alvo. A
+correção de campo é a fatia corretiva **`b54.c1`**, que precisa decidir o que cada um deveria ler.
+
+**Custo aceito, declarado por `D5`:** até a `b54.c1` entrar, o sintoma fica **mais quieto em
+produção**. Hoje essas telas quebram com `TypeError`; a partir desta versão exibem `—`. A troca é
+deliberada e a `b54.c1` entra em seguida.
+
+### Achados de esteira corrigidos no caminho
+
+1. **O ritual de versão estava impossível num arquivo** (`D7`).
+   `.claude/graph/policies.yaml` classificava `scripts/backend-contract-map.allowlist.json` como
+   artefato gerado e apontava `npm run report:backend-contract-map` como origem. Esse comando é
+   `validate-backend-contract-map.mjs --report` e **nunca escreveu em disco** — o arquivo não tem
+   nenhum `writeFileSync`. O hook `PreToolUse` que nega escrita à mão nesse caminho entrou em
+   `867b7fd`, depois da `b53`: de `b49` a `b53` o arquivo foi carimbado à mão, e desde então
+   nenhum agente conseguia carimbá-lo. Nasce `scripts/stamp-contract-map-version.mjs`
+   (`npm run stamp:backend-contract-map-version`), que reescreve **apenas** o campo `version`. O
+   hook não muda: a lista de rotas, que é medição de verdade, continua inalcançável por
+   `Edit`/`Write`. O diff do arquivo nesta versão é de uma linha, e é a prova de que o carimbador
+   é estreito.
+
+2. **A `b53` entrou com `npm run typecheck` vermelho.** Quatro erros `TS2802` em
+   `tests/unit/guardPermissionMapProofHistoric.test.ts`, arquivo intocado desde então, o que prova
+   que já estavam lá quando aquele release fechou. A causa é `tsconfig` com `target: es5`, que o
+   `T8` do plano da onda manda não tocar; a correção é local (`Array.from` no lugar de spread e de
+   `for…of` sobre `Set`) e não muda a forma nem a força de nenhuma asserção.
+
+### Testes
+
+`tests/unit/moneyFormatter.test.ts` — o teto monotônico de cópias locais deixa de ser `<= 25` e
+passa a exigir lista vazia. A asserção nova **nomeia cada arquivo infrator** na mensagem de falha,
+em vez de devolver só um total. Foi verificada contra um arquivo descartável com a cópia dentro: o
+teste reprovou citando o caminho, e voltou ao verde depois da remoção. Asserção de catraca que só
+sabe ficar verde não é catraca.
+
+### Ritual de versão
+
+`package.json`, `config/app.ts`, `.env.example`, `.env.test`, `.env.backend-controlled.example`,
+`.github/workflows/frontend-ci.yml`, `README.md`, `CHANGELOG.md`,
+`scripts/backend-permissions.allowlist.json`, `scripts/guard-permission-map.allowlist.json`,
+`tests/evidence/integrated-e2e.assisted-evidence.example.json` carimbados em `1.11.0a8b54`.
+`scripts/backend-permissions.snapshot.json` regenerado por
+`npm run generate:backend-permissions-snapshot`; `scripts/backend-contract-map.allowlist.json`
+carimbado pelo comando novo de `D7`.
+
+**Nenhuma mudança de permissão, de rota ou de menu.** Não há concessão a fazer antes do deploy.
+
+# v1.11.0a8b53
+
+## Gate de permissões fechado: auditar e bloquear divergências (F1.6.b)
+
+Onda F1 (parte 5) do plano `docs/backend-v1.23/PLANO-FRONTEND-v1.23.md` §7, item F1.6. Decisão `D2` e `D3` em `docs/arquitetura/DECISOES.md`: constrói o gate que cruza cada chamada HTTP do frontend com a permissão que o contrato declara exigir. A análise abrange 481 chamadas HTTP resolvidas sobre a AST (abstract syntax tree) do repositório, comparadas às 579 operações do contrato v1.23. Zero divergência dentro do escopo — as sete divergências legítimas de `b52` foram corrigidas, e o guard de entrada de Tabelas de Preço segue as novas regras desde então.
+
+**Exceções registradas**: 9 órfãs (módulos sem página de rota ativa) mantidas em lista nominada com teto monotônico. Nenhuma foi corrigida porque o escopo de F1.6 cobre apenas divergências de guard dentro de telas operacionais — a remoção de código morto é responsabilidade de F5.6. As exceções são:
+
+- **Bancos**: 7 chamadas (`POST /api/bancos`, `/api/bancos/contas-bancarias`, `/api/bancos/convenios`, `/api/bancos/carteiras`, `/api/bancos/boletos/gerar`, `/api/bancos/cnab/remessas`, `/api/bancos/cnab/retornos/importar`), nenhuma tem guard.
+- **Auditoria**: 1 chamada (`GET /api/auditoria/eventos`), permissão exigida é `AUDITORIA_CONSULTAR`, não tem guard (a tela que a usa agora exige `AUDITORIA_OPERACIONAL_CONSULTAR`, após `b52`).
+- **Relatórios**: 1 chamada (`GET /api/relatorios/gerenciais/dashboard`), permissão exigida é `RELATORIOS_DASHBOARD_CONSULTAR`, não tem guard.
+
+**Limite do gate**: o validador é condição **necessária** e **não suficiente**. Ele não detecta permissão em **excesso** — isto é, não pega quando um guard aceita mais permissões do que o contrato exige. Esse risco foi coberto por varredura manual (não automatizada) durante `b52` e é responsabilidade de F5.4 e F5.5. Ver comentário no cabeçalho de `scripts/validate-guard-permission-map.mjs` e seção "Limitações" no `README.md`.
+
+**Duas correções de menu e rota constatadas na verificação** (não no plano original, portanto entram nesta versão como achados):
+
+1. `layout/AppMenu.tsx` — item pai "Auditoria": corrige a permissão de `anyPermissions: ['AUDITORIA_CONSULTAR', 'AUDITORIA_OPERACIONAL_CONSULTAR']` para que o menu apareça para quem só tem a permissão nova (adicionado em `b52`).
+2. `lib/security/routePermissions.ts` — rota `/tabelas-preco`: muda para `anyOf: ['TABELAS_PRECO_CONSULTAR', 'TABELAS_PRECO_GERENCIAR']` (não mais aceita `VENDAS_*`), refletindo a decisão `D3` de `b52`.
+
+**Mocks e fixtures**: nenhuma alteração nova; `b52` já preparou os conjuntos (`mockPermissions` em `tests/mocks/auth/mockAuthClient.ts` e `ADMIN_PERMISSIONS` em `tests/e2e/fixtures/logosoft.ts`).
+
+**Testes**: novo teste unitário `tests/unit/guardPermissionMapProofHistoric.test.ts` garante que o gate continua honesto — executa a análise sobre `b52` (1312bc2) e confere que as sete divergências foram de fato corrigidas, e a árvore de hoje tem zero divergência legítima (apenas as 9 órfãs registradas).
+
+**Ritual de versão** (`package.json`, `.env.example`, `.env.test`, `.env.backend-controlled.example`, `scripts/backend-contract-map.allowlist.json`, `scripts/backend-permissions.snapshot.json`, `scripts/backend-permissions.allowlist.json`, `tests/evidence/integrated-e2e.assisted-evidence.example.json`, `README.md`, `CHANGELOG.md`) atualizado para `1.11.0a8b53`.
+
+# v1.11.0a8b52
+
+## Guards de permissão corrigidos: permissão existente, porém errada (F1.6.a)
+
+Onda F1 (parte 4) de `docs/backend-v1.23/PLANO-FRONTEND-v1.23.md` §5, item F1.6. Sequência
+travada em `D2` de `docs/arquitetura/DECISOES.md`: corrige agora as quatro divergências que a
+varredura do `arquiteto-frontend` nomeou (481 chamadas HTTP resolvidas sobre AST × 579 operações
+do contrato v1.23, 15 flags brutas, 4 verdadeiras depois da triagem), antes de `b53` construir o
+gate de classe que cruza cada chamada HTTP com a permissão que o contrato declara. Os seis
+códigos de permissão corretos usados nesta versão já estavam no union e no catálogo desde `b50` —
+zero endpoint novo, zero contrato novo, zero permissão nova no frontend; `validate:backend-permissions`
+segue em teto `0/0`. Depois que esta versão já estava em desenvolvimento, o usuário decidiu, por
+`D3` em `docs/arquitetura/DECISOES.md`, trazer para dentro do escopo o guard de **entrada** de
+Tabelas de Preço — que a varredura original (risco `R2`) havia deixado de fora por ter perfil de
+risco diferente das outras quatro correções. Essa mudança entra como Passo 9, ao final desta
+seção.
+
+- `features/tabelas-preco/components/TabelasPrecoPage.tsx`: o guard único
+  `hasAnyPermission(['TABELAS_PRECO_GERENCIAR', 'VENDAS_GERENCIAR'])`, que protegia editar,
+  ativar e inativar tabela, e as ações de item, é substituído por permissões granulares. Botão
+  "Nova tabela": `PermissionGuard permission="TABELAS_PRECO_GERENCIAR"` (sai `VENDAS_GERENCIAR`
+  do guard). Ações de linha da tabela (editar/ativar/inativar) e do item (editar/inativar): usam
+  o campo `permission` que `RowAction` (`components/data/DataTableActions.tsx`) já expunha e não
+  era usado aqui — `TABELAS_PRECO_GERENCIAR`, `TABELAS_PRECO_ATIVAR`, `TABELAS_PRECO_INATIVAR`,
+  `TABELAS_PRECO_ITENS_GERENCIAR`. Comportamento visual idêntico ao de hoje —
+  `DataTableActions` já filtrava por permissão e escondia a ação, o diff só troca qual
+  permissão é checada. O guard de **entrada** da tela e a regra de rota correspondente também
+  mudam nesta versão — ver o Passo 9, ao final desta seção.
+- `features/seguranca/components/SegurancaActionDialogs.tsx` (`GerenciarUsuarioDialog`): o guard
+  único `SEGURANCA_USUARIOS_GERENCIAR`, que cobria os cinco botões de ação do diálogo, vira um
+  `PermissionGuard` por botão: "Resetar senha" → `SEGURANCA_USUARIOS_RESETAR_SENHA`; "Vincular
+  grupo" e "Remover grupo" → `SEGURANCA_GRUPOS_ACESSO_GERENCIAR`; "Inativar" →
+  `SEGURANCA_USUARIOS_INATIVAR`. "Reativar" continua `SEGURANCA_USUARIOS_GERENCIAR` — já estava
+  certo e não muda. Cada botão desabilitado por falta de permissão passa a expor `title` no
+  formato `"Permissão necessária: <CÓDIGO>."` (idioma já usado em
+  `FiscalOperationalPanels.tsx`). "Remover grupo" mantém a composição
+  `disabled || Boolean(motivoSemRemocao)`, com o `title` do `motivoSemRemocao`
+  (indisponibilidade de negócio, resolvida pelo backend) tendo precedência sobre o de permissão.
+  `UsuariosPage.tsx` (wiring de `acoes`) e `routePermissions.ts` (regra de
+  `/seguranca/usuarios`) não mudam.
+- `features/auditoria/components/AuditoriaEventosPage.tsx`: o guard de conteúdo da tela passa de
+  `AUDITORIA_CONSULTAR` para `AUDITORIA_OPERACIONAL_CONSULTAR` — a permissão que
+  `GET /api/auditoria/eventos` e `GET /api/auditoria/operacional` exigem de fato. O texto do
+  `UnauthorizedState` passa a nomear a permissão certa. `lib/security/routePermissions.ts`
+  (regra `/auditoria`) fica **permissiva de propósito**:
+  `anyOf: ['AUDITORIA_CONSULTAR', 'AUDITORIA_OPERACIONAL_CONSULTAR']` — o prefixo `/auditoria`
+  pode voltar a hospedar uma tela que use `AUDITORIA_CONSULTAR` de verdade quando
+  `useAuditoriaEventos` deixar de ser órfão (ver `R6`); quem decide se a tela entrega conteúdo ou
+  `UnauthorizedState` é o componente, não o portão de rota. `layout/AppMenu.tsx`: os dois itens
+  do submenu "Auditoria" (`/auditoria/operacional` e `/auditoria/eventos` — ambos renderizam o
+  mesmo `AuditoriaEventosPage`) passam a `permission: 'AUDITORIA_OPERACIONAL_CONSULTAR'`. **Ajuste
+  não nomeado no plano, encontrado na verificação**: o item pai "Auditoria" também precisou virar
+  `anyPermissions: ['AUDITORIA_CONSULTAR', 'AUDITORIA_OPERACIONAL_CONSULTAR']` (era
+  `permission: 'AUDITORIA_CONSULTAR'`) — sem isso, o `filterMenu` de `AppMenu.tsx` esconde o
+  grupo inteiro para quem tem só a permissão nova, porque pai e filhos são filtrados de forma
+  independente; a sessão que a correção deveria beneficiar (só `AUDITORIA_OPERACIONAL_CONSULTAR`)
+  ficaria sem ver o item de menu.
+- `features/fiscal/components/FiscalOperationalPanels.tsx` (`FiscalIntegracoesTable`): o botão
+  "Reprocessar" troca de `FISCAL_EMITIR` para `FISCAL_REPROCESSAR` — a permissão distinta que a
+  v1.23 introduziu para essa ação (ver risco `R1`). O gate de negócio `row.podeReprocessar`
+  (workflow devolvido pelo backend) permanece ortogonal à permissão e não muda.
+  `routePermissions.ts` e o menu de Fiscal continuam sem separar emitir de reprocessar no portão
+  de rota — essa separação é `F2.5`, fora desta versão.
+- Mocks de permissão, obrigatórios para que as quatro correções acima não derrubassem o E2E
+  (nenhum dos nove códigos abaixo existia nos conjuntos mockados antes desta versão):
+  `tests/mocks/auth/mockAuthClient.ts` (`mockPermissions`) e `tests/e2e/fixtures/logosoft.ts`
+  (`ADMIN_PERMISSIONS`) ganham `TABELAS_PRECO_CONSULTAR`, `TABELAS_PRECO_GERENCIAR`,
+  `TABELAS_PRECO_ATIVAR`, `TABELAS_PRECO_INATIVAR`, `TABELAS_PRECO_ITENS_GERENCIAR`,
+  `AUDITORIA_OPERACIONAL_CONSULTAR`, `SEGURANCA_USUARIOS_RESETAR_SENHA`,
+  `SEGURANCA_USUARIOS_INATIVAR`, `FISCAL_REPROCESSAR`. `CONSULTA_PERMISSIONS`
+  (`tests/e2e/fixtures/logosoft.ts`) foi avaliado e mantido como está: nenhum caso hoje o exercita
+  contra as telas tocadas nesta versão.
+- **Passo 9 — guard de entrada de Tabelas de Preço, acrescentado ao escopo por `D3` depois que
+  esta versão já estava em desenvolvimento** (ver "Item à parte", na seção operacional abaixo, e
+  `docs/arquitetura/DECISOES.md`): `features/tabelas-preco/components/TabelasPrecoPage.tsx` — o
+  guard de entrada da tela deixa de aceitar `VENDAS_CONSULTAR`/`VENDAS_GERENCIAR` e passa a exigir
+  só `TABELAS_PRECO_CONSULTAR`, a permissão que `GET /api/tabelas-preco` de fato exige; o
+  `UnauthorizedState` passa a nomeá-la. `lib/security/routePermissions.ts` — a regra de
+  `/tabelas-preco` perde `VENDAS_*` e vira `anyOf: ['TABELAS_PRECO_CONSULTAR',
+  'TABELAS_PRECO_GERENCIAR']`. `layout/AppMenu.tsx` — o item de menu "Tabelas de preço" (dentro do
+  grupo "Vendas") perde `VENDAS_CONSULTAR`/`VENDAS_GERENCIAR` e fica com
+  `anyPermissions: ['TABELAS_PRECO_CONSULTAR', 'TABELAS_PRECO_GERENCIAR']`; o item **pai** "Vendas"
+  não muda — já incluía `TABELAS_PRECO_*` desde antes, ao lado de `VENDAS_*`, porque também
+  precisa aparecer para quem só usa "Pedidos de venda". Isso fecha o risco `R2` do plano `b52` e
+  **revoga o `AC-1` do Passo 1** desse mesmo plano: o `grep -c "VENDAS_GERENCIAR"` em
+  `TabelasPrecoPage.tsx` agora retorna `0`, não `1` — confirmado também para `VENDAS_` em geral
+  (`grep -c "VENDAS_"` retorna `0`).
+- `tests/unit/moneyFormatter.test.ts`: comentário do teto monotônico atualizado de "drenadas em
+  b52" para "drenadas em b54" — `D2` remanejou a drenagem das cópias locais de `formatMoney`
+  (`D1`/`b51` previa `b52`). É comentário; a asserção do teto (`<= 25`) não muda.
+- Ritual de versão (`package.json`, `config/app.ts`, `.env.example`, `.env.test`,
+  `.env.backend-controlled.example`, `.github/workflows/frontend-ci.yml`, `README.md`,
+  `scripts/backend-contract-map.allowlist.json`, `scripts/backend-permissions.snapshot.json`,
+  `scripts/backend-permissions.allowlist.json`,
+  `tests/evidence/integrated-e2e.assisted-evidence.example.json`) atualizado para `1.11.0a8b52`.
+
+### Antes do deploy: o que acrescentar aos grupos de acesso
+
+Nenhuma operação que hoje conclui deixa de concluir. Os botões que somem ou ficam desabilitados
+já eram recusados pelo backend com `403` — a tela apenas parou de prometer o que não podia
+entregar.
+
+| Ação na tela | Permissão agora exigida |
+| --- | --- |
+| Editar / Ativar / Inativar tabela de preço, "Nova tabela" | `TABELAS_PRECO_GERENCIAR`, `TABELAS_PRECO_ATIVAR`, `TABELAS_PRECO_INATIVAR` |
+| Editar / Inativar item de tabela de preço, "Adicionar item" | `TABELAS_PRECO_ITENS_GERENCIAR` |
+| Resetar senha de usuário | `SEGURANCA_USUARIOS_RESETAR_SENHA` |
+| Vincular / Remover grupo de acesso do usuário | `SEGURANCA_GRUPOS_ACESSO_GERENCIAR` |
+| Inativar usuário | `SEGURANCA_USUARIOS_INATIVAR` |
+| Ver "Auditoria operacional" / "Eventos de auditoria" | `AUDITORIA_OPERACIONAL_CONSULTAR` |
+| Reprocessar integração fiscal | `FISCAL_REPROCESSAR` |
+
+Preparação, em `/seguranca/grupos-acesso` → editar grupo → campo **Permissões** (o `MultiSelect`
+de `GrupoAcessoFormDialog.tsx`, alimentado pelo catálogo completo desde `b50` — a tela já existe
+hoje):
+
+- Aos grupos que já têm `SEGURANCA_USUARIOS_GERENCIAR`: acrescentar
+  `SEGURANCA_USUARIOS_RESETAR_SENHA`, `SEGURANCA_USUARIOS_INATIVAR` e
+  `SEGURANCA_GRUPOS_ACESSO_GERENCIAR`.
+- Aos grupos que têm `TABELAS_PRECO_GERENCIAR` ou `VENDAS_GERENCIAR` e mexem em preço:
+  acrescentar `TABELAS_PRECO_ATIVAR`, `TABELAS_PRECO_INATIVAR`, `TABELAS_PRECO_ITENS_GERENCIAR`.
+- Aos grupos que têm `AUDITORIA_CONSULTAR`: acrescentar `AUDITORIA_OPERACIONAL_CONSULTAR`.
+- Aos grupos que têm `FISCAL_EMITIR` e devem reprocessar integrações: acrescentar
+  `FISCAL_REPROCESSAR`.
+
+**O único caminho de auto-bloqueio**: se a preparação acima não for feita antes do deploy, o
+administrador que tem apenas `SEGURANCA_USUARIOS_GERENCIAR` abre "Gerenciar usuário" e encontra
+quatro dos cinco botões desabilitados (Resetar senha, Vincular grupo, Remover grupo, Inativar —
+só "Reativar" continua liberado, pois usa a mesma permissão de sempre). **Se esse administrador
+for o único com permissão para editar grupos de acesso, ele precisa ganhar
+`SEGURANCA_GRUPOS_ACESSO_GERENCIAR` antes do deploy, sob pena de precisar de intervenção direta
+no backend para se desbloquear.** Quem administra como `isMaster` ou com a permissão `'*'`
+(`lib/permissions/permissions.ts`) passa por qualquer guard e não perde nada com esta versão.
+
+### Item à parte: Tabelas de Preço deixa de aceitar permissão de Vendas na entrada
+
+Diferente dos sete itens da tabela acima, este é o **único ponto desta versão em que alguém perde
+acesso de verdade, e não apenas a ilusão de um botão que já era recusado pelo backend**. Decisão do
+usuário, `D3` em `docs/arquitetura/DECISOES.md`, acrescentada ao escopo depois que a versão já
+estava em desenvolvimento (Passo 9).
+
+Hoje, quem tem só `VENDAS_CONSULTAR` ou `VENDAS_GERENCIAR` **entra** na tela de Tabelas de Preço —
+ainda que veja a lista sempre vazia, porque `GET /api/tabelas-preco` já exige
+`TABELAS_PRECO_CONSULTAR` e o backend recusa a consulta. Depois desta versão, esse mesmo usuário
+deixa de ver o item de menu "Tabelas de preço" e, se acessar `/tabelas-preco` direto pela URL,
+recebe `UnauthorizedState` nomeando `TABELAS_PRECO_CONSULTAR`.
+
+**Antes do deploy**: aos grupos que têm `VENDAS_CONSULTAR` ou `VENDAS_GERENCIAR` e precisam de
+Tabelas de Preço, acrescentar `TABELAS_PRECO_CONSULTAR` em `/seguranca/grupos-acesso` → editar
+grupo → **Permissões** — sob pena de o módulo sumir do menu e da rota para o cargo inteiro.
+
+A frase "nenhuma operação que hoje conclui deixa de concluir" continua verdadeira aqui também — a
+lista já vinha vazia para esse público — mas o **acesso à tela** some, e isso o operador percebe
+imediatamente, diferente dos botões desabilitados dos outros sete itens.
+
+- **Teste novo, fora desta entrega** (é do `engenheiro-testes`): reescrita de
+  `tests/unit/tabelasPrecoB40Structure.test.ts` (a asserção que hoje fixa
+  `PermissionGuard anyOf={['TABELAS_PRECO_GERENCIAR', 'VENDAS_GERENCIAR']}` e
+  `canManageTabelaPreco` fica vermelha por esta versão, de propósito),
+  `tests/unit/routePermissions.test.ts` (o `toEqual(['AUDITORIA_CONSULTAR'])` da regra de
+  `/auditoria` também fica vermelho, de propósito), `tests/unit/auditoriaB45Structure.test.ts`
+  (caso novo cobrindo `AUDITORIA_OPERACIONAL_CONSULTAR` em rota e menu),
+  `tests/unit/segurancaB39Structure.test.ts` (caso novo cobrindo os cinco guards/quatro códigos
+  distintos) e quatro casos novos de E2E em `tests/e2e/permissions.spec.ts` (AC-13 a AC-16 do
+  plano `b52`). O Passo 9 acrescenta: no mesmo `tabelasPrecoB40Structure.test.ts`, o caso do guard
+  de entrada passa a exigir `TABELAS_PRECO_CONSULTAR` e a proibir `VENDAS_*`; em
+  `routePermissions.test.ts`, a regra de `/tabelas-preco` muda; em `permissions.spec.ts`, dois
+  casos novos (AC-18, AC-19 do plano `b52`).
+- **Fora do escopo desta versão** (nominalmente, ver plano `b52`): `types/erp.ts` e
+  `features/seguranca/permissoesCatalogo.ts` (fecharam em `b50`, teto `0/0`); os três JSON de
+  `scripts/` (só o carimbo de versão); `lib/formatters/money.ts` (entregue em `b51`, `D1`);
+  `features/*/api|hooks|schemas|types` (nenhuma rota, payload, Zod, `queryKey`, `enabled` ou
+  mutação muda); `components/data/DataTableActions.tsx` (`RowAction` não ganha campo `title`
+  nesta versão — proposta para `F5`); `components/security/PermissionGuard.tsx` e
+  `lib/permissions/permissions.ts` (contrato do guard e semântica de `isMaster`/`'*'`
+  inalterados); a regra de `/seguranca/usuarios` e o wiring `acoes` de `UsuariosPage.tsx`; a separação
+  emitir × reprocessar no portão de rota e no menu de Fiscal (`F2.5`); regra de negócio
+  (`isTabelaAtiva`, `isContaEncerrada`, `motivoRemocaoIndisponivel`, `podeReprocessar` — todas do
+  backend); bancos, relatórios, dashboard, shared (órfãos de `F5.6`); o gate de classe que cruza
+  chamada HTTP × permissão do contrato (`F1.6.b`/`b53`).
+- **Riscos e pendências**: `R1` — `FISCAL_REPROCESSAR` é permissão nova da v1.23
+  (`novasEmV123` no snapshot); é plausível que nenhum grupo em produção a possua hoje e o botão
+  "Reprocessar" desapareça para todo usuário não-master até a preparação acima ser feita — não é
+  regressão (o backend já recusava a ação), mas fica pergunta em aberto para o backend: a
+  migração da v1.23 concedeu `FISCAL_REPROCESSAR` a algum grupo existente? `R2` — **resolvido
+  nesta versão pelo Passo 9, por decisão do usuário (`D3`)**: o guard de entrada de Tabelas de
+  Preço e a regra de rota deixaram de aceitar `VENDAS_CONSULTAR`/`VENDAS_GERENCIAR` e passaram a
+  exigir `TABELAS_PRECO_CONSULTAR`. Ver "Item à parte", na seção operacional acima, para o efeito
+  em quem hoje só tem permissão de Vendas. `R6` — achados órfãos da
+  varredura, só registrados aqui, tratamento em `F5.6`: `useAuditoriaEventos` e
+  `useRelatorioDashboardConsolidado` sem consumidor; `BancosDialogs.tsx` não é importado por
+  ninguém; `CnabPage` e `CadastrosBancariosPage` são placeholders de 15 linhas — consequência
+  colateral: `AUDITORIA_CONSULTAR` hoje não protege nenhuma chamada real no produto. `A1` —
+  ambiguidade de contrato sem efeito nesta versão: `POST /api/tabelas-preco` e
+  `GET /api/tabelas-preco/{id}` declaram `Response DTO UsuarioResponse`, e `PUT` declara
+  `CargoAcessoResponse` — pergunta ao backend, reforça a proposta de `ProducesResponseType`.
+
+# v1.11.0a8b51
+
+## `formatMoney` deixa de mascarar ausência com R$ 0,00 (F1.4)
+
+Onda F1 (parte 3) de `docs/backend-v1.23/PLANO-FRONTEND-v1.23.md` §5. Decisão de desenho travada
+em `D1` de `docs/arquitetura/DECISOES.md`: duas funções em vez de uma assinatura com opções.
+
+- `lib/formatters/money.ts`: contrato novo. `formatMoney(value: number | null | undefined): string`
+  — para campo que o contrato do backend declara obrigatório. Remove o `?? 0` que mascarava
+  ausência com `R$ 0,00` plausível (o defeito P1 da onda F1.1). Ausência (`null`/`undefined`/`NaN`)
+  denuncia na própria célula em desenvolvimento com o texto `"valor ausente (contrato)"` e degrada
+  para exatamente `"—"` em produção. O sinal de ambiente é `process.env.NODE_ENV`, lido dentro da
+  função (não `appConfig.env`/`NEXT_PUBLIC_APP_ENV`, que nunca vale `production` neste
+  repositório — embarcaria o modo ruidoso em produção). Sem `console` (proibido por
+  `validate:source`) e sem `throw` (derrubaria a `DataTable` inteira em vez da célula).
+  `formatMoneyOptional(value, fallback = '—'): string` — para campo que o contrato declara
+  opcional; ausência rende o `fallback` em silêncio, sem denúncia em nenhum ambiente. Invariante
+  que a mudança não quebra: `formatMoney(0)` continua `"R$ 0,00"` — zero legítimo é diferente de
+  campo ausente.
+- `features/financeiro/components/financeiroUiUtils.ts`, `features/compras/components/comprasUiUtils.ts`,
+  `features/vendas/components/vendasUiUtils.ts`: a cópia local de `formatMoney` (que fazia
+  `?? 0`/`Number(value ?? 0)`) é removida; os três arquivos passam a reexportar `formatMoney` e
+  `formatMoneyOptional` de `@/lib/formatters/money`. Os importadores existentes (financeiro: 3;
+  compras: 4; vendas: 3) continuam intactos — diff pequeno, mesmo nome, contrato novo.
+- `features/financeiro/hooks/useFinanceiroOriginOptions.ts`: apaga a cópia local de `formatMoney`
+  (fazia `value ?? 0` sobre `pedido.valorTotal`, um campo que o autor supôs obrigatório); importa
+  `formatMoney` de `@/lib/formatters/money`.
+- `features/tabelas-preco/components/TabelasPrecoPage.tsx`: apaga a cópia local; `precoVenda` e
+  `precoMinimo` passam a usar `formatMoney` (importado da lib) nos dois pontos de exibição (itens
+  da tabela e preço vigente). Ambiguidade registrada: não há confirmação do backend de que
+  `precoMinimo` seja opcional — decisão de falhar para o lado ruidoso (`formatMoney`, não
+  `formatMoneyOptional`), porque se o campo for de fato opcional a denúncia em dev provoca
+  pergunta; se for obrigatório e eu tivesse suposto opcional, o defeito voltaria a ser silencioso.
+- `features/patrimonio/components/BensPage.tsx`, `features/contratos/components/ContratosPage.tsx`,
+  `features/producao/components/OrdensProducaoPage.tsx`, `features/rh/components/BeneficiosPage.tsx`:
+  as quatro cópias locais que já renderizavam `value == null ? '—' : ...` (evidência empírica de
+  ausência legítima) são removidas; os call sites (`valorContabil`/`valorAquisicao`,
+  `valorTotal`/`franquia`/`valorExcedente`/`valorFixo`, `custoConsolidado`, `valor` de benefício e
+  concessão) passam a chamar `formatMoneyOptional` importado de `@/lib/formatters/money`
+  explicitamente — a intenção declarada fica visível no diff e auditável por
+  `grep formatMoneyOptional`, em vez de reimplementada célula a célula.
+- Ritual de versão (`package.json`, `config/app.ts`, `.env.example`, `.env.test`,
+  `.env.backend-controlled.example`, `.github/workflows/frontend-ci.yml`, `README.md`,
+  `scripts/backend-contract-map.allowlist.json`, `scripts/backend-permissions.snapshot.json`,
+  `scripts/backend-permissions.allowlist.json`,
+  `tests/evidence/integrated-e2e.assisted-evidence.example.json`) atualizado para `1.11.0a8b51`.
+- **Teste novo, fora desta entrega** (é do `engenheiro-testes`):
+  `tests/unit/moneyFormatter.test.ts`, que fixa o contrato acima (AC-1 a AC-5 do plano) e o teto
+  monotônico de cópias locais `(value: number) =>` restantes (24, medidas por
+  `grep -rn "const formatMoney" features lib` — ver "Fora do escopo").
+- **Fora do escopo desta versão** (nominalmente, ver plano `b51`): as 24 cópias locais com
+  assinatura `(value: number)` em `bancos`, `clientes`, `compras-avancado`, `contabil`, `crm`,
+  `faturamento`, `financeiro-avancado`, `frota`, `patrimonio/DepreciacaoPage`, `pdv`, `produtos`,
+  `rh/ColaboradoresPage`, `rh/EventosPage`, `servicos` — elas não mascaram: com `undefined` lançam
+  `TypeError` e derrubam o render da linha, classe de defeito diferente (barulhenta, não
+  silenciosa), congelada por teto de teste e drenada em `b52`. `lib/formatters/display.ts`
+  (`formatDisplayValue`, `Number(value ?? 0)` para `type === 'money'`) — mesmo defeito, mas só a
+  camada órfã de F5.6 o consome; some junto com ela. Guards de permissão errados (F1.6) — versão
+  seguinte.
+
+# v1.11.0a8b50
+
+## União e catálogo de permissões fechados (F1.2, F1.3)
+
+Onda F1 (parte 2) de `docs/backend-v1.23/PLANO-FRONTEND-v1.23.md` §5. Fecha o registro auditável
+aberto em b48/b49 (`scripts/backend-permissions.allowlist.json`): 3 permissões fantasma e 36
+coberturas pendentes.
+
+- `types/erp.ts` (union `PermissionCode`): removidas `ATIVIDADES_GERENCIAR`,
+  `RELATORIOS_CONSULTAR` (nunca existiram no backend) e `PORTARIA_PRE_AUTORIZAR` (grafia
+  incorreta). Acrescentadas as 36 permissões que `npm run report:backend-permissions` listava em
+  `coberturaPendente`, agrupadas junto do módulo vizinho já existente no union: 5 granulares de
+  Atividades (`CRIAR`/`ATUALIZAR`/`CANCELAR`/`COMENTAR`/`ATRIBUIR`), `AUDITORIA_OPERACIONAL_CONSULTAR`,
+  `INFRAESTRUTURA_CONSULTAR`/`BACKUP_CONSULTAR`, `SEGURANCA_USUARIOS_INATIVAR`/`RESETAR_SENHA`,
+  `SEGURANCA_GRUPOS_ACESSO_CONSULTAR`/`GERENCIAR`, `SEGURANCA_PARAMETROS_CONSULTAR`/`GERENCIAR`,
+  `PESSOAS_BLOQUEAR`, `PESSOAS_DADOS_FISCAIS_GERENCIAR`, `CLASSIFICACOES_PESSOA_GERENCIAR`,
+  `TRANSPORTADORAS_CONSULTAR`/`GERENCIAR`, `TABELAS_PRECO_ATIVAR`/`INATIVAR`/`ITENS_GERENCIAR`,
+  `POLITICA_COMERCIAL_GERENCIAR`, `VENDAS_PRECO_MINIMO_SOBRESCREVER`,
+  `FINANCEIRO_CAIXA_GERENCIAR`/`BANCO_GERENCIAR`, `FISCAL_REPROCESSAR`,
+  `FISCAL_CADASTROS_GERENCIAR`, `FISCAL_SERIES_CONSULTAR`/`GERENCIAR`, `FISCAL_MODELOS_CONSULTAR`,
+  `INTEGRACOES_CONSULTAR`/`GERENCIAR`/`REPROCESSAR`, `FATURAMENTO_RETOMAR_REVERSAO` e
+  `PORTARIA_PREAUTORIZAR` (substitui a grafia incorreta na mesma posição). Union: 144 → 177.
+- `features/seguranca/permissoesCatalogo.ts`: catálogo `Record<PermissionCode, …>` acompanha o
+  union — mesmas 3 remoções, mesmas 36 adições, com `{ grupo, label }`. Corrigido também o rótulo
+  mentiroso de `SEGURANCA_PERMISSOES_GERENCIAR` (`"Grupos de acesso · Gerenciar"` →
+  `"Cargos de acesso · Gerenciar"`): essa permissão guarda Cargos de acesso, não Grupos de acesso
+  — origem documental do P2 do plano. Catálogo: 144 → 177.
+- `lib/security/routePermissions.ts`: `/seguranca/grupos-acesso` passa a exigir
+  `anyOf: ['SEGURANCA_GRUPOS_ACESSO_CONSULTAR', 'SEGURANCA_GRUPOS_ACESSO_GERENCIAR']` em vez de
+  `SEGURANCA_PERMISSOES_GERENCIAR`; `/portaria` corrige a grafia para `PORTARIA_PREAUTORIZAR`;
+  `/atividades` troca `ATIVIDADES_GERENCIAR` pelas cinco permissões granulares.
+- `layout/AppMenu.tsx`: item de menu "Grupos de acesso" passa a exigir
+  `SEGURANCA_GRUPOS_ACESSO_CONSULTAR`/`GERENCIAR` (mantido `SEGURANCA_PERMISSOES_GERENCIAR` no
+  `anyPermissions` do grupo pai "Segurança", que também cobre outros itens do menu); "Portaria" e
+  "Atividades" acompanham a grafia/granularidade corrigidas em `routePermissions.ts`.
+- `features/seguranca/components/GruposAcessoPage.tsx`: guard de página passa a
+  `hasAnyPermission(['SEGURANCA_GRUPOS_ACESSO_CONSULTAR', 'SEGURANCA_GRUPOS_ACESSO_GERENCIAR'])`
+  com texto de `UnauthorizedState` atualizado; "Novo grupo", "Editar" e "Inativar" passam a exigir
+  `SEGURANCA_GRUPOS_ACESSO_GERENCIAR`. **Mudança de acesso visível**: quem tem
+  `SEGURANCA_GRUPOS_ACESSO_*` mas não `SEGURANCA_PERMISSOES_GERENCIAR` passa a ver a tela; quem só
+  tinha `SEGURANCA_PERMISSOES_GERENCIAR` perde a tela — é a correção do P2, não uma regressão.
+- `features/portaria/components/PortariaPage.tsx` e `PreAutorizacoesTab.tsx`: guard de página,
+  item "Nova pré-autorização" e ação "Cancelar" trocam `PORTARIA_PRE_AUTORIZAR` por
+  `PORTARIA_PREAUTORIZAR` (grafia real da constante C# `PortariaPreAutorizar`, catálogo §12 e
+  `POST /api/portaria/pre-autorizacoes`).
+- `features/atividades/components/AtividadesPage.tsx`: guard de página exige
+  `['ATIVIDADES_CONSULTAR', 'ATIVIDADES_CRIAR', 'ATIVIDADES_ATUALIZAR', 'ATIVIDADES_CANCELAR',
+  'ATIVIDADES_COMENTAR', 'ATIVIDADES_ATRIBUIR']`; "Nova atividade" exige `ATIVIDADES_CRIAR`;
+  ações da tabela mapeadas por operação real do backend: "Editar"/"Status" →
+  `ATIVIDADES_ATUALIZAR` (`PUT /api/atividades/{id}` e `POST /api/atividades/{id}/status`
+  atualizam o mesmo agregado), "Atribuir" → `ATIVIDADES_ATRIBUIR`, "Comentar" →
+  `ATIVIDADES_COMENTAR`, "Cancelar" → `ATIVIDADES_CANCELAR`. "Detalhe" continua exigindo só
+  `ATIVIDADES_CONSULTAR` (é leitura).
+- `scripts/backend-permissions.allowlist.json`: `fantasmasConhecidos` e `coberturaPendente`
+  esvaziados; `teto` passa de `{ fantasmas: 3, coberturaPendente: 36 }` para `{ fantasmas: 0,
+  coberturaPendente: 0 }` — tolerância zero a partir de agora; `version` → `1.11.0a8b50`.
+- `scripts/backend-permissions.snapshot.json`: regenerado via
+  `npm run generate:backend-permissions-snapshot` com `version: 1.11.0a8b50` (conteúdo nomeado
+  inalterado — só a versão do artefato muda).
+- `tests/mocks/auth/mockAuthClient.ts` e `tests/e2e/fixtures/logosoft.ts`: `mockPermissions` /
+  `ADMIN_PERMISSIONS` trocam `ATIVIDADES_GERENCIAR` pelas cinco granulares, removem
+  `RELATORIOS_CONSULTAR` e acrescentam `SEGURANCA_GRUPOS_ACESSO_CONSULTAR`/`GERENCIAR`;
+  `CONSULTA_PERMISSIONS` apenas perde `RELATORIOS_CONSULTAR`. Sem esse ajuste o typecheck não
+  fecha (os mocks são tipados por `PermissionCode`) e os fixtures E2E concederiam uma string morta.
+- `docs/CI_GATES_FRONTEND.md` §8: os números "3 e 36" e a frase "o gate de permissões nasce
+  vermelho por desenho" (verdadeiros em b48/b49) passam a descrever o estado fechado: nasceu
+  vermelho em b48 com 3 fantasmas + 36 coberturas pendentes; zerado nesta versão (F1.2/F1.3); o
+  teto `0/0` é agora tolerância zero.
+- Ritual de versão (`package.json`, `config/app.ts`, `.env.example`, `.env.test`,
+  `.env.backend-controlled.example`, `.github/workflows/frontend-ci.yml`, `README.md`,
+  `scripts/backend-contract-map.allowlist.json`,
+  `tests/evidence/integrated-e2e.assisted-evidence.example.json`) atualizado para
+  `1.11.0a8b50`.
+- **Testes que ficam vermelhos por desenho ao fim desta versão** (reescrita é do
+  `engenheiro-testes`, não desta entrega): `tests/unit/backendPermissions.test.ts` (contadores de
+  fantasma/cobertura pendente e os `toContain` das 3 strings fantasma),
+  `tests/unit/routePermissions.test.ts` (`ATIVIDADES_GERENCIAR`), `tests/unit/portariaStructure.test.ts`
+  e `tests/unit/atividadesB43Structure.test.ts` (grafia/granularidade),
+  `tests/unit/segurancaB39Structure.test.ts` (`SEGURANCA_PERMISSOES_GERENCIAR` →
+  `SEGURANCA_GRUPOS_ACESSO_GERENCIAR`). Teste novo pendente:
+  `tests/unit/permissoesUnionCatalogo.test.ts`.
+- **Fora do escopo desta versão** (nominalmente, ver plano): `features/tabelas-preco/`,
+  `features/seguranca/components/SegurancaActionDialogs.tsx`, `features/auditoria/` (guards com
+  permissão existente porém errada — F1.6); `features/fiscal/` (`FISCAL_REPROCESSAR` sem guard —
+  F2.5); `features/faturamento/` (`FATURAMENTO_RETOMAR_REVERSAO` sem consumidor — F2.1);
+  `features/shared/config/erpFeatureCatalog.ts` (F5.6); `scripts/validate-backend-permissions.mjs`
+  e `scripts/lib/backend-permissions.mjs` (o script não muda, só os dados da allowlist);
+  `lib/formatters/money.ts` e o restante de F1.4 (versão b51).
+- **Ambiguidade registrada, não resolvida nesta versão**: o contrato declara 178 permissões
+  nomeadas; a união medida entre as duas fontes documentais dá 177 — uma permissão do backend
+  segue sem nome em nenhuma fonte (`naoConciliado.quantidade: 1` no snapshot). Não foi inventada.
+
 # v1.11.0a8b49
 
 ## Contrato monetário do Financeiro (F1.1)

@@ -249,9 +249,34 @@ que vier depois é construído sobre chão que não sustenta.
 | F1.3 | Corrigir as três fantasmas (`PORTARIA_PRE_AUTORIZAR` → `PORTARIA_PREAUTORIZAR`; `ATIVIDADES_GERENCIAR` → as cinco granulares; remover `RELATORIOS_CONSULTAR`) | O botão de pré-autorização habilita para quem tem a permissão |
 | F1.4 | **`formatMoney` deixa de mascarar ausência**: `value ?? 0` vira erro visível em modo dev e "—" em produção | Campo ausente **nunca** mais vira R$ 0,00 silencioso. É a defesa genérica contra a classe inteira de P1 |
 | F1.5 | Remover `Origem = Compra` do fluxo manual de Conta a Pagar (**manter** em Contas a Receber) | O caminho morto some |
+| F1.6 | **Guards com permissão existente porém errada** — a classe que o gate de F0.2 não enxerga, porque não é fantasma nem cobertura pendente. Corrigir os três achados abaixo e criar o gate que cruza a chamada HTTP de cada tela contra a permissão do contrato | Nenhum guard concede acesso a uma ação que o backend recusa, nem recusa uma que ele concede; o gate novo falha se voltar a divergir |
 
 **F1.4 é o item que mais importa a longo prazo** — os outros consertam instâncias, ele fecha
 a classe.
+
+**Os três achados de F1.6**, levantados pelo `arquiteto-frontend` ao mapear as 36 permissões de
+F1.2. Mesma família do P2 — o guard existe, compila e passa no gate, e ainda assim guarda a porta
+errada:
+
+```text
+features/tabelas-preco/components/TabelasPrecoPage.tsx:59,112,150
+  guarda ativar / inativar / itens com TABELAS_PRECO_GERENCIAR|VENDAS_GERENCIAR;
+  o backend exige TABELAS_PRECO_ATIVAR / _INATIVAR / _ITENS_GERENCIAR
+
+features/seguranca/components/SegurancaActionDialogs.tsx:108-121
+  um único PermissionGuard SEGURANCA_USUARIOS_GERENCIAR cobre resetar senha,
+  vincular/remover grupo e inativar; o backend exige SEGURANCA_USUARIOS_RESETAR_SENHA,
+  SEGURANCA_USUARIOS_INATIVAR e SEGURANCA_GRUPOS_ACESSO_GERENCIAR
+
+features/auditoria/components/…:82
+  guarda /auditoria com AUDITORIA_CONSULTAR, mas auditoriaApi.ts:49,56 chamam
+  /eventos-recentes e /operacional, que o backend gate com AUDITORIA_OPERACIONAL_CONSULTAR
+```
+
+As seis permissões corretas já entram no union em F1.2, então F1.6 não depende de contrato novo.
+`scanFrontendRoutes` já resolve rota sobre a AST e é o insumo pronto para o gate. **Sequência
+decidida: F1.6 entra depois de F1.4**, para não misturar "fechar o registro de permissões" com
+"auditar todo guard contra o contrato" no mesmo diff — é o argumento do T7 aplicado a permissões.
 
 ### F2 — o que o backend já entrega e a tela não mostra (≈1 fatia) · **zero endpoint novo**
 

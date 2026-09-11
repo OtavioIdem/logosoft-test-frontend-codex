@@ -12,8 +12,8 @@ import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { useDepreciacaoMutation } from '@/features/patrimonio/hooks/usePatrimonioResources';
 import { DepreciacaoResultadoResponse, ProcessarDepreciacaoFormValues } from '@/features/patrimonio/types/patrimonio.types';
 import { ProcessarDepreciacaoDialog } from '@/features/patrimonio/components/PatrimonioDialogs';
+import { formatMoney } from '@/lib/formatters/money';
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const mesNomes = ['—', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 const competenciaLabelPt = (ano: number, mes: number) => `${mesNomes[mes] ?? mes}/${ano}`;
 
@@ -44,6 +44,7 @@ export const DepreciacaoPage = () => {
             <PageHeader title="Depreciação" description="Processamento em lote por competência (ano/mês). O cálculo é idempotente." actions={headerActions} />
             <Card>
                 {resultado ? (
+                    /* DepreciacaoResultadoResponse não bate em nome com ProcessarDepreciacaoPeriodoResponse do backend — correção de campo é da b54.c1, D5 */
                     <Message className="w-full" severity="success" text={`Competência ${competenciaLabelPt(resultado.ano, resultado.mes)}: ${resultado.bensDepreciados} bem(ns) depreciado(s), total ${formatMoney(resultado.valorTotal)}.`} />
                 ) : (
                     <p className="text-color-secondary m-0">Escolha a empresa e a competência para processar a depreciação do período. Reprocessar a mesma competência não duplica lançamentos.</p>

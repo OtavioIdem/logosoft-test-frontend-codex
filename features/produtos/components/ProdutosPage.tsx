@@ -26,9 +26,9 @@ import { CodigoBarrasFormValues, ProdutoFormValues, ProdutoFornecedorFormValues,
 import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { EntityStatus, TipoProduto } from '@/types/erp';
+import { formatMoney } from '@/lib/formatters/money';
 
 const isActive = (record: ProdutoResponse) => Number(record.status) === EntityStatus.Ativo;
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const filterLocal = (records: ProdutoResponse[], term: string) => {
     const normalized = term.trim().toLowerCase();
     if (!normalized) return records;

@@ -5,6 +5,8 @@ import { ProdutoResponse } from '@/features/produtos/types/produtos.types';
 import { LocalEstoqueResponse } from '@/features/estoque/types/estoque.types';
 import { PedidoVendaResponse } from '@/features/vendas/types/vendas.types';
 
+export { formatMoney, formatMoneyOptional } from '@/lib/formatters/money';
+
 export type FieldErrors = Record<string, string | undefined>;
 
 export const fieldErrorMap = (error: ZodError<unknown>): FieldErrors => {
@@ -23,9 +25,6 @@ export const dateFromIso = (value?: string | Date | null) => {
     const date = new Date(value);
     return Number.isFinite(date.getTime()) ? date : null;
 };
-
-export const formatMoney = (value?: number | null) =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value ?? 0));
 
 export const formatDate = (value?: string | null) => {
     if (!value) return '-';

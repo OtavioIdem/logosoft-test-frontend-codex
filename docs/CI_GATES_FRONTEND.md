@@ -114,12 +114,12 @@ Toda divergência precisa estar registrada em `scripts/backend-permissions.allow
 
 ### Divergência deliberada da tolerância-zero
 
-O gate de mapa de rotas (`validate:backend-contract-map`) segue tolerância zero: `documentedDivergences` só existe para auditoria histórica e hoje está vazio — toda rota do frontend bate com o catálogo do backend. **O gate de permissões nasce vermelho por desenho.** Na primeira execução já existem 3 fantasmas e 36 pendências medidas contra o contrato v1.23; suprimir esse número para abrir o PR seria esconder uma dívida real e já quantificada, não corrigi-la.
+O gate de mapa de rotas (`validate:backend-contract-map`) segue tolerância zero: `documentedDivergences` só existe para auditoria histórica e hoje está vazio — toda rota do frontend bate com o catálogo do backend. **O gate de permissões nasceu vermelho por desenho em `v1.11.0a8b48`.** Na primeira execução já existiam 3 fantasmas e 36 pendências medidas contra o contrato v1.23; suprimir esse número para abrir o PR teria escondido uma dívida real e já quantificada, em vez de corrigi-la. `v1.11.0a8b50` (F1.2/F1.3) fechou integralmente esse registro: união e catálogo passam a nomear as 177 permissões do contrato, e o teto é agora `0/0` — tolerância zero, como os demais gates.
 
 Por isso `scripts/backend-permissions.allowlist.json` é um **registro fechado e monotônico**, não uma supressão:
 
 - `suppressions` é sempre `[]` — nenhum item pode desativar uma verificação.
-- `teto.fantasmas`/`teto.coberturaPendente` trava o número de itens registrados hoje (3 e 36); o registro só encolhe, e o gate reprova se o teto não bater exatamente com o número de entradas.
+- `teto.fantasmas`/`teto.coberturaPendente` trava o número de itens registrados; o registro só encolhe, e o gate reprova se o teto não bater exatamente com o número de entradas. Desde `v1.11.0a8b50` o teto é `0/0` — qualquer fantasma ou cobertura pendente nova volta a reprovar o gate, exatamente como em b48/b49.
 - `auditPolicy.expiresAt` expira o registro; passar da data sem revisão reprova o gate.
 - Cada item aponta o alvo (`F1.2` corrige cobertura pendente, `F1.3` corrige fantasma), então a dívida é rastreável, não permanente.
 

@@ -23,8 +23,8 @@ import { useBoletoHistorico, useBoletoMutations, useBoletos } from '@/features/b
 import { BoletoResponse, BoletoResumoResponse, BoletosListQuery } from '@/features/bancos/types/bancos.types';
 import { BoletoDetalheDialog } from '@/features/bancos/components/BancosOperacoesDialogs';
 import { boletoPodeCancelar, statusBoletoFilterOptions, statusBoletoLabel, statusBoletoSeverity } from '@/features/bancos/components/bancosLabels';
+import { formatMoney } from '@/lib/formatters/money';
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString('pt-BR') : '—');
 
 const filterLocal = (records: BoletoResumoResponse[], term: string) => {
@@ -83,6 +83,7 @@ export const BoletosPage = () => {
                 {boletosQuery.error ? <ApiErrorPanel error={mapApiError(boletosQuery.error)} /> : null}
                 <DataTableServer<BoletoResumoResponse> value={visibleRecords} totalRecords={records.length} loading={boletosQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhum boleto encontrado.">
                     <Column header="Documento" body={(row: BoletoResumoResponse) => row.numeroDocumento || row.nossoNumero || row.id.slice(0, 8)} />
+                    {/* row.valor não existe no contrato (BoletoResponse só tem valorTitulo/valorPago) — correção de campo é da b54.c1, D5 */}
                     <Column header="Valor" body={(row: BoletoResumoResponse) => formatMoney(row.valor)} />
                     <Column header="Vencimento" headerClassName="hidden md:table-cell" bodyClassName="hidden md:table-cell" body={(row: BoletoResumoResponse) => formatDate(row.vencimento)} />
                     <Column header="Status" body={(row: BoletoResumoResponse) => <Tag value={statusBoletoLabel(Number(row.status))} severity={statusBoletoSeverity(Number(row.status)) ?? undefined} />} />

@@ -86,12 +86,12 @@ describe('backend permissions', () => {
     it('allowlist teto casa com contagens reais de fantasmas e cobertura pendente', () => {
         const allowlist = JSON.parse(read('scripts/backend-permissions.allowlist.json'));
 
-        expect(allowlist.teto.fantasmas).toBe(3);
-        expect(allowlist.fantasmasConhecidos.length).toBe(3);
+        expect(allowlist.teto.fantasmas).toBe(0);
+        expect(allowlist.fantasmasConhecidos.length).toBe(0);
         expect(allowlist.teto.fantasmas).toBe(allowlist.fantasmasConhecidos.length);
 
-        expect(allowlist.teto.coberturaPendente).toBe(36);
-        expect(allowlist.coberturaPendente.length).toBe(36);
+        expect(allowlist.teto.coberturaPendente).toBe(0);
+        expect(allowlist.coberturaPendente.length).toBe(0);
         expect(allowlist.teto.coberturaPendente).toBe(allowlist.coberturaPendente.length);
     });
 
@@ -216,7 +216,7 @@ Permissões no backend | **2** (mais MASTER_GOD e *)`;
         expect(comparison.unionSemCatalogo).toContain('PERM_FANTASMA');
     });
 
-    it('estado real do repositório: 3 fantasmas nomeados registrados', () => {
+    it('estado real do repositório: nenhum fantasma (F1.2/F1.3 fecharam os 3 de b49)', () => {
         const snapshot = JSON.parse(read('scripts/backend-permissions.snapshot.json'));
         const allowlist = JSON.parse(read('scripts/backend-permissions.allowlist.json'));
         const inputs = readPermissionInputs(root);
@@ -226,19 +226,17 @@ Permissões no backend | **2** (mais MASTER_GOD e *)`;
             snapshotPermissions: snapshot.permissions
         });
 
-        expect(comparison.fantasmas).toContain('ATIVIDADES_GERENCIAR');
-        expect(comparison.fantasmas).toContain('RELATORIOS_CONSULTAR');
-        expect(comparison.fantasmas).toContain('PORTARIA_PRE_AUTORIZAR');
-        expect(comparison.fantasmas.length).toBe(3);
+        expect(comparison.fantasmas).not.toContain('ATIVIDADES_GERENCIAR');
+        expect(comparison.fantasmas).not.toContain('RELATORIOS_CONSULTAR');
+        expect(comparison.fantasmas).not.toContain('PORTARIA_PRE_AUTORIZAR');
+        expect(comparison.fantasmas.length).toBe(0);
 
-        // Cada fantasma está registrado na allowlist
-        const fantasmaIds = new Set(allowlist.fantasmasConhecidos.map((item: any) => item.code));
-        for (const fantasma of comparison.fantasmas) {
-            expect(fantasmaIds.has(fantasma)).toBe(true);
-        }
+        // Allowlist mantém registro histórico vazio; teto é 0
+        expect(allowlist.fantasmasConhecidos.length).toBe(0);
+        expect(allowlist.teto.fantasmas).toBe(0);
     });
 
-    it('estado real do repositório: 36 permissões com cobertura pendente', () => {
+    it('estado real do repositório: nenhuma cobertura pendente (F1.2/F1.3 fecharam as 36 de b49)', () => {
         const snapshot = JSON.parse(read('scripts/backend-permissions.snapshot.json'));
         const allowlist = JSON.parse(read('scripts/backend-permissions.allowlist.json'));
         const inputs = readPermissionInputs(root);
@@ -248,13 +246,11 @@ Permissões no backend | **2** (mais MASTER_GOD e *)`;
             snapshotPermissions: snapshot.permissions
         });
 
-        expect(comparison.coberturaPendente.length).toBe(36);
+        expect(comparison.coberturaPendente.length).toBe(0);
 
-        // Cada uma está registrada na allowlist
-        const coberturaPendentes = new Set(allowlist.coberturaPendente.map((item: any) => item.code));
-        for (const perm of comparison.coberturaPendente) {
-            expect(coberturaPendentes.has(perm)).toBe(true);
-        }
+        // Allowlist mantém registro histórico vazio; teto é 0
+        expect(allowlist.coberturaPendente.length).toBe(0);
+        expect(allowlist.teto.coberturaPendente).toBe(0);
     });
 
     it('rejeita allowlist duplicada, expirada ou supressora', () => {

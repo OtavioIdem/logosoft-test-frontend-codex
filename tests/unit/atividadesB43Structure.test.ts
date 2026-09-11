@@ -16,29 +16,37 @@ describe('atividades B43 structure', () => {
         expect(api).toContain('/api/atividades/${id}/cancelar');
     });
 
-    it('cria página real com workflow e sem placeholder', () => {
+    it('cria página real com workflow granular e sem placeholder', () => {
         const page = read('app/(main)/atividades/page.tsx');
         const component = read('features/atividades/components/AtividadesPage.tsx');
         expect(page).toContain('AtividadesPage');
         expect(page).not.toContain('ModulePlaceholderPage');
-        expect(component).toContain("hasAnyPermission(['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'])");
-        expect(component).toContain('ATIVIDADES_GERENCIAR');
+        expect(component).toContain("hasAnyPermission(['ATIVIDADES_CONSULTAR'");
+        expect(component).toContain('ATIVIDADES_CRIAR');
+        expect(component).toContain('ATIVIDADES_ATUALIZAR');
+        expect(component).toContain('ATIVIDADES_COMENTAR');
+        expect(component).toContain('ATIVIDADES_ATRIBUIR');
+        expect(component).toContain('ATIVIDADES_CANCELAR');
         expect(component).toContain('AtribuirAtividadeDialog');
         expect(component).toContain('AlterarStatusAtividadeDialog');
         expect(component).toContain('ComentarAtividadeDialog');
         expect(component).toContain('Cancelar atividade');
     });
 
-    it('inclui menu, permissões de rota e tipos de permissão do módulo', () => {
+    it('inclui menu, permissões de rota e tipos de permissão granulares do módulo', () => {
         const menu = read('layout/AppMenu.tsx');
         const routes = read('lib/security/routePermissions.ts');
         const erpTypes = read('types/erp.ts');
         expect(menu).toContain('/atividades');
         expect(menu).toContain('ATIVIDADES_CONSULTAR');
         expect(routes).toContain('^\\/atividades');
-        expect(routes).toContain('ATIVIDADES_GERENCIAR');
+        expect(routes).toContain('ATIVIDADES_CRIAR');
         expect(erpTypes).toContain("'ATIVIDADES_CONSULTAR'");
-        expect(erpTypes).toContain("'ATIVIDADES_GERENCIAR'");
+        expect(erpTypes).toContain("'ATIVIDADES_CRIAR'");
+        expect(erpTypes).toContain("'ATIVIDADES_ATUALIZAR'");
+        expect(erpTypes).toContain("'ATIVIDADES_COMENTAR'");
+        expect(erpTypes).toContain("'ATIVIDADES_ATRIBUIR'");
+        expect(erpTypes).toContain("'ATIVIDADES_CANCELAR'");
     });
 
 

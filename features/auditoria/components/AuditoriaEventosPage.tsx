@@ -79,8 +79,8 @@ export const AuditoriaEventosPage = () => {
     const recentes = useMemo(() => (recentesQuery.data ?? []).slice(0, 8).map((evento) => toView(evento, usuarioLabelMap)), [recentesQuery.data, usuarioLabelMap]);
     const modulesCount = useMemo(() => new Set(operacionalItems.map((evento) => evento.modulo).filter(Boolean)).size, [operacionalItems]);
 
-    if (!hasPermission('AUDITORIA_CONSULTAR')) {
-        return <UnauthorizedState description="A consulta de auditoria exige a permissão AUDITORIA_CONSULTAR." />;
+    if (!hasPermission('AUDITORIA_OPERACIONAL_CONSULTAR')) {
+        return <UnauthorizedState description="A consulta de auditoria exige a permissão AUDITORIA_OPERACIONAL_CONSULTAR." />;
     }
 
     const update = (name: keyof AuditoriaOperacionalQuery, value: string | Date | null) => {

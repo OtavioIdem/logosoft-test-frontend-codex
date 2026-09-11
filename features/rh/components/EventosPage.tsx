@@ -20,8 +20,8 @@ import { useColaboradorOptions, useEventoMutation, useEventos } from '@/features
 import { EventoRhFormValues, EventoRhResponse, EventosListQuery } from '@/features/rh/types/rh.types';
 import { EventoDialog } from '@/features/rh/components/RhDialogs';
 import { origemEventoLabel, tipoEventoLabel, tipoEventoSeverity } from '@/features/rh/components/rhLabels';
+import { formatMoney } from '@/lib/formatters/money';
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatCompetencia = (value: string) => (value && value.length === 6 ? `${value.slice(4)}/${value.slice(0, 4)}` : value);
 
 export const EventosPage = () => {

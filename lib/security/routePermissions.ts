@@ -8,7 +8,7 @@ export type RoutePermissionRule = {
 
 export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/seguranca\/usuarios(?:\/.*)?$/, anyOf: ['SEGURANCA_USUARIOS_CONSULTAR', 'SEGURANCA_USUARIOS_GERENCIAR'], description: 'Usuários' },
-    { pattern: /^\/seguranca\/grupos-acesso(?:\/.*)?$/, anyOf: ['SEGURANCA_PERMISSOES_GERENCIAR'], description: 'Grupos de acesso' },
+    { pattern: /^\/seguranca\/grupos-acesso(?:\/.*)?$/, anyOf: ['SEGURANCA_GRUPOS_ACESSO_CONSULTAR', 'SEGURANCA_GRUPOS_ACESSO_GERENCIAR'], description: 'Grupos de acesso' },
     { pattern: /^\/administracao\/deploy(?:\/.*)?$/, anyOf: ['DEPLOY_CONSULTAR', 'DEPLOY_GERENCIAR'], description: 'Deploy / Ambiente' },
     { pattern: /^\/administracao(?:\/.*)?$/, anyOf: ['ADMINISTRACAO_CONSULTAR', 'ADMINISTRACAO_GERENCIAR'], description: 'Administração' },
     { pattern: /^\/pessoas(?:\/.*)?$/, anyOf: ['PESSOAS_CONSULTAR', 'PESSOAS_GERENCIAR'], description: 'Pessoas' },
@@ -23,8 +23,9 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/estoque\/reservas(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'ESTOQUE_RESERVAR'], description: 'Reservas de estoque' },
     { pattern: /^\/estoque\/inventarios(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'ESTOQUE_INVENTARIO_GERENCIAR'], description: 'Inventários de estoque' },
     { pattern: /^\/estoque\/avancado(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'ESTOQUE_INVENTARIO_GERENCIAR', 'ESTOQUE_AJUSTAR', 'ESTOQUE_BLOQUEIO_GERENCIAR'], description: 'Estoque avançado' },
+    { pattern: /^\/estoque\/locais(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'LOCAIS_ESTOQUE_GERENCIAR'], description: 'Locais de estoque' },
     { pattern: /^\/estoque(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'ESTOQUE_MOVIMENTAR', 'ESTOQUE_RESERVAR', 'ESTOQUE_INVENTARIO_GERENCIAR'], description: 'Estoque' },
-    { pattern: /^\/tabelas-preco(?:\/.*)?$/, anyOf: ['TABELAS_PRECO_CONSULTAR', 'TABELAS_PRECO_GERENCIAR', 'VENDAS_CONSULTAR', 'VENDAS_GERENCIAR'], description: 'Tabelas de preço' },
+    { pattern: /^\/tabelas-preco(?:\/.*)?$/, anyOf: ['TABELAS_PRECO_CONSULTAR', 'TABELAS_PRECO_GERENCIAR'], description: 'Tabelas de preço' },
     { pattern: /^\/vendas(?:\/.*)?$/, anyOf: ['VENDAS_CONSULTAR', 'VENDAS_GERENCIAR', 'VENDAS_APROVAR', 'VENDAS_CANCELAR', 'VENDAS_FATURAR'], description: 'Vendas' },
     { pattern: /^\/financeiro\/contas-receber(?:\/.*)?$/, anyOf: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_RECEBER', 'FINANCEIRO_ESTORNAR', 'FINANCEIRO_CANCELAR'], description: 'Contas a receber' },
     { pattern: /^\/financeiro\/contas-pagar(?:\/.*)?$/, anyOf: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_PAGAR', 'FINANCEIRO_ESTORNAR', 'FINANCEIRO_CANCELAR'], description: 'Contas a pagar' },
@@ -49,7 +50,7 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/faturamento(?:\/.*)?$/, anyOf: ['FATURAMENTO_CONSULTAR', 'FATURAMENTO_PREPARAR', 'FATURAMENTO_CONFIRMAR', 'FATURAMENTO_CANCELAR'], description: 'Faturamento' },
     { pattern: /^\/servicos(?:\/.*)?$/, anyOf: ['SERVICOS_CONSULTAR', 'SERVICOS_GERENCIAR', 'SERVICOS_APONTAR', 'SERVICOS_FATURAR'], description: 'Serviços (Ordem de Serviço)' },
     { pattern: /^\/frota(?:\/.*)?$/, anyOf: ['FROTA_CONSULTAR', 'FROTA_GERENCIAR'], description: 'Frota (veículos, motoristas, viagens)' },
-    { pattern: /^\/portaria(?:\/.*)?$/, anyOf: ['PORTARIA_CONSULTAR', 'PORTARIA_PRE_AUTORIZAR', 'PORTARIA_OPERAR'], description: 'Portaria (controle de acesso)' },
+    { pattern: /^\/portaria(?:\/.*)?$/, anyOf: ['PORTARIA_CONSULTAR', 'PORTARIA_PREAUTORIZAR', 'PORTARIA_OPERAR'], description: 'Portaria (controle de acesso)' },
     { pattern: /^\/alimentar(?:\/.*)?$/, anyOf: ['ALIMENTAR_CONSULTAR', 'ALIMENTAR_LOTES_GERENCIAR', 'ALIMENTAR_RECALL_GERENCIAR'], description: 'Alimentar (lotes e recall)' },
     { pattern: /^\/rh(?:\/.*)?$/, anyOf: ['RH_CONSULTAR', 'RH_GERENCIAR', 'RH_PONTO_REGISTRAR', 'RH_EVENTOS_GERENCIAR'], description: 'RH (colaboradores, ponto, ausências, benefícios, eventos)' },
     { pattern: /^\/qualidade(?:\/.*)?$/, anyOf: ['QUALIDADE_CONSULTAR', 'QUALIDADE_INSPECIONAR', 'QUALIDADE_NAO_CONFORMIDADE_GERENCIAR'], description: 'Qualidade (inspeções e não-conformidades)' },
@@ -59,9 +60,9 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/contabil(?:\/.*)?$/, anyOf: ['CONTABIL_CONSULTAR', 'CONTABIL_PLANO_CONTAS_GERENCIAR', 'CONTABIL_PERIODOS_GERENCIAR', 'CONTABIL_LANCAMENTOS_GERENCIAR', 'CONTABIL_LANCAMENTOS_ESTORNAR', 'CONTABIL_REGRAS_GERENCIAR'], description: 'Contábil (plano de contas, períodos, lançamentos, regras)' },
     { pattern: /^\/patrimonio(?:\/.*)?$/, anyOf: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_BENS_GERENCIAR', 'PATRIMONIO_TRANSFERIR', 'PATRIMONIO_BAIXAR', 'PATRIMONIO_DEPRECIAR', 'PATRIMONIO_INVENTARIO_GERENCIAR'], description: 'Patrimônio (bens, depreciação e inventário)' },
     { pattern: /^\/bancos(?:\/.*)?$/, anyOf: ['BANCOS_CONSULTAR', 'BANCOS_GERENCIAR', 'BOLETOS_GERAR', 'BOLETOS_CANCELAR', 'CNAB_REMESSA_GERAR', 'CNAB_RETORNO_PROCESSAR'], description: 'Bancos, boletos e CNAB' },
-    { pattern: /^\/atividades(?:\/.*)?$/, anyOf: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_GERENCIAR'], description: 'Atividades' },
+    { pattern: /^\/atividades(?:\/.*)?$/, anyOf: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_CRIAR', 'ATIVIDADES_ATUALIZAR', 'ATIVIDADES_CANCELAR', 'ATIVIDADES_COMENTAR', 'ATIVIDADES_ATRIBUIR'], description: 'Atividades' },
     { pattern: /^\/relatorios(?:\/.*)?$/, anyOf: ['RELATORIOS_OPERACIONAIS_CONSULTAR', 'RELATORIOS_VENDAS_CONSULTAR', 'RELATORIOS_COMPRAS_CONSULTAR', 'RELATORIOS_FINANCEIRO_CONSULTAR', 'RELATORIOS_ESTOQUE_CONSULTAR', 'RELATORIOS_FISCAL_CONSULTAR', 'RELATORIOS_PRODUCAO_CONSULTAR', 'RELATORIOS_DASHBOARD_CONSULTAR', 'RELATORIOS_EXPORTAR'], description: 'Relatórios' },
-    { pattern: /^\/auditoria(?:\/.*)?$/, anyOf: ['AUDITORIA_CONSULTAR'], description: 'Auditoria' }
+    { pattern: /^\/auditoria(?:\/.*)?$/, anyOf: ['AUDITORIA_CONSULTAR', 'AUDITORIA_OPERACIONAL_CONSULTAR'], description: 'Auditoria' }
 ];
 
 export const findRoutePermissionRule = (pathname: string) => routePermissionRules.find((rule) => rule.pattern.test(pathname));
