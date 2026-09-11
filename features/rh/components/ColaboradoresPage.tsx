@@ -29,8 +29,8 @@ import { useColaboradorMutations, useColaboradores } from '@/features/rh/hooks/u
 import { ColaboradorFormValues, ColaboradorResponse, ColaboradoresListQuery, DesligarColaboradorFormValues } from '@/features/rh/types/rh.types';
 import { ColaboradorFormDialog } from '@/features/rh/components/RhDialogs';
 import { colaboradorAtivo, regimeLabel, statusColaboradorFilterOptions, statusColaboradorLabel, statusColaboradorSeverity } from '@/features/rh/components/rhLabels';
+import { formatMoney } from '@/lib/formatters/money';
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const filterLocal = (records: ColaboradorResponse[], term: string) => {
     const normalized = term.trim().toLowerCase();

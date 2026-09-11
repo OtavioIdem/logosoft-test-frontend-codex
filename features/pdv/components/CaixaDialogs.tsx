@@ -13,8 +13,8 @@ import { FormGrid } from '@/components/forms/FormGrid';
 import { MoneyInput } from '@/components/forms/MoneyInput';
 import { abrirCaixaSchema, fecharCaixaSchema, movimentoCaixaSchema } from '@/features/pdv/schemas/pdvSchemas';
 import { AbrirCaixaFormValues, CaixaResponse, FecharCaixaFormValues, MovimentoCaixaFormValues } from '@/features/pdv/types/pdv.types';
+import { formatMoney } from '@/lib/formatters/money';
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const buildErrors = (error: z.ZodError) => {
     const map: Record<string, string> = {};

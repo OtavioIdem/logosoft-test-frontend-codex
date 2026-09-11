@@ -23,8 +23,8 @@ import { useFaturamento, useFaturamentoHistorico, useFaturamentoMutations, useFa
 import { ConfirmarFaturamentoFormValues, FaturamentoHistoricoResponse, FaturamentoOcorrenciaResponse } from '@/features/faturamento/types/faturamento.types';
 import { ConfirmarFaturamentoDialog } from '@/features/faturamento/components/FaturamentoDialogs';
 import { podeCancelar, podeConfirmar, statusFaturamentoLabel, statusFaturamentoSeverity, tipoOcorrenciaLabel, tipoOcorrenciaSeverity } from '@/features/faturamento/components/faturamentoLabels';
+import { formatMoney } from '@/lib/formatters/money';
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatDateTime = (value?: string | null) => (value ? new Date(value).toLocaleString('pt-BR') : '—');
 
 export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: string }) => {

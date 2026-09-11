@@ -23,8 +23,8 @@ import { useFaturamentoMutations, useFaturamentos } from '@/features/faturamento
 import { FaturamentoResponse, FaturamentosListQuery, PrepararFaturamentoFormValues } from '@/features/faturamento/types/faturamento.types';
 import { PrepararFaturamentoDialog } from '@/features/faturamento/components/FaturamentoDialogs';
 import { statusFaturamentoLabel, statusFaturamentoOptions, statusFaturamentoSeverity } from '@/features/faturamento/components/faturamentoLabels';
+import { formatMoney } from '@/lib/formatters/money';
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatDateTime = (value?: string | null) => (value ? new Date(value).toLocaleString('pt-BR') : '—');
 
 export const FaturamentoPage = () => {

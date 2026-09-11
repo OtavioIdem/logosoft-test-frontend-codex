@@ -1,3 +1,101 @@
+# v1.11.0a8b54
+
+## Drenagem das 25 cópias locais de `formatMoney` — fecha `D1` e o bloco da onda F1
+
+Item F1.4 do plano `docs/backend-v1.23/PLANO-FRONTEND-v1.23.md`. Fecha a dívida que `D1` abriu na
+`b51` e que `D2` remanejou para esta versão. As 25 cópias locais, todas com o mesmo corpo
+(`value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })`), saem de `features/`, e
+os 69 pontos de chamada em 13 módulos passam a importar `formatMoney` de `lib/formatters/money.ts`.
+
+**Nenhum ponto de chamada usa `formatMoneyOptional`, e isso foi medido, não presumido.** O nó
+`inventario` classificou os 69 um a um contra a declaração C# do record de response do backend,
+citando arquivo, linha, campo e record em cada linha:
+
+| Classificação | Pontos | Função |
+| --- | ---: | --- |
+| Campo que o contrato declara obrigatório (`decimal`) | 47 | `formatMoney` |
+| Campo que o contrato declara opcional (`decimal?`) | 0 | — |
+| Valor calculado na própria tela | 11 | `formatMoney`, por `D6` |
+| Valor de formulário antes do submit | 7 | `formatMoney`, por `D6` |
+| Campo sem par no record do backend | 4 | `formatMoney`, por `D5` |
+
+`D6` decidiu os 18 pontos das duas linhas do meio: `isAbsent`, em `lib/formatters/money.ts`, trata
+`NaN` como ausência, e total que vira `NaN` porque um operando chegou indefinido é a mesma classe
+de defeito monetário silencioso que `D1` existe para fechar. `formatMoneyOptional` renderia `—` e
+engoliria o caso.
+
+**Armadilha de medição registrada, porque quase inverteu a fatia inteira**: o
+`CONTRATO-API-v1.23.md` traz dois blocos por operação, e só o de response (```csharp```) discrimina
+optionality. O bloco de request marca 1458 campos com `?` contra 9 sem — classificar por ele
+tornaria todos os 69 pontos opcionais e esvaziaria o mecanismo de `D1`. No bloco de response a
+discriminação é real: 533 campos `decimal` contra 48 `decimal?`.
+
+**Comportamento observável muda, e para melhor.** A cópia local chamava `toLocaleString` sobre o
+campo ausente, o que lançava `TypeError` e derrubava a tela inteira. A função nova denuncia na
+célula em desenvolvimento e rende `—` em produção.
+
+### Três telas leem campo monetário que o backend não entrega (achado, não corrigido aqui)
+
+Decisão `D5`. São quatro pontos de chamada, em três telas alcançáveis pelo menu, todos confirmados
+contra o record C# real do backend e não só contra o documento de contrato:
+
+- **Boletos** — `features/bancos/components/BoletosPage.tsx` e `BancosOperacoesDialogs.tsx` leem
+  `valor`. `BancosContracts.cs` tem `ValorTitulo` (obrigatório) e `ValorPago` (opcional). Não tem
+  `Valor`.
+- **Lançamentos contábeis** — `features/contabil/components/LancamentosPage.tsx` lê `valorTotal`.
+  `LancamentoContabilContracts.cs` tem `TotalDebito` e `TotalCredito`. Não tem total.
+- **Depreciação** — `features/patrimonio/components/DepreciacaoPage.tsx` lê `valorTotal` de um tipo
+  (`DepreciacaoResultadoResponse`) cujos quatro campos não batem em nome com nenhum campo de
+  `ProcessarDepreciacaoPeriodoResponse`, que é o record que o endpoint devolve.
+
+É a classe do defeito `P1` da onda, encontrada por esta fatia e **não corrigida por ela**. Os
+quatro pontos ficam com `formatMoney` e um comentário no ponto de chamada apontando o alvo. A
+correção de campo é a fatia corretiva **`b54.c1`**, que precisa decidir o que cada um deveria ler.
+
+**Custo aceito, declarado por `D5`:** até a `b54.c1` entrar, o sintoma fica **mais quieto em
+produção**. Hoje essas telas quebram com `TypeError`; a partir desta versão exibem `—`. A troca é
+deliberada e a `b54.c1` entra em seguida.
+
+### Achados de esteira corrigidos no caminho
+
+1. **O ritual de versão estava impossível num arquivo** (`D7`).
+   `.claude/graph/policies.yaml` classificava `scripts/backend-contract-map.allowlist.json` como
+   artefato gerado e apontava `npm run report:backend-contract-map` como origem. Esse comando é
+   `validate-backend-contract-map.mjs --report` e **nunca escreveu em disco** — o arquivo não tem
+   nenhum `writeFileSync`. O hook `PreToolUse` que nega escrita à mão nesse caminho entrou em
+   `867b7fd`, depois da `b53`: de `b49` a `b53` o arquivo foi carimbado à mão, e desde então
+   nenhum agente conseguia carimbá-lo. Nasce `scripts/stamp-contract-map-version.mjs`
+   (`npm run stamp:backend-contract-map-version`), que reescreve **apenas** o campo `version`. O
+   hook não muda: a lista de rotas, que é medição de verdade, continua inalcançável por
+   `Edit`/`Write`. O diff do arquivo nesta versão é de uma linha, e é a prova de que o carimbador
+   é estreito.
+
+2. **A `b53` entrou com `npm run typecheck` vermelho.** Quatro erros `TS2802` em
+   `tests/unit/guardPermissionMapProofHistoric.test.ts`, arquivo intocado desde então, o que prova
+   que já estavam lá quando aquele release fechou. A causa é `tsconfig` com `target: es5`, que o
+   `T8` do plano da onda manda não tocar; a correção é local (`Array.from` no lugar de spread e de
+   `for…of` sobre `Set`) e não muda a forma nem a força de nenhuma asserção.
+
+### Testes
+
+`tests/unit/moneyFormatter.test.ts` — o teto monotônico de cópias locais deixa de ser `<= 25` e
+passa a exigir lista vazia. A asserção nova **nomeia cada arquivo infrator** na mensagem de falha,
+em vez de devolver só um total. Foi verificada contra um arquivo descartável com a cópia dentro: o
+teste reprovou citando o caminho, e voltou ao verde depois da remoção. Asserção de catraca que só
+sabe ficar verde não é catraca.
+
+### Ritual de versão
+
+`package.json`, `config/app.ts`, `.env.example`, `.env.test`, `.env.backend-controlled.example`,
+`.github/workflows/frontend-ci.yml`, `README.md`, `CHANGELOG.md`,
+`scripts/backend-permissions.allowlist.json`, `scripts/guard-permission-map.allowlist.json`,
+`tests/evidence/integrated-e2e.assisted-evidence.example.json` carimbados em `1.11.0a8b54`.
+`scripts/backend-permissions.snapshot.json` regenerado por
+`npm run generate:backend-permissions-snapshot`; `scripts/backend-contract-map.allowlist.json`
+carimbado pelo comando novo de `D7`.
+
+**Nenhuma mudança de permissão, de rota ou de menu.** Não há concessão a fazer antes do deploy.
+
 # v1.11.0a8b53
 
 ## Gate de permissões fechado: auditar e bloquear divergências (F1.6.b)

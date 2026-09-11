@@ -24,8 +24,8 @@ import { useLancamento, useLancamentos, useLancamentoMutations } from '@/feature
 import { LancamentoContabilResumoResponse, LancamentoFormValues, LancamentosListQuery, PartidaContabilResponse, TipoPartida } from '@/features/contabil/types/contabil.types';
 import { LancamentoFormDialog } from '@/features/contabil/components/ContabilDialogs';
 import { lancamentoPodeEstornar, statusLancamentoFilterOptions, statusLancamentoLabel, statusLancamentoSeverity, tipoPartidaLabel } from '@/features/contabil/components/contabilLabels';
+import { formatMoney } from '@/lib/formatters/money';
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString('pt-BR') : '—');
 
 const filterLocal = (records: LancamentoContabilResumoResponse[], term: string) => {
@@ -91,6 +91,7 @@ export const LancamentosPage = () => {
                     <Column header="Número" body={(row: LancamentoContabilResumoResponse) => row.numero || row.id.slice(0, 8)} />
                     <Column header="Data" body={(row: LancamentoContabilResumoResponse) => formatDate(row.data)} />
                     <Column field="historico" header="Histórico" />
+                    {/* row.valorTotal não existe no contrato (LancamentoContabilResponse só tem totalDebito/totalCredito) — correção de campo é da b54.c1, D5 */}
                     <Column header="Valor" body={(row: LancamentoContabilResumoResponse) => formatMoney(row.valorTotal)} />
                     <Column header="Status" body={(row: LancamentoContabilResumoResponse) => <Tag value={statusLancamentoLabel(Number(row.status))} severity={statusLancamentoSeverity(Number(row.status)) ?? undefined} />} />
                     <Column header="Ações" alignHeader="right" body={(row: LancamentoContabilResumoResponse) => (

@@ -1,7 +1,7 @@
 {
     "name": "logosoft-frontend",
-    "version": "1.11.0-a.8.b53",
-    "logosoftVersion": "1.11.0a8b53",
+    "version": "1.11.0-a.8.b54",
+    "logosoftVersion": "1.11.0a8b54",
     "private": true,
     "scripts": {
         "dev": "next dev",
@@ -45,7 +45,8 @@
         "report:backend-permissions": "node scripts/validate-backend-permissions.mjs --report",
         "validate:guard-permission-map": "node scripts/validate-guard-permission-map.mjs",
         "report:guard-permission-map": "node scripts/validate-guard-permission-map.mjs --report",
-        "generate:backend-permissions-snapshot": "node scripts/generate-backend-permissions-snapshot.mjs"
+        "generate:backend-permissions-snapshot": "node scripts/generate-backend-permissions-snapshot.mjs",
+        "stamp:backend-contract-map-version": "node scripts/stamp-contract-map-version.mjs"
     },
     "dependencies": {
         "@hookform/resolvers": "^3.9.0",

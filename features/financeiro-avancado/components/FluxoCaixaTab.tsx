@@ -11,8 +11,8 @@ import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { mapApiError } from '@/lib/http/apiError';
 import { useFluxoCaixaAvancado } from '@/features/financeiro-avancado/hooks/useFinanceiroAvancadoResources';
+import { formatMoney } from '@/lib/formatters/money';
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const toDateOnly = (value: Date | null) => (value ? value.toISOString().slice(0, 10) : null);
 
 const startOfMonth = () => { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), 1); };

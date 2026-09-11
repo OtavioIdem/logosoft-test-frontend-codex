@@ -23,8 +23,8 @@ import { useCotacaoCompra, useCotacoesCompraMutations } from '@/features/compras
 import { AprovarCotacaoFormValues, CotacaoCompraItemResponse, ItemCotacaoFormValues, StatusCotacaoCompra } from '@/features/compras-avancado/types/comprasAvancado.types';
 import { AprovarCotacaoDialog, ItemCotacaoDialog } from '@/features/compras-avancado/components/CotacaoDialogs';
 import { cotacaoPodeGerenciar, statusCotacaoLabel, statusCotacaoSeverity } from '@/features/compras-avancado/components/comprasAvancadoLabels';
+import { formatMoney } from '@/lib/formatters/money';
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString('pt-BR') : '—');
 
 export const CotacaoCompraDetalhePage = ({ cotacaoId }: { cotacaoId: string }) => {

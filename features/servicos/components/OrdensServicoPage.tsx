@@ -23,8 +23,8 @@ import { useOrdensServico, useOrdensServicoMutations } from '@/features/servicos
 import { OrdemServicoFormValues, OrdemServicoResponse, OrdensServicoListQuery, StatusOrdemServico } from '@/features/servicos/types/servicos.types';
 import { OrdemServicoFormDialog } from '@/features/servicos/components/OrdemServicoFormDialog';
 import { prioridadeLabel, prioridadeSeverity, statusOrdemServicoLabel, statusOrdemServicoSeverity } from '@/features/servicos/components/servicosLabels';
+import { formatMoney } from '@/lib/formatters/money';
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
 const statusFilterOptions = [
     { label: 'Todos os status', value: null },

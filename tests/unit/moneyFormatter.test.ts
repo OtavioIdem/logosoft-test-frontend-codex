@@ -128,35 +128,33 @@ describe('formatMoney — contrato de campo obrigatório (F1.4)', () => {
         });
     });
 
-    describe('AC-6: Teto monotônico de cópias locais em features/', () => {
-        it('número de "const formatMoney" em features/ <= 25 (atual) e só encolhe', () => {
+    describe('AC-6: Catraca de sentido único — zero cópias locais em features/', () => {
+        it('nenhum arquivo em features/ define "const formatMoney" (drenagem de b54)', () => {
             const path = require('path');
             const fs = require('fs');
             const glob = require('glob');
 
             // Buscar todos os arquivos .ts e .tsx em features/
             const files = glob.sync(`${root}/features/**/*.{ts,tsx}`);
-            let count = 0;
+            const infratores: string[] = [];
 
             for (const file of files) {
                 try {
                     const content = fs.readFileSync(file, 'utf8');
-                    // Contar linhas que definem const formatMoney
+                    // Procurar linhas que definem const formatMoney
                     const matches = content.match(/(?:const|export const)\s+formatMoney\s*=/g);
-                    if (matches) {
-                        count += matches.length;
+                    if (matches && matches.length > 0) {
+                        const relative = path.relative(root, file);
+                        infratores.push(relative);
                     }
                 } catch {
                     // Ignore file read errors
                 }
             }
 
-            // O estado atual é 25 (todas as cópias locais com assinatura (value: number))
-            // que lançam TypeError com undefined, não silenciosamente mascaram com "R$ 0,00".
-            // Elas são barulhentas, não silenciosas: classe diferente.
-            // Este teste garante que o número encolhe (b51 tira importações de lib),
-            // nunca cresce. Drenagem completa planejada para b54 (D2 remanejou de b52 para b54).
-            expect(count).toBeLessThanOrEqual(25);
+            // Catraca de sentido único: a lista de arquivos infratores DEVE ser vazia.
+            // Se quebrar, nomeia cada arquivo que reintroduziu a cópia local.
+            expect(infratores, `Arquivos que reintroduziram "const formatMoney" (bloqueio de drenagem b54): ${infratores.join(', ')}`).toEqual([]);
         });
     });
 

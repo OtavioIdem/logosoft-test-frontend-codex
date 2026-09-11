@@ -23,8 +23,8 @@ import { useOportunidades, usePropostas, usePropostaMutations } from '@/features
 import { PropostaFormValues, PropostaResponse, PropostasListQuery } from '@/features/crm/types/crm.types';
 import { PropostaFormDialog } from '@/features/crm/components/CrmDialogs';
 import { oportunidadeAberta, propostaPodeDecidir, statusPropostaFilterOptions, statusPropostaLabel, statusPropostaSeverity } from '@/features/crm/components/crmLabels';
+import { formatMoney } from '@/lib/formatters/money';
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString('pt-BR') : '—');
 
 export const PropostasPage = () => {

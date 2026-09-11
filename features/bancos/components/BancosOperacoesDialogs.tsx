@@ -15,6 +15,7 @@ import { FormGrid } from '@/components/forms/FormGrid';
 import { SelectOption } from '@/types/erp';
 import { useContasReceber } from '@/features/financeiro/hooks/useFinanceiroResources';
 import { BoletoResponse, GerarBoletoFormValues, ImportarRetornoFormValues } from '@/features/bancos/types/bancos.types';
+import { formatMoney } from '@/lib/formatters/money';
 
 const footer = (label: string, loading: boolean | undefined, onHide: () => void, onConfirm: () => void, disabled?: boolean) => (
     <div className="flex justify-content-end gap-2">
@@ -23,7 +24,6 @@ const footer = (label: string, loading: boolean | undefined, onHide: () => void,
     </div>
 );
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString('pt-BR') : '—');
 
 export const GerarBoletoDialog = ({ visible, loading, carteiraOptions, carteiraLoading, onHide, onSubmit }: { visible: boolean; loading?: boolean; carteiraOptions: SelectOption<string>[]; carteiraLoading?: boolean; onHide: () => void; onSubmit: (values: GerarBoletoFormValues) => Promise<void> }) => {
@@ -100,6 +100,7 @@ export const BoletoDetalheDialog = ({ visible, boleto, historico, historicoLoadi
             {boleto ? (
                 <>
                     <div className="grid mb-2">
+                        {/* boleto.valor não existe no contrato (BoletoResponse só tem valorTitulo/valorPago) — correção de campo é da b54.c1, D5 */}
                         <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Valor</span><strong>{formatMoney(boleto.valor)}</strong></div>
                         <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Vencimento</span>{formatDate(boleto.vencimento)}</div>
                         <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Nosso número</span>{boleto.nossoNumero || '—'}</div>

@@ -17,6 +17,7 @@ import { MoneyInput } from '@/components/forms/MoneyInput';
 import { usePessoas } from '@/features/pessoas/hooks/usePessoasResources';
 import { baixarContaSchema, criarContaSchema, estornarBaixaSchema } from '@/features/financeiro-avancado/schemas/financeiroAvancadoSchemas';
 import { BaixaFinanceiraResponse, BaixarContaFormValues, CriarContaFormValues, EstornarBaixaFormValues, TipoConta } from '@/features/financeiro-avancado/types/financeiroAvancado.types';
+import { formatMoney } from '@/lib/formatters/money';
 
 const buildErrors = (error: z.ZodError) => {
     const map: Record<string, string> = {};
@@ -34,7 +35,6 @@ const footer = (label: string, loading: boolean | undefined, onHide: () => void,
     </div>
 );
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const initialConta = (): CriarContaFormValues => ({ empresaId: '', filialId: null, participanteId: '', descricao: '', documento: null, valorOriginal: 0, dataEmissao: new Date(), dataVencimento: new Date() });
 
 export const CriarContaDialog = ({ visible, loading, tipo, onHide, onSubmit }: { visible: boolean; loading?: boolean; tipo: TipoConta; onHide: () => void; onSubmit: (values: CriarContaFormValues) => Promise<void> }) => {

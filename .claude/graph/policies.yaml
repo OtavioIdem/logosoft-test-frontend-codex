@@ -183,7 +183,14 @@ generated_only:
   scripts/backend-permissions.snapshot.json:
     gerar_com: npm run generate:backend-permissions-snapshot
   scripts/backend-contract-map.allowlist.json:
-    gerar_com: npm run report:backend-contract-map
+    carimbar_com: npm run stamp:backend-contract-map-version
+    regra: >
+      Este arquivo NAO e gerado: `generatedAt`, `sourceDate` e a politica de
+      auditoria sao escritos a mao, e a lista de rotas e medicao. So o campo
+      `version` se move a cada fatia, e so o carimbador acima o move. O comando
+      `npm run report:backend-contract-map` apenas VALIDA e imprime relatorio —
+      ele nunca escreveu em disco, e a classificacao anterior, que o apontava
+      como origem, tornou o ritual de versao impossivel desde 867b7fd. Ver D7.
   docs/backend-v1.23/CONTRATO-API-v1.23.md:
     origem: gerado no repositório do backend (scripts/gerar-contrato-frontend.mjs)
     regra: >

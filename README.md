@@ -1,4 +1,26 @@
-# logosoft Frontend v1.11.0a8b53
+# logosoft Frontend v1.11.0a8b54
+
+## v1.11.0a8b54 — drenagem das 25 cópias locais de `formatMoney` (F1.4, fecha D1)
+
+Fecha a dívida que `D1` abriu na `b51` e `D2` remanejou para esta versão, e com ela o bloco da
+onda F1. As 25 cópias locais de `formatMoney` (`value.toLocaleString('pt-BR', { style: 'currency',
+currency: 'BRL' })`, que lançavam `TypeError` e derrubavam a tela inteira quando o campo vinha
+ausente) saem, e os 69 pontos de chamada em 13 módulos passam a importar `formatMoney` de
+`lib/formatters/money.ts`. Nenhum ponto usa `formatMoneyOptional`: o inventário do
+`inventariante-contrato-tela` (`docs/arquitetura/DECISOES.md`, `D5`/`D6`) classificou os 69 contra
+o record C# do backend — 47 leem campo que o contrato declara obrigatório, 11 formatam valor
+calculado na própria tela (soma, subtotal, total, troco, diferença de caixa) e 7 formatam valor de
+formulário antes do submit (ambos usam `formatMoney` por `D6`, porque `isAbsent` trata `NaN` como
+ausência e total que vira `NaN` por operando indefinido é a mesma classe de defeito que `D1`
+denuncia), e 4 leem campo que o backend **não declara** (`D5`): `boleto.valor` em
+`features/bancos/components/BoletosPage.tsx` e `BancosOperacoesDialogs.tsx` (o backend só tem
+`ValorTitulo`/`ValorPago`), `row.valorTotal` em `features/contabil/components/LancamentosPage.tsx`
+(o backend só tem `TotalDebito`/`TotalCredito`), e `resultado.valorTotal` em
+`features/patrimonio/components/DepreciacaoPage.tsx` (o tipo do frontend não bate em nome com
+nenhum campo do record real). Os quatro ficam com `formatMoney` e um comentário no ponto de
+chamada; a correção do campo é da fatia corretiva `b54.c1`, não desta. Comportamento observável
+muda: onde a cópia local derrubava a tela com `TypeError`, agora a mesma ausência denuncia em
+desenvolvimento e degrada para `—` em produção.
 
 ## v1.11.0a8b53 — Gate de permissões fechado: auditar e bloquear divergências (F1.6.b)
 

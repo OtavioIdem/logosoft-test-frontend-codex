@@ -20,8 +20,8 @@ import { useCaixas, useCaixasMutations } from '@/features/pdv/hooks/usePdvResour
 import { AbrirCaixaFormValues, CaixaResponse, CaixasListQuery, FecharCaixaFormValues, MovimentoCaixaFormValues } from '@/features/pdv/types/pdv.types';
 import { AbrirCaixaDialog, FecharCaixaDialog, MovimentoCaixaDialog } from '@/features/pdv/components/CaixaDialogs';
 import { isCaixaAberto, statusCaixaLabel, statusCaixaSeverity } from '@/features/pdv/components/pdvLabels';
+import { formatMoney } from '@/lib/formatters/money';
 
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const formatDateTime = (value?: string | null) => (value ? new Date(value).toLocaleString('pt-BR') : '—');
 
 type MovimentoState = { kind: 'suprimento' | 'sangria'; caixa: CaixaResponse } | null;

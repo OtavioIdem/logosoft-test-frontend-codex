@@ -25,9 +25,9 @@ import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { EntityStatus } from '@/types/erp';
+import { formatMoney } from '@/lib/formatters/money';
 
 const isActive = (record: ClienteResponse) => Number(record.status) === EntityStatus.Ativo;
-const formatMoney = (value: number) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const filterLocal = (records: ClienteResponse[], term: string) => {
     const normalized = term.trim().toLowerCase();
     if (!normalized) return records;

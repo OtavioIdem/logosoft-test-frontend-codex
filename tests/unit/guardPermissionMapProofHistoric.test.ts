@@ -93,14 +93,14 @@ describe('Gate de permissão × guard — prova histórica (F1.6.b)', () => {
     it.each(PARES_LEGITIMOS)(
         'acusa $modulo $permissao na árvore com defeito',
         ({ modulo, permissao }) => {
-            expect([...paresNaArvoreAntiga].sort()).toContain(`${modulo} ${permissao}`);
+            expect(Array.from(paresNaArvoreAntiga).sort()).toContain(`${modulo} ${permissao}`);
         }
     );
 
     it.each(PARES_LEGITIMOS)(
         'não acusa $modulo $permissao na árvore de hoje',
         ({ modulo, permissao }) => {
-            expect([...paresHoje].sort()).not.toContain(`${modulo} ${permissao}`);
+            expect(Array.from(paresHoje).sort()).not.toContain(`${modulo} ${permissao}`);
         }
     );
 
@@ -116,7 +116,7 @@ describe('Gate de permissão × guard — prova histórica (F1.6.b)', () => {
         );
 
         // Toda divergência que o gate acusa hoje precisa estar no registro, uma a uma.
-        for (const par of paresHoje) expect([...registrados]).toContain(par);
+        for (const par of Array.from(paresHoje)) expect(Array.from(registrados)).toContain(par);
 
         // E o teto acompanha o tamanho da lista: catraca de sentido único.
         expect(registro.teto.chamadaSemGuard).toBe(registro.chamadaSemGuard.length);

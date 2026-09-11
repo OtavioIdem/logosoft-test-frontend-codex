@@ -155,3 +155,128 @@ medição em silêncio.
 guard de entrada de Tabelas de Preço corrigido por D3. A regra é condição necessária — prova que o
 módulo conhece a permissão, não que a exige no lugar certo — e permissão a mais é invisível a ela.
 Das cinco correções da `b52`, o gate reprova quatro.
+
+### D5 — a b54 drena as três telas de campo monetário sem par, e a correção de campo vai para a b54.c1
+
+Data: 2026-09-11
+Rodada: sem rodada de debate. Decisão do usuário, tomada sobre o achado que o
+`inventariante-contrato-tela` produziu no nó `inventario` da fatia `b54`.
+Decisão: a `b54` troca as 25 cópias locais de `formatMoney` pelas funções de
+`lib/formatters/money.ts` nos 69 pontos de chamada, **inclusive** nos quatro pontos em que o
+campo lido não tem par no record do backend. Esses quatro usam `formatMoney`, que denuncia a
+ausência. A correção do campo em si — decidir o que cada um deveria ler — vira a fatia
+corretiva `b54.c1`, com inventário e testes próprios.
+Alternativas descartadas:
+1. Corrigir o campo dentro da própria `b54` — exigiria decidir mapeamento de campo em três
+   módulos (Boletos entre valor do título, valor pago ou derivado; Depreciação com o tipo de
+   response reescrito inteiro), o que vira `contractChange` e junta um diff de correção a um
+   diff mecânico de 25 arquivos. É o argumento do T7.
+2. Corrigir primeiro e adiar a drenagem para `b55` — fecharia o defeito mais grave antes, ao
+   custo de adiar por uma versão o fechamento da dívida de `D1` e o merge da onda F1.
+Por quê: os quatro pontos são achado desta fatia, não defeito que ela cria, e a troca **melhora**
+o que o operador vê hoje. A cópia local chama `toLocaleString` sobre campo ausente, o que lança
+`TypeError` e derruba a tela inteira; depois da troca, a mesma ausência vira uma célula que
+denuncia em desenvolvimento e rende `—` em produção. O argumento do inventariante contra — de que
+drenar sem corrigir esconde o defeito atrás da função nova — foi considerado e é procedente em um
+ponto: **em produção o sintoma fica mais quieto** até a corretiva entrar. O usuário decidiu aceitar
+esse custo, e ele fica registrado aqui e no `CHANGELOG.md`.
+Reversível: sim, e a reversão é a própria `b54.c1`. Gatilho de revisita: a `b54.c1` não entrar na
+sequência imediatamente depois da `b54`, o que transformaria "mais quieto por uma fatia" em
+"silencioso por tempo indeterminado".
+Quem arbitrou: usuário
+Impacto: `features/bancos/components/BoletosPage.tsx` e `BancosOperacoesDialogs.tsx` (campo
+`valor`, que o backend não declara — `BancosContracts.cs` tem `ValorTitulo` obrigatório e
+`ValorPago` opcional), `features/contabil/components/LancamentosPage.tsx` (campo `valorTotal`, que
+o backend não declara — só `TotalDebito` e `TotalCredito`), e
+`features/patrimonio/components/DepreciacaoPage.tsx` (o tipo `DepreciacaoResultadoResponse` não
+bate em nome com nenhum campo de `ProcessarDepreciacaoPeriodoResponse`). Os três são a classe do
+defeito `P1` da onda, encontrados por esta fatia e **não** corrigidos por ela.
+
+### D6 — valor calculado na tela e valor de formulário usam `formatMoney`, não a versão opcional
+
+Data: 2026-09-11
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre a classificação do
+`inventariante-contrato-tela` na fatia `b54`.
+Decisão: os 11 pontos de chamada que formatam valor calculado na própria tela (soma, subtotal,
+total, troco, diferença de caixa) e os 7 que formatam valor de formulário antes do submit usam
+`formatMoney`. `formatMoneyOptional` fica reservada a campo que o contrato do backend declara
+opcional, e não há nenhum entre os 69 pontos desta fatia.
+Alternativas descartadas:
+1. `formatMoneyOptional` para os dois grupos, por não serem campo de contrato — renderia `—` em
+   silêncio quando o cálculo desse `NaN`, que é exatamente a classe de defeito monetário
+   silencioso que `D1` existe para fechar.
+2. Uma terceira função para valor local — mais uma assinatura para um caso cujo comportamento
+   desejado é idêntico ao de `formatMoney`.
+Por quê: `isAbsent`, em `lib/formatters/money.ts`, trata `NaN` como ausência. Total que vira `NaN`
+porque um operando chegou indefinido é a mesma classe do `P1`, e `formatMoney` é a única das duas
+que o denuncia. A tipagem garante `number` nos dois grupos, então em operação normal as duas
+funções renderiam igual; a diferença só aparece no caso defeituoso, e é lá que ela importa.
+Reversível: sim, ponto a ponto. Gatilho de revisita: aparecer valor calculado cuja ausência seja
+estado legítimo de tela, e não defeito — nesse dia o ponto passa a exigir declaração explícita.
+Quem arbitrou: orquestrador
+Impacto: 18 dos 69 pontos de chamada da `b54`, em `compras-avancado`, `contabil`, `crm`, `pdv`.
+
+### D7 — o allowlist do mapa de contrato ganha um carimbador de versão, e o hook continua negando escrita à mão
+
+Data: 2026-09-11
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre o `blocked` que o
+`dev-senior-react` devolveu no nó `builder` da fatia `b54`, e confirmada por leitura direta.
+Decisão: nasce `scripts/stamp-contract-map-version.mjs`, acionado por
+`npm run stamp:backend-contract-map-version`, que reescreve **apenas** o campo `version` de
+`scripts/backend-contract-map.allowlist.json` a partir do `package.json`. O hook `PreToolUse` de
+`.claude/settings.json` **não muda**: escrita à mão nesse arquivo continua negada.
+`.claude/graph/policies.yaml` passa a nomear o comando novo no lugar de
+`npm run report:backend-contract-map`.
+Alternativas descartadas:
+1. Afrouxar o hook e deixar o arquivo ser carimbado à mão, como foi de `b49` a `b53` — é o que o
+   arquivo pede hoje, mas o hook protege a lista de rotas, que é medição de verdade. Trocar
+   proteção de arquivo inteiro por conveniência de um campo é o caminho de volta para a fraude que
+   `policies.yaml` existe para impedir.
+2. Escrever um gerador de verdade, que reconstrua o arquivo inteiro — o arquivo não é gerado: tem
+   `generatedAt` e `sourceDate` congelados em 2026-08-12 e política de auditoria com dono e
+   validade escritos à mão. Um "gerador" apagaria isso.
+Por quê: `policies.yaml` classificou o arquivo como `generated_only` e apontou
+`npm run report:backend-contract-map` como a origem. Li `scripts/validate-backend-contract-map.mjs`
+inteiro: não há nenhum `writeFileSync`, e `--report` só imprime. A classificação estava errada, e o
+hook que a impõe entrou em `867b7fd`, depois da `b53` — de `b49` a `b53` o arquivo foi carimbado à
+mão, e desde `867b7fd` o ritual de versão desse arquivo ficou impossível para qualquer agente. O
+carimbador estreito devolve o ritual sem devolver o buraco: só o campo `version` é escrito, e a
+lista de rotas continua inalcançável por `Edit`/`Write`.
+Reversível: sim. Gatilho de revisita: o backend passar a gerar esse allowlist de verdade, como já
+gera o contrato — nesse dia o carimbador vira redundante e sai.
+Quem arbitrou: orquestrador
+Impacto: `scripts/stamp-contract-map-version.mjs` (novo), `package.json` (script novo),
+`.claude/graph/policies.yaml` (seção `generated_only`). O achado é defeito da esteira introduzido
+por `867b7fd`, não da fatia `b54`.
+
+### D8 — o `package-lock.json` não entra na `b54`, e a decisão sobre lockfile é fatia de plataforma
+
+Data: 2026-09-11
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre um efeito colateral do nó de
+medição de E2E da fatia `b54`.
+Decisão: o `package-lock.json` gerado durante o reparo do `node_modules` **não** é commitado na
+`b54`. Foi movido para fora da árvore, preservado como evidência no scratchpad da sessão. Se o
+repositório deve passar a versionar lockfile, isso é fatia de plataforma própria, com o `CI` no
+escopo.
+Alternativas descartadas:
+1. Commitar junto — muda o comportamento de instalação do `CI` dentro de uma fatia cujo assunto é
+   formatação de dinheiro. É o argumento do T7, e o diff de um lockfile é do tamanho de todo o
+   resto da fatia somado.
+2. Apagar sem registrar — o repositório **nunca** teve lockfile (sem histórico no git), e isso tem
+   consequência medida: `npm ci` não roda (`EUSAGE`), e por isso `.github/workflows/frontend-ci.yml`
+   instala com `npm install`. Sem registro, a próxima pessoa redescobre isso do mesmo jeito caro.
+Por quê: a ausência de lockfile é estado antigo e deliberado o bastante para o `CI` já o
+acomodar. Trazê-lo agora, sem medir o efeito nos 21 gates, troca reprodutibilidade futura por
+risco imediato numa fatia de risco `HIGH` que já está fechada.
+Reversível: sim. Gatilho de revisita: um gate reprovar por versão de dependência que mudou sozinha
+entre duas execuções, que é exatamente o que lockfile previne, ou a decisão de migrar o `CI` para
+`npm ci`.
+Quem arbitrou: orquestrador
+Impacto: nenhum arquivo da `b54`. O lockfile gerado está em
+`scratchpad/package-lock.gerado-no-reparo-b54.json`.
+
+**Incidente que originou isto, registrado porque vai se repetir:** `git worktree remove --force`
+sobre uma worktree cujo `node_modules` era uma **junção** (`mklink /J`) para o `node_modules` da
+árvore principal recursou pela junção e apagou parte do `node_modules` real antes de falhar. O
+reparo foi `npm install`, que trouxe 45 pacotes de volta. Quem usar worktree para medir outra
+revisão deve remover a junção **antes** do `git worktree remove`, ou não usar junção.
