@@ -21,7 +21,7 @@ export const useBemMutations = () => {
     const cadastrarMutation = useMutation({ mutationFn: (values: unknown) => patrimonioApi.cadastrarBem(values), onSuccess: invalidate });
     const transferirMutation = useMutation({ mutationFn: ({ id, values }: IdValues) => patrimonioApi.transferirBem(id, values), onSuccess: invalidate });
     const bloquearMutation = useMutation({ mutationFn: ({ id, motivo }: IdMotivo) => patrimonioApi.bloquearBem(id, motivo), onSuccess: invalidate });
-    const desbloquearMutation = useMutation({ mutationFn: ({ id, motivo }: IdMotivo) => patrimonioApi.desbloquearBem(id, motivo), onSuccess: invalidate });
+    const desbloquearMutation = useMutation({ mutationFn: (id: string) => patrimonioApi.desbloquearBem(id), onSuccess: invalidate });
     const baixarMutation = useMutation({ mutationFn: ({ id, values }: IdValues) => patrimonioApi.baixarBem(id, values), onSuccess: invalidate });
     return { cadastrarMutation, transferirMutation, bloquearMutation, desbloquearMutation, baixarMutation };
 };

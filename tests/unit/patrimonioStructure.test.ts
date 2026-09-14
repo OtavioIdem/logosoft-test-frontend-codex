@@ -94,4 +94,48 @@ describe('Patrimônio (Onda 4) — estrutura e scaffold', () => {
         // Campo corrigido de valor contábil
         expect(page).toContain('valorContabilAtual');
     });
+
+    it('v1.11.0a8b54.c2: AC-2 — enum antigo StatusBem não existe em features/', () => {
+        const types = read('features/patrimonio/types/patrimonio.types.ts');
+        const labels = read('features/patrimonio/components/patrimonioLabels.ts');
+        const schemas = read('features/patrimonio/schemas/patrimonioSchemas.ts');
+        const api = read('features/patrimonio/api/patrimonioApi.ts');
+        const bensPage = read('features/patrimonio/components/BensPage.tsx');
+        const dialogs = read('features/patrimonio/components/PatrimonioDialogs.tsx');
+
+        // Regressão textual: StatusBem como palavra inteira (não StatusBemPatrimonial)
+        // O enum antigo tinha Ativo=1, Bloqueado=2, Baixado=3
+        expect(types).not.toMatch(/\bStatusBem\b/);
+        expect(labels).not.toMatch(/\bStatusBem\b/);
+        expect(schemas).not.toMatch(/\bStatusBem\b/);
+        expect(api).not.toMatch(/\bStatusBem\b/);
+        expect(bensPage).not.toMatch(/\bStatusBem\b/);
+        expect(dialogs).not.toMatch(/\bStatusBem\b/);
+    });
+
+    it('v1.11.0a8b54.c2: AC-6 — enum antigo CategoriaBem não existe em features/', () => {
+        const types = read('features/patrimonio/types/patrimonio.types.ts');
+        const labels = read('features/patrimonio/components/patrimonioLabels.ts');
+        const schemas = read('features/patrimonio/schemas/patrimonioSchemas.ts');
+        const bensPage = read('features/patrimonio/components/BensPage.tsx');
+        const dialogs = read('features/patrimonio/components/PatrimonioDialogs.tsx');
+
+        // Regressão textual: CategoriaBem como palavra inteira (não CategoriaBemPatrimonial)
+        // O enum antigo tinha 6 valores (Movel, Imovel, Veiculo, Maquina, Equipamento, Outro)
+        expect(types).not.toMatch(/\bCategoriaBem\b/);
+        expect(labels).not.toMatch(/\bCategoriaBem\b/);
+        expect(schemas).not.toMatch(/\bCategoriaBem\b/);
+        expect(bensPage).not.toMatch(/\bCategoriaBem\b/);
+        expect(dialogs).not.toMatch(/\bCategoriaBem\b/);
+    });
+
+    it('v1.11.0a8b54.c2: AC-8 — ação Desbloquear chama desbloquear(row.id) direto sem diálogo', () => {
+        const page = read('features/patrimonio/components/BensPage.tsx');
+
+        // Verificar que não existe 'dialog === "desbloquear"'
+        expect(page).not.toContain("dialog === 'desbloquear'");
+
+        // Verificar que a ação desbloquear chama a função desbloquear
+        expect(page).toContain('desbloquear(row.id)');
+    });
 });

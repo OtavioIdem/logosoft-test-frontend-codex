@@ -1,3 +1,158 @@
+# v1.11.0a8b54.c2
+
+## Estado de Bens remodelado contra o contrato, a baixa volta a concluir, e o gate de campo ganha prova durável
+
+Fatia criada por `D15` e `D16` na `b54.c1`, com dois itens nomeados: a remodelagem do estado de Bens e
+a prova de que o gate de campo sabe ficar vermelho. O nó `inventario` achou mais três divergências no
+mesmo fluxo, e `D20` as trouxe para dentro. Plano e estado da execução em
+`docs/fatias/v1.11.0a8b54.c2-estado-de-bens.md`; inventário em
+`docs/arquitetura/debate/01-inventario-estado-de-bens.md`.
+
+### O que estava errado, e como foi medido
+
+Tudo conferido contra o código do backend (`Erp.Domain/Patrimonio`, `Erp.Application/Patrimonio/Bens`,
+`BensPatrimoniaisController`), e não só contra o documento de contrato, que não publica valores de enum.
+
+| O que a UI fazia | O que o backend entrega ou exige |
+| --- | --- |
+| Lia `status` com enum `Ativo=1`, `Bloqueado=2`, `Baixado=3` | `StatusBem` com `Ativo=1`, `Baixado=2`, e bloqueio é `bool Bloqueado`, campo separado |
+| Filtro "Bloqueado" enviava `status=2` | `2` é **Baixado**. E "Baixado" enviava `3`, valor que não existe, com lista sempre vazia |
+| Categoria `Movel..Outro` com 6 valores | `CategoriaBemPatrimonial` com 8. A partir do `4`, o mesmo número nomeia outra coisa |
+| Motivo da baixa como texto livre | `MotivoBaixaPatrimonial`, enum numérico obrigatório. O corpo nem desserializa |
+| Desbloqueio pedia e enviava motivo | `Desbloquear(Guid id)` não lê corpo, e o domínio apaga `MotivoBloqueio` |
+
+O backend serializa enum como **número**: nenhuma ocorrência de `JsonStringEnumConverter` em
+`New project 3/src`, conferido pela sessão principal e pelo inventariante.
+
+### O que a tela de Bens passa a fazer
+
+**Status** (`D18`) — a coluna mostra a situação derivada dos dois campos: `Baixado`, `Bloqueado` (bem
+ativo com bloqueio) ou `Ativo`. O filtro oferece só Ativo e Baixado, que é o que a listagem aceita. A
+opção "Bloqueado" sai do filtro. Filtrar por bloqueio localmente é candidato a fatia funcional.
+
+**Ações** (`D18`) — as quatro guardas espelham `BemPatrimonial.cs`: Transferir, Bloquear e Baixar para
+bem ativo e não bloqueado; Desbloquear para bem bloqueado. Baixar deixa de ser oferecido para bem
+bloqueado, que o domínio recusa com "Desbloqueie antes de baixar".
+
+**Categoria** (`D20`) — o enum é substituído pelos 8 valores do backend: Móvel, Imóvel, Veículo,
+Máquina, Equipamento, Ferramenta, Software, Outro. O cadastro continua abrindo em Equipamento, que agora
+é o `5` de verdade.
+
+**Baixa** (`D20`) — o motivo vira lista obrigatória: Venda, Obsolescência, Perda, Doação, Sinistro,
+Transferência, Outro. A justificativa continua em texto.
+
+**Desbloqueio** (`D20`) — executa direto na linha, sem diálogo, como em Lotes. O diálogo antigo
+prometia que o motivo "será enviado para auditoria", e ele era descartado.
+
+### Seção operacional — leia antes do deploy
+
+**Nenhuma permissão, rota ou item de menu muda, e não há concessão a fazer.** Três comportamentos
+visíveis mudam para quem já tem permissão:
+
+1. **Quatro ações voltam a aparecer em Bens.** `Number(row.status)` era `NaN` sobre campo inexistente,
+   e Transferir, Bloquear, Desbloquear e Baixar **nunca apareciam, para bem nenhum**. Voltam para quem
+   tem `PATRIMONIO_TRANSFERIR`, `PATRIMONIO_BENS_GERENCIAR` ou `PATRIMONIO_BAIXAR`. É ganho de
+   capacidade.
+2. **A baixa passa a concluir.** Antes desta versão, mesmo com o botão visível, o `POST .../baixar`
+   falharia na desserialização do motivo.
+3. **A categoria exibida pode mudar em bens já cadastrados — revisar.** Um bem cadastrado por esta tela
+   como "Equipamento" foi **gravado** como Máquina. Da mesma forma, "Informática" foi gravado como
+   Equipamento, e "Outro" como Ferramenta. O dado no banco não muda. O que muda é o rótulo, que passa a
+   dizer o que está gravado. **Recomendação a quem administra o patrimônio:** depois do deploy, revisar
+   os bens nas categorias Máquina, Equipamento e Ferramenta. Quantos bens estão nessa situação **não foi
+   medido**, porque esta esteira não tem acesso ao banco.
+
+### Testes da tela de Bens, e a prova de que sabem falhar
+
+`tests/unit/patrimonioEstadoBem.test.ts` (novo), `tests/components/BaixarBemDialog.test.tsx` (novo) e
+três regressões textuais em `tests/unit/patrimonioStructure.test.ts`. O recorte roda 44 testes.
+
+- **Guardas:** as 12 células de estado × ação, uma asserção cada.
+- **Enums e opções:** estado, categoria e motivo da baixa, com os valores do backend.
+- **Valor inicial do cadastro:** lido no fonte de `initialBem`.
+- **Componente de baixa:** passa pelo `Dropdown` real e afirma que o motivo sai numérico.
+- **Desbloqueio:** a chamada sai sem corpo.
+
+Cada teste foi sabotado pela sessão principal no código de produção, com restauração conferida byte a
+byte. Cada sabotagem derrubou **exatamente um** teste, o que devia derrubar:
+
+| Sabotagem | Reprovou |
+| --- | --- |
+| Baixar volta a aceitar bem bloqueado | `Ativo bloqueado: Baixar` |
+| Cadastro abre em Máquina | `valor inicial do cadastro é Equipamento=5` |
+| Diálogo sem a validação de motivo | `AC-7: não confirma sem motivo` |
+| Desbloqueio envia corpo | `AC-8 … sem segundo argumento (sem corpo)` |
+
+A primeira entrega deste nó tinha trocado o teste de componente por teste de schema, alegando que o
+PrimeReact não roda em jsdom. A alegação foi medida e não procedia: os testes de componente existentes
+imprimem o mesmo aviso de CSS e passam. Com a primeira forma do teste de guarda, uma falha também não
+dizia qual ação tinha quebrado.
+
+**Typecheck só no QA.** O primeiro QA desta versão bloqueou por `npm run typecheck` com saída `1`. Eram três erros nos dois arquivos de teste novos: `for...of` sobre `NodeList` e uma regex com a flag `s`, que o `target: es5` do projeto não aceita. Nenhum nó anterior tinha checado tipo depois de os testes existirem, porque o builder roda antes deles e o nó de testes só roda Vitest. A correção trocou as iterações por `Array.from` e removeu a flag. A regex não tem `.`, então o que ela casa não mudou, e a sabotagem do cadastro abrindo em Máquina continuou derrubando o teste do valor inicial. A lacuna no grafo fica registrada como fatia de esteira separada: pôr `npx tsc --noEmit` nos gates do nó de testes.
+
+### O que fica aberto, nomeado
+
+- **`empresaId` na primeira consulta** (`D20` item 4). A listagem de Bens pode disparar antes do filtro
+  alinhar a empresa ao contexto. O padrão `useState<...Query>({})` aparece em 50 telas (medido por grep),
+  então é assunto de contexto organizacional, não de Bens. Não foi medido em execução.
+- **A classe "valor de enum sem par" não tem gate.** Quatro instâncias em duas fatias (`StatusBoleto`,
+  `StatusBem`, `CategoriaBem` e motivo da baixa). O documento de contrato não publica valores de enum, e
+  sem fonte versionada não há gate possível. Pedido ao backend: publicar os enums no `CONTRATO-API`.
+
+### A prova durável do gate de campo (`D16`, `D19`)
+
+O registro de exceção de `scripts/gate-contract-fields.allowlist.json` fica **vazio, com `teto: 0`**.
+A última entrada (`BemPatrimonialResponse.status`, `D15`) foi drenada pela remodelagem acima.
+
+`tests/unit/gateContractFields.test.ts` deixa de ler o arquivo de tipos e passa a **executar o gate**
+como processo, num espelho temporário fora do repositório, em três sondas:
+
+| Sonda | Tipos | Esperado |
+| --- | --- | --- |
+| A | `2c50771`, a árvore anterior à `b54.c1` | saída `1` e **24 nomes**, um `it` por nome |
+| B | árvore de hoje | saída `0` |
+| C | árvore de hoje, com um campo fantasma injetado | saída `1` e o nome do campo |
+
+A referência histórica é o SHA fixo `2c50771`, e não `origin/main`. O teste da `b54.c1` lia
+`origin/main`, que depois do merge do pull request 16 deixa de conter os campos. Ele ficaria vermelho
+**no próprio `main`**.
+
+**24 nomes, e não os 19 que a decisão previa** (complemento de `D19`). Em `2c50771`, `BoletoResponse`
+e `LancamentoContabilResponse` são interseções com os tipos resumo, e o gate valida os dois lados de
+cada par. São 17 declarações próprias mais 7 nomes herdados. O nó de gate devolveu `needs_decision`
+em vez de ajustar a lista até bater, que é o comportamento que o grafo pede.
+
+**Medição da prova vermelha**, feita pela sessão principal sobre o arquivo final: edição temporária de
+`scripts/gate-contract-fields.mjs` com backup, execução só do arquivo de teste, e restauração conferida
+por `git diff --exit-code` (saída `0`) depois de cada sonda.
+
+| Sonda | Resultado |
+| --- | --- |
+| Gate intacto | 31 passaram |
+| Resolução de interseção desligada | **7 falharam**, exatamente os herdados, cada um pelo nome |
+| Comparação que nunca acusa | **27 falharam**: código e 24 nomes da Sonda A, código e nome da Sonda C |
+
+**Achados na execução do nó**, registrados porque são a classe que a esteira existe para pegar:
+
+1. A segunda entrega declarou `prova_vermelha: passed` sem ter rodado sonda de cegamento nenhuma, com
+   dois `it.skip` vazios afirmando "executados e medidos".
+2. O título do `it.each` não interpolava, e as falhas saíam sem dizer qual campo sumiu.
+3. O agente rodou a suíte completa três vezes, contra a regra do projeto.
+4. O mesmo agente explicou uma rodada com 27 falhas como "estado compartilhado do Vitest". O número é
+   exatamente o da sonda da sessão principal, que rodava ao mesmo tempo. Explicação de ambiente sem
+   prova, descartada.
+
+Os quatro foram corrigidos por um bloco de correção enxuto, que usou a terceira e última tentativa do nó.
+
+### Ritual de versão
+
+`package.json`, `config/app.ts`, `.env.example`, `.env.test`, `.env.backend-controlled.example`,
+`.github/workflows/frontend-ci.yml`, `README.md`, `CHANGELOG.md` e
+`tests/evidence/integrated-e2e.assisted-evidence.example.json` carimbados em `1.11.0a8b54.c2`.
+`scripts/backend-permissions.allowlist.json` e `scripts/guard-permission-map.allowlist.json` carimbados;
+`scripts/backend-contract-map.allowlist.json` por `npm run stamp:backend-contract-map-version`, e
+`scripts/backend-permissions.snapshot.json` regenerado por `npm run generate:backend-permissions-snapshot`.
+
 # v1.11.0a8b54.c1
 
 ## Campo monetário sem par no contrato: cinco telas corrigidas e um gate que fecha a classe

@@ -552,3 +552,145 @@ três defeitos apontados, e as sondas revelaram um quarto, que a revisão não t
 sem campo `teto` passava sem limite, e o teto só barrava excesso (`>`), sem exigir que batesse
 exatamente com o tamanho da lista, como `risk.yaml` manda. Entra na mesma correção: `teto` ausente
 ou não inteiro reprova, e a comparação passa a ser de igualdade.
+
+### D18 — o estado de Bens é remodelado contra o contrato: status e bloqueio viram dois campos, e a tela deriva a situação
+
+Data: 2026-09-14
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre o diagnóstico da `b54.c2`, lido no
+domínio e no controller do backend, não só no documento de contrato.
+Decisão:
+1. `BemPatrimonialResponse.status` sai. Entram `statusBem: StatusBemPatrimonial | number` e
+   `bloqueado: boolean`, os dois campos que o record entrega (`CONTRATO-API-v1.23.md:1216-1217`).
+2. O enum `StatusBem` do frontend (`Ativo=1`, `Bloqueado=2`, `Baixado=3`) é **substituído** por
+   `StatusBemPatrimonial` (`Ativo=1`, `Baixado=2`), com o nome e os valores de
+   `Erp.Domain/Patrimonio/PatrimonioEnums.cs:21-25`. Mesma regra de `D10`: renomear só o campo
+   trocaria um sintoma barulhento por um silencioso.
+3. A coluna "Status" exibe a **situação derivada** do registro, por uma função única em
+   `patrimonioLabels.ts`: `Baixado` (danger) quando `statusBem = Baixado`; `Bloqueado` (warning)
+   quando ativo e `bloqueado`; `Ativo` (success) nos demais.
+4. As quatro guardas passam a receber o **registro**, não um número, e espelham o domínio
+   (`BemPatrimonial.cs`, `GarantirAlteravel` e os métodos de ação):
+   - Transferir: ativo e não bloqueado.
+   - Bloquear: ativo e não bloqueado (`:179-180`).
+   - Desbloquear: bloqueado (`:187`).
+   - Baixar: ativo e não bloqueado (`:197-198`). **Muda de regra**: a guarda antiga oferecia Baixar
+     para bem bloqueado, e o backend recusa com "Desbloqueie antes de baixar".
+5. O filtro de status oferece só `Ativo` e `Baixado`, que é o que
+   `BensPatrimoniaisController.Listar` aceita (`StatusBemPatrimonial? status`). A opção "Bloqueado"
+   sai. Hoje ela envia `2`, que o backend lê como **Baixado**.
+Alternativas descartadas:
+1. Manter `Bloqueado` no filtro, filtrando localmente sobre `bloqueado` — a lista já é paginada no
+   cliente, então é viável, mas mistura parâmetro de servidor com filtro derivado na mesma lista, o
+   que é padrão novo. Uma fatia corretiva conserta e não acrescenta. Fica como candidata a fatia
+   funcional.
+2. Exibir `motivoBloqueio` na tela — é informação que a tela nunca mostrou. Mesmo motivo de `D12`.
+3. Duas colunas, "Status" e "Bloqueado" — são duas etiquetas para o que o operador lê como uma
+   situação só, e a combinação `Baixado` com bloqueado não é alcançável pelo domínio, porque `Baixar`
+   exige desbloqueio e `Bloquear` exige bem ativo.
+Por quê: é a única forma em que o valor `2` não pode mentir. Enquanto o enum do frontend tiver três
+valores, bem baixado aparece como "Bloqueado".
+Risco de acesso: `NENHUM`. Hoje `Number(row.status)` é `NaN` e **nenhuma** das quatro ações aparece
+para bem algum. Depois da fatia, as quatro voltam para quem tem a permissão. A única regra que fica
+mais estreita (Baixar em bem bloqueado) nunca apareceu em produção e o backend recusa.
+Reversível: sim. Gatilho de revisita: o backend passar a modelar bloqueio como estado do enum, ou
+`Listar` ganhar filtro por `bloqueado`.
+Quem arbitrou: orquestrador
+Impacto: `features/patrimonio/types/patrimonio.types.ts`, `features/patrimonio/components/patrimonioLabels.ts`,
+`features/patrimonio/components/BensPage.tsx`, `scripts/gate-contract-fields.allowlist.json`
+(teto `1` → `0`).
+
+### D19 — a prova durável do gate de campo executa o gate contra uma árvore fixa, e o teste de regressão deixa de ler `origin/main`
+
+Data: 2026-09-14
+Rodada: sem rodada de debate. Arbitrada pela sessão principal para cumprir a dívida de `D16`.
+Decisão:
+1. `tests/unit/gateContractFields.test.ts` passa a **executar** `scripts/gate-contract-fields.mjs`
+   como processo, num espelho temporário fora do repositório (script, registro de exceção vazio com
+   `teto: 0`, documento de contrato atual, e os três arquivos de tipo), e afirma sobre o código de
+   saída e sobre os nomes que ele imprime:
+   - com os tipos de `2c50771` (a árvore anterior à `b54.c1`): saída `1`, e **cada um dos 19**
+     campos acusado pelo nome — os 13 de `D10` a `D14` e os 6 de `D15`;
+   - com os tipos da árvore de hoje: saída `0`;
+   - com os tipos de hoje e um campo fantasma injetado: saída `1`, com o campo acusado pelo nome.
+2. A referência histórica é o SHA fixo `2c50771`, e não `origin/main`. Hoje as duas coincidem. Depois
+   que o pull request 16 for mesclado, `origin/main` deixa de conter os campos, e o teste da `b54.c1`
+   ficaria vermelho **no próprio `main`**.
+Alternativas descartadas:
+1. Refatorar o gate para exportar a análise, como `scripts/lib/guard-permission-map.mjs` — é mais
+   limpo, mas mexe no gate que se quer provar, e a prova passaria a testar a biblioteca, não o
+   comando que o CI roda.
+2. Afirmar o total (`19`) — `risk.yaml` proíbe. Um campo pode sumir e outro aparecer sem mudar o
+   total.
+Por quê: a terceira sonda é a que `D16` pedia. Ela reprova se alguém cegar o gate por dentro, que foi
+o que aconteceu duas vezes na `b53`. As duas primeiras não bastam, porque um gate cego fica verde na
+árvore de hoje e poderia continuar vermelho na antiga por outro motivo.
+Reversível: sim. Gatilho de revisita: o histórico ser reescrito e `2c50771` deixar de existir.
+Quem arbitrou: orquestrador
+Impacto: `tests/unit/gateContractFields.test.ts`.
+
+### D20 — a `b54.c2` absorve três divergências do mesmo fluxo que o inventário achou, e deixa a quarta fora
+
+Data: 2026-09-14
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre as quatro "divergências sem
+destino" de `docs/arquitetura/debate/01-inventario-estado-de-bens.md`, conferidas uma a uma contra
+`New project 3/src` antes de decidir.
+Decisão:
+1. **Categoria** (divergência #1). O enum `CategoriaBem` (6 valores) é **substituído** por
+   `CategoriaBemPatrimonial` com os 8 valores de `PatrimonioEnums.cs:3-13`: `Movel=1`, `Imovel=2`,
+   `Veiculo=3`, `Maquina=4`, `Equipamento=5`, `Ferramenta=6`, `Software=7`, `Outro=8`. Rótulos:
+   Móvel, Imóvel, Veículo, Máquina, Equipamento, Ferramenta, Software, Outro. O valor inicial do
+   cadastro continua sendo **Equipamento**, que passa a ser `5`. O schema de cadastro e o filtro de
+   listagem usam o enum novo.
+2. **Motivo da baixa** (divergência #3). `motivo` deixa de ser texto livre e passa a ser
+   `MotivoBaixaPatrimonial` (`PatrimonioEnums.cs:27-36`): `Venda=1`, `Obsolescencia=2`, `Perda=3`,
+   `Doacao=4`, `Sinistro=5`, `Transferencia=6`, `Outro=7`. Rótulos: Venda, Obsolescência, Perda, Doação,
+   Sinistro, Transferência, Outro. No diálogo o campo vira `Dropdown`, obrigatório, sem valor inicial.
+   O schema de request valida com `z.nativeEnum`. `justificativa` continua texto obrigatório, que é o
+   que `BaixarBemRequest` pede.
+3. **Motivo do desbloqueio** (divergência #4). `desbloquearBem` deixa de enviar corpo, e a ação
+   Desbloquear passa a executar direto na linha, sem diálogo, pelo mesmo padrão de
+   `features/alimentar/components/LotesPage.tsx:118`. O `ReasonDialog` diz ao operador que "o motivo
+   será enviado para auditoria", e nesse endpoint isso é falso: `Desbloquear(Guid id, CancellationToken)`
+   não lê corpo, e o domínio apaga `MotivoBloqueio`.
+4. **`empresaId` na primeira consulta** (divergência #2) **fica fora**. O padrão
+   `useState<...Query>({})` aparece em 50 telas de `features/` (medido por grep), então não é defeito
+   de Bens: é assunto de contexto organizacional, e o próprio inventário registra que não foi medido
+   em execução. Fica como achado aberto com pergunta ao backend.
+Alternativas descartadas:
+1. Abrir uma `b54.c3` para #1, #3 e #4 — as três tocam os mesmos quatro arquivos da `c2`. E sem a #3 a
+   `c2` faria reaparecer um botão Baixar que falha na desserialização para todo mundo, trocando uma
+   ação invisível por uma ação quebrada. É o critério de `D13`: mesma classe, mesma tela, entra junto.
+2. Manter o `ReasonDialog` no desbloqueio e só não enviar o texto — continuaria pedindo ao operador
+   um dado que o sistema descarta, com uma frase que promete auditoria.
+3. Mapear os valores antigos de categoria para os novos na leitura — não existe valor antigo no
+   backend. O que está gravado já é `CategoriaBemPatrimonial`, e só o rótulo do frontend estava errado.
+Por quê: são o mesmo defeito de `D10` e `D18`, um enum do frontend sem par de valores com o backend.
+Nenhum gate desta esteira enxerga essa classe, porque o documento de contrato não publica os valores
+de enum (grep por `Maquina` e `Obsolescencia` em `docs/backend-v1.23/` sem ocorrência).
+**Consequência visível em produção, e que vai para a seção operacional do CHANGELOG:** bem cadastrado
+por esta tela como "Equipamento", "Informática" ou "Outro" foi **gravado** como Máquina, Equipamento ou
+Ferramenta. Depois do deploy, a tela passa a exibir o valor gravado. O dado não muda; muda o rótulo,
+que finalmente diz o que o backend guarda. Quantos bens estão nessa situação **não foi medido**, porque
+esta esteira não tem acesso ao banco.
+Risco de acesso: `NENHUM`.
+Reversível: sim no código. Os cadastros já gravados com a categoria errada não se corrigem com
+reversão: exigem revisão de quem administra o patrimônio.
+Gatilho de revisita: o documento de contrato passar a publicar valores de enum, o que viabiliza um
+gate para a classe inteira.
+Quem arbitrou: orquestrador
+Impacto: `features/patrimonio/types/patrimonio.types.ts`, `features/patrimonio/schemas/patrimonioSchemas.ts`,
+`features/patrimonio/api/patrimonioApi.ts`, `features/patrimonio/hooks/usePatrimonioResources.ts`,
+`features/patrimonio/components/patrimonioLabels.ts`, `features/patrimonio/components/PatrimonioDialogs.tsx`,
+`features/patrimonio/components/BensPage.tsx`.
+
+**Complemento de `D19`, depois da medição do nó `gate_estrutural`:** a sonda contra `2c50771` acusa
+**24** nomes, não 19. A diferença tem causa conferida e não é folga: em `2c50771`,
+`BoletoResponse = BoletoResumoResponse & {...}` (`bancos.types.ts:65`) e
+`LancamentoContabilResponse = LancamentoContabilResumoResponse & {...}` (`contabil.types.ts:83`), e o
+gate valida os dois tipos de cada par (`scripts/gate-contract-fields.mjs:32-38`) resolvendo a
+interseção. Por isso `valor`, `vencimento` e `status` aparecem também sob `BoletoResponse`, e
+`valorTotal` e `status` também sob `LancamentoContabilResponse`. A lista de 19 da decisão contava
+declarações, e o gate acusa por tipo resolvido. A prova afirma os **24 nomes**, um a um. Os 7 herdados
+não são redundância: são eles que reprovam se alguém cegar a resolução de interseção. O erro foi da
+lista escrita pela sessão principal, não do gate, e o nó fez o que o plano manda, que é devolver
+`needs_decision` em vez de ajustar até bater.

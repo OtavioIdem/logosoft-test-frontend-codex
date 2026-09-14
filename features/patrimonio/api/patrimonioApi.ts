@@ -58,9 +58,8 @@ export const patrimonioApi = {
         const payload = parseSchema(motivoSchema, { motivo });
         return runRequest(async () => (await httpClient.post<BemPatrimonialResponse>(`${BENS}/${id}/bloquear`, payload)).data);
     },
-    async desbloquearBem(id: string, motivo: string) {
-        const payload = parseSchema(motivoSchema, { motivo });
-        return runRequest(async () => (await httpClient.post<BemPatrimonialResponse>(`${BENS}/${id}/desbloquear`, payload)).data);
+    async desbloquearBem(id: string) {
+        return runRequest(async () => (await httpClient.post<BemPatrimonialResponse>(`${BENS}/${id}/desbloquear`)).data);
     },
     async baixarBem(id: string, values: unknown) {
         const payload = parseSchema(baixarBemSchema, values);
