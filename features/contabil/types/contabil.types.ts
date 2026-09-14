@@ -76,8 +76,9 @@ export type LancamentoContabilResumoResponse = {
     numero?: string | null;
     data: IsoDateTime;
     historico: string;
-    valorTotal: number;
-    status: StatusLancamentoContabil | number;
+    totalDebito: number;
+    totalCredito: number;
+    statusLancamento: StatusLancamentoContabil | number;
 };
 
 export type LancamentoContabilResponse = LancamentoContabilResumoResponse & {

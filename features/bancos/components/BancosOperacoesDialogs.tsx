@@ -14,8 +14,9 @@ import { FieldError } from '@/components/forms/FieldError';
 import { FormGrid } from '@/components/forms/FormGrid';
 import { SelectOption } from '@/types/erp';
 import { useContasReceber } from '@/features/financeiro/hooks/useFinanceiroResources';
-import { BoletoResponse, GerarBoletoFormValues, ImportarRetornoFormValues } from '@/features/bancos/types/bancos.types';
-import { formatMoney } from '@/lib/formatters/money';
+import { BoletoHistoricoResponse, BoletoResponse, GerarBoletoFormValues, ImportarRetornoFormValues } from '@/features/bancos/types/bancos.types';
+import { statusBoletoLabel } from '@/features/bancos/components/bancosLabels';
+import { formatMoney, formatMoneyOptional } from '@/lib/formatters/money';
 
 const footer = (label: string, loading: boolean | undefined, onHide: () => void, onConfirm: () => void, disabled?: boolean) => (
     <div className="flex justify-content-end gap-2">
@@ -94,26 +95,25 @@ export const GerarBoletoDialog = ({ visible, loading, carteiraOptions, carteiraL
     );
 };
 
-export const BoletoDetalheDialog = ({ visible, boleto, historico, historicoLoading, onHide }: { visible: boolean; boleto: BoletoResponse | null; historico: { data: string; evento: string; descricao?: string | null }[]; historicoLoading?: boolean; onHide: () => void }) => {
+export const BoletoDetalheDialog = ({ visible, boleto, historico, historicoLoading, onHide }: { visible: boolean; boleto: BoletoResponse | null; historico: BoletoHistoricoResponse[]; historicoLoading?: boolean; onHide: () => void }) => {
     return (
         <Dialog header="Boleto" visible={visible} modal style={{ width: 'min(56rem, 98vw)' }} onHide={onHide}>
             {boleto ? (
                 <>
                     <div className="grid mb-2">
-                        {/* boleto.valor não existe no contrato (BoletoResponse só tem valorTitulo/valorPago) — correção de campo é da b54.c1, D5 */}
-                        <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Valor</span><strong>{formatMoney(boleto.valor)}</strong></div>
-                        <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Vencimento</span>{formatDate(boleto.vencimento)}</div>
+                        <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Valor do título</span><strong>{formatMoney(boleto.valorTitulo)}</strong></div>
+                        <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Valor pago</span><strong>{formatMoneyOptional(boleto.valorPago)}</strong></div>
+                        <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Vencimento</span>{formatDate(boleto.dataVencimento)}</div>
                         <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Nosso número</span>{boleto.nossoNumero || '—'}</div>
                         <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Documento</span>{boleto.numeroDocumento || '—'}</div>
                         <div className="col-12"><span className="block text-color-secondary text-sm">Linha digitável</span><span className="font-mono">{boleto.linhaDigitavel || '—'}</span></div>
                         <div className="col-12"><span className="block text-color-secondary text-sm">Código de barras</span><span className="font-mono">{boleto.codigoBarras || '—'}</span></div>
                     </div>
-                    {boleto.alertas && boleto.alertas.length > 0 ? <Message className="w-full mb-3" severity="warn" text={boleto.alertas.join(' · ')} /> : null}
                     <Message className="w-full mb-3" severity="info" text="Layout de linha digitável/código de barras é best-effort — validar contra o banco real antes de usar em produção." />
-                    <DataTable value={historico} dataKey="data" loading={historicoLoading} emptyMessage="Sem histórico." responsiveLayout="scroll" stripedRows size="small">
-                        <Column header="Data" body={(row: { data: string }) => new Date(row.data).toLocaleString('pt-BR')} />
-                        <Column field="evento" header="Evento" body={(row: { evento: string }) => <Tag value={row.evento} />} />
-                        <Column field="descricao" header="Descrição" body={(row: { descricao?: string | null }) => row.descricao || '—'} />
+                    <DataTable value={historico} dataKey="id" loading={historicoLoading} emptyMessage="Sem histórico." responsiveLayout="scroll" stripedRows size="small">
+                        <Column header="Data" body={(row: BoletoHistoricoResponse) => new Date(row.data).toLocaleString('pt-BR')} />
+                        <Column header="Evento" body={(row: BoletoHistoricoResponse) => <Tag value={`${statusBoletoLabel(Number(row.statusAnterior))} → ${statusBoletoLabel(Number(row.statusNovo))}`} />} />
+                        <Column field="observacao" header="Descrição" body={(row: BoletoHistoricoResponse) => row.observacao} />
                     </DataTable>
                 </>
             ) : null}

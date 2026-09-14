@@ -1,0 +1,15 @@
+{
+  "description": "Registro de exceção: campo declarado no TS que não existe no C#, fora do escopo da fatia v1.11.0a8b54.c1",
+  "scopeFatia": "v1.11.0a8b54.c1 — campo monetário sem par",
+  "exceptions": [
+    {
+      "module": "patrimonio",
+      "type": "BemPatrimonialResponse",
+      "field": "status",
+      "reason": "Enum status (StatusBem: Ativo/Bloqueado/Baixado) não corresponde a record C# (StatusBemPatrimonial: Ativo/Baixado + bool Bloqueado). Remodelagem para b54.c2, conforme D15.",
+      "targetFatia": "v1.11.0a8b54.c2"
+    }
+  ],
+  "teto": 1,
+  "note": "Teto exato de 1 exceção. Handoffs aplicados por dev-senior-react em D15. Se divergências > 1 e não nominais aqui, acusa como erro novo."
+}

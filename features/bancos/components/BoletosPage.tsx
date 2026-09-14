@@ -23,7 +23,7 @@ import { useBoletoHistorico, useBoletoMutations, useBoletos } from '@/features/b
 import { BoletoResponse, BoletoResumoResponse, BoletosListQuery } from '@/features/bancos/types/bancos.types';
 import { BoletoDetalheDialog } from '@/features/bancos/components/BancosOperacoesDialogs';
 import { boletoPodeCancelar, statusBoletoFilterOptions, statusBoletoLabel, statusBoletoSeverity } from '@/features/bancos/components/bancosLabels';
-import { formatMoney } from '@/lib/formatters/money';
+import { formatMoney, formatMoneyOptional } from '@/lib/formatters/money';
 
 const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString('pt-BR') : '—');
 
@@ -83,14 +83,14 @@ export const BoletosPage = () => {
                 {boletosQuery.error ? <ApiErrorPanel error={mapApiError(boletosQuery.error)} /> : null}
                 <DataTableServer<BoletoResumoResponse> value={visibleRecords} totalRecords={records.length} loading={boletosQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhum boleto encontrado.">
                     <Column header="Documento" body={(row: BoletoResumoResponse) => row.numeroDocumento || row.nossoNumero || row.id.slice(0, 8)} />
-                    {/* row.valor não existe no contrato (BoletoResponse só tem valorTitulo/valorPago) — correção de campo é da b54.c1, D5 */}
-                    <Column header="Valor" body={(row: BoletoResumoResponse) => formatMoney(row.valor)} />
-                    <Column header="Vencimento" headerClassName="hidden md:table-cell" bodyClassName="hidden md:table-cell" body={(row: BoletoResumoResponse) => formatDate(row.vencimento)} />
-                    <Column header="Status" body={(row: BoletoResumoResponse) => <Tag value={statusBoletoLabel(Number(row.status))} severity={statusBoletoSeverity(Number(row.status)) ?? undefined} />} />
+                    <Column header="Valor do título" body={(row: BoletoResumoResponse) => formatMoney(row.valorTitulo)} />
+                    <Column header="Valor pago" body={(row: BoletoResumoResponse) => formatMoneyOptional(row.valorPago)} />
+                    <Column header="Vencimento" headerClassName="hidden md:table-cell" bodyClassName="hidden md:table-cell" body={(row: BoletoResumoResponse) => formatDate(row.dataVencimento)} />
+                    <Column header="Status" body={(row: BoletoResumoResponse) => <Tag value={statusBoletoLabel(Number(row.statusBoleto))} severity={statusBoletoSeverity(Number(row.statusBoleto)) ?? undefined} />} />
                     <Column header="Ações" alignHeader="right" body={(row: BoletoResumoResponse) => (
                         <DataTableActions actions={[
                             { key: 'abrir', label: 'Abrir', icon: 'pi pi-eye', permission: 'BANCOS_CONSULTAR', onClick: () => abrirDetalhe(row.id) },
-                            ...(boletoPodeCancelar(Number(row.status)) ? [{ key: 'cancelar', label: 'Cancelar', icon: 'pi pi-ban', severity: 'danger' as const, permission: 'BOLETOS_CANCELAR' as const, onClick: () => setCancelarAlvo(row.id) }] : [])
+                            ...(boletoPodeCancelar(Number(row.statusBoleto)) ? [{ key: 'cancelar', label: 'Cancelar', icon: 'pi pi-ban', severity: 'danger' as const, permission: 'BOLETOS_CANCELAR' as const, onClick: () => setCancelarAlvo(row.id) }] : [])
                         ]} />
                     )} />
                 </DataTableServer>

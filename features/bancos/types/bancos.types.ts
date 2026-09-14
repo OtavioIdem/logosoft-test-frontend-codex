@@ -9,11 +9,10 @@ export enum TipoCobranca {
 }
 
 export enum StatusBoleto {
-    EmAberto = 1,
-    Registrado = 2,
+    Gerado = 1,
+    EmRemessa = 2,
     Liquidado = 3,
-    Baixado = 4,
-    Cancelado = 5
+    Cancelado = 4
 }
 
 // ---- Response types ----
@@ -50,28 +49,29 @@ export type CarteiraCobrancaResponse = {
 
 export type BoletoResumoResponse = {
     id: Guid;
-    empresaId: Guid;
-    filialId?: Guid | null;
     contaReceberId: Guid;
     parcelaReceberId: Guid;
     carteiraCobrancaId: Guid;
     numeroDocumento?: string | null;
     nossoNumero?: string | null;
-    valor: number;
-    vencimento?: IsoDateTime | null;
-    status: StatusBoleto | number;
+    valorTitulo: number;
+    valorPago?: number | null;
+    dataVencimento: IsoDateTime;
+    statusBoleto: StatusBoleto | number;
 };
 
 export type BoletoResponse = BoletoResumoResponse & {
     linhaDigitavel?: string | null;
     codigoBarras?: string | null;
-    alertas?: string[] | null;
 };
 
 export type BoletoHistoricoResponse = {
+    id: Guid;
+    statusAnterior: StatusBoleto | number;
+    statusNovo: StatusBoleto | number;
+    observacao: string;
+    usuarioId?: Guid | null;
     data: IsoDateTime;
-    evento: string;
-    descricao?: string | null;
 };
 
 export type RemessaCnabResponse = {

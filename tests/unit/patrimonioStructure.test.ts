@@ -50,4 +50,48 @@ describe('Patrimônio (Onda 4) — estrutura e scaffold', () => {
         const depreciacao = read('features/patrimonio/components/DepreciacaoPage.tsx');
         expect(depreciacao).toContain('permission="PATRIMONIO_DEPRECIAR"');
     });
+
+    it('v1.11.0a8b54.c1: tipo DepreciacaoResultadoResponse reflete contrato C# com competencia/totalBensDepreciados/valorTotalDepreciado', () => {
+        const types = read('features/patrimonio/types/patrimonio.types.ts');
+
+        // Competencia é int no backend (YYYYMM), necessário decodificar
+        expect(types).toContain('competencia: number');
+
+        // Campo corrigido: TotalBensDepreciados → totalBensDepreciados
+        expect(types).toContain('totalBensDepreciados: number');
+
+        // Campo corrigido: ValorTotalDepreciado → valorTotalDepreciado
+        expect(types).toContain('valorTotalDepreciado: number');
+
+        // TotalContabilizados (entregue pelo backend, opcional exibição)
+        expect(types).toContain('totalContabilizados: number');
+
+        // Array de bens depreciados
+        expect(types).toContain('bens: BemDepreciadoResponse[]');
+    });
+
+    it('v1.11.0a8b54.c1: tipo BemPatrimonialResponse tem valorContabilAtual (não valorContabil)', () => {
+        const types = read('features/patrimonio/types/patrimonio.types.ts');
+
+        // Campo corrigido: ValorContabilAtual → valorContabilAtual
+        expect(types).toContain('valorContabilAtual: number');
+    });
+
+    it('v1.11.0a8b54.c1: DepreciacaoPage decodifica competencia e renderiza resultado corrigido', () => {
+        const page = read('features/patrimonio/components/DepreciacaoPage.tsx');
+
+        // Decodificação de competencia (Math.floor / modulo)
+        expect(page).toContain('resultado.competencia');
+
+        // Campos que refletem o contrato
+        expect(page).toContain('totalBensDepreciados');
+        expect(page).toContain('valorTotalDepreciado');
+    });
+
+    it('v1.11.0a8b54.c1: BensPage renderiza valorContabilAtual (não valorContabil)', () => {
+        const page = read('features/patrimonio/components/BensPage.tsx');
+
+        // Campo corrigido de valor contábil
+        expect(page).toContain('valorContabilAtual');
+    });
 });

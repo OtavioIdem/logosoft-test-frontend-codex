@@ -1,7 +1,7 @@
 {
     "name": "logosoft-frontend",
-    "version": "1.11.0-a.8.b54",
-    "logosoftVersion": "1.11.0a8b54",
+    "version": "1.11.0-a.8.b54.c1",
+    "logosoftVersion": "1.11.0a8b54.c1",
     "private": true,
     "scripts": {
         "dev": "next dev",
@@ -29,6 +29,7 @@
         "validate:skills": "node scripts/validate-skills.mjs",
         "validate:mocks-isolation": "node scripts/validate-mocks-isolation.mjs",
         "validate:backend-controlled": "node scripts/validate-backend-controlled.mjs",
+        "validate:contract-fields": "node scripts/gate-contract-fields.mjs",
         "test:contract:operational": "playwright test --config=playwright.operational-contract.config.ts",
         "validate:operational-contracts": "node scripts/validate-operational-contracts.mjs",
         "validate:integrated-e2e": "node scripts/validate-integrated-e2e.mjs",

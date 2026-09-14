@@ -55,4 +55,34 @@ describe('Contábil (Onda 4) — estrutura e scaffold', () => {
         expect(schema).toContain('soma dos débitos deve ser igual à soma dos créditos');
         expect(schema).toContain('ao menos duas partidas');
     });
+
+    it('v1.11.0a8b54.c1: tipo LancamentoContabilResponse reflete contrato C# com totalDebito/totalCredito/statusLancamento', () => {
+        const types = read('features/contabil/types/contabil.types.ts');
+
+        // Campos corrigidos: TotalDebito → totalDebito
+        expect(types).toContain('totalDebito: number');
+
+        // Campos corrigidos: TotalCredito → totalCredito
+        expect(types).toContain('totalCredito: number');
+
+        // Campo de status corrigido: StatusLancamento → statusLancamento
+        expect(types).toContain('statusLancamento: StatusLancamentoContabil | number');
+
+        // Partidas que existem no backend
+        expect(types).toContain('partidas: PartidaContabilResponse[]');
+
+        // Enum StatusLancamentoContabil: 3 valores, idêntico ao backend
+        expect(types).toContain('Normal = 1');
+        expect(types).toContain('Estornado = 2');
+        expect(types).toContain('Estorno = 3');
+    });
+
+    it('v1.11.0a8b54.c1: LancamentosPage renderiza colunas com totalDebito/totalCredito/statusLancamento', () => {
+        const page = read('features/contabil/components/LancamentosPage.tsx');
+
+        // Colunas que lêem os campos corrigidos
+        expect(page).toContain('totalDebito');
+        expect(page).toContain('totalCredito');
+        expect(page).toContain('statusLancamento');
+    });
 });

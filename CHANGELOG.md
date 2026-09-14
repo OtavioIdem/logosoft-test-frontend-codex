@@ -1,3 +1,117 @@
+# v1.11.0a8b54.c1
+
+## Campo monetário sem par no contrato: cinco telas corrigidas e um gate que fecha a classe
+
+Fatia corretiva criada por `D5`, que a separou da `b54` de propósito: aquela drenou as cópias
+locais de `formatMoney` e deixou quatro pontos de chamada lendo campo que o backend não declara,
+com o custo declarado de exibirem `—` em produção até esta versão entrar. Entrou.
+
+### O que estava errado, e como foi medido
+
+O nó `inventario` confrontou o **tipo inteiro** de cada tela contra o record C# de response do
+backend, campo a campo, citando arquivo e linha do `.cs`. O recorte cresceu de quatro pontos de
+dinheiro para 13 campos fantasma em cinco telas:
+
+| Tela | Campo que a UI lia | O que o backend entrega |
+| --- | --- | --- |
+| Boletos, lista e detalhe | `valor` | `ValorTitulo` obrigatório e `ValorPago` opcional |
+| Boletos | `vencimento` | `DataVencimento` |
+| Boletos | `status` | `StatusBoleto` |
+| Boletos, detalhe | `alertas` | nada — o campo não existe em `GET /{id}` |
+| Boletos, histórico | `evento` e `descricao` | `StatusAnterior`, `StatusNovo` e `Observacao` |
+| Lançamentos contábeis | `valorTotal` | `TotalDebito` e `TotalCredito` |
+| Lançamentos contábeis | `status` | `StatusLancamento` |
+| Depreciação | `ano`, `mes`, `bensDepreciados`, `valorTotal` | `Competencia`, `TotalBensDepreciados`, `ValorTotalDepreciado` |
+| Bens | `valorContabil` | `ValorContabilAtual` |
+
+### O que cada tela passa a exibir
+
+**Boletos** (`D10`) — a coluna única "Valor" vira duas, "Valor do título" com `formatMoney` e
+"Valor pago" com `formatMoneyOptional`. **É o primeiro ponto de chamada de `formatMoneyOptional`
+em produção**: a função existe desde a `b51`, por `D1`, e até hoje não tinha nenhum. O enum
+`StatusBoleto` do frontend é **substituído** pelo do backend (`Gerado`, `EmRemessa`, `Liquidado`,
+`Cancelado`); o antigo tinha cinco valores com semântica diferente em três deles, e corrigir só o
+nome do campo teria trocado um sintoma barulhento por um silencioso — o valor `4` apareceria como
+"Baixado" quando o backend quer dizer "Cancelado".
+
+**Histórico do boleto** (`D14`) — a coluna "Evento", que lia um campo inexistente e renderizava
+etiqueta vazia em toda linha, passa a exibir a **transição** (`Gerado → Em remessa`), montada com
+os dois campos de estado que o contrato entrega. "Descrição" passa a ler `observacao`.
+
+**Lançamentos contábeis** (`D11`) — a coluna "Valor" vira duas, "Débito" e "Crédito". Exibir um
+total seria afirmar uma garantia que não existe: a igualdade entre os dois lados é imposta pelo
+`refine` de `contabilSchemas.ts` apenas no que **o frontend cria**, e lançamento de origem
+automática nunca passa por ele. Duas colunas é a única opção que não pode mentir.
+
+**Depreciação** (`D12`) — o tipo é reescrito contra `ProcessarDepreciacaoPeriodoResponse` e a tela
+decodifica `Competencia`, que é `ano * 100 + mes`. A frase que o operador lê **não muda**.
+`TotalContabilizados` e a lista de `Bens`, que o backend entrega e a tela ignora, ficam
+registrados como candidatos de fatia funcional — fatia corretiva conserta, quem acrescenta é outra.
+
+**Bens** (`D13`) — a coluna "Valor contábil" passa a ler `valorContabilAtual`, **sem** o fallback
+`?? valorAquisicao`. Era o fallback que tornava o defeito silencioso: como o campo lido nunca
+existiu, a coluna mostrava o valor de aquisição mesmo para bem já depreciado.
+
+### Seção operacional — duas ações voltam a aparecer
+
+**Nenhuma permissão, rota ou item de menu muda, e não há concessão a fazer antes do deploy.** Mas
+o comportamento visível muda para quem já tem permissão:
+
+- **Boletos** — `boletoPodeCancelar` recebia `Number(row.status)` sobre campo inexistente, o que dá
+  `NaN`. A ação **"Cancelar" nunca aparecia, para nenhum boleto**. Volta a aparecer para quem tem
+  `BOLETOS_CANCELAR`.
+- **Lançamentos contábeis** — mesmo defeito em `lancamentoPodeEstornar`. A ação **"Estornar" nunca
+  aparecia, para nenhum lançamento**. Volta a aparecer para quem tem a permissão.
+
+É ganho de capacidade, não perda. O backend continua sendo quem autoriza.
+
+### O gate que fecha a classe
+
+Nasce `scripts/gate-contract-fields.mjs` (`npm run validate:contract-fields`), ligado em
+`scripts/validate-source.mjs` e portanto no CI. Ele reprova quando um tipo do frontend declara
+campo que o record de response do backend não entrega, comparando contra os blocos `csharp` de
+`docs/backend-v1.23/CONTRATO-API-v1.23.md`, que está versionado aqui — por isso o gate roda no
+runner, sem depender do repositório do backend.
+
+**Por que um gate e não mais um teste:** os três testes de estrutura dos módulos tocados
+(`bancosStructure`, `contabilStructure`, `patrimonioStructure`) passaram **antes e depois** da
+correção. Treze testes verdes não notaram a troca de cinco campos nem a substituição de um enum
+inteiro, porque nenhum deles asserta sobre campo de contrato.
+
+**Medição da prova vermelha:** contra `origin/main`, o gate acusa os 13 campos nominais acima, um a
+um. Contra a árvore de hoje, zero. E a sessão principal conferiu por sonda independente: um campo
+fantasma injetado em `LancamentoContabilResponse` foi acusado **pelo nome**, com código de saída
+`1`; revertido, volta a `0`.
+
+**Registro de exceção: teto `1`.** O gate encontrou seis campos fantasma além dos 13. `D15`
+conferiu um a um e concluiu que cinco não são exceção: `BoletoResumoResponse.empresaId` e
+`.filialId` (mais as duas heranças) **saem do tipo**, porque o backend não os entrega e nenhuma
+linha da UI os lê de um registro — o filtro da tela lê o próprio estado do filtro; e
+`valorDepreciado` vira `depreciacaoAcumulada`, o campo real. Sobra uma, com alvo real.
+
+### O que fica para a `b54.c2`, nomeado e com dono
+
+1. **Remodelagem do estado de Bens** (`D15`). `BemPatrimonialResponse.status` é a mesma classe dos
+   outros, e derruba **quatro** guardas de ação em `BensPage.tsx` — Transferir, Bloquear,
+   Desbloquear e Baixar, nenhuma aparece hoje. Mas não é renomeação: o enum do frontend
+   (`Ativo`, `Bloqueado`, `Baixado`) modela bloqueio como **estado**, e o backend não —
+   `StatusBemPatrimonial` tem dois valores e bloqueio é `bool Bloqueado` com `string? MotivoBloqueio`.
+   Trocar só o nome faria bem baixado aparecer como bloqueado.
+2. **Prova durável do gate** (`D16`). `tests/unit/gateContractFields.test.ts` trava a volta dos 13
+   campos, o que é verdadeiro e útil, mas **não executa o gate**. Enquanto a `b54.c2` não entra, o
+   gate protege o repositório e nada protege o gate contra ser cegado por dentro — que foi o que
+   aconteceu duas vezes na `b53`.
+
+### Ritual de versão
+
+`package.json`, `config/app.ts`, `.env.example`, `.env.test`, `.env.backend-controlled.example`,
+`.github/workflows/frontend-ci.yml`, `README.md`, `CHANGELOG.md`,
+`scripts/backend-permissions.allowlist.json`, `scripts/guard-permission-map.allowlist.json`,
+`tests/evidence/integrated-e2e.assisted-evidence.example.json` carimbados em `1.11.0a8b54.c1`.
+`scripts/backend-permissions.snapshot.json` regenerado por comando, e
+`scripts/backend-contract-map.allowlist.json` carimbado por
+`npm run stamp:backend-contract-map-version`, o carimbador que `D7` criou na `b54`.
+
 # v1.11.0a8b54
 
 ## Drenagem das 25 cópias locais de `formatMoney` — fecha `D1` e o bloco da onda F1

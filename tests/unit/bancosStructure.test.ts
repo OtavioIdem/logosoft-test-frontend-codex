@@ -51,4 +51,59 @@ describe('Bancos/Boletos/CNAB (Onda 4) — estrutura e scaffold', () => {
         expect(boletos).toContain('Geração de boleto indisponível');
         expect(cnab).toContain('operações de remessa e retorno estão indisponíveis');
     });
+
+    it('v1.11.0a8b54.c1: tipos BoletoResponse e BoletoHistoricoResponse refletem contrato C#', () => {
+        const types = read('features/bancos/types/bancos.types.ts');
+
+        // Campos corrigidos: DataVencimento → dataVencimento
+        expect(types).toContain('dataVencimento: IsoDateTime');
+
+        // Campos corrigidos: StatusBoleto → statusBoleto (nome de propriedade, não tipo)
+        expect(types).toContain('statusBoleto: StatusBoleto | number');
+
+        // Campos monetários corrigidos: ValorTitulo → valorTitulo
+        expect(types).toContain('valorTitulo: number');
+
+        // Campo opcional do backend: ValorPago → valorPago
+        expect(types).toContain('valorPago?: number | null');
+
+        // Histórico: Observacao → observacao (não 'descricao' nem 'evento')
+        expect(types).toContain('observacao: string');
+
+        // Histórico: campos de status (StatusAnterior/StatusNovo)
+        expect(types).toContain('statusAnterior: StatusBoleto | number');
+        expect(types).toContain('statusNovo: StatusBoleto | number');
+
+        // Enum StatusBoleto corrigido: 4 valores do backend, não 5
+        expect(types).toContain('Gerado = 1');
+        expect(types).toContain('EmRemessa = 2');
+        expect(types).toContain('Liquidado = 3');
+        expect(types).toContain('Cancelado = 4');
+        expect(types).not.toContain('EmAberto =');
+        expect(types).not.toContain('Registrado =');
+        expect(types).not.toContain('Baixado =');
+    });
+
+    it('v1.11.0a8b54.c1: BoletosPage renderiza colunas e campos corrigidos', () => {
+        const page = read('features/bancos/components/BoletosPage.tsx');
+
+        // Colunas que lêem os campos corrigidos
+        expect(page).toContain('dataVencimento');
+        expect(page).toContain('statusBoleto');
+        expect(page).toContain('valorTitulo');
+
+        // Dialog de detalhe lê os mesmos campos
+        expect(page).toContain('valorPago');
+    });
+
+    it('v1.11.0a8b54.c1: BancosOperacoesDialogs renderiza histórico com observacao/status, não evento/descricao', () => {
+        const dialog = read('features/bancos/components/BancosOperacoesDialogs.tsx');
+
+        // Histórico: observacao é o campo que existe em C#
+        expect(dialog).toContain('observacao');
+
+        // Histórico: status anterior e novo (não evento genérico)
+        expect(dialog).toContain('statusAnterior');
+        expect(dialog).toContain('statusNovo');
+    });
 });

@@ -23,7 +23,7 @@ import { useBens, useBemMutations } from '@/features/patrimonio/hooks/usePatrimo
 import { BaixarBemFormValues, BemFormValues, BemPatrimonialResponse, BensListQuery, TransferirBemFormValues } from '@/features/patrimonio/types/patrimonio.types';
 import { BaixarBemDialog, BemFormDialog, TransferirBemDialog } from '@/features/patrimonio/components/PatrimonioDialogs';
 import { bemPodeBaixar, bemPodeBloquear, bemPodeDesbloquear, bemPodeTransferir, categoriaBemFilterOptions, categoriaBemLabel, statusBemFilterOptions, statusBemLabel, statusBemSeverity } from '@/features/patrimonio/components/patrimonioLabels';
-import { formatMoneyOptional } from '@/lib/formatters/money';
+import { formatMoney } from '@/lib/formatters/money';
 
 const filterLocal = (records: BemPatrimonialResponse[], term: string) => {
     const normalized = term.trim().toLowerCase();
@@ -99,7 +99,7 @@ export const BensPage = () => {
                     <Column field="codigo" header="Código" />
                     <Column field="descricao" header="Descrição" />
                     <Column header="Categoria" headerClassName="hidden lg:table-cell" bodyClassName="hidden lg:table-cell" body={(row: BemPatrimonialResponse) => categoriaBemLabel(Number(row.categoria))} />
-                    <Column header="Valor contábil" headerClassName="hidden md:table-cell" bodyClassName="hidden md:table-cell" body={(row: BemPatrimonialResponse) => formatMoneyOptional(row.valorContabil ?? row.valorAquisicao)} />
+                    <Column header="Valor contábil" headerClassName="hidden md:table-cell" bodyClassName="hidden md:table-cell" body={(row: BemPatrimonialResponse) => formatMoney(row.valorContabilAtual)} />
                     <Column header="Status" body={(row: BemPatrimonialResponse) => <Tag value={statusBemLabel(Number(row.status))} severity={statusBemSeverity(Number(row.status)) ?? undefined} />} />
                     <Column header="Ações" alignHeader="right" body={(row: BemPatrimonialResponse) => {
                         const acoes = [] as { key: string; label: string; icon: string; severity?: 'danger'; permission: 'PATRIMONIO_TRANSFERIR' | 'PATRIMONIO_BENS_GERENCIAR' | 'PATRIMONIO_BAIXAR'; onClick: () => void }[];
