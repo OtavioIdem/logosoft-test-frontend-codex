@@ -694,3 +694,328 @@ declarações, e o gate acusa por tipo resolvido. A prova afirma os **24 nomes**
 não são redundância: são eles que reprovam se alguém cegar a resolução de interseção. O erro foi da
 lista escrita pela sessão principal, não do gate, e o nó fez o que o plano manda, que é devolver
 `needs_decision` em vez de ajustar até bater.
+
+### D21 — a onda F2 se fatia em três versões, e os legs do faturamento vêm primeiro
+
+Data: 2026-09-14
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre a §5 (F2) e a §2 (P4, P5) de
+`docs/backend-v1.23/PLANO-FRONTEND-v1.23.md`, depois de conferir no código que nenhum item da F2 existe
+(grep por `legs`, `retomar-reversao`, `valores-acessorios` em `features/`, `app/`, `lib/`, `layout/` e
+`types/` sem ocorrência; a legenda falsa de impostos presente em `NotaFiscalDetalhePage.tsx`).
+Decisão:
+1. **`b55` — F2.1.** Legs do faturamento e `POST /api/faturamento/{id}/retomar-reversao`. Corrige o P4.
+2. **`b56` — F2.2 e F2.3.** Aba de Impostos (legenda, coluna `Origem`, linha `Manual` que suprime a do
+   `Motor`) e valores acessórios da nota. Corrige o P5.
+3. **`b57` — F2.4, F2.5 e F2.6.** O fluxo de transmissão: `alertas`, `FISCAL_REPROCESSAR` na rota e no
+   menu, e `correlationId` obrigatório.
+Alternativas descartadas:
+1. Uma fatia só, como o plano da onda estima (≈1 fatia) — misturaria três fluxos (reversão de
+   faturamento, composição de imposto, transmissão à SEFAZ) no mesmo diff, e dois deles são `CRITICAL`
+   por `risk.yaml`. É o argumento de `T7`: a revisão fica impossível.
+2. Começar pela `b57`, que é a menor — ordenar por tamanho e não por dano. O P4 esconde um efeito
+   pendurado (estoque baixado, título a receber) sem caminho de UI para resolver, e o P5 desinforma.
+Por quê: `risk.yaml` manda bloco menor quando o risco é alto, e a ordem da §2 do plano da onda é por dano.
+A `b55` fica sozinha porque traz o único endpoint que grava na F2 com efeito sobre estoque e financeiro
+(`DeclararEfeitoDesfeito` é uma afirmação humana de que o efeito foi desfeito).
+Risco de acesso: `NENHUM` para o fatiamento em si. Cada fatia classifica o próprio.
+Reversível: sim. Gatilho de revisita: o `planner` da `b55` medir que a retomada depende de algo da
+`b57`, ou o backend mudar o contrato de legs antes da `b55` fechar.
+Quem arbitrou: orquestrador
+Impacto: `features/faturamento/**` na `b55`; `features/fiscal/**` na `b56` e na `b57`; `lib/security/routePermissions.ts`
+e `layout/AppMenu.tsx` na `b57`.
+
+### D22 — a rota de retomada entra no catálogo que o gate de contrato lê, como adendo com evidência de controller
+
+Data: 2026-09-14
+Rodada: sem rodada de debate. Arbitrada sobre o `needs_decision` do nó `planner` da `b55`
+(`docs/fatias/v1.11.0a8b55-f2-legs-faturamento.md`, seção 9).
+Decisão: a sessão principal acrescenta `POST /{id:guid}/retomar-reversao` à seção `api/faturamento` do
+§9 de `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md`, com uma nota de adendo que cita
+`FaturamentosController.cs:99-106`. `tests/unit/backendContractMap.test.ts` passa de 576 para 577 com
+asserção nominal da chave. O §12 (permissões) não é tocado. A mesma regra vale para `calcular-tributos` e
+`valores-acessorios` na `b56`.
+Alternativas descartadas:
+1. Apontar o gate para `CONTRATO-API-v1.23.md`. É mudança de gate estrutural, com prova vermelha própria, e
+   não cabe numa fatia `CRITICAL` de tela. É o destino certo como fatia de esteira (gatilho abaixo).
+2. Tirar a retomada da `b55`. Sobraria só a leitura, e o P4 ficaria sem remédio.
+3. Esperar o backend regenerar o documento. Não existe gerador para ele, então a espera não teria fim.
+Por quê: o documento **não é artefato gerado**, e quatro fatos sustentam isso:
+- o cabeçalho diz "levantamento feito por leitura direta do código";
+- foi escrito num único commit (`9c16a39`, 2026-08-12);
+- o repositório do backend não tem script que o produza (o único gerador, `scripts/gerar-contrato-frontend.mjs`,
+  produz `CONTRATO-API-v1.23.md`);
+- o hook de `.claude/settings.json` não o protege.
+
+Corrigir a origem com evidência de controller é o que o CLAUDE.md manda. Editar um artefato gerado para o
+gate fechar seria o oposto. A rota existe no backend: quem está defasado é o documento, que é da v1.18.
+Reversível: sim. Gatilho de revisita: a fatia de esteira que migrar o `validate-backend-contract-map`
+para ler `CONTRATO-API-v1.23.md`, gerado por comando. Com ela, os adendos saem.
+Quem arbitrou: orquestrador
+Impacto: `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md` (§9), `tests/unit/backendContractMap.test.ts`.
+
+### D23 — Confirmar fica indisponível, com o motivo visível, quando o faturamento tem leg em reversão
+
+Data: 2026-09-14
+Rodada: proposta do `planner` da `b55`.
+Decisão: com `possuiLegEmReversao: true`, o botão Confirmar do detalhe fica desabilitado, e um tooltip
+visível mesmo com o botão desabilitado explica o motivo. A regra lê o booleano calculado pelo backend e não
+deriva o estado de novo a partir dos legs.
+Alternativas descartadas:
+1. Manter como está. O operador preenche nove campos fiscais para receber a recusa, porque o backend valida
+   os campos (`ConfirmarFaturamentoUseCase.cs:80`) antes de checar a reversão (`:108-112`).
+2. Esconder o botão. O operador perde o motivo.
+Por quê: o backend já recusa esse caso, e a tela deixa de prometer uma ação que não conclui.
+Risco de acesso: `ILUSAO`. Ninguém perde uma operação que conclui hoje.
+Reversível: sim. Gatilho de revisita: o backend deixar de recusar a confirmação com leg `EmReversao`.
+Quem arbitrou: orquestrador
+Impacto: `FaturamentoDetalhePage.tsx`, `faturamentoLabels.ts`.
+
+### D24 — o fluxo de Cancelar faturamento fica fora da `b55`, exceto a reconsulta no erro
+
+Data: 2026-09-14
+Rodada: proposta do `planner` da `b55`.
+Decisão: não entram na `b55` o guard de Cancelar por leg 4 `Integrado`, a recusa em lista estruturada e
+`FATURAMENTO_REVERTER_INTEGRACAO`. Entra só a reconsulta quando a mutação termina em erro (`D27`).
+Alternativas descartadas: incluir só o guard do leg 4. O botão tem duas recusas enganosas com a mesma causa:
+- a lista de legs, que aparece num toast de 7 s;
+- o 404 "Recurso não encontrado." para quem não tem `FATURAMENTO_REVERTER_INTEGRACAO`.
+
+A segunda depende de uma permissão que não entra no union sem corrigir a origem documental. Corrigir só a
+primeira deixa o botão prometendo pela metade.
+Por quê: é o argumento de `D21` e `T7` aplicado ao cancelamento. Ele merece fatia própria, depois das
+perguntas B-1 e B-2 ao backend.
+Reversível: sim. Gatilho de revisita: o backend publicar `FATURAMENTO_REVERTER_INTEGRACAO` numa fonte
+documental, ou responder B-2.
+Quem arbitrou: orquestrador
+Impacto: nesta fatia, só `useFaturamentoResources.ts` (`D27`).
+
+### D25 — a tabela de legs mostra sempre os seis, na ordem do catálogo
+
+Data: 2026-09-14
+Rodada: proposta do `planner` da `b55`.
+Decisão: a tabela tem seis linhas fixas, na ordem de `LegIntegracaoFaturamento`.
+- Leg sem registro aparece como "Sem registro".
+- Estado com valor desconhecido aparece cru, como "Estado desconhecido (n)", e nunca com um rótulo conhecido.
+- Leg com valor desconhecido vira linha extra.
+Alternativas descartadas: mostrar só as linhas devolvidas. O operador perderia a posição em que a cadeia parou.
+Por quê: a pergunta do operador é "até onde foi?", e só a cadeia inteira responde. O próprio backend chama
+a ausência de "nenhum registro" (`FaturamentoErrors.cs:129`).
+Reversível: sim. Gatilho de revisita: o backend acrescentar leg ao catálogo.
+Quem arbitrou: orquestrador
+Impacto: `faturamentoLabels.ts`, `FaturamentoDetalhePage.tsx`.
+
+### D26 — a listagem de faturamentos não ganha sinal de legs
+
+Data: 2026-09-14
+Rodada: proposta do `planner` da `b55`.
+Decisão: `FaturamentoPage.tsx` não lê `legs` nem os booleanos derivados, e um teste de regressão textual
+garante isso.
+Alternativas descartadas:
+1. Badge na listagem. Por escolha do backend, `GET /api/faturamento` devolve os legs vazios e os booleanos
+   sempre `false` (`FaturamentoConsultaUseCases.cs:56-63`). O badge diria "sem problema" em todas as
+   linhas, que é justamente o dano do P4.
+2. Uma consulta de detalhe por linha. É o custo que o backend recusou.
+Por quê: sinal falso é pior que ausência de sinal.
+Reversível: sim. Gatilho de revisita: resposta afirmativa do backend a B-3 (listagem com legs ou com os
+booleanos).
+Quem arbitrou: orquestrador
+Impacto: `tests/unit/faturamentoStructure.test.ts`.
+
+### D27 — as mutações do detalhe reconsultam também no erro, e o diálogo de retomada se fecha pelo estado do leg
+
+Data: 2026-09-14
+Rodada: proposta do `planner` da `b55`.
+Decisão:
+- Confirmar, cancelar e retomar invalidam detalhe, histórico e ocorrências em `onSettled`, e não só em
+  `onSuccess`.
+- O diálogo de retomada só fica visível enquanto o leg da linha estiver `EmReversao` na consulta atual.
+Alternativas descartadas: ramificar por código de erro. `runRequest` descarta o `code`, e mudar isso mexe
+num padrão compartilhado (destino: F5).
+Por quê: a falha no meio do cancelamento ou da retomada é o que cria ou mantém o leg `EmReversao` e a
+ocorrência de erro. Hoje a tela continua mostrando o estado anterior à falha.
+Reversível: sim. Gatilho de revisita: F5.5 (consolidação das classes de erro) passar a preservar o `code`.
+Quem arbitrou: orquestrador
+Impacto: `useFaturamentoResources.ts`, `FaturamentoDetalhePage.tsx`.
+
+### D28 — no diálogo de retomada o leg vem da linha, e a ação não tem valor inicial
+
+Data: 2026-09-14
+Rodada: proposta do `planner` da `b55`.
+Decisão:
+- O leg aparece só para leitura, vindo da linha clicada.
+- A ação é obrigatória e começa vazia.
+- O motivo é obrigatório, com 1 a 500 caracteres após trim (`FaturamentoValidators.cs:44-52`).
+- Com `DeclararEfeitoDesfeito`, um aviso diz que é uma afirmação humana, auditada, de que o efeito foi
+  desfeito fora do sistema.
+Alternativas descartadas:
+1. Dropdown de leg. Permitiria escolher um leg fora de `EmReversao`.
+2. Ação com valor inicial. Empurraria o operador para uma escolha que ele não fez.
+Por quê: `DeclararEfeitoDesfeito` encerra a reversão sem que o sistema confirme nada, então a escolha
+precisa ser deliberada.
+Reversível: sim. Gatilho de revisita: o backend acrescentar ação ao enum.
+Quem arbitrou: orquestrador
+Impacto: `FaturamentoDialogs.tsx`, `faturamentoSchemas.ts`.
+
+### D29 — dono dos arquivos de versão, enquanto `policies.yaml` não os lista
+
+Data: 2026-09-14
+Rodada: proposta do `planner` da `b55`, com o precedente da `b54.c2`.
+Decisão:
+- O builder carimba `package.json`, `config/app.ts`, `README.md`, `.env.example`, `.env.test`,
+  `.env.backend-controlled.example` e `.github/workflows/frontend-ci.yml`.
+- O `engenheiro-testes` carimba `tests/evidence/integrated-e2e.assisted-evidence.example.json` e as duas
+  allowlists de `scripts/` à mão. O snapshot de permissões e a allowlist do mapa de contrato ele carimba só
+  por comando.
+- O `CHANGELOG.md` fica com a sessão principal.
+Alternativas descartadas: carimbar pelo `devops-frontend`, dono de `.env*.example` e `.github/workflows/**`
+em `policies.yaml`. Isso acrescentaria um nó a uma fatia sem `platformChange`.
+Por quê: é a divisão que funcionou na `b54.c2`. A lacuna é da política, e não da fatia: `package.json`,
+`config/app.ts`, `README.md` e `.env.test` não estão na lista `write` de ninguém.
+Reversível: sim. Gatilho de revisita: a fatia de esteira E-2 acrescentar os arquivos de versão a
+`policies.yaml`.
+Quem arbitrou: orquestrador
+Impacto: blocos A e B da `b55` e das fatias seguintes.
+
+### D30 — as quatro divergências do inventário da `b55`: o teto do motivo de cancelamento entra, as outras três têm destino
+
+Data: 2026-09-14
+Rodada: `docs/arquitetura/debate/02-inventario-legs-faturamento.md`, que o nó `inventario` da `b55` entregou
+como `completed_with_warnings`. Cada divergência foi conferida no fonte pela sessão principal antes da decisão.
+Decisão:
+1. **Teto do motivo de cancelamento (divergência 4) entra na `b55`.**
+   - `cancelarFaturamentoSchema` (`features/faturamento/schemas/faturamentoSchemas.ts:34`) ganha
+     `.max(300)` no `motivo`, e o critério vira `AC-17`.
+   - O backend exige `NotEmpty().MaximumLength(300)` (`FaturamentoValidators.cs:35`).
+   - Hoje o `textRequired` do arquivo é só `z.string().trim().min(1, message)` (`:9`), então 301 caracteres
+     passam no cliente e voltam 400 com o diálogo aberto.
+2. **`confirmadoPor`, `canceladoEm`, `canceladoPor` e `usuarioId` do histórico (divergência 1) ficam como
+   estão.** Estão no tipo e nenhuma tela os lê.
+   - Destino dos três GUID de usuário: F5, classe de referência por GUID.
+   - `canceladoEm` vai para a fatia de cancelamento de faturamento (`D24`).
+3. **`possuiLegComFalha` e `possuiLegRevertido` (divergência 2) entram só no tipo, sem critério que os
+   consuma.** A tabela de legs já mostra `Falhou` e `Revertido` linha a linha (`AC-2`), e um badge agregado
+   repetiria a mesma informação acima dela.
+4. **`FaturamentoLegResponse.responsavelId` (divergência 3) entra só no tipo.** Sem coluna "quem" na
+   tabela, porque é GUID cru de usuário. Destino: F5, classe de referência por GUID.
+Alternativas descartadas:
+1. Deixar o teto de 300 para a fatia de cancelamento (`D24`). É uma linha no arquivo que o builder já toca,
+   do mesmo tipo de defeito (request do cliente mais frouxo que o validator), e a `D24` tirou do escopo o
+   guard e a permissão do Cancelar, não o schema.
+2. Mostrar GUID cru na coluna "quem". Repetiria o defeito que a F5 existe para resolver.
+3. Tirar `possuiLegComFalha` e `possuiLegRevertido` do tipo. O tipo espelha o contrato, e campo aditivo
+   omitido é o que a b54.c1 mostrou que vira campo fantasma mais tarde.
+Por quê: só a divergência 4 faz o operador errar hoje, num diálogo que grava. As outras três são ausência
+de exibição, sem informação falsa.
+Risco de acesso: `NENHUM`.
+Reversível: sim. Gatilho de revisita: a F5 resolver referência por GUID, com o que a coluna "quem" e os
+campos de auditoria do faturamento voltam à mesa.
+Quem arbitrou: orquestrador
+Impacto: `features/faturamento/schemas/faturamentoSchemas.ts`, `tests/unit/faturamentoPayload.test.ts`.
+
+### D31 — a rejeição não tratada do submit que falha é padrão da base e vai para a F5.5; as coberturas parciais da `b55` têm destino nominal
+
+Data: 2026-09-14
+Rodada: sem rodada de debate. Arbitrada sobre o contrato do nó `tests` da `b55` (tentativa 3,
+`completed_with_warnings`), depois de a sessão principal conferir por conta própria:
+- recorte de 66 testes passando, sem linha `Errors`;
+- sabotagens (b) e (f) reproduzidas, cada uma derrubando só o teste esperado, com restauração conferida por `cmp`.
+
+Decisão:
+1. **Rejeição não tratada fica como está na `b55`.** Com `runWithToast` em `rethrow: true`, o diálogo que faz
+   `await onSubmit(...)` sem `catch` gera `unhandledRejection` quando a gravação falha. O toast de erro
+   aparece e o diálogo continua aberto, que é o comportamento pretendido. O efeito colateral é um erro no
+   console. O padrão é da base e não desta fatia:
+   - 142 ocorrências de `rethrow: true` em 63 arquivos de `features/`;
+   - 108 linhas `await onSubmit(` em `features/` e `components/`;
+   - medido por grep;
+   - o `ConfirmarFaturamentoDialog` desta mesma tela já fazia isso antes da fatia.
+
+   O teste de AC-10 absorve a rejeição de forma nominal: exige exatamente uma, e que seja o erro simulado.
+   Destino: F5.5, consolidação das classes de erro e do contrato de submit dos diálogos.
+2. **Coberturas parciais declaradas pelo nó, aceitas com destino.** Nenhuma volta para a última tentativa:
+   - **AC-3**, linha que continua "Em reversão" com POST falho e GET em 4: coberto por composição.
+     `estadoLegLabel` nunca devolve "Revertido" fora do 3 (teste unitário), e o AC-10 prova que a linha
+     deriva da consulta e não da ação: só mostra "Revertido" quando o GET devolve 3, e a sabotagem (f)
+     derruba o teste.
+   - **AC-8**, leg só para leitura e 2 opções: o leg é renderizado como texto, sem campo editável no
+     componente. As 2 opções saem de `acaoRetomadaOptions`. Fica para o QA confirmar no diff.
+   - **AC-12**, tooltip visível com o botão desabilitado: comportamento visual do PrimeReact. O desabilitado
+     é provado pela sabotagem (h). O tooltip fica para conferência do QA no navegador.
+   - **AC-10**, reconsulta no erro de confirmar e cancelar: textual (`onSettled`). É o mesmo mecanismo que a
+     sabotagem (f) provou para retomar, na mesma linha de código.
+
+Alternativas descartadas:
+1. Pôr `try/catch` só no `RetomarReversaoDialog`. Criaria um terceiro padrão de submit no mesmo arquivo, ao
+   lado do `ConfirmarFaturamentoDialog`, e mudaria o teste de AC-10, que depende da rejeição, num nó que já
+   esgotou as três tentativas.
+2. Mudar `useMutationWithToast` para não relançar. É um padrão compartilhado por 63 arquivos, e é o argumento
+   de `T7`.
+3. Abrir uma quarta tentativa do nó `tests` para as coberturas parciais. O limite do grafo é três. As
+   lacunas têm cobertura por composição ou são visuais, e a decisão final de cobertura é do `qa_review`.
+
+Por quê: o que o operador vê está certo. O erro de console é dívida da base inteira, e tratá-lo aqui misturaria
+refatoração de padrão com correção de defeito.
+
+Risco de acesso: `NENHUM`.
+
+Reversível: sim. Gatilho de revisita: F5.5, ou o QA da `b55` julgar alguma cobertura parcial insuficiente para uma
+fatia `CRITICAL`. Nesse caso, abre-se `correction -> tests -> qa_review`, conforme o grafo.
+
+Quem arbitrou: orquestrador
+
+Impacto: nenhum arquivo muda. Registro para a F5.5 e para o QA da `b55`.
+
+### D32 — o bloqueio do QA da `b55` segue pelo nó `correction`, que não é quarta tentativa do nó `tests`
+
+Data: 2026-09-14
+Rodada: sem rodada de debate. Arbitrada sobre o veredito BLOQUEADO do `qa_review`, tentativa 2, rodada com o modelo
+opus por causa de E-3. O próprio QA deixou a pergunta em `risks`: esta passagem conta ou não como quarta tentativa.
+
+Decisão:
+1. **A correção corre no nó `correction`.** `execution-graph.yaml` o define como nó próprio, que entra quando o
+   veredito é BLOQUEADO e recebe um `correctionSlice` fechado. O limite `retry.max_attempts: 3` vale por nó e
+   impede o mesmo nó de girar sem diagnóstico. Ele não impede a correção que o grafo prevê depois do QA. O
+   executor é o `engenheiro-testes`, dono dos quatro achados, em nível L2 (modelo sonnet, sobrescrevendo o haiku
+   do frontmatter, E-3), com briefing literal.
+2. **Entram na correção:**
+   - QA-1: valores literais dos enums no teste de AC-1;
+   - QA-2: teste direto de AC-3, com POST falho e GET ainda em 4;
+   - QA-3: teste versionado do tooltip de AC-12 no spec e2e;
+   - QA-4: listas `anyOf` literais no teste de AC-14;
+   - QA-9: o AC-10 passa a afirmar que histórico e ocorrências são reconsultados;
+   - a janela de mascaramento do `unhandledRejection`, fechada com `expect(rejeicoes).toEqual([falha])` depois
+     do `process.off`;
+   - QA-7: o alvo da exceção GC-01, vencido desde a `b53`, passa a ser F5.6 (camada de CRUD genérico órfã), que é
+     o destino da classe de scaffold morto.
+3. **Fora da correção, com dono:**
+   - QA-5, imprecisões do CHANGELOG: sessão principal.
+   - QA-6, dois comentários com linha imprecisa: `dev-senior-react` em L2. Entra **depois** da correção, porque a
+     sabotagem S1 edita o mesmo arquivo.
+   - QA-8, motivo do Retomar desabilitado por falta de permissão: padrão de `PermissionGuard`, destino F5.
+   - QA-10: sem ação.
+4. **Sequência depois da correção:**
+   - QA-6;
+   - o nó `e2e` roda de novo, na 3411, duas vezes, porque o spec ganhou o teste de AC-12;
+   - `qa_review` tentativa 3, que reproduz S1, S2, S4 e também S7 (tooltip), esta no navegador.
+
+Alternativas descartadas:
+1. Tratar a correção como quarta tentativa do nó `tests` e devolver ao usuário. Seria ler o limite contra o
+   próprio grafo, que desenha `correction -> tests -> qa_review` como o caminho de um BLOQUEADO. O que o limite
+   quer impedir, girar sem causa, não acontece aqui: a causa está medida por sabotagem e a correção é literal.
+2. Aceitar APROVADO_COM_RESSALVA. A fatia é CRITICAL, e `risk.yaml` diz que ela só fecha com APROVADO limpo.
+3. Corrigir o QA-6 junto, em paralelo. Colidiria com a sabotagem S1 no mesmo arquivo, o erro de medição que a
+   `b54.c2` já registrou (QA-G5).
+
+Por quê: o QA da tentativa 2 mediu o que o da tentativa 1 não mediu. Quatro testes verdes não sabiam ficar
+vermelhos. A correção é pequena, está toda em `tests/`, e o código de produção foi confirmado conforme.
+
+Risco de acesso: `NENHUM`.
+
+Reversível: sim. Gatilho de revisita: a correção devolver `blocked`/`failed`, ou o QA 3 bloquear de novo. Nesse caso a
+fatia volta ao usuário, sem quinto caminho.
+
+Quem arbitrou: orquestrador
+
+Impacto: `tests/unit/faturamentoLabels.test.ts`, `tests/unit/faturamentoStructure.test.ts`,
+`tests/components/FaturamentoDetalhePage.test.tsx`, `tests/e2e/faturamento-legs.spec.ts`,
+`scripts/guard-permission-map.allowlist.json`.

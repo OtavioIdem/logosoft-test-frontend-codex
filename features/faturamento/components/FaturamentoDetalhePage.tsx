@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
@@ -20,9 +20,9 @@ import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { AnexosPanel } from '@/features/anexos/components/AnexosPanel';
 import { useFaturamento, useFaturamentoHistorico, useFaturamentoMutations, useFaturamentoOcorrencias } from '@/features/faturamento/hooks/useFaturamentoResources';
-import { ConfirmarFaturamentoFormValues, FaturamentoHistoricoResponse, FaturamentoOcorrenciaResponse } from '@/features/faturamento/types/faturamento.types';
-import { ConfirmarFaturamentoDialog } from '@/features/faturamento/components/FaturamentoDialogs';
-import { podeCancelar, podeConfirmar, statusFaturamentoLabel, statusFaturamentoSeverity, tipoOcorrenciaLabel, tipoOcorrenciaSeverity } from '@/features/faturamento/components/faturamentoLabels';
+import { AcaoRetomadaReversaoLeg, ConfirmarFaturamentoFormValues, EstadoLegIntegracaoFaturamento, FaturamentoHistoricoResponse, FaturamentoOcorrenciaResponse, RetomarReversaoFormValues } from '@/features/faturamento/types/faturamento.types';
+import { ConfirmarFaturamentoDialog, RetomarReversaoDialog } from '@/features/faturamento/components/FaturamentoDialogs';
+import { confirmacaoBloqueadaPorReversao, estadoLegLabel, estadoLegSeverity, LinhaLegFaturamento, montarLinhasDeLegs, podeCancelar, podeConfirmar, statusFaturamentoLabel, statusFaturamentoSeverity, tipoOcorrenciaLabel, tipoOcorrenciaSeverity } from '@/features/faturamento/components/faturamentoLabels';
 import { formatMoney } from '@/lib/formatters/money';
 
 const formatDateTime = (value?: string | null) => (value ? new Date(value).toLocaleString('pt-BR') : '—');
@@ -33,12 +33,18 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
     const toast = useAppToast();
     const runWithToast = useMutationWithToast();
     const [dialog, setDialog] = useState<'confirmar' | 'cancelar' | null>(null);
+    const [legEmRetomada, setLegEmRetomada] = useState<number | null>(null);
 
     const faturamentoQuery = useFaturamento(faturamentoId);
     const historicoQuery = useFaturamentoHistorico(faturamentoId);
     const ocorrenciasQuery = useFaturamentoOcorrencias(faturamentoId);
-    const { confirmarMutation, cancelarMutation } = useFaturamentoMutations();
+    const { confirmarMutation, cancelarMutation, retomarReversaoMutation } = useFaturamentoMutations();
     const faturamento = faturamentoQuery.data ?? null;
+
+    const linhasLegs = useMemo(() => montarLinhasDeLegs(faturamento?.legs), [faturamento]);
+    // D27: o diálogo só fica visível enquanto a linha atual (reconsultada) mostrar o leg em EmReversao.
+    const linhaEmRetomada = legEmRetomada !== null ? linhasLegs.find((linha) => linha.leg === legEmRetomada) ?? null : null;
+    const dialogRetomarVisivel = legEmRetomada !== null && Number(linhaEmRetomada?.registro?.estado) === EstadoLegIntegracaoFaturamento.EmReversao;
 
     if (!hasPermission('FATURAMENTO_CONSULTAR')) {
         return <UnauthorizedState description="A rotina de Faturamento exige a permissão FATURAMENTO_CONSULTAR." />;
@@ -65,12 +71,46 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
         );
     };
 
+    const retomar = async (values: RetomarReversaoFormValues) => {
+        const declarando = Number(values.acao) === AcaoRetomadaReversaoLeg.DeclararEfeitoDesfeito;
+        await runWithToast(
+            async () => {
+                await retomarReversaoMutation.mutateAsync({ id: faturamentoId, values });
+                setLegEmRetomada(null);
+            },
+            {
+                success: declarando
+                    ? { summary: 'Declaração registrada', detail: 'O operador declarou o efeito desfeito; é uma afirmação humana auditada, não uma confirmação do sistema.' }
+                    : { summary: 'Reversão confirmada pelo sistema' },
+                error: { summary: 'Erro ao retomar a reversão' },
+                rethrow: true
+            }
+        );
+    };
+
     const etapa = faturamento ? Number(faturamento.etapa) : 0;
 
     const headerActions = (
         <div className="flex gap-2 flex-wrap justify-content-end">
             <Button label="Voltar" icon="pi pi-arrow-left" severity="secondary" outlined onClick={() => router.push('/faturamento')} />
-            {faturamento && podeConfirmar(etapa) ? <PermissionGuard permission="FATURAMENTO_CONFIRMAR" mode="disable">{({ disabled }) => <Button label="Confirmar" icon="pi pi-check" severity="success" disabled={disabled} onClick={() => setDialog('confirmar')} />}</PermissionGuard> : null}
+            {faturamento && podeConfirmar(etapa) ? (
+                <PermissionGuard permission="FATURAMENTO_CONFIRMAR" mode="disable">
+                    {({ disabled }) => {
+                        const bloqueadoPorReversao = confirmacaoBloqueadaPorReversao(faturamento);
+                        return (
+                            <Button
+                                label="Confirmar"
+                                icon="pi pi-check"
+                                severity="success"
+                                disabled={disabled || bloqueadoPorReversao}
+                                tooltip={bloqueadoPorReversao ? 'Há um leg em reversão. Retome a reversão antes de confirmar o faturamento.' : undefined}
+                                tooltipOptions={{ showOnDisabled: true }}
+                                onClick={() => setDialog('confirmar')}
+                            />
+                        );
+                    }}
+                </PermissionGuard>
+            ) : null}
             {faturamento && podeCancelar(etapa) ? <PermissionGuard permission="FATURAMENTO_CANCELAR" mode="disable">{({ disabled }) => <Button label="Cancelar" icon="pi pi-ban" severity="danger" outlined disabled={disabled} onClick={() => setDialog('cancelar')} />}</PermissionGuard> : null}
         </div>
     );
@@ -96,6 +136,58 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
                         </div>
                     </Card>
 
+                    {faturamento.etapaDivergeDosLegs ? (
+                        <Message
+                            className="w-full mb-3"
+                            severity="error"
+                            text="A etapa do faturamento não reflete o estado dos legs: há leg integrado cujo efeito a etapa atual não mostra. Se a etapa é Erro ou Cancelado, esse efeito pode continuar de pé. Confira os legs abaixo e as ocorrências."
+                        />
+                    ) : null}
+                    {faturamento.possuiLegEmReversao ? (
+                        <Message
+                            className="w-full mb-3"
+                            severity="warn"
+                            text="Há um leg em reversão: o efeito original pode continuar de pé até a retomada."
+                        />
+                    ) : null}
+
+                    <Card title="Legs de integração" className="mb-3">
+                        <DataTable value={linhasLegs} dataKey="key" responsiveLayout="scroll" stripedRows size="small">
+                            <Column header="Leg" body={(row: LinhaLegFaturamento) => row.legLabel} />
+                            <Column
+                                header="Estado"
+                                body={(row: LinhaLegFaturamento) =>
+                                    row.registro ? (
+                                        <Tag value={estadoLegLabel(Number(row.registro.estado))} severity={estadoLegSeverity(Number(row.registro.estado)) ?? undefined} />
+                                    ) : (
+                                        <span className="text-color-secondary">Sem registro</span>
+                                    )
+                                }
+                            />
+                            <Column header="Ocorreu em" body={(row: LinhaLegFaturamento) => (row.registro ? formatDateTime(row.registro.ocorreuEm) : '—')} />
+                            <Column header="Motivo" body={(row: LinhaLegFaturamento) => row.registro?.motivo ?? '—'} />
+                            <Column
+                                header="Ação"
+                                body={(row: LinhaLegFaturamento) =>
+                                    row.registro && Number(row.registro.estado) === EstadoLegIntegracaoFaturamento.EmReversao ? (
+                                        <PermissionGuard permission="FATURAMENTO_RETOMAR_REVERSAO" mode="disable">
+                                            {({ disabled }) => (
+                                                <Button
+                                                    label="Retomar"
+                                                    icon="pi pi-replay"
+                                                    size="small"
+                                                    outlined
+                                                    disabled={disabled || retomarReversaoMutation.isPending}
+                                                    onClick={() => setLegEmRetomada(row.leg)}
+                                                />
+                                            )}
+                                        </PermissionGuard>
+                                    ) : null
+                                }
+                            />
+                        </DataTable>
+                    </Card>
+
                     <Card title="Ocorrências" className="mb-3">
                         <DataTable value={ocorrenciasQuery.data ?? []} dataKey="id" loading={ocorrenciasQuery.isFetching} emptyMessage="Nenhuma ocorrência." responsiveLayout="scroll" stripedRows size="small">
                             <Column header="Tipo" body={(row: FaturamentoOcorrenciaResponse) => <Tag value={tipoOcorrenciaLabel(Number(row.tipo))} severity={tipoOcorrenciaSeverity(Number(row.tipo)) ?? undefined} />} />
@@ -117,6 +209,7 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
 
                     <ConfirmarFaturamentoDialog visible={dialog === 'confirmar'} loading={confirmarMutation.isPending} empresaId={faturamento.empresaId} onHide={() => setDialog(null)} onSubmit={confirmar} />
                     <ReasonDialog visible={dialog === 'cancelar'} title="Cancelar faturamento" confirmLabel="Cancelar faturamento" loading={cancelarMutation.isPending} onHide={() => setDialog(null)} onConfirm={cancelar} />
+                    <RetomarReversaoDialog visible={dialogRetomarVisivel} loading={retomarReversaoMutation.isPending} leg={legEmRetomada} onHide={() => setLegEmRetomada(null)} onSubmit={retomar} />
                 </>
             ) : null}
         </>

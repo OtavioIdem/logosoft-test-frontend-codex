@@ -1288,6 +1288,13 @@ Gerado do código; a ordem é a dos arquivos.
 | `POST` | `/preparar` | `FaturamentoPreparar` | `Preparar([FromBody] PrepararFaturamentoRequest request)` |
 | `POST` | `/{id:guid}/confirmar` | `FaturamentoConfirmar` | `Confirmar(Guid id, [FromBody] ConfirmarFaturamentoRequest request)` |
 | `POST` | `/{id:guid}/cancelar` | `FaturamentoCancelar` | `Cancelar(Guid id, [FromBody] CancelarFaturamentoRequest request)` |
+| `POST` | `/{id:guid}/retomar-reversao` | `FaturamentoRetomarReversao` | `RetomarReversao(Guid id, [FromBody] RetomarReversaoLegRequest request)` |
+
+> **Adendo v1.11.0a8b55 (D22):** a linha `retomar-reversao` não constava do levantamento de 2026-08-12
+> (v1.18). Ela foi acrescentada pela sessão principal a partir de
+> `New project 3/src/Erp.Api/Controllers/Faturamento/FaturamentosController.cs:99-106`
+> (`[HttpPost("{id:guid}/retomar-reversao")]`, `[RequiredPermission(SystemPermissions.FaturamentoRetomarReversao)]`).
+> O cabeçalho "576 endpoints" descreve o levantamento original e não foi alterado.
 
 ### `api/financeiro/condicoes-pagamento`
 

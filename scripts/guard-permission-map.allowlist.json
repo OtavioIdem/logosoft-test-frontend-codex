@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "1.11.0a8b54.c2",
+  "version": "1.11.0a8b55",
   "status": "registro-fechado-monotonico",
   "contractDocument": "docs/backend-v1.23/CONTRATO-API-v1.23.md",
   "auditPolicy": {
@@ -119,7 +119,7 @@
       "endpoint": "/api/seguranca/grupos-acesso",
       "declaredPermission": "SEGURANCA_PERMISSOES_GERENCIAR",
       "contractPermission": "SEGURANCA_GRUPOS_ACESSO_CONSULTAR / SEGURANCA_GRUPOS_ACESSO_GERENCIAR",
-      "target": "b54 — corrigir ou remover scaffold morto",
+      "target": "F5.6 — remover a camada de CRUD genérico órfã (scaffold seguranca-grupos)",
       "decision": "exceção registrada (D2), impacto zero — useGrupos/useUsuarios sem consumidor"
     }
   ]

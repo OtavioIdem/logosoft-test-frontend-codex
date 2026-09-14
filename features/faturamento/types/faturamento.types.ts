@@ -25,6 +25,40 @@ export enum TipoDocumentoFiscal {
     Outro = 99
 }
 
+// LegIntegracaoFaturamento (FaturamentoLegIntegracao.cs:12-20): passo da cadeia de integração do faturamento.
+export enum LegIntegracaoFaturamento {
+    GerarNotaFiscal = 1,
+    GerarXmlEnvio = 2,
+    AssinarXml = 3,
+    TransmitirAutorizarSefaz = 4,
+    BaixarEstoque = 5,
+    GerarContaReceber = 6
+}
+
+// EstadoLegIntegracaoFaturamento (FaturamentoLegIntegracao.cs:31-): 4 estados, não 3 (armadilha 2 da b55).
+export enum EstadoLegIntegracaoFaturamento {
+    Integrado = 1,
+    Falhou = 2,
+    Revertido = 3,
+    EmReversao = 4
+}
+
+// AcaoRetomadaReversaoLeg (FaturamentoContracts.cs:124-128): as duas saídas de EmReversao.
+export enum AcaoRetomadaReversaoLeg {
+    ReaplicarInversa = 1,
+    DeclararEfeitoDesfeito = 2
+}
+
+// FaturamentoLegResponse (FaturamentoContracts.cs:56).
+export type FaturamentoLegResponse = {
+    id: Guid;
+    leg: LegIntegracaoFaturamento | number;
+    estado: EstadoLegIntegracaoFaturamento | number;
+    ocorreuEm: IsoDateTime;
+    responsavelId?: Guid | null;
+    motivo?: string | null;
+};
+
 export type FaturamentoResponse = {
     id: Guid;
     empresaId: Guid;
@@ -39,6 +73,13 @@ export type FaturamentoResponse = {
     canceladoEm?: IsoDateTime | null;
     canceladoPor?: Guid | null;
     motivoCancelamento?: string | null;
+    // Os 4 campos abaixo só vêm preenchidos no detalhe (GET /api/faturamento/{id}); na listagem
+    // (GET /api/faturamento) chegam vazios ou falsos por escolha do backend (FaturamentoConsultaUseCases.cs:56-63).
+    legs?: FaturamentoLegResponse[] | null;
+    possuiLegComFalha?: boolean;
+    possuiLegRevertido?: boolean;
+    etapaDivergeDosLegs?: boolean;
+    possuiLegEmReversao?: boolean;
 };
 
 export type FaturamentoHistoricoResponse = {
@@ -99,4 +140,10 @@ export type ConfirmarFaturamentoFormValues = {
     validarDadosFiscaisProduto: boolean;
     condicaoPagamentoId?: string | null;
     primeiraDataVencimentoContaReceber?: Date | null;
+};
+// Payload validado de RetomarReversaoLegRequest (FaturamentoContracts.cs:137-140): { leg, acao, motivo }.
+export type RetomarReversaoFormValues = {
+    leg: LegIntegracaoFaturamento | number;
+    acao: AcaoRetomadaReversaoLeg | number;
+    motivo: string;
 };

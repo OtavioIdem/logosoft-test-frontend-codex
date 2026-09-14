@@ -1,3 +1,167 @@
+# v1.11.0a8b55
+
+## Faturamento mostra os seis legs, avisa quando a etapa mente, e oferece a retomada de reversão
+
+É a primeira fatia da onda F2 (`D21`). Corrige o P4 do plano da onda: um leg preso em reversão deixava
+estoque baixado ou título a receber de pé, com o faturamento em "Cancelado" ou "Erro", sem que a tela
+dissesse isso e sem caminho de UI para resolver. Plano e estado da execução em
+`docs/fatias/v1.11.0a8b55-f2-legs-faturamento.md`; inventário em
+`docs/arquitetura/debate/02-inventario-legs-faturamento.md`; decisões `D21` a `D32`.
+
+**Risco da fatia: `CRITICAL`.** A retomada chama porta inversa real: descarta nota não transmitida (legs 1
+a 3), estorna baixa de estoque (leg 5) e cancela conta a receber (leg 6). A declaração de efeito desfeito é
+afirmação humana. Conferido em `CatalogoLegIntegracaoFaturamento.cs` e `RetomarReversaoLegUseCase.cs`.
+
+### O que o backend já entregava e a tela não lia
+
+Tudo conferido no código do backend (`New project 3/src`), porque o documento de contrato não publica
+valores de enum e tem três erros nesta seção (armadilhas 2 a 4 do plano).
+
+| O que a UI fazia | O que o backend entrega |
+| --- | --- |
+| `FaturamentoResponse` com 13 campos | 18: mais `legs`, `possuiLegComFalha`, `possuiLegRevertido`, `etapaDivergeDosLegs`, `possuiLegEmReversao` |
+| Não chamava `POST /api/faturamento/{id}/retomar-reversao` | Endpoint sob `FATURAMENTO_RETOMAR_REVERSAO`, motivo obrigatório de até 500 caracteres |
+| Motivo do cancelamento sem teto | `MaximumLength(300)` (`FaturamentoValidators.cs:35`) |
+| Recarregava o detalhe só em sucesso | É a falha no meio do cancelamento que cria o leg `EmReversao` e a ocorrência de erro |
+
+### O que a tela de detalhe do faturamento passa a fazer
+
+**Legs de integração** (`D25`)
+
+Um cartão novo mostra sempre os seis legs, na ordem da cadeia:
+1. Gerar nota fiscal
+2. Gerar XML de envio
+3. Assinar XML
+4. Transmitir e autorizar na SEFAZ
+5. Baixar estoque
+6. Gerar conta a receber
+
+Cada linha traz o estado, a data e o motivo. Leg que ainda não rodou aparece como "Sem registro". Estado
+com valor desconhecido aparece como "Estado desconhecido (n)", e nunca como "Revertido".
+
+**Os dois alertas**
+
+- **Etapa × legs.** Quando `etapaDivergeDosLegs` vem verdadeiro, a tela avisa que a etapa não reflete o
+  estado dos legs. Em Erro ou Cancelado, isso quer dizer que um efeito pode continuar de pé.
+- **Leg em reversão.** Quando `possuiLegEmReversao` vem verdadeiro, a tela avisa que o efeito original pode
+  continuar de pé até a retomada.
+
+**Retomar reversão** (`D27`, `D28`)
+
+O botão aparece só na linha do leg em reversão, sob `FATURAMENTO_RETOMAR_REVERSAO`.
+
+- **O diálogo.** O leg da linha aparece só para leitura. A ação ("Reaplicar a inversa" ou "Declarar efeito
+  desfeito") começa vazia. O motivo é obrigatório e aceita até 500 caracteres.
+- **Declarar.** Escolher essa ação mostra o aviso de afirmação humana.
+- **Toasts.** Sucesso dá "Reversão confirmada pelo sistema" para Reaplicar e "Declaração registrada" para
+  Declarar.
+- **Estado exibido.** A tela não troca o estado por conta própria. O que aparece vem sempre da nova consulta.
+
+**Confirmar** (`D23`)
+
+Fica desabilitado quando há leg em reversão, com o motivo no tooltip.
+
+**Reconsulta no erro** (`D27`)
+
+Confirmar, cancelar e retomar recarregam o detalhe, o histórico e as ocorrências também quando falham. É
+na falha que o leg em reversão e a ocorrência de erro aparecem.
+
+**Motivo do cancelamento** (`D30`)
+
+Limitado a 300 caracteres, igual ao backend.
+
+**O que não muda** (`D26`)
+
+A listagem de faturamentos, a rota e o menu continuam como estavam. O backend não traz legs na listagem, e
+um sinal ali diria "sem problema" em toda linha.
+
+### Seção operacional — leia antes do deploy
+
+1. **Conceder `FATURAMENTO_RETOMAR_REVERSAO` junto com `FATURAMENTO_CONSULTAR`** a quem resolve reversão
+   de faturamento, antes do deploy. Só a permissão de retomada não abre a tela: a rota e o detalhe exigem
+   consultar. Nenhuma rota ou item de menu muda.
+2. **Confirmar fica indisponível quando o faturamento tem leg em reversão** (`D23`, risco de acesso
+   `ILUSAO`). O backend já recusava esse caso depois de o operador preencher os campos fiscais. Nenhuma
+   operação que conclui hoje deixa de concluir.
+3. **"Declarar efeito desfeito" é afirmação humana, auditada como estorno**, e encerra o aviso de reversão
+   pendente sem nenhuma chamada ao sistema. Oriente quem recebe a permissão: só declarar depois de
+   conferir fora do sistema que o estoque foi reposto, a nota descartada ou o título cancelado.
+4. **Condição que já existe hoje, e não muda nesta versão:** cancelar faturamento com leg integrado exige
+   também `FATURAMENTO_REVERTER_INTEGRACAO`, que não aparece na tela de grupos. Sem ela, o cancelamento
+   devolve "Recurso não encontrado.". Fica para a fatia de cancelamento (`D24`).
+5. **Limite do dano, conferido no domínio:** cancelar conta a receber com qualquer valor recebido é
+   recusado pelo backend (`ContaReceber.cs:80`), e o descarte de nota só vale para nota não transmitida.
+
+### Gate de contrato (`D22`)
+
+O `validate:backend-contract-map` lê `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md`, levantamento manual da
+v1.18 (commit único `9c16a39`, sem gerador no backend, sem proteção de hook). A rota de retomada foi
+acrescentada ali como adendo, citando `FaturamentosController.cs:99-106`, e o teste do mapa passa de 576
+para 577 rotas com asserção nominal. Medido logo após o adendo: gate com saída `0`, e o teste antigo
+vermelho com "expected 576 but got 577". A migração do gate para o `CONTRATO-API-v1.23.md` gerado fica como
+fatia de esteira.
+
+### Testes, e a prova de que sabem falhar
+
+Recorte de 7 arquivos, com **67 testes**. A contagem é a saída "Tests 67 passed (67)" do `npx vitest run` nos 7 arquivos, medida pelo QA da tentativa 3, duas vezes. Antes da correção `D32` eram 66:
+
+- **Unitários:** `tests/unit/faturamentoPayload.test.ts`, `faturamentoStructure.test.ts`, `faturamentoLabels.test.ts` (novo), `backendContractMap.test.ts` (576 → 577, com asserção nominal da rota) e `backendPermissions.test.ts`.
+- **Componente:** `tests/components/RetomarReversaoDialog.test.tsx` (novo, 4 casos) e `FaturamentoDetalhePage.test.tsx` (novo, 10 casos).
+
+Cada sabotagem abaixo foi feita no código de produção, com backup e restauração conferida com `cmp`, e derrubou **exatamente um** dos 13 testes de componente da bateria anterior à correção ("1 failed | 12 passed (13)"): o que a nomeia. As linhas de AC-6 e AC-10 foram reproduzidas também pela sessão principal, com o mesmo resultado.
+
+| Sabotagem | Reprovou |
+| --- | --- |
+| Retomar aparece também em leg Integrado | `AC-6: botão Retomar existe só na linha em reversão` |
+| Retomada volta a reconsultar só no sucesso (`onSuccess`) | `AC-10: após retomada rejeitada reconsulta o detalhe…` |
+| Aviso de "Declarar" sempre oculto | `AC-8: Declarar exibe o aviso de afirmação humana; Reaplicar não` |
+| Confirmar sem o bloqueio por reversão | `AC-12: Confirmar desabilitado com leg em reversão e habilitado sem` |
+| Tabela sem as linhas "Sem registro" | `AC-2: mostra 6 linhas na ordem do catálogo e Sem registro para o leg 4` |
+
+Unitários: estado desconhecido (0, 5, 99) nunca vira "Revertido". Os motivos aceitam 500 e 300 caracteres e recusam 501 e 301. Enum em string e campo extra são recusados.
+
+**Foram precisas três tentativas neste nó.** A primeira não entregou os testes de componente nem o spec, alegando que o `Dropdown` do PrimeReact não era testável em jsdom — alegação já medida e derrubada na b54.c2. A segunda entregou testes que passavam sem testar: um único caso na tela, e seleção de opção dentro de um `if` que pulava em silêncio. A terceira teve títulos de caso prescritos e sabotagem obrigatória, e fechou.
+
+**O QA bloqueou a primeira versão desta bateria, com razão.** Numa segunda revisão, feita no nível de modelo que o grafo exige, o QA fez nove sabotagens. Quatro passaram sem nenhum teste vermelho:
+
+- valores do enum trocados (o teste comparava pelo membro, não pelo número);
+- "Revertido" inventado pela tela depois de uma falha;
+- tooltip do Confirmar sem `showOnDisabled`;
+- permissão a mais no `anyOf` da rota.
+
+O nó `correction` (`D32`) acrescentou os valores literais dos enums, o cenário direto de POST falho com o GET ainda em 4, o teste do tooltip no e2e e as listas `anyOf` literais. Depois disso, cada uma das três sabotagens de unidade e componente (S1, S2 e S4) derrubou exatamente o teste que a nomeia: "1 failed | 66 passed (67)" em cada uma, no recorte de 7 arquivos, medido pelo QA da tentativa 3. A sabotagem do tooltip foi medida no navegador:
+
+- **Com a sabotagem (sem `showOnDisabled`):** o teste `AC-12 S4` do e2e falhou, com `.p-tooltip` não encontrado.
+- **Restaurado:** o mesmo teste passou.
+- **Como foi rodado:** `--grep "AC-12 S4"`, num servidor isolado na 3411 (PID 7344, `next dev -p 3411` em `Documents\New project`).
+- **Antes de cada rodada:** o chunk servido confirmou que a sabotagem, e depois a restauração, estavam no ar.
+
+O registro de exceção GC-01, com alvo `b54` vencido desde a b53, passou a apontar para a F5.6.
+
+**Dívida registrada (`D31`).** Quando a gravação falha, o diálogo que faz `await onSubmit` sem `catch` gera uma rejeição não tratada no console. O toast e o diálogo aberto estão certos. É padrão da base (142 `rethrow: true` em 63 arquivos de `features/`, medido por grep) e vai para a F5.5.
+
+### E2E
+
+`tests/e2e/faturamento-legs.spec.ts` (novo) cobre quatro sessões nominais:
+
+| Sessão | Permissões | O que se afirma |
+| --- | --- | --- |
+| S1 | `FATURAMENTO_CONSULTAR` | Retomar visível e desabilitado |
+| S2 | `FATURAMENTO_CONSULTAR` + `FATURAMENTO_RETOMAR_REVERSAO` | Retomar habilitado. O corpo enviado é exatamente `{ leg: 5, acao: 1, motivo }`, numérico |
+| S3 | só `FATURAMENTO_RETOMAR_REVERSAO` | Estado não autorizado, sem tabela de legs e nenhum `POST` (contador registrado antes da navegação) |
+| S4 | `FATURAMENTO_CONSULTAR` + `FATURAMENTO_CONFIRMAR` | Confirmar desabilitado mostra o tooltip do motivo (`showOnDisabled`) |
+
+**Servidor.** Único, na porta 3411. A identidade foi conferida pela linha de comando do PID, que roda `next dev -p 3411` a partir de `Documents\New project`. Antes de subir, a porta estava livre. No fim, foi liberada.
+
+**Resultado.** Rodou `faturamento-legs.spec.ts` junto com `permissions.spec.ts`, porque a fixture compartilhada ganhou as rotas de faturamento. Foram **14 de 14 nas duas execuções**, com os mesmos títulos. Depois da correção pós-QA, com o teste S4 acrescentado, rodou de novo em outro servidor isolado (PID 26544, identidade conferida da mesma forma): **15 de 15 nas duas execuções**.
+
+### O que fica aberto, nomeado
+
+- **Fluxo de Cancelar** (`D24`): guard por leg 4 integrado, recusa como lista, `FATURAMENTO_REVERTER_INTEGRACAO`.
+- **Sinal de legs na listagem** (`D26`): a listagem do backend não traz legs; depende da pergunta B-3.
+- **Identificadores de usuário crus** (`D30`): F5.
+- **Perguntas ao backend** B-1 a B-9, na seção 8 do plano.
+
 # v1.11.0a8b54.c2
 
 ## Estado de Bens remodelado contra o contrato, a baixa volta a concluir, e o gate de campo ganha prova durável

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sanitizePayload } from '@/lib/http/requestUtils';
-import { cancelarFaturamentoSchema, confirmarFaturamentoSchema, prepararFaturamentoSchema } from '@/features/faturamento/schemas/faturamentoSchemas';
-import { TipoDocumentoFiscal } from '@/features/faturamento/types/faturamento.types';
+import { cancelarFaturamentoSchema, confirmarFaturamentoSchema, prepararFaturamentoSchema, retomarReversaoLegSchema } from '@/features/faturamento/schemas/faturamentoSchemas';
+import { TipoDocumentoFiscal, LegIntegracaoFaturamento, AcaoRetomadaReversaoLeg } from '@/features/faturamento/types/faturamento.types';
 
 const pedidoId = '11111111-1111-1111-1111-111111111111';
 const condicaoId = '22222222-2222-2222-2222-222222222222';
@@ -44,5 +44,30 @@ describe('Faturamento — payloads', () => {
     it('monta cancelamento com motivo', () => {
         expect(build(cancelarFaturamentoSchema, { motivo: 'Erro de emissão' })).toEqual({ motivo: 'Erro de emissão' });
         expect(() => cancelarFaturamentoSchema.parse({ motivo: '' })).toThrow();
+    });
+
+    it('AC-17: cancelamento aceita 300 caracteres e recusa 301', () => {
+        const motivo300 = 'x'.repeat(300);
+        const motivo301 = 'x'.repeat(301);
+        expect(build(cancelarFaturamentoSchema, { motivo: motivo300 })).toEqual({ motivo: motivo300 });
+        expect(() => cancelarFaturamentoSchema.parse({ motivo: motivo301 })).toThrow('O motivo aceita até 300 caracteres.');
+    });
+
+    it('AC-9: retomada aceita motivo de 500 caracteres e recusa 501', () => {
+        const motivo500 = 'x'.repeat(500);
+        const motivo501 = 'x'.repeat(501);
+        expect(build(retomarReversaoLegSchema, { leg: LegIntegracaoFaturamento.BaixarEstoque, acao: AcaoRetomadaReversaoLeg.ReaplicarInversa, motivo: motivo500 })).toEqual({ leg: 5, acao: 1, motivo: motivo500 });
+        expect(() => retomarReversaoLegSchema.parse({ leg: LegIntegracaoFaturamento.BaixarEstoque, acao: AcaoRetomadaReversaoLeg.ReaplicarInversa, motivo: motivo501 })).toThrow('O motivo aceita até 500 caracteres.');
+    });
+
+    it('AC-9: retomada aplica trim ao motivo e recusa vazio/só espaços', () => {
+        expect(build(retomarReversaoLegSchema, { leg: LegIntegracaoFaturamento.BaixarEstoque, acao: AcaoRetomadaReversaoLeg.ReaplicarInversa, motivo: '  test  ' })).toEqual({ leg: 5, acao: 1, motivo: 'test' });
+        expect(() => retomarReversaoLegSchema.parse({ leg: LegIntegracaoFaturamento.BaixarEstoque, acao: AcaoRetomadaReversaoLeg.ReaplicarInversa, motivo: '' })).toThrow();
+        expect(() => retomarReversaoLegSchema.parse({ leg: LegIntegracaoFaturamento.BaixarEstoque, acao: AcaoRetomadaReversaoLeg.ReaplicarInversa, motivo: '   ' })).toThrow();
+    });
+
+    it('AC-9: retomada recusa enum em string e campo extra', () => {
+        expect(() => retomarReversaoLegSchema.parse({ leg: '5', acao: 1, motivo: 'test' })).toThrow();
+        expect(() => retomarReversaoLegSchema.parse({ leg: 5, acao: 1, motivo: 'test', extra: true })).toThrow();
     });
 });

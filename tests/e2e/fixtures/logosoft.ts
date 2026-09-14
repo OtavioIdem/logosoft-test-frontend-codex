@@ -293,6 +293,8 @@ const contasPagar = [{
 }];
 const auditoria = [{ id: 'aud-1', modulo: 'Vendas', entidade: 'PedidoVenda', entidadeId: pedidoVenda.id, acao: 1, descricao: 'Pedido de venda criado', usuario: 'Administrador E2E', usuarioId: e2eUsuarioId, empresaId, filialId, criadoEm: '2026-05-08T12:00:00.000Z' }];
 
+const faturamentoId = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+
 const notaFiscalId = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
 const documentoAuxiliarId = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
 const chaveAcessoFiscal = '35260500000000000100550010000001001000001000';
@@ -703,6 +705,65 @@ export const mockApiRoutes = async (page: Page) => {
         if (path.includes('/api/financeiro/contas-receber')) return route.fulfill(json(contasReceber));
         if (path.includes('/api/financeiro/contas-pagar')) return route.fulfill(json(contasPagar));
         if (path.includes('/api/auditoria/eventos')) return route.fulfill(json(auditoria));
+
+        // Faturamento: GET /api/faturamento/{id}, /historico, /ocorrencias; POST /retomar-reversao
+        const faturamento = {
+            id: faturamentoId,
+            empresaId,
+            filialId,
+            pedidoVendaId: pedidoVenda.id,
+            notaFiscalId: null,
+            contaReceberId: null,
+            etapa: 2,
+            valorTotal: 251,
+            confirmadoEm: null,
+            confirmadoPor: null,
+            canceladoEm: null,
+            canceladoPor: null,
+            motivoCancelamento: null,
+            legs: [
+                {
+                    id: '10101010-1010-1010-1010-101010101010',
+                    leg: 5,
+                    estado: 4,
+                    ocorreuEm: '2026-09-14T10:00:00Z',
+                    motivo: 'Reversão em andamento'
+                }
+            ],
+            possuiLegComFalha: false,
+            possuiLegRevertido: false,
+            etapaDivergeDosLegs: false,
+            possuiLegEmReversao: true
+        };
+
+        const faturamentoHistorico = [
+            {
+                id: '20202020-2020-2020-2020-202020202020',
+                statusAnterior: 1,
+                statusNovo: 2,
+                observacao: 'Faturamento preparado',
+                usuarioId: e2eUsuarioId,
+                data: '2026-09-14T09:00:00Z'
+            }
+        ];
+
+        const faturamentoOcorrencias = [
+            {
+                id: '30303030-3030-3030-3030-303030303030',
+                tipo: 2,
+                mensagem: 'Baixa de estoque em andamento',
+                data: '2026-09-14T10:00:00Z'
+            }
+        ];
+
+        if (path === '/api/faturamento' && method === 'GET') return route.fulfill(json({ items: [faturamento], page: 1, pageSize: 20, totalItems: 1, totalPages: 1 }));
+        if (path === `/api/faturamento/${faturamentoId}` && method === 'GET') return route.fulfill(json(faturamento));
+        if (path === `/api/faturamento/${faturamentoId}/historico` && method === 'GET') return route.fulfill(json(faturamentoHistorico));
+        if (path === `/api/faturamento/${faturamentoId}/ocorrencias` && method === 'GET') return route.fulfill(json(faturamentoOcorrencias));
+        if (path === `/api/faturamento/${faturamentoId}/retomar-reversao` && (method as string) === 'POST') {
+            const body = request.postDataJSON() as Record<string, unknown>;
+            return route.fulfill(json({ success: true, leg: body.leg, acao: body.acao, motivo: body.motivo }));
+        }
 
         return route.fulfill(json([]));
     });

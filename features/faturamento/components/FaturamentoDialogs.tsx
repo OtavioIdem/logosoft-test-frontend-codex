@@ -16,9 +16,9 @@ import { FormGrid } from '@/components/forms/FormGrid';
 import { DateInput } from '@/components/forms/DateInput';
 import { usePedidosVenda } from '@/features/vendas/hooks/useVendasResources';
 import { useCondicoesPagamentoOptions } from '@/features/financeiro/hooks/useFinanceiroResources';
-import { confirmarFaturamentoSchema, prepararFaturamentoSchema } from '@/features/faturamento/schemas/faturamentoSchemas';
-import { ConfirmarFaturamentoFormValues, PrepararFaturamentoFormValues, TipoDocumentoFiscal } from '@/features/faturamento/types/faturamento.types';
-import { tipoDocumentoOptions } from '@/features/faturamento/components/faturamentoLabels';
+import { confirmarFaturamentoSchema, prepararFaturamentoSchema, retomarReversaoLegSchema } from '@/features/faturamento/schemas/faturamentoSchemas';
+import { AcaoRetomadaReversaoLeg, ConfirmarFaturamentoFormValues, LegIntegracaoFaturamento, PrepararFaturamentoFormValues, RetomarReversaoFormValues, TipoDocumentoFiscal } from '@/features/faturamento/types/faturamento.types';
+import { acaoRetomadaOptions, legFaturamentoLabel, tipoDocumentoOptions } from '@/features/faturamento/components/faturamentoLabels';
 
 const buildErrors = (error: z.ZodError) => {
     const map: Record<string, string> = {};
@@ -142,6 +142,80 @@ export const ConfirmarFaturamentoDialog = ({ visible, loading, empresaId, onHide
                     <label htmlFor="fatValidar" className="font-medium">Validar dados fiscais</label>
                 </div>
             </FormGrid>
+        </Dialog>
+    );
+};
+
+// RetomarReversaoDialog (D28): o leg vem da linha clicada (só leitura); a ação começa vazia; o motivo é
+// obrigatório, com contador até 500 caracteres; "Declarar efeito desfeito" ganha um aviso de afirmação humana.
+export const RetomarReversaoDialog = ({
+    visible,
+    loading,
+    leg,
+    onHide,
+    onSubmit
+}: {
+    visible: boolean;
+    loading?: boolean;
+    leg: LegIntegracaoFaturamento | number | null;
+    onHide: () => void;
+    onSubmit: (values: RetomarReversaoFormValues) => Promise<void>;
+}) => {
+    const [acao, setAcao] = useState<AcaoRetomadaReversaoLeg | number | null>(null);
+    const [motivo, setMotivo] = useState('');
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    useEffect(() => {
+        if (visible) {
+            setAcao(null);
+            setMotivo('');
+            setErrors({});
+        }
+    }, [visible]);
+
+    const confirmar = async () => {
+        const parsed = retomarReversaoLegSchema.safeParse({ leg, acao, motivo });
+        if (!parsed.success) { setErrors(buildErrors(parsed.error)); return; }
+        await onSubmit(parsed.data);
+    };
+
+    return (
+        <Dialog header="Retomar reversão" visible={visible} modal style={{ width: 'min(36rem, 96vw)' }} footer={footer('Retomar', loading, onHide, confirmar)} onHide={onHide}>
+            <div className="field">
+                <span className="block text-color-secondary text-sm">Leg</span>
+                <strong>{leg !== null ? legFaturamentoLabel(Number(leg)) : '—'}</strong>
+            </div>
+            <div className="field">
+                <label htmlFor="retomarAcao" className="font-medium">Ação *</label>
+                <Dropdown
+                    inputId="retomarAcao"
+                    value={acao}
+                    options={acaoRetomadaOptions}
+                    placeholder="Selecione a ação"
+                    className={classNames('w-full', { 'p-invalid': errors.acao })}
+                    onChange={(event) => { setAcao(event.value); setErrors((current) => ({ ...current, acao: '' })); }}
+                />
+                <FieldError message={errors.acao} />
+            </div>
+            {acao === AcaoRetomadaReversaoLeg.DeclararEfeitoDesfeito ? (
+                <Message
+                    className="w-full mb-3"
+                    severity="warn"
+                    text="Declarar o efeito desfeito é uma afirmação humana, auditada: o sistema não confirma nada, apenas registra que você verificou, fora do sistema, que o efeito não está mais de pé."
+                />
+            ) : null}
+            <div className="field">
+                <label htmlFor="retomarMotivo" className="font-medium">Motivo *</label>
+                <InputTextarea
+                    id="retomarMotivo"
+                    value={motivo}
+                    rows={4}
+                    maxLength={500}
+                    className={classNames('w-full', { 'p-invalid': errors.motivo })}
+                    onChange={(event) => { setMotivo(event.target.value); setErrors((current) => ({ ...current, motivo: '' })); }}
+                />
+                <small className="text-color-secondary block mt-1">{motivo.length}/500</small>
+                <FieldError message={errors.motivo} />
+            </div>
         </Dialog>
     );
 };

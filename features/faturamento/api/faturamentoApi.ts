@@ -1,7 +1,7 @@
 import { httpClient } from '@/lib/http/httpClient';
 import { mapApiError } from '@/lib/http/apiError';
 import { cleanQueryParams, sanitizePayload } from '@/lib/http/requestUtils';
-import { cancelarFaturamentoSchema, confirmarFaturamentoSchema, prepararFaturamentoSchema } from '@/features/faturamento/schemas/faturamentoSchemas';
+import { cancelarFaturamentoSchema, confirmarFaturamentoSchema, prepararFaturamentoSchema, retomarReversaoLegSchema } from '@/features/faturamento/schemas/faturamentoSchemas';
 import {
     ConfirmarFaturamentoResponse,
     FaturamentoHistoricoResponse,
@@ -74,6 +74,13 @@ export const faturamentoApi = {
         const payload = parseSchema(cancelarFaturamentoSchema, { motivo });
         return runRequest(async () => {
             const response = await httpClient.post<FaturamentoResponse>(`/api/faturamento/${id}/cancelar`, payload);
+            return response.data;
+        });
+    },
+    async retomarReversao(id: string, values: unknown) {
+        const payload = parseSchema(retomarReversaoLegSchema, values);
+        return runRequest(async () => {
+            const response = await httpClient.post<FaturamentoResponse>(`/api/faturamento/${id}/retomar-reversao`, payload);
             return response.data;
         });
     }
