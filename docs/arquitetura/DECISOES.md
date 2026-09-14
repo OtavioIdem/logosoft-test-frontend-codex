@@ -517,3 +517,38 @@ remodelagem do estado de Bens (`D15`) e a prova durável deste gate.
 gate protege o repositório mas nada protege o gate. Apagar `scripts/gate-contract-fields.mjs` hoje
 faria o `validate:source` reprovar por arquivo ausente — essa parte está coberta pelo `statSync` do
 validador — mas cegá-lo por dentro, como já aconteceu duas vezes na `b53`, passaria sem teste algum.
+
+### D17 — o gate de campo passa a ler o documento de contrato e a aplicar o teto, antes do merge da `b54.c1`
+
+Data: 2026-09-14
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre quatro comentários de revisão do
+Sourcery no pull request 16, conferidos um a um contra o código.
+Decisão: `scripts/gate-contract-fields.mjs` deixa de comparar contra o objeto `BACKEND_CONTRACTS`
+copiado à mão e passa a extrair os campos dos blocos `csharp` rotulados `Response` de
+`docs/backend-v1.23/CONTRATO-API-v1.23.md` em tempo de execução. O gate passa a reprovar quando o
+registro de exceção tem mais entradas que o `teto`, e quando uma entrada não corresponde a
+divergência observada. O teste de regressão do lado de `origin/main` passa a buscar o campo dentro
+do bloco do tipo nomeado, incluindo a base de interseção, e não no arquivo inteiro. Entra como
+commit de acompanhamento da `b54.c1`, que não foi mesclada.
+Alternativas descartadas:
+1. Mesclar e corrigir numa fatia seguinte — o changelog e o pull request afirmam que o gate compara
+   contra o documento versionado, e mesclar publicaria uma afirmação falsa sobre o mecanismo que
+   deveria proteger a classe inteira.
+2. Manter a lista manual e só corrigir o texto — o gate continuaria validando contra campos
+   desatualizados assim que o contrato fosse regenerado, que o plano da onda manda fazer a cada
+   fatia do backend.
+Por quê: três dos quatro comentários procedem. O primeiro não: `.github/workflows/frontend-ci.yml`
+tem `fetch-depth: 0` desde `D9`, e o log da execução `34843761978` mostra
+`tests/unit/gateContractFields.test.ts` rodando e passando. A sonda da sessão principal, que injetou
+um campo fantasma e o viu acusado, não tinha como detectar a lista manual, porque a lista manual
+também acusa campo desconhecido. O QA da `b54.c1` também não detectou.
+Reversível: sim. Gatilho de revisita: o documento de contrato mudar de formato.
+Quem arbitrou: orquestrador
+Impacto: `scripts/gate-contract-fields.mjs`, `tests/unit/gateContractFields.test.ts`, e a entrada da
+`b54.c1` no `CHANGELOG.md`, que passa a registrar a correção.
+
+**Complemento, depois das sondas da sessão principal:** a primeira rodada da correção fechou os
+três defeitos apontados, e as sondas revelaram um quarto, que a revisão não tinha visto. O registro
+sem campo `teto` passava sem limite, e o teto só barrava excesso (`>`), sem exigir que batesse
+exatamente com o tamanho da lista, como `risk.yaml` manda. Entra na mesma correção: `teto` ausente
+ou não inteiro reprova, e a comparação passa a ser de igualdade.

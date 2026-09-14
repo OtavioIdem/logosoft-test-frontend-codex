@@ -35,6 +35,16 @@ describe('Regressão: 13 campos fantasma não voltaram', () => {
   ];
 
   it('regressão: cada um dos 13 campos esteve em origin/main', () => {
+    // Helper: extrai bloco de um tipo específico
+    const extractTypeBlock = (content: string, typeName: string): string | null => {
+      const typeStart = content.indexOf(`type ${typeName}`);
+      if (typeStart < 0) return null;
+      const blockStart = content.indexOf('{', typeStart);
+      const blockEnd = content.indexOf('};', blockStart);
+      if (blockEnd < 0) return null;
+      return content.substring(blockStart, blockEnd + 2);
+    };
+
     // Extrai tipos de origin/main para confirmar que os campos existiam antes
     const modules = Array.from(new Set(expectedDivergences.map(d => d.module)));
     const oldContents: { [key: string]: string } = {};
@@ -48,13 +58,19 @@ describe('Regressão: 13 campos fantasma não voltaram', () => {
       }
     }
 
-    // Para cada campo, valida que está nos tipos antigos
+    // Para cada campo, valida que está no tipo específico antigo (não em todo arquivo)
     for (const expected of expectedDivergences) {
-      const typeContent = oldContents[expected.module];
+      const fileContent = oldContents[expected.module];
+      const typeBlock = extractTypeBlock(fileContent, expected.type);
+
+      if (!typeBlock) {
+        throw new Error(`Tipo ${expected.module}/${expected.type} não encontrado em origin/main`);
+      }
+
       const fieldPattern = new RegExp(`\\b${expected.field}\\s*\\??:`, 'm');
 
       expect(
-        fieldPattern.test(typeContent),
+        fieldPattern.test(typeBlock),
         `Campo ${expected.field} não encontrado em ${expected.module}/${expected.type} de origin/main`
       ).toBe(true);
     }

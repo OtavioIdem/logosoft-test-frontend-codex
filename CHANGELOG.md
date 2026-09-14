@@ -83,6 +83,27 @@ um. Contra a árvore de hoje, zero. E a sessão principal conferiu por sonda ind
 fantasma injetado em `LancamentoContabilResponse` foi acusado **pelo nome**, com código de saída
 `1`; revertido, volta a `0`.
 
+**Correção antes do merge, por revisão automática** (`D17`). O primeiro commit desta versão
+afirmava comparar contra o documento de contrato e **não comparava**: o documento só aparecia num
+comentário, e a comparação era contra uma cópia manual dos campos dentro do script. O teto do
+registro de exceção também não era aplicado. Os dois defeitos foram apontados pelo Sourcery no pull
+request 16, conferidos contra o código, e corrigidos num commit de acompanhamento. A sonda da sessão
+principal com campo injetado não tinha como pegar a cópia manual, porque ela também acusava campo
+desconhecido; o QA também não pegou. Um quarto comentário da mesma revisão, sobre checkout raso no
+CI, não procedia.
+
+Depois da correção, o gate foi sondado num espelho temporário fora do repositório, lendo o código
+de saída do próprio comando:
+
+| Sonda | Saída |
+| --- | --- |
+| Espelho intacto | `0` |
+| Contrato sem `ValorContabilAtual` | `1`, acusa `valorContabilAtual` pelo nome |
+| Record ausente do documento | `1` |
+| Duas exceções com teto `1` | `1` |
+| Exceção sem divergência correspondente | `1` |
+| Registro sem `teto`, ou com `teto` diferente do tamanho da lista | `1` |
+
 **Registro de exceção: teto `1`.** O gate encontrou seis campos fantasma além dos 13. `D15`
 conferiu um a um e concluiu que cinco não são exceção: `BoletoResumoResponse.empresaId` e
 `.filialId` (mais as duas heranças) **saem do tipo**, porque o backend não os entrega e nenhuma

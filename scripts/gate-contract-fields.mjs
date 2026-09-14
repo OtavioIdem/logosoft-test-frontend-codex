@@ -22,132 +22,142 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
 
 /**
- * Contratos C# dos records consumidos pelo frontend.
- * Fonte: docs/backend-v1.23/CONTRATO-API-v1.23.md
- * PascalCase → camelCase para comparação.
- *
- * Mapa de TS type → C# record esperado.
- * Nota: BoletoResponse e LancamentoContabilResponse herdam de *Response,
- * mas ambos mapeiam para o MESMO record C# (sem DTO de "resumo" no backend).
+ * Mapeia tipos TS para os records C# que precisam ser validados.
+ * Chave: tipo TS, Valor: nome do record C# a procurar no contrato.
+ * Se o record aparecer em várias operações, todos os blocos são validados como idênticos.
+ * Se o registro aparecer como IReadOnlyCollection<T> ou IReadOnlyList<T>, a busca tenta resolver isso automaticamente.
  */
-const BACKEND_CONTRACTS = {
+const BACKEND_TYPE_MAP = {
   bancos: {
-    // BoletoResumoResponse e BoletoResponse apontam para o mesmo record C#
-    BoletoResumoResponse: [
-      'id',
-      'contaReceberId',
-      'parcelaReceberId',
-      'carteiraCobrancaId',
-      'nossoNumero',
-      'numeroDocumento',
-      'dataEmissao',
-      'dataVencimento',
-      'valorTitulo',
-      'statusBoleto',
-      'linhaDigitavel',
-      'codigoBarras',
-      'dataLiquidacao',
-      'valorPago'
-    ],
-    BoletoResponse: [
-      'id',
-      'contaReceberId',
-      'parcelaReceberId',
-      'carteiraCobrancaId',
-      'nossoNumero',
-      'numeroDocumento',
-      'dataEmissao',
-      'dataVencimento',
-      'valorTitulo',
-      'statusBoleto',
-      'linhaDigitavel',
-      'codigoBarras',
-      'dataLiquidacao',
-      'valorPago'
-    ],
-    BoletoHistoricoResponse: [
-      'id',
-      'statusAnterior',
-      'statusNovo',
-      'observacao',
-      'usuarioId',
-      'data'
-    ]
+    BoletoResumoResponse: 'BoletoResponse',
+    BoletoResponse: 'BoletoResponse',
+    BoletoHistoricoResponse: 'BoletoHistoricoResponse'  // Aparece como IReadOnlyCollection<BoletoHistoricoResponse>
   },
   contabil: {
-    // Ambos apontam para o mesmo record C# (não há DTO de "resumo")
-    LancamentoContabilResumoResponse: [
-      'id',
-      'empresaId',
-      'filialId',
-      'numero',
-      'data',
-      'historico',
-      'origem',
-      'origemId',
-      'statusLancamento',
-      'lancamentoEstornoId',
-      'totalDebito',
-      'totalCredito',
-      'partidas'
-    ],
-    LancamentoContabilResponse: [
-      'id',
-      'empresaId',
-      'filialId',
-      'numero',
-      'data',
-      'historico',
-      'origem',
-      'origemId',
-      'statusLancamento',
-      'lancamentoEstornoId',
-      'totalDebito',
-      'totalCredito',
-      'partidas'
-    ]
+    LancamentoContabilResumoResponse: 'LancamentoContabilResponse',
+    LancamentoContabilResponse: 'LancamentoContabilResponse'
   },
   patrimonio: {
-    DepreciacaoResultadoResponse: [
-      'competencia',
-      'totalBensDepreciados',
-      'valorTotalDepreciado',
-      'totalContabilizados',
-      'bens'
-    ],
-    BemPatrimonialResponse: [
-      'id',
-      'empresaId',
-      'filialId',
-      'codigo',
-      'descricao',
-      'categoria',
-      'dataAquisicao',
-      'valorAquisicao',
-      'valorResidual',
-      'vidaUtilMeses',
-      'metodo',
-      'setorId',
-      'responsavelId',
-      'contaAtivoId',
-      'contaDepreciacaoAcumuladaId',
-      'contaDespesaDepreciacaoId',
-      'depreciacaoAcumulada',
-      'mesesDepreciados',
-      'ultimaCompetenciaDepreciada',
-      'valorContabilAtual',
-      'statusBem',
-      'bloqueado',
-      'motivoBloqueio',
-      'dataBaixa',
-      'motivoBaixa',
-      'justificativaBaixa',
-      'valorBaixa',
-      'movimentacoes',
-      'depreciacoes'
-    ]
+    DepreciacaoResultadoResponse: 'ProcessarDepreciacaoPeriodoResponse',  // Nome diferente no contrato
+    BemPatrimonialResponse: 'BemPatrimonialResponse'
   }
 };
+
+/**
+ * Extrai campos de um bloco C# do contrato.
+ * Procura por padrão `TypeName Nomecampo` ou `TypeName? Nomecampo` ou `IReadOnlyXxx<Type> Nomecampo`.
+ * Retorna array de nomes em camelCase.
+ */
+function extractCSharpFields(csharpBlock) {
+  // Remove comentários e quebras de linha extras
+  let block = csharpBlock.replace(/\/\/.*$/gm, '').trim();
+
+  // Extrai campos: padrão é `TipoQualquerCoisa NomeField` ou `TipoQualquerCoisa? NomeField`
+  // Captura até a primeira letra maiúscula seguida de minúsculas como início do nome do campo
+  const fieldPattern = /(?:Guid\??|string\??|decimal\??|int\??|bool\??|DateTimeOffset\??|IReadOnlyList<[\w.]+>\??|IReadOnlyCollection<[\w.]+>\??|[\w.]+\??)\s+([A-Z][a-zA-Z0-9]*)/g;
+
+  const fields = [];
+  let match;
+  while ((match = fieldPattern.exec(block)) !== null) {
+    // Captura nome do campo e converte PascalCase → camelCase
+    const fieldName = match[1];
+    const camelCased = fieldName.charAt(0).toLowerCase() + fieldName.slice(1);
+    fields.push(camelCased);
+  }
+
+  return [...new Set(fields)]; // Remove duplicatas
+}
+
+/**
+ * Lê o documento de contrato e extrai campos de cada record C#.
+ * Procura por blocos `**Response** (C#, \`RecordName\`)` seguidos de bloco ```csharp...```.
+ * Valida que blocos repetidos de um mesmo record têm campos idênticos.
+ */
+function loadContractFromDocument(contractPath) {
+  if (!fs.existsSync(contractPath)) {
+    console.error(`❌ Arquivo de contrato não encontrado: ${contractPath}`);
+    process.exit(1);
+  }
+
+  const content = fs.readFileSync(contractPath, 'utf8');
+  const contracts = {};
+
+  // Padrão: **Response** (C#, `RecordName`) seguido de ```csharp
+  // Usa \s+ para capturar qualquer tipo de espaço/newline (LF ou CRLF)
+  const responseBlockPattern = /\*\*Response\*\*\s*\(C#,\s*`([^`]+)`\)\s+```csharp/g;
+
+  let match;
+  while ((match = responseBlockPattern.exec(content)) !== null) {
+    const recordName = match[1];
+
+    // Procura pelo fechamento ```
+    const startPos = match.index + match[0].length;
+    const csharpEndPattern = /```/;
+    const csharpEndMatch = csharpEndPattern.exec(content.substring(startPos));
+
+    if (!csharpEndMatch) continue; // Bloco não foi fechado
+
+    const blockEnd = startPos + csharpEndMatch.index;
+    const csharpBlock = content.substring(startPos, blockEnd);
+
+    const fields = extractCSharpFields(csharpBlock);
+
+    // Valida que blocos repetidos têm campos idênticos
+    if (contracts[recordName]) {
+      const existing = contracts[recordName];
+      const existingSet = new Set(existing);
+      const fieldsSet = new Set(fields);
+
+      if (existing.length !== fields.length || !fields.every(f => existingSet.has(f))) {
+        console.error(`❌ Record ${recordName} aparece com campos diferentes:`);
+        console.error(`   Primeira vez: ${existing.join(', ')}`);
+        console.error(`   Agora:        ${fields.join(', ')}`);
+        process.exit(1);
+      }
+    } else {
+      contracts[recordName] = fields;
+    }
+  }
+
+  return contracts;
+}
+
+/**
+ * Constrói o mapa de contrato resolvendo a ligação TS → C#.
+ * Se o record esperado não existir, tenta resolver a partir de IReadOnlyCollection<Record>.
+ */
+function buildBackendContracts(contractPath) {
+  const contractRecords = loadContractFromDocument(contractPath);
+  const result = {};
+
+  for (const [module, typeMap] of Object.entries(BACKEND_TYPE_MAP)) {
+    result[module] = {};
+    for (const [tsType, csharpRecord] of Object.entries(typeMap)) {
+      let found = contractRecords[csharpRecord];
+
+      // Se não encontrou direto, tenta procurar por IReadOnlyCollection<Record>
+      if (!found) {
+        const collectionKey = `IReadOnlyCollection<${csharpRecord}>`;
+        found = contractRecords[collectionKey];
+      }
+
+      // Se ainda não encontrou, tenta IReadOnlyList<Record>
+      if (!found) {
+        const listKey = `IReadOnlyList<${csharpRecord}>`;
+        found = contractRecords[listKey];
+      }
+
+      if (!found) {
+        console.warn(`⚠️  Record ${csharpRecord} (esperado por ${tsType}) não encontrado no contrato`);
+        result[module][tsType] = [];
+      } else {
+        result[module][tsType] = found;
+      }
+    }
+  }
+
+  return result;
+}
 
 /**
  * Lê e parseia um arquivo TypeScript para extrair tipos object.
@@ -290,9 +300,9 @@ function resolveTypeFields(moduleName, typeName, fileContent, cache = {}) {
  * Compara campos do TS contra o contrato C#.
  * Retorna array de divergências: { module, type, field, reason }
  */
-function validateModule(moduleName, fileContent) {
+function validateModule(moduleName, fileContent, backendContracts) {
   const divergences = [];
-  const contracts = BACKEND_CONTRACTS[moduleName];
+  const contracts = backendContracts[moduleName];
 
   if (!contracts) {
     console.warn(`⚠️  Módulo ${moduleName} não configurado no gate.`);
@@ -345,13 +355,66 @@ function loadAllowlist() {
 }
 
 /**
+ * Valida teto de exceções: deve estar presente e ser exatamente igual ao tamanho da lista.
+ * Catraca de sentido único: teto não pode ser apagado, e folga futura é proibida.
+ */
+function validateExceptionsCeiling(allowlist) {
+  if (!allowlist.hasOwnProperty('teto') || allowlist.teto === null || allowlist.teto === undefined) {
+    console.error(`❌ Campo 'teto' ausente no allowlist. Catraca de sentido único: teto é obrigatório.`);
+    console.error(`   Registre teto: ${allowlist.exceptions.length} no allowlist.`);
+    process.exit(1);
+  }
+
+  if (!Number.isInteger(allowlist.teto)) {
+    console.error(`❌ Campo 'teto' não é inteiro: ${allowlist.teto}`);
+    process.exit(1);
+  }
+
+  if (allowlist.exceptions.length !== allowlist.teto) {
+    console.error(`❌ Divergência no teto de exceções:`);
+    console.error(`   Esperado (exceptions.length): ${allowlist.exceptions.length}`);
+    console.error(`   Registrado (teto): ${allowlist.teto}`);
+    console.error(`   Catraca de sentido único: teto deve ser exato, sem folga.`);
+    process.exit(1);
+  }
+
+  return true;
+}
+
+/**
  * Filtra divergências: remove as que estão no allowlist.
+ * Também valida que cada exceção correspondente a uma divergência real.
  */
 function filterAllowlisted(divergences, allowlist) {
   const allowlistedSet = new Set();
+  const exceptionSet = new Set();
+
   for (const ex of allowlist.exceptions) {
     const key = `${ex.module}/${ex.type}/${ex.field}`;
     allowlistedSet.add(key);
+    exceptionSet.add(key);
+  }
+
+  // Valida que cada exceção corresponde a uma divergência real (catraca de sentido único)
+  const orphanExceptions = [];
+  for (const exKey of exceptionSet) {
+    const hasMatch = divergences.some(div => {
+      const divKey = `${div.module}/${div.type}/${div.field}`;
+      return divKey === exKey;
+    });
+
+    if (!hasMatch) {
+      orphanExceptions.push(exKey);
+    }
+  }
+
+  if (orphanExceptions.length > 0) {
+    console.error(`❌ Exceções orfãs no allowlist (sem divergência correspondente):`);
+    for (const ex of orphanExceptions) {
+      console.error(`   ${ex}`);
+    }
+    console.error('Catraca de sentido único: exceção sem divergência real deve ser removida do allowlist.');
+    process.exit(1);
   }
 
   const filtered = [];
@@ -373,6 +436,13 @@ function main() {
   const allDivergences = [];
   const allowlist = loadAllowlist();
 
+  // Carrega contrato do documento
+  const contractPath = path.join(ROOT, 'docs', 'backend-v1.23', 'CONTRATO-API-v1.23.md');
+  const BACKEND_CONTRACTS = buildBackendContracts(contractPath);
+
+  // Valida teto de exceções (chama process.exit(1) internamente se houver erro)
+  validateExceptionsCeiling(allowlist);
+
   for (const moduleName of modules) {
     const typesFile = path.join(
       ROOT,
@@ -388,7 +458,7 @@ function main() {
     }
 
     const content = fs.readFileSync(typesFile, 'utf8');
-    const divergences = validateModule(moduleName, content);
+    const divergences = validateModule(moduleName, content, BACKEND_CONTRACTS);
     allDivergences.push(...divergences);
   }
 
