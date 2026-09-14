@@ -1,4 +1,25 @@
-# logosoft Frontend v1.11.0a8b54
+# logosoft Frontend v1.11.0a8b54.c1
+
+## v1.11.0a8b54.c1 — corrige o campo monetário sem par em Boletos, Lançamentos, Depreciação e Bens (D10-D13)
+
+Fecha o que `D5` deixou aberto na `b54`: os quatro pontos de leitura de campo que o backend não
+declara. Em **Boletos**, a coluna "Valor" (`valor`, inexistente) vira "Valor do título"
+(`valorTitulo`, `formatMoney`) e "Valor pago" (`valorPago`, `formatMoneyOptional` — primeiro ponto
+de chamada em produção); `vencimento` vira `dataVencimento`; `status` vira `statusBoleto`, com o
+enum `StatusBoleto` do frontend substituído pelo do backend (`Gerado`, `EmRemessa`, `Liquidado`,
+`Cancelado`); a leitura de `alertas` sai do diálogo de detalhe, porque `GET /boletos/{id}` não
+entrega esse campo. Em **Lançamentos contábeis**, a coluna "Valor" (`valorTotal`, inexistente) vira
+"Débito"/"Crédito" (`totalDebito`/`totalCredito`); `status` vira `statusLancamento`. Em
+**Depreciação**, `DepreciacaoResultadoResponse` é reescrito contra `ProcessarDepreciacaoPeriodoResponse`
+e a tela decodifica `Competencia` (`ano * 100 + mes`) para exibir a mesma frase de hoje, com os
+nomes certos. Em **Bens** (`D13`, achado lateral que entra nesta fatia em vez de virar `.c2`), a
+coluna "Valor contábil" passa a ler `valorContabilAtual` com `formatMoney`, sem o fallback
+`?? valorAquisicao` que escondia o defeito.
+
+Capacidade que volta em duas telas: `boletoPodeCancelar` e `lancamentoPodeEstornar` recebiam
+`Number(undefined)` (`NaN`) sobre o campo antigo, o que fazia as ações "Cancelar" e "Estornar"
+nunca aparecerem, para nenhum registro. Corrigir o nome do campo devolve os botões a quem tem a
+permissão.
 
 ## v1.11.0a8b54 — drenagem das 25 cópias locais de `formatMoney` (F1.4, fecha D1)
 

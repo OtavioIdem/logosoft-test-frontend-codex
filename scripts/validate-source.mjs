@@ -370,6 +370,13 @@ try {
     failures.push('scripts/validate-skills.mjs: validação das skills operacionais falhou ou está ausente');
 }
 
+try {
+    statSync(join(root, 'scripts/gate-contract-fields.mjs'));
+    execFileSync(process.execPath, [join(root, 'scripts/gate-contract-fields.mjs')], { stdio: 'inherit' });
+} catch {
+    failures.push('scripts/gate-contract-fields.mjs: gate de divergências de campo falhou ou está ausente');
+}
+
 if (failures.length > 0) {
     process.stderr.write(`Validação de fonte falhou:\n${failures.map((failure) => `- ${failure}`).join('\n')}\n`);
     process.exit(1);

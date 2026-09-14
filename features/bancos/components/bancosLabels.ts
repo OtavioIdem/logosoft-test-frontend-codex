@@ -15,10 +15,9 @@ const tipoCobrancaMap: Record<number, string> = {
 };
 
 const statusBoletoMap: Record<number, string> = {
-    [StatusBoleto.EmAberto]: 'Em aberto',
-    [StatusBoleto.Registrado]: 'Registrado',
+    [StatusBoleto.Gerado]: 'Gerado',
+    [StatusBoleto.EmRemessa]: 'Em remessa',
     [StatusBoleto.Liquidado]: 'Liquidado',
-    [StatusBoleto.Baixado]: 'Baixado',
     [StatusBoleto.Cancelado]: 'Cancelado'
 };
 
@@ -32,10 +31,9 @@ export const statusBoletoSeverity = (value: number): Severity => {
     switch (n(value)) {
         case StatusBoleto.Liquidado:
             return 'success';
-        case StatusBoleto.Registrado:
+        case StatusBoleto.EmRemessa:
             return 'info';
         case StatusBoleto.Cancelado:
-        case StatusBoleto.Baixado:
             return 'danger';
         default:
             return 'warning';
@@ -43,4 +41,4 @@ export const statusBoletoSeverity = (value: number): Severity => {
 };
 
 // Regras de transição de estado (UI). O backend é a autoridade final.
-export const boletoPodeCancelar = (status: number) => [StatusBoleto.EmAberto, StatusBoleto.Registrado].includes(n(status));
+export const boletoPodeCancelar = (status: number) => [StatusBoleto.Gerado, StatusBoleto.EmRemessa].includes(n(status));

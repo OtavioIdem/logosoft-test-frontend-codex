@@ -32,18 +32,28 @@ export type BemPatrimonialResponse = {
     valorAquisicao: number;
     valorResidual: number;
     vidaUtilMeses: number;
-    valorDepreciado?: number | null;
-    valorContabil?: number | null;
+    depreciacaoAcumulada: number;
+    valorContabilAtual: number;
     setorId?: Guid | null;
     responsavelId?: Guid | null;
     status: StatusBem | number;
 };
 
+export type BemDepreciadoResponse = {
+    bemId: Guid;
+    codigo: string;
+    valor: number;
+    valorContabilApos: number;
+    contabilizado: boolean;
+    lancamentoContabilId?: Guid | null;
+};
+
 export type DepreciacaoResultadoResponse = {
-    ano: number;
-    mes: number;
-    bensDepreciados: number;
-    valorTotal: number;
+    competencia: number;
+    totalBensDepreciados: number;
+    valorTotalDepreciado: number;
+    totalContabilizados: number;
+    bens: BemDepreciadoResponse[];
 };
 
 export type ItemInventarioPatrimonioResponse = {

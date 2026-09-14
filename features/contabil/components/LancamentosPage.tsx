@@ -91,13 +91,13 @@ export const LancamentosPage = () => {
                     <Column header="Número" body={(row: LancamentoContabilResumoResponse) => row.numero || row.id.slice(0, 8)} />
                     <Column header="Data" body={(row: LancamentoContabilResumoResponse) => formatDate(row.data)} />
                     <Column field="historico" header="Histórico" />
-                    {/* row.valorTotal não existe no contrato (LancamentoContabilResponse só tem totalDebito/totalCredito) — correção de campo é da b54.c1, D5 */}
-                    <Column header="Valor" body={(row: LancamentoContabilResumoResponse) => formatMoney(row.valorTotal)} />
-                    <Column header="Status" body={(row: LancamentoContabilResumoResponse) => <Tag value={statusLancamentoLabel(Number(row.status))} severity={statusLancamentoSeverity(Number(row.status)) ?? undefined} />} />
+                    <Column header="Débito" body={(row: LancamentoContabilResumoResponse) => formatMoney(row.totalDebito)} />
+                    <Column header="Crédito" body={(row: LancamentoContabilResumoResponse) => formatMoney(row.totalCredito)} />
+                    <Column header="Status" body={(row: LancamentoContabilResumoResponse) => <Tag value={statusLancamentoLabel(Number(row.statusLancamento))} severity={statusLancamentoSeverity(Number(row.statusLancamento)) ?? undefined} />} />
                     <Column header="Ações" alignHeader="right" body={(row: LancamentoContabilResumoResponse) => (
                         <DataTableActions actions={[
                             { key: 'abrir', label: 'Abrir', icon: 'pi pi-eye', permission: 'CONTABIL_CONSULTAR', onClick: () => setSelectedId(row.id) },
-                            ...(lancamentoPodeEstornar(Number(row.status)) ? [{ key: 'estornar', label: 'Estornar', icon: 'pi pi-undo', severity: 'danger' as const, permission: 'CONTABIL_LANCAMENTOS_ESTORNAR' as const, onClick: () => setEstornarAlvo(row.id) }] : [])
+                            ...(lancamentoPodeEstornar(Number(row.statusLancamento)) ? [{ key: 'estornar', label: 'Estornar', icon: 'pi pi-undo', severity: 'danger' as const, permission: 'CONTABIL_LANCAMENTOS_ESTORNAR' as const, onClick: () => setEstornarAlvo(row.id) }] : [])
                         ]} />
                     )} />
                 </DataTableServer>
@@ -107,7 +107,7 @@ export const LancamentosPage = () => {
             {detalhe ? (
                 <Card title={`Lançamento ${detalhe.numero || detalhe.id.slice(0, 8)}`} className="mt-3">
                     <div className="flex gap-2 flex-wrap mb-3 align-items-center">
-                        <Tag value={statusLancamentoLabel(Number(detalhe.status))} severity={statusLancamentoSeverity(Number(detalhe.status)) ?? undefined} />
+                        <Tag value={statusLancamentoLabel(Number(detalhe.statusLancamento))} severity={statusLancamentoSeverity(Number(detalhe.statusLancamento)) ?? undefined} />
                         <span className="text-color-secondary">{formatDate(detalhe.data)} · {detalhe.historico}</span>
                     </div>
                     <DataTable value={detalhe.partidas} dataKey="id" emptyMessage="Nenhuma partida." responsiveLayout="scroll" stripedRows size="small">

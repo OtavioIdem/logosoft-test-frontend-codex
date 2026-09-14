@@ -44,8 +44,7 @@ export const DepreciacaoPage = () => {
             <PageHeader title="Depreciação" description="Processamento em lote por competência (ano/mês). O cálculo é idempotente." actions={headerActions} />
             <Card>
                 {resultado ? (
-                    /* DepreciacaoResultadoResponse não bate em nome com ProcessarDepreciacaoPeriodoResponse do backend — correção de campo é da b54.c1, D5 */
-                    <Message className="w-full" severity="success" text={`Competência ${competenciaLabelPt(resultado.ano, resultado.mes)}: ${resultado.bensDepreciados} bem(ns) depreciado(s), total ${formatMoney(resultado.valorTotal)}.`} />
+                    <Message className="w-full" severity="success" text={`Competência ${competenciaLabelPt(Math.floor(resultado.competencia / 100), resultado.competencia % 100)}: ${resultado.totalBensDepreciados} bem(ns) depreciado(s), total ${formatMoney(resultado.valorTotalDepreciado)}.`} />
                 ) : (
                     <p className="text-color-secondary m-0">Escolha a empresa e a competência para processar a depreciação do período. Reprocessar a mesma competência não duplica lançamentos.</p>
                 )}

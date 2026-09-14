@@ -308,3 +308,247 @@ hoje não é o caso — a execução inteira leva pouco mais de um minuto.
 Quem arbitrou: orquestrador
 Impacto: `.github/workflows/frontend-ci.yml`. Junto com os quatro erros `TS2802` que a `b54` já
 corrigiu, fecha as duas razões pelas quais o CI desta branch estava vermelho desde a `b53`.
+
+### D10 — Boletos passa a exibir valor do título e valor pago, e adota o enum de status do backend
+
+Data: 2026-09-11
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre o inventário do nó `inventario`
+da fatia `b54.c1`, conferido por leitura direta do record e do enum do backend.
+Decisão: (a) a coluna única "Valor", que lia o campo inexistente `valor`, vira **duas**: "Valor do
+título" lendo `valorTitulo` com `formatMoney`, e "Valor pago" lendo `valorPago` com
+`formatMoneyOptional`. (b) `vencimento` vira `dataVencimento`. (c) `status` vira `statusBoleto`, e o
+enum `StatusBoleto` do frontend é **substituído** pelo do backend (`Gerado=1`, `EmRemessa=2`,
+`Liquidado=3`, `Cancelado=4`). (d) a leitura de `alertas` no diálogo de detalhe é **removida**:
+`GET /api/bancos/boletos/{id}` não entrega esse campo, e a mensagem de aviso nunca teve dado.
+Alternativas descartadas:
+1. Exibir só o valor do título — resolve a divergência e perde a informação de pago contra aberto,
+   que é o que o operador de cobrança olha.
+2. Derivar um saldo (`valorTitulo - valorPago`) — regra de negócio que o contrato não declara, e
+   inventar regra dentro de fatia corretiva é o caminho para o próximo achado.
+3. Manter o enum do frontend e mapeá-lo para o do backend — institucionaliza um vocabulário de UI
+   que nomeia estados que o backend não tem (`EmAberto`, `Registrado`, `Baixado`), e nada no
+   repositório indica que alguém dependa desses rótulos.
+Por quê: o enum do frontend tem cinco valores e o do backend quatro, com semântica diferente em 1, 2
+e 4. Corrigir só o nome do campo trocaria um sintoma barulhento por um silencioso: o valor `2`
+apareceria como "Registrado" quando o backend quer dizer "Em remessa", e o `4` como "Baixado" quando
+quer dizer "Cancelado". A regra de `boletoPodeCancelar` sobrevive à troca sem mudança de
+comportamento, porque ela cobre os valores 1 e 2, que continuam sendo os dois estados anteriores à
+liquidação. `valorPago` é `decimal?` no backend e vira o **primeiro ponto de chamada de
+`formatMoneyOptional` em produção** — a função existe desde a `b51` e nunca teve nenhum.
+Reversível: sim. Gatilho de revisita: o backend passar a expor `Alertas` em `GET /{id}`, ou
+introduzir um quinto estado de boleto.
+Quem arbitrou: orquestrador
+Impacto: `features/bancos/types/bancos.types.ts` (enum e tipo), `features/bancos/components/
+BoletosPage.tsx`, `BancosOperacoesDialogs.tsx`, `bancosLabels.ts`, e os testes que fixam os rótulos
+antigos.
+
+**Capacidade que volta, e precisa ser dita no CHANGELOG:** hoje `boletoPodeCancelar` recebe
+`Number(row.status)` sobre um campo inexistente, o que dá `NaN`, e por isso a ação "Cancelar"
+**nunca aparece, para nenhum boleto**. Corrigir o nome do campo devolve o botão a quem tem
+`BOLETOS_CANCELAR`. É ganho de capacidade, não perda, e o backend continua sendo quem decide.
+
+### D11 — Lançamentos contábeis exibe débito e crédito em colunas separadas, não um total
+
+Data: 2026-09-11
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre o inventário da `b54.c1`.
+Decisão: a coluna "Valor", que lia o campo inexistente `valorTotal`, vira **duas**, "Débito" e
+"Crédito", lendo `totalDebito` e `totalCredito`, ambos `decimal` obrigatórios. E `status` vira
+`statusLancamento`, troca mecânica: o enum já é idêntico dos dois lados.
+Alternativas descartadas:
+1. Exibir só o total de débito, assumindo o balanceamento — o `refine` de
+   `contabilSchemas.ts:54-58` garante `Σdébito = Σcrédito` apenas no que **o frontend cria**.
+   Lançamento de origem automática nunca passa por ele, e nada no contrato promete a igualdade.
+   Mostrar um lado só é afirmar uma garantia que não existe.
+2. Exibir um lado e criar um teste que reprove quando os dois divergirem — mistura correção de campo
+   com regra de auditoria nova, e uma divergência real viraria teste vermelho em vez de informação
+   na tela de quem precisa dela.
+Por quê: duas colunas é a única opção que não pode mentir. Se algum lançamento estiver
+desbalanceado, isso vira visível para o contador em vez de ficar escondido atrás de um número
+escolhido por conveniência. O custo é uma coluna a mais numa tabela que já existe.
+Reversível: sim. Gatilho de revisita: o backend passar a expor um total próprio no record.
+Quem arbitrou: orquestrador
+Impacto: `features/contabil/types/contabil.types.ts`, `features/contabil/components/
+LancamentosPage.tsx`, e os testes do módulo.
+
+**Capacidade que volta:** mesmo caso de `D10`. `lancamentoPodeEstornar` recebe `NaN` hoje, e a ação
+"Estornar" nunca aparece para nenhum lançamento.
+
+### D12 — Depreciação reconstrói a mensagem com os campos reais, e não acrescenta informação nova
+
+Data: 2026-09-11
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre o inventário da `b54.c1`.
+Decisão: `DepreciacaoResultadoResponse` é reescrito contra `ProcessarDepreciacaoPeriodoResponse`
+(`Competencia`, `TotalBensDepreciados`, `ValorTotalDepreciado`, `TotalContabilizados`, `Bens`). A
+tela decodifica `Competencia`, que é `ano * 100 + mes` codificado, e exibe a **mesma** frase de
+hoje, com os nomes certos.
+Alternativas descartadas:
+1. Acrescentar `TotalContabilizados` à frase — o backend já entrega e a informação é útil, mas muda
+   o que o operador lê. Fatia corretiva conserta; quem acrescenta é fatia funcional.
+2. Expandir a tela para listar `Bens` item a item — muda uma frase de resumo em tabela, e é escopo
+   de tela nova disfarçado de correção de campo.
+3. Exibir `Competencia` cru, sem decodificar — mais simples para o código e pior para quem lê.
+Por quê: é o mínimo que fecha a divergência sem mudar o que o operador vê, que é exatamente o
+contrato de uma fatia corretiva. `TotalContabilizados` e a lista de `Bens` ficam registrados aqui
+como candidatos de uma fatia funcional, e não como dívida esquecida.
+Reversível: sim. Gatilho de revisita: alguém da operação pedir para distinguir bem depreciado de bem
+contabilizado, que é a informação que a opção 1 traria.
+Quem arbitrou: orquestrador
+Impacto: `features/patrimonio/types/patrimonio.types.ts`,
+`features/patrimonio/components/DepreciacaoPage.tsx`.
+
+### D13 — a quinta tela entra nesta fatia, em vez de virar uma `.c2`
+
+Data: 2026-09-11
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre achado lateral do inventário da
+`b54.c1`.
+Decisão: `features/patrimonio/components/BensPage.tsx` entra no escopo da `b54.c1`. A coluna "Valor
+contábil" lê `valorContabil`, que o backend não declara; passa a ler `valorContabilAtual`
+(`BemPatrimonialContracts.cs:77`, `decimal` obrigatório), com `formatMoney` e **sem** o fallback
+`?? valorAquisicao`, que campo obrigatório não precisa.
+Alternativas descartadas:
+1. Abrir uma `b54.c2` só para ela — `D5` fechou o escopo em três telas, e respeitar essa fronteira
+   ao pé da letra deixaria para depois um defeito idêntico, no mesmo módulo, achado pelo inventário
+   desta mesma fatia. É o tipo de resto que não se drena.
+2. Deixar como está por ser "só um fallback" — o fallback é justamente o que torna o defeito
+   silencioso.
+Por quê: é a mesma classe exata, no mesmo módulo, e o efeito atual é um número errado na tela sem
+nenhum sinal. Como `valorContabil` é sempre indefinido, o `??` sempre cai para o valor de aquisição,
+e a coluna "Valor contábil" mostra o valor de aquisição **mesmo para bem já depreciado**. O diff é
+do tamanho de um campo, e o perfil de risco é o mesmo das outras quatro telas.
+Reversível: sim.
+Quem arbitrou: orquestrador
+Impacto: `features/patrimonio/types/patrimonio.types.ts`,
+`features/patrimonio/components/BensPage.tsx`.
+
+### D14 — o histórico do boleto mostra a transição de estado, que é o evento que o contrato entrega
+
+Data: 2026-09-11
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre um `needs_decision` que o
+`dev-senior-react` devolveu no nó `builder` da `b54.c1`, em vez de improvisar. Foi o comportamento
+certo: `D10` decidiu sobre `BoletoResponse` e não cobria `BoletoHistoricoResponse`.
+Decisão: `BoletoHistoricoResponse` é reescrito contra o record real
+(`Erp.Application/Bancos/BancosContracts.cs`): `id`, `statusAnterior`, `statusNovo`, `observacao`,
+`usuarioId` opcional e `data`. Na tela, a coluna "Evento" passa a exibir a **transição**, montada
+com o rótulo de status já existente nos dois lados (`Gerado → Em remessa`), e a coluna "Descrição"
+passa a ler `observacao`, que é `string` obrigatória e portanto dispensa o fallback de travessão.
+Alternativas descartadas:
+1. Remover a coluna "Evento" — o histórico existe justamente para dizer o que mudou, e sobraria uma
+   tabela de datas com observação solta.
+2. Deixar como está e tratar numa fatia futura — `evento` é sempre `undefined` hoje, então a coluna
+   renderiza uma `Tag` vazia em toda linha. É a mesma classe das outras quatro telas desta fatia, e
+   está no mesmo arquivo que já está sendo tocado.
+Por quê: o campo `evento` não existe no backend, e o que ele tentava nomear é exatamente o par
+`StatusAnterior`/`StatusNovo`, que o backend entrega. Exibir a transição não inventa informação:
+usa só campo do contrato, e reaproveita o rótulo de status que `D10` acabou de alinhar com o enum
+do backend. `descricao` contra `Observacao` é troca mecânica de nome.
+Reversível: sim. Gatilho de revisita: o backend passar a expor um rótulo de evento próprio.
+Quem arbitrou: orquestrador
+Impacto: `features/bancos/types/bancos.types.ts` e
+`features/bancos/components/BancosOperacoesDialogs.tsx`.
+
+### D15 — das seis exceções que o gate registrou, cinco não são exceção: quatro somem e uma é corrigida
+
+Data: 2026-09-11
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre o registro de exceção que o
+`engenheiro-testes` propôs no nó `gate_estrutural` da `b54.c1`, conferido item a item contra o
+documento de contrato e o enum do backend.
+Decisão:
+1. `BoletoResumoResponse.empresaId` e `.filialId`, e as duas heranças em `BoletoResponse`, **saem do
+   tipo**. O backend não os entrega e nenhuma linha da UI os lê de uma linha de boleto — o
+   `EmpresaFilialFilter` da tela lê `filters.empresaId`, que é estado do filtro, não campo do
+   registro. Declaração fantasma que ninguém lê é o próximo `row.<campo>` esperando ser escrito.
+2. `BemPatrimonialResponse.valorDepreciado` vira `depreciacaoAcumulada`, que é o campo real
+   (`decimal DepreciacaoAcumulada` no record). É campo monetário do tipo que esta fatia já está
+   corrigindo.
+3. `BemPatrimonialResponse.status` **permanece** como única entrada do registro de exceção, com
+   alvo na fatia `b54.c2`, criada por esta decisão.
+Alternativas descartadas:
+1. Manter as seis como exceção — quatro delas se resolvem apagando uma linha, e exceção que se
+   drena com uma linha apodrece no registro em vez de ser drenada. `risk.yaml` exige alvo real por
+   item, e "achado lateral" não é alvo.
+2. Corrigir `status` de Bens aqui também — é o que a simetria com `D10` e `D11` sugeriria, e não se
+   sustenta na medição. Ver abaixo.
+Por quê, sobre o item 3: `row.status` em `BensPage.tsx` alimenta a coluna "Status", o filtro, e as
+**quatro** guardas de ação — Transferir, Bloquear, Desbloquear e Baixar. Como o backend entrega
+`StatusBem` e não `Status`, `Number(row.status)` é `NaN` hoje e as quatro ações nunca aparecem, do
+mesmo jeito que em Boletos e em Lançamentos. Mas aqui a correção **não** é trocar o nome do campo: o
+enum do frontend (`Ativo=1`, `Bloqueado=2`, `Baixado=3`) modela bloqueio como estado, e o backend
+não. `StatusBemPatrimonial` tem dois valores (`Ativo=1`, `Baixado=2`), e bloqueio é
+`bool Bloqueado` com `string? MotivoBloqueio`, campos separados do record. Trocar só o nome faria um
+bem baixado aparecer como "Bloqueado", porque o valor `2` quer dizer coisas diferentes dos dois
+lados. A correção certa remodela o estado de Bens contra o contrato e refaz as quatro guardas e o
+filtro — isso é desenho, não renomeação, e `regimes.yaml` manda parar e abrir fatia quando o
+diagnóstico chega aí.
+Reversível: sim. Gatilho de revisita: a `b54.c2` não entrar em seguida, que transformaria uma
+exceção com alvo em exceção sem dono.
+Quem arbitrou: orquestrador
+Impacto: `features/bancos/types/bancos.types.ts`, `features/patrimonio/types/patrimonio.types.ts`,
+`scripts/gate-contract-fields.allowlist.json`. O teto do registro passa de 6 para **1**.
+
+### D16 — o teste do gate de campo fantasma é reenquadrado como regressão, e a prova durável vai para a `b54.c2`
+
+Data: 2026-09-11
+Rodada: sem rodada de debate. Decisão do usuário, tomada sobre o esgotamento das três tentativas do
+nó `gate_estrutural` da `b54.c1`, conforme `retry.on_exhausted` de
+`.claude/graph/execution-graph.yaml`, que atribui a decisão ao usuário.
+Decisão: `tests/unit/gateContractFields.test.ts` permanece, reenquadrado pelo que de fato faz —
+garantir que os 13 campos fantasma corrigidos nesta fatia não voltem aos tipos. O nome, a descrição
+e os `it` deixam de prometer que ele prova o gate. A asserção vazia final (`expect(true).toBe(true)`)
+sai. A prova durável de que o gate sabe ficar vermelho fica como dívida nomeada da fatia `b54.c2`,
+que `D15` já criou.
+Alternativas descartadas:
+1. Quarta tentativa no mesmo nó — quebraria o limite de três, que existe porque na `b53` um nó de
+   gate consumiu sete rodadas com a causa raiz visível na terceira.
+2. Apagar o teste — some com o sinal falso e também com a parte verdadeira, que é a trava contra os
+   13 campos voltarem.
+Por quê: o teste afirma uma coisa verdadeira com um nome falso. Reenquadrar preserva o valor e
+remove a promessa que ele não cumpre. O gate em si foi medido pela sessão principal e é confiável:
+campo fantasma injetado em `LancamentoContabilResponse` foi acusado **pelo nome**, e o script
+devolveu código de saída `1`; revertido, volta a `0`. Ele está ligado em
+`scripts/validate-source.mjs` e em `package.json` (`validate:contract-fields`), então roda no CI a
+cada execução.
+Reversível: sim. Gatilho de revisita: a `b54.c2` não entrar em seguida, o que deixaria o gate rodando
+no pipeline por tempo indeterminado sem teste que o proteja de ser apagado ou cegado.
+Quem arbitrou: usuário
+Impacto: `tests/unit/gateContractFields.test.ts`. A `b54.c2` passa a carregar **dois** itens: a
+remodelagem do estado de Bens (`D15`) e a prova durável deste gate.
+
+**Limite registrado junto, porque é o que a fatia não entrega:** enquanto a `b54.c2` não entra, o
+gate protege o repositório mas nada protege o gate. Apagar `scripts/gate-contract-fields.mjs` hoje
+faria o `validate:source` reprovar por arquivo ausente — essa parte está coberta pelo `statSync` do
+validador — mas cegá-lo por dentro, como já aconteceu duas vezes na `b53`, passaria sem teste algum.
+
+### D17 — o gate de campo passa a ler o documento de contrato e a aplicar o teto, antes do merge da `b54.c1`
+
+Data: 2026-09-14
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre quatro comentários de revisão do
+Sourcery no pull request 16, conferidos um a um contra o código.
+Decisão: `scripts/gate-contract-fields.mjs` deixa de comparar contra o objeto `BACKEND_CONTRACTS`
+copiado à mão e passa a extrair os campos dos blocos `csharp` rotulados `Response` de
+`docs/backend-v1.23/CONTRATO-API-v1.23.md` em tempo de execução. O gate passa a reprovar quando o
+registro de exceção tem mais entradas que o `teto`, e quando uma entrada não corresponde a
+divergência observada. O teste de regressão do lado de `origin/main` passa a buscar o campo dentro
+do bloco do tipo nomeado, incluindo a base de interseção, e não no arquivo inteiro. Entra como
+commit de acompanhamento da `b54.c1`, que não foi mesclada.
+Alternativas descartadas:
+1. Mesclar e corrigir numa fatia seguinte — o changelog e o pull request afirmam que o gate compara
+   contra o documento versionado, e mesclar publicaria uma afirmação falsa sobre o mecanismo que
+   deveria proteger a classe inteira.
+2. Manter a lista manual e só corrigir o texto — o gate continuaria validando contra campos
+   desatualizados assim que o contrato fosse regenerado, que o plano da onda manda fazer a cada
+   fatia do backend.
+Por quê: três dos quatro comentários procedem. O primeiro não: `.github/workflows/frontend-ci.yml`
+tem `fetch-depth: 0` desde `D9`, e o log da execução `34843761978` mostra
+`tests/unit/gateContractFields.test.ts` rodando e passando. A sonda da sessão principal, que injetou
+um campo fantasma e o viu acusado, não tinha como detectar a lista manual, porque a lista manual
+também acusa campo desconhecido. O QA da `b54.c1` também não detectou.
+Reversível: sim. Gatilho de revisita: o documento de contrato mudar de formato.
+Quem arbitrou: orquestrador
+Impacto: `scripts/gate-contract-fields.mjs`, `tests/unit/gateContractFields.test.ts`, e a entrada da
+`b54.c1` no `CHANGELOG.md`, que passa a registrar a correção.
+
+**Complemento, depois das sondas da sessão principal:** a primeira rodada da correção fechou os
+três defeitos apontados, e as sondas revelaram um quarto, que a revisão não tinha visto. O registro
+sem campo `teto` passava sem limite, e o teto só barrava excesso (`>`), sem exigir que batesse
+exatamente com o tamanho da lista, como `risk.yaml` manda. Entra na mesma correção: `teto` ausente
+ou não inteiro reprova, e a comparação passa a ser de igualdade.
