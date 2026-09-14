@@ -23,12 +23,12 @@ import {
     AbrirInventarioPatrimonioFormValues,
     BaixarBemFormValues,
     BemFormValues,
-    CategoriaBem,
+    CategoriaBemPatrimonial,
     ProcessarDepreciacaoFormValues,
     RegistrarContagemFormValues,
     TransferirBemFormValues
 } from '@/features/patrimonio/types/patrimonio.types';
-import { categoriaBemOptions } from '@/features/patrimonio/components/patrimonioLabels';
+import { categoriaBemOptions, motivoBaixaOptions } from '@/features/patrimonio/components/patrimonioLabels';
 
 const buildErrors = (error: z.ZodError) => {
     const map: Record<string, string> = {};
@@ -46,7 +46,7 @@ const footer = (label: string, loading: boolean | undefined, onHide: () => void,
     </div>
 );
 
-const initialBem = (): BemFormValues => ({ empresaId: '', filialId: null, codigo: '', descricao: '', categoria: CategoriaBem.Equipamento, dataAquisicao: null, valorAquisicao: 0, valorResidual: 0, vidaUtilMeses: 60, setorId: null, responsavelId: null });
+const initialBem = (): BemFormValues => ({ empresaId: '', filialId: null, codigo: '', descricao: '', categoria: CategoriaBemPatrimonial.Equipamento, dataAquisicao: null, valorAquisicao: 0, valorResidual: 0, vidaUtilMeses: 60, setorId: null, responsavelId: null });
 
 export const BemFormDialog = ({ visible, loading, onHide, onSubmit }: { visible: boolean; loading?: boolean; onHide: () => void; onSubmit: (values: BemFormValues) => Promise<void> }) => {
     const [values, setValues] = useState<BemFormValues>(initialBem);
@@ -175,7 +175,7 @@ export const TransferirBemDialog = ({ visible, loading, empresaId, filialId, onH
 
 export const BaixarBemDialog = ({ visible, loading, onHide, onSubmit }: { visible: boolean; loading?: boolean; onHide: () => void; onSubmit: (values: BaixarBemFormValues) => Promise<void> }) => {
     const [data, setData] = useState<Date | null>(null);
-    const [motivo, setMotivo] = useState('');
+    const [motivo, setMotivo] = useState<BaixarBemFormValues['motivo']>(null);
     const [justificativa, setJustificativa] = useState('');
     const [valorBaixa, setValorBaixa] = useState<number | null>(null);
     const [erros, setErros] = useState<Record<string, string>>({});
@@ -183,7 +183,7 @@ export const BaixarBemDialog = ({ visible, loading, onHide, onSubmit }: { visibl
     useEffect(() => {
         if (visible) {
             setData(null);
-            setMotivo('');
+            setMotivo(null);
             setJustificativa('');
             setValorBaixa(null);
             setErros({});
@@ -192,7 +192,7 @@ export const BaixarBemDialog = ({ visible, loading, onHide, onSubmit }: { visibl
 
     const confirmar = async () => {
         const next: Record<string, string> = {};
-        if (!motivo.trim()) next.motivo = 'Informe o motivo.';
+        if (motivo === null || motivo === undefined) next.motivo = 'Informe o motivo.';
         if (!justificativa.trim()) next.justificativa = 'Informe a justificativa.';
         setErros(next);
         if (Object.keys(next).length > 0) return;
@@ -212,7 +212,7 @@ export const BaixarBemDialog = ({ visible, loading, onHide, onSubmit }: { visibl
                 </div>
                 <div className="field col-12 md:col-4">
                     <label htmlFor="baixaMotivo" className="font-medium">Motivo *</label>
-                    <InputText id="baixaMotivo" value={motivo} className={classNames({ 'p-invalid': erros.motivo })} onChange={(event) => { setMotivo(event.target.value); setErros((c) => ({ ...c, motivo: '' })); }} />
+                    <Dropdown inputId="baixaMotivo" value={motivo} options={motivoBaixaOptions} placeholder="Selecione o motivo" className={classNames({ 'p-invalid': erros.motivo })} onChange={(event) => { setMotivo(event.value); setErros((c) => ({ ...c, motivo: '' })); }} />
                     <FieldError message={erros.motivo} />
                 </div>
                 <div className="field col-12">

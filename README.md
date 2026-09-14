@@ -1,4 +1,4 @@
-# logosoft Frontend v1.11.0a8b54.c1
+# logosoft Frontend v1.11.0a8b54.c2
 
 ## v1.11.0a8b54.c1 — corrige o campo monetário sem par em Boletos, Lançamentos, Depreciação e Bens (D10-D13)
 

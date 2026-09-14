@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { isValidGuid } from '@/lib/http/requestUtils';
-import { CategoriaBem } from '@/features/patrimonio/types/patrimonio.types';
+import { CategoriaBemPatrimonial, MotivoBaixaPatrimonial } from '@/features/patrimonio/types/patrimonio.types';
 
 const requiredGuid = (label: string) => z.string().trim().refine(isValidGuid, `${label} deve ser selecionado corretamente.`);
 const optionalGuid = z
@@ -23,7 +23,7 @@ export const cadastrarBemSchema = z.object({
     filialId: optionalGuid,
     codigo: textRequired('Informe o código do bem.'),
     descricao: textRequired('Informe a descrição.'),
-    categoria: z.nativeEnum(CategoriaBem),
+    categoria: z.nativeEnum(CategoriaBemPatrimonial),
     dataAquisicao: requiredDate('Informe a data de aquisição.'),
     valorAquisicao: money('Valor de aquisição'),
     valorResidual: money('Valor residual'),
@@ -41,7 +41,7 @@ export const transferirBemSchema = z.object({
 
 export const baixarBemSchema = z.object({
     data: optionalDate,
-    motivo: textRequired('Informe o motivo.'),
+    motivo: z.nativeEnum(MotivoBaixaPatrimonial, { errorMap: () => ({ message: 'Informe o motivo.' }) }),
     justificativa: textRequired('Informe a justificativa.'),
     valorBaixa: optionalMoney
 });
