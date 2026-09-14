@@ -22,7 +22,7 @@ import { mapApiError } from '@/lib/http/apiError';
 import { useBens, useBemMutations } from '@/features/patrimonio/hooks/usePatrimonioResources';
 import { BaixarBemFormValues, BemFormValues, BemPatrimonialResponse, BensListQuery, TransferirBemFormValues } from '@/features/patrimonio/types/patrimonio.types';
 import { BaixarBemDialog, BemFormDialog, TransferirBemDialog } from '@/features/patrimonio/components/PatrimonioDialogs';
-import { bemPodeBaixar, bemPodeBloquear, bemPodeDesbloquear, bemPodeTransferir, categoriaBemFilterOptions, categoriaBemLabel, statusBemFilterOptions, statusBemLabel, statusBemSeverity } from '@/features/patrimonio/components/patrimonioLabels';
+import { bemPodeBaixar, bemPodeBloquear, bemPodeDesbloquear, bemPodeTransferir, categoriaBemFilterOptions, categoriaBemLabel, situacaoBem, statusBemFilterOptions } from '@/features/patrimonio/components/patrimonioLabels';
 import { formatMoney } from '@/lib/formatters/money';
 
 const filterLocal = (records: BemPatrimonialResponse[], term: string) => {
@@ -31,7 +31,7 @@ const filterLocal = (records: BemPatrimonialResponse[], term: string) => {
     return records.filter((record) => `${record.codigo} ${record.descricao}`.toLowerCase().includes(normalized));
 };
 
-type DialogKind = 'cadastrar' | 'transferir' | 'baixar' | 'bloquear' | 'desbloquear' | null;
+type DialogKind = 'cadastrar' | 'transferir' | 'baixar' | 'bloquear' | null;
 
 export const BensPage = () => {
     const { hasPermission } = usePermissions();
@@ -75,10 +75,7 @@ export const BensPage = () => {
         if (!alvo) return;
         await runWithToast(async () => { await bloquearMutation.mutateAsync({ id: alvo.id, motivo }); close(); }, { success: { summary: 'Bem bloqueado' }, error: { summary: 'Erro ao bloquear bem' }, rethrow: true });
     };
-    const desbloquear = async (motivo: string) => {
-        if (!alvo) return;
-        await runWithToast(async () => { await desbloquearMutation.mutateAsync({ id: alvo.id, motivo }); close(); }, { success: { summary: 'Bem desbloqueado' }, error: { summary: 'Erro ao desbloquear bem' }, rethrow: true });
-    };
+    const desbloquear = (id: string) => runWithToast(() => desbloquearMutation.mutateAsync(id), { success: { summary: 'Bem desbloqueado' }, error: { summary: 'Erro ao desbloquear bem' } });
 
     const headerActions = (
         <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
@@ -100,13 +97,13 @@ export const BensPage = () => {
                     <Column field="descricao" header="Descrição" />
                     <Column header="Categoria" headerClassName="hidden lg:table-cell" bodyClassName="hidden lg:table-cell" body={(row: BemPatrimonialResponse) => categoriaBemLabel(Number(row.categoria))} />
                     <Column header="Valor contábil" headerClassName="hidden md:table-cell" bodyClassName="hidden md:table-cell" body={(row: BemPatrimonialResponse) => formatMoney(row.valorContabilAtual)} />
-                    <Column header="Status" body={(row: BemPatrimonialResponse) => <Tag value={statusBemLabel(Number(row.status))} severity={statusBemSeverity(Number(row.status)) ?? undefined} />} />
+                    <Column header="Status" body={(row: BemPatrimonialResponse) => { const situacao = situacaoBem(row); return <Tag value={situacao.label} severity={situacao.severity ?? undefined} />; }} />
                     <Column header="Ações" alignHeader="right" body={(row: BemPatrimonialResponse) => {
                         const acoes = [] as { key: string; label: string; icon: string; severity?: 'danger'; permission: 'PATRIMONIO_TRANSFERIR' | 'PATRIMONIO_BENS_GERENCIAR' | 'PATRIMONIO_BAIXAR'; onClick: () => void }[];
-                        if (bemPodeTransferir(Number(row.status))) acoes.push({ key: 'transferir', label: 'Transferir', icon: 'pi pi-arrow-right-arrow-left', permission: 'PATRIMONIO_TRANSFERIR', onClick: () => abrir('transferir', row) });
-                        if (bemPodeBloquear(Number(row.status))) acoes.push({ key: 'bloquear', label: 'Bloquear', icon: 'pi pi-lock', permission: 'PATRIMONIO_BENS_GERENCIAR', onClick: () => abrir('bloquear', row) });
-                        if (bemPodeDesbloquear(Number(row.status))) acoes.push({ key: 'desbloquear', label: 'Desbloquear', icon: 'pi pi-lock-open', permission: 'PATRIMONIO_BENS_GERENCIAR', onClick: () => abrir('desbloquear', row) });
-                        if (bemPodeBaixar(Number(row.status))) acoes.push({ key: 'baixar', label: 'Baixar', icon: 'pi pi-minus-circle', severity: 'danger', permission: 'PATRIMONIO_BAIXAR', onClick: () => abrir('baixar', row) });
+                        if (bemPodeTransferir(row)) acoes.push({ key: 'transferir', label: 'Transferir', icon: 'pi pi-arrow-right-arrow-left', permission: 'PATRIMONIO_TRANSFERIR', onClick: () => abrir('transferir', row) });
+                        if (bemPodeBloquear(row)) acoes.push({ key: 'bloquear', label: 'Bloquear', icon: 'pi pi-lock', permission: 'PATRIMONIO_BENS_GERENCIAR', onClick: () => abrir('bloquear', row) });
+                        if (bemPodeDesbloquear(row)) acoes.push({ key: 'desbloquear', label: 'Desbloquear', icon: 'pi pi-lock-open', permission: 'PATRIMONIO_BENS_GERENCIAR', onClick: () => desbloquear(row.id) });
+                        if (bemPodeBaixar(row)) acoes.push({ key: 'baixar', label: 'Baixar', icon: 'pi pi-minus-circle', severity: 'danger', permission: 'PATRIMONIO_BAIXAR', onClick: () => abrir('baixar', row) });
                         return acoes.length ? <DataTableActions actions={acoes} /> : <span className="text-color-secondary">—</span>;
                     }} />
                 </DataTableServer>
@@ -117,7 +114,6 @@ export const BensPage = () => {
             <TransferirBemDialog visible={dialog === 'transferir'} loading={transferirMutation.isPending} empresaId={alvo?.empresaId ?? null} filialId={alvo?.filialId ?? null} onHide={close} onSubmit={transferir} />
             <BaixarBemDialog visible={dialog === 'baixar'} loading={baixarMutation.isPending} onHide={close} onSubmit={baixar} />
             <ReasonDialog visible={dialog === 'bloquear'} title="Bloquear bem" confirmLabel="Bloquear" loading={bloquearMutation.isPending} onHide={close} onConfirm={bloquear} />
-            <ReasonDialog visible={dialog === 'desbloquear'} title="Desbloquear bem" confirmLabel="Desbloquear" loading={desbloquearMutation.isPending} onHide={close} onConfirm={desbloquear} />
         </>
     );
 };

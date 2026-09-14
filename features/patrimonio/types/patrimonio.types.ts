@@ -1,18 +1,29 @@
 import { Guid, IsoDateTime } from '@/types/erp';
 
-export enum CategoriaBem {
+export enum CategoriaBemPatrimonial {
     Movel = 1,
     Imovel = 2,
     Veiculo = 3,
-    Equipamento = 4,
-    Informatica = 5,
-    Outro = 6
+    Maquina = 4,
+    Equipamento = 5,
+    Ferramenta = 6,
+    Software = 7,
+    Outro = 8
 }
 
-export enum StatusBem {
+export enum StatusBemPatrimonial {
     Ativo = 1,
-    Bloqueado = 2,
-    Baixado = 3
+    Baixado = 2
+}
+
+export enum MotivoBaixaPatrimonial {
+    Venda = 1,
+    Obsolescencia = 2,
+    Perda = 3,
+    Doacao = 4,
+    Sinistro = 5,
+    Transferencia = 6,
+    Outro = 7
 }
 
 export enum StatusInventarioPatrimonio {
@@ -27,7 +38,7 @@ export type BemPatrimonialResponse = {
     filialId?: Guid | null;
     codigo: string;
     descricao: string;
-    categoria: CategoriaBem | number;
+    categoria: CategoriaBemPatrimonial | number;
     dataAquisicao: IsoDateTime;
     valorAquisicao: number;
     valorResidual: number;
@@ -36,7 +47,8 @@ export type BemPatrimonialResponse = {
     valorContabilAtual: number;
     setorId?: Guid | null;
     responsavelId?: Guid | null;
-    status: StatusBem | number;
+    statusBem: StatusBemPatrimonial | number;
+    bloqueado: boolean;
 };
 
 export type BemDepreciadoResponse = {
@@ -84,8 +96,8 @@ export type InventarioPatrimonialResponse = InventarioPatrimonialResumoResponse 
 export type BensListQuery = {
     empresaId?: Guid | null;
     filialId?: Guid | null;
-    categoria?: CategoriaBem | number | null;
-    status?: StatusBem | number | null;
+    categoria?: CategoriaBemPatrimonial | number | null;
+    status?: StatusBemPatrimonial | number | null;
     termo?: string | null;
 };
 
@@ -101,7 +113,7 @@ export type BemFormValues = {
     filialId?: string | null;
     codigo: string;
     descricao: string;
-    categoria: CategoriaBem | number;
+    categoria: CategoriaBemPatrimonial | number;
     dataAquisicao?: Date | null;
     valorAquisicao: number;
     valorResidual: number;
@@ -111,7 +123,7 @@ export type BemFormValues = {
 };
 
 export type TransferirBemFormValues = { setorNovoId?: string | null; responsavelNovoId?: string | null; data?: Date | null; observacao?: string | null };
-export type BaixarBemFormValues = { data?: Date | null; motivo: string; justificativa: string; valorBaixa?: number | null };
+export type BaixarBemFormValues = { data?: Date | null; motivo: MotivoBaixaPatrimonial | number | null; justificativa: string; valorBaixa?: number | null };
 export type ProcessarDepreciacaoFormValues = { empresaId: string; filialId?: string | null; ano: number; mes: number };
 export type AbrirInventarioPatrimonioFormValues = { empresaId: string; filialId?: string | null; descricao: string; dataReferencia?: Date | null };
 export type RegistrarContagemFormValues = { itemId: string; localizado: boolean; setorEncontradoId?: string | null; observacao?: string | null };
