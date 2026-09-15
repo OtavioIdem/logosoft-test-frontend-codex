@@ -1455,6 +1455,7 @@ Gerado do código; a ordem é a dos arquivos.
 | `POST` | `/` | `FiscalGerenciar` | `Criar([FromBody] CriarNotaFiscalRequest request)` |
 | `POST` | `/gerar-de-pedido-venda` | `FiscalEmitir` | `GerarDePedidoVenda([FromBody] GerarNotaFiscalPedidoVendaRequest request)` |
 | `POST` | `/{id:guid}/itens` | `FiscalGerenciar` | `AdicionarItem(Guid id, [FromBody] AdicionarItemNotaFiscalRequest request)` |
+| `POST` | `/{id:guid}/valores-acessorios` | `FiscalGerenciar` | `DefinirValoresAcessorios(Guid id, [FromBody] DefinirValoresAcessoriosNotaFiscalRequest request)` |
 | `POST` | `/{id:guid}/impostos` | `FiscalGerenciar` | `AdicionarImposto(Guid id, [FromBody] AdicionarImpostoNotaFiscalRequest request)` |
 | `POST` | `/{id:guid}/xmls` | `FiscalGerenciar` | `ArmazenarXml(Guid id, [FromBody] ArmazenarXmlNotaFiscalRequest request)` |
 | `POST` | `/{id:guid}/validar` | `FiscalGerenciar` | `Validar(Guid id)` |
@@ -1473,6 +1474,13 @@ Gerado do código; a ordem é a dos arquivos.
 | `POST` | `/{id:guid}/gerar-conta-receber` | `FinanceiroGerenciar` | `GerarContaReceber(Guid id, [FromBody] GerarContaReceberNotaFiscalAutorizadaRequest request)` |
 | `POST` | `/{id:guid}/danfe` | `FiscalEmitir` | `GerarDanfe(Guid id, [FromBody] GerarDanfeNotaFiscalRequest request)` |
 | `GET` | `/documentos-auxiliares/{documentoAuxiliarId:guid}/download` | `FiscalConsultar` | `BaixarDocumentoAuxiliar(Guid documentoAuxiliarId)` |
+
+> **Adendo v1.11.0a8b56 (D22, D36):** a linha `valores-acessorios` não constava do levantamento de 2026-08-12
+> (v1.18). Ela foi acrescentada pela sessão principal a partir de
+> `New project 3/src/Erp.Api/Controllers/Fiscal/NotasFiscaisController.cs:95-102`
+> (`[HttpPost("{id:guid}/valores-acessorios")]`, `[RequiredPermission(SystemPermissions.FiscalGerenciar)]`).
+> `calcular-tributos` também falta aqui e fica fora de propósito: o frontend não a consome (D36).
+> O cabeçalho "576 endpoints" descreve o levantamento original e não foi alterado.
 
 ### `api/fiscal/observabilidade`
 

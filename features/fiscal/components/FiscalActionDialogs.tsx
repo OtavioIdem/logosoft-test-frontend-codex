@@ -9,8 +9,11 @@ import { InputNumber } from 'primereact/inputnumber';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { InputText } from 'primereact/inputtext';
 import { Message } from 'primereact/message';
+import { classNames } from 'primereact/utils';
+import { z } from 'zod';
 import { EntitySelect } from '@/components/forms/EntitySelect';
 import { EmpresaSelect } from '@/components/forms/EmpresaSelect';
+import { FieldError } from '@/components/forms/FieldError';
 import { FilialSelect } from '@/components/forms/FilialSelect';
 import { usePessoas } from '@/features/pessoas/hooks/usePessoasResources';
 import { PessoaResponse } from '@/features/pessoas/types/pessoas.types';
@@ -21,8 +24,18 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { usePedidosVenda } from '@/features/vendas/hooks/useVendasResources';
 import { PedidoVendaResponse } from '@/features/vendas/types/vendas.types';
 import { FormatoDocumentoAuxiliarFiscal, OrigemNotaFiscal, StatusPedidoVenda, TipoContingenciaFiscal, TipoDocumentoFiscal, TipoOperacaoFiscal, TipoServicoTransmissaoFiscal, TipoXmlFiscal } from '@/types/erp';
-import { ItemNotaFiscalResponse } from '@/features/fiscal/types/fiscal.types';
+import { adicionarImpostoNotaFiscalSchema, definirValoresAcessoriosNotaFiscalSchema } from '@/features/fiscal/schemas/fiscalSchemas';
+import { ItemNotaFiscalResponse, NotaFiscalResponse } from '@/features/fiscal/types/fiscal.types';
 import { gerarCorrelationId, maskFiscalSensitiveText, servicoTransmissaoFiscalOptions, tipoDocumentoFiscalOptions, tipoOperacaoFiscalOptions } from '@/features/fiscal/components/fiscalUiUtils';
+
+const buildFieldErrors = (error: z.ZodError) => {
+    const map: Record<string, string> = {};
+    error.issues.forEach((issue) => {
+        const key = issue.path[0];
+        if (typeof key === 'string' && !map[key]) map[key] = issue.message;
+    });
+    return map;
+};
 
 type BaseDialogProps<T> = {
     visible: boolean;
@@ -223,19 +236,139 @@ export const ItemNotaFiscalDialog = ({ visible, loading, onHide, onSubmit, empre
     );
 };
 
+const impostoNotaFiscalInitialValues = () => ({ itemNotaFiscalId: '', nome: 'ICMS', cstCsosn: '', baseCalculo: 0, aliquota: 0, valor: 0, observacao: '' });
+
+// D35: motivo do lançamento manual obrigatório, sem texto padrão -- ele substitui, no total, o valor do
+// motor para IPI, ICMS ST e FCP ST do mesmo item, e fica registrado para auditoria.
 export const ImpostoNotaFiscalDialog = ({ visible, loading, onHide, onSubmit, itens }: BaseDialogProps<Record<string, unknown>> & { itens: ItemNotaFiscalResponse[] }) => {
-    const [values, setValues] = useState({ itemNotaFiscalId: '', nome: 'ICMS', cstCsosn: '', baseCalculo: 0, aliquota: 0, valor: 0, observacao: 'Imposto parametrizado manualmente.' });
+    const [values, setValues] = useState(impostoNotaFiscalInitialValues);
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    useEffect(() => {
+        if (visible) {
+            setValues(impostoNotaFiscalInitialValues());
+            setErrors({});
+        }
+    }, [visible]);
+
     const itemOptions = [{ label: 'Imposto da nota', value: '' }, ...itens.map((item) => ({ label: `${item.sequencia} • ${item.codigoItem} • ${item.descricao}`, value: item.id }))];
+
+    const update = (patch: Partial<ReturnType<typeof impostoNotaFiscalInitialValues>>) => {
+        setValues((v) => ({ ...v, ...patch }));
+        setErrors((current) => {
+            const next = { ...current };
+            Object.keys(patch).forEach((key) => {
+                next[key] = '';
+            });
+            return next;
+        });
+    };
+
+    const submeter = (event: React.FormEvent) => {
+        event.preventDefault();
+        const parsed = adicionarImpostoNotaFiscalSchema.safeParse(values);
+        if (!parsed.success) {
+            setErrors(buildFieldErrors(parsed.error));
+            return;
+        }
+        onSubmit(values);
+    };
+
     return (
-        <Dialog header="Adicionar imposto parametrizado" visible={visible} modal style={{ width: 'min(52rem, 96vw)' }} onHide={onHide} footer={footer('imposto-nota-fiscal-form', loading, onHide, 'Adicionar imposto')}>
-            <form id="imposto-nota-fiscal-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
-                <Field label="Item vinculado" hint="Lista derivada dos itens já carregados no detalhe da nota; não digite o ID do item."><Dropdown value={values.itemNotaFiscalId} options={itemOptions} onChange={(e) => setValues((v) => ({ ...v, itemNotaFiscalId: e.value }))} /></Field>
-                <Field label="Imposto"><InputText value={values.nome} onChange={(e) => setValues((v) => ({ ...v, nome: e.target.value }))} /></Field>
-                <Field label="CST/CSOSN"><InputText value={values.cstCsosn} onChange={(e) => setValues((v) => ({ ...v, cstCsosn: e.target.value }))} /></Field>
-                <Field label="Base cálculo"><InputNumber value={values.baseCalculo} min={0} mode="currency" currency="BRL" locale="pt-BR" onValueChange={(e) => setValues((v) => ({ ...v, baseCalculo: Number(e.value ?? 0) }))} /></Field>
-                <Field label="Alíquota %"><InputNumber value={values.aliquota} min={0} suffix="%" onValueChange={(e) => setValues((v) => ({ ...v, aliquota: Number(e.value ?? 0) }))} /></Field>
-                <Field label="Valor"><InputNumber value={values.valor} min={0} mode="currency" currency="BRL" locale="pt-BR" onValueChange={(e) => setValues((v) => ({ ...v, valor: Number(e.value ?? 0) }))} /></Field>
-                <TextAreaField label="Observação" value={values.observacao} onChange={(observacao) => setValues((v) => ({ ...v, observacao }))} hint="O frontend não calcula imposto automaticamente nesta etapa." />
+        <Dialog header="Lançar imposto manual" visible={visible} modal style={{ width: 'min(52rem, 96vw)' }} onHide={onHide} footer={footer('imposto-nota-fiscal-form', loading, onHide, 'Adicionar imposto')}>
+            <form id="imposto-nota-fiscal-form" className="grid formgrid p-fluid" onSubmit={submeter}>
+                <Field label="Item vinculado" hint="Lista derivada dos itens já carregados no detalhe da nota; não digite o ID do item."><Dropdown value={values.itemNotaFiscalId} options={itemOptions} onChange={(e) => update({ itemNotaFiscalId: e.value })} /></Field>
+                <Field label="Imposto"><InputText value={values.nome} onChange={(e) => update({ nome: e.target.value })} /></Field>
+                <Field label="CST/CSOSN"><InputText value={values.cstCsosn} onChange={(e) => update({ cstCsosn: e.target.value })} /></Field>
+                <Field label="Base cálculo"><InputNumber value={values.baseCalculo} min={0} mode="currency" currency="BRL" locale="pt-BR" onValueChange={(e) => update({ baseCalculo: Number(e.value ?? 0) })} /></Field>
+                <Field label="Alíquota %"><InputNumber value={values.aliquota} min={0} suffix="%" onValueChange={(e) => update({ aliquota: Number(e.value ?? 0) })} /></Field>
+                <Field label="Valor"><InputNumber value={values.valor} min={0} mode="currency" currency="BRL" locale="pt-BR" onValueChange={(e) => update({ valor: Number(e.value ?? 0) })} /></Field>
+                <div className="field col-12">
+                    <label className="font-medium block mb-2">Motivo do lançamento manual</label>
+                    <InputTextarea value={values.observacao} rows={4} maxLength={500} className={classNames('w-full', { 'p-invalid': errors.observacao })} onChange={(e) => update({ observacao: e.target.value })} />
+                    <small className="text-color-secondary block mt-1 line-height-3">Este lançamento manual de IPI, ICMS ST ou FCP ST substitui, no total da nota, o valor calculado pelo motor de tributação para o mesmo item. Explique o motivo: ele fica registrado na linha.</small>
+                    <FieldError message={errors.observacao} />
+                </div>
+                <button type="submit" className="hidden" />
+            </form>
+        </Dialog>
+    );
+};
+
+type ValoresAcessoriosFormValues = { valorFrete: number | null; valorSeguro: number | null; valorOutrasDespesas: number | null };
+
+const valoresAcessoriosFromNota = (nota?: NotaFiscalResponse | null): ValoresAcessoriosFormValues => ({
+    valorFrete: Number(nota?.valorFrete ?? 0),
+    valorSeguro: Number(nota?.valorSeguro ?? 0),
+    valorOutrasDespesas: Number(nota?.valorOutrasDespesas ?? 0)
+});
+
+// AC-7: abre com os três valores atuais da nota; valida localmente antes de enviar exatamente
+// { valorFrete, valorSeguro, valorOutrasDespesas } numéricos.
+export const ValoresAcessoriosDialog = ({
+    visible,
+    loading,
+    nota,
+    onHide,
+    onSubmit
+}: {
+    visible: boolean;
+    loading?: boolean;
+    nota?: NotaFiscalResponse | null;
+    onHide: () => void;
+    onSubmit: (values: { valorFrete: number; valorSeguro: number; valorOutrasDespesas: number }) => Promise<void> | void;
+}) => {
+    const [values, setValues] = useState<ValoresAcessoriosFormValues>(() => valoresAcessoriosFromNota(nota));
+    const [errors, setErrors] = useState<Record<string, string>>({});
+    useEffect(() => {
+        if (visible) {
+            setValues(valoresAcessoriosFromNota(nota));
+            setErrors({});
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [visible]);
+
+    const update = (patch: Partial<ValoresAcessoriosFormValues>) => {
+        setValues((v) => ({ ...v, ...patch }));
+        setErrors((current) => {
+            const next = { ...current };
+            Object.keys(patch).forEach((key) => {
+                next[key] = '';
+            });
+            return next;
+        });
+    };
+
+    const submeter = (event: React.FormEvent) => {
+        event.preventDefault();
+        const parsed = definirValoresAcessoriosNotaFiscalSchema.safeParse(values);
+        if (!parsed.success) {
+            setErrors(buildFieldErrors(parsed.error));
+            return;
+        }
+        onSubmit(parsed.data);
+    };
+
+    return (
+        <Dialog header="Valores acessórios da nota" visible={visible} modal style={{ width: 'min(44rem, 96vw)' }} onHide={onHide} footer={footer('valores-acessorios-form', loading, onHide, 'Salvar valores')}>
+            <form id="valores-acessorios-form" className="grid formgrid p-fluid" onSubmit={submeter}>
+                <div className="field col-12">
+                    <Message severity="info" className="w-full" text="Frete, seguro e outras despesas entram no total da nota e na base de cálculo dos tributos, recalculados na validação." />
+                </div>
+                <div className="field col-12 md:col-4">
+                    <label className="font-medium block mb-2">Frete</label>
+                    <InputNumber value={values.valorFrete} min={0} mode="currency" currency="BRL" locale="pt-BR" className={classNames({ 'p-invalid': errors.valorFrete })} onValueChange={(e) => update({ valorFrete: e.value ?? null })} />
+                    <FieldError message={errors.valorFrete} />
+                </div>
+                <div className="field col-12 md:col-4">
+                    <label className="font-medium block mb-2">Seguro</label>
+                    <InputNumber value={values.valorSeguro} min={0} mode="currency" currency="BRL" locale="pt-BR" className={classNames({ 'p-invalid': errors.valorSeguro })} onValueChange={(e) => update({ valorSeguro: e.value ?? null })} />
+                    <FieldError message={errors.valorSeguro} />
+                </div>
+                <div className="field col-12 md:col-4">
+                    <label className="font-medium block mb-2">Outras despesas</label>
+                    <InputNumber value={values.valorOutrasDespesas} min={0} mode="currency" currency="BRL" locale="pt-BR" className={classNames({ 'p-invalid': errors.valorOutrasDespesas })} onValueChange={(e) => update({ valorOutrasDespesas: e.value ?? null })} />
+                    <FieldError message={errors.valorOutrasDespesas} />
+                </div>
                 <button type="submit" className="hidden" />
             </form>
         </Dialog>

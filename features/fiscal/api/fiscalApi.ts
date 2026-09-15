@@ -13,6 +13,7 @@ import {
     consultarProtocoloSefazSchema,
     contingenciaFiscalSchema,
     criarNotaFiscalSchema,
+    definirValoresAcessoriosNotaFiscalSchema,
     emitirCartaCorrecaoSefazSchema,
     exportarNotasFiscaisCsvSchema,
     gerarContaReceberNotaFiscalSchema,
@@ -40,6 +41,7 @@ import {
     ConsultarProtocoloSefazRequest,
     ContingenciaFiscalResponse,
     CriarNotaFiscalRequest,
+    DefinirValoresAcessoriosNotaFiscalRequest,
     DocumentoAuxiliarFiscalResponse,
     EmitirCartaCorrecaoSefazRequest,
     EventoFiscalOperacionalResponse,
@@ -257,6 +259,7 @@ export const buildCriarNotaFiscalPayload = (values: unknown): CriarNotaFiscalReq
 export const buildGerarNotaFiscalPedidoVendaPayload = (values: unknown): GerarNotaFiscalPedidoVendaRequest => parseSchema(gerarNotaFiscalPedidoVendaSchema, values);
 export const buildAdicionarItemNotaFiscalPayload = (values: unknown): AdicionarItemNotaFiscalRequest => parseSchema(adicionarItemNotaFiscalSchema, values);
 export const buildAdicionarImpostoNotaFiscalPayload = (values: unknown): AdicionarImpostoNotaFiscalRequest => parseSchema(adicionarImpostoNotaFiscalSchema, values);
+export const buildDefinirValoresAcessoriosPayload = (values: unknown): DefinirValoresAcessoriosNotaFiscalRequest => parseSchema(definirValoresAcessoriosNotaFiscalSchema, values);
 export const buildArmazenarXmlNotaFiscalPayload = (values: unknown): ArmazenarXmlNotaFiscalRequest => parseSchema(armazenarXmlNotaFiscalSchema, values);
 export const buildGerarXmlEnvioPayload = (values: unknown): GerarXmlEnvioNotaFiscalRequest => parseSchema(gerarXmlEnvioSchema, values);
 export const buildAssinarXmlEnvioPayload = (values: unknown): AssinarXmlNotaFiscalRequest => parseSchema(assinarXmlEnvioSchema, values);
@@ -391,6 +394,13 @@ export const fiscalApi = {
         const payload = buildAdicionarImpostoNotaFiscalPayload(values);
         return runFiscalRequest(async () => {
             const response = await httpClient.post<NotaFiscalResponse>(`/api/fiscal/notas-fiscais/${id}/impostos`, payload);
+            return response.data;
+        });
+    },
+    async definirValoresAcessorios(id: string, values: unknown) {
+        const payload = buildDefinirValoresAcessoriosPayload(values);
+        return runFiscalRequest(async () => {
+            const response = await httpClient.post<NotaFiscalResponse>(`/api/fiscal/notas-fiscais/${id}/valores-acessorios`, payload);
             return response.data;
         });
     },

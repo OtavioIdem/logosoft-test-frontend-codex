@@ -1,5 +1,5 @@
 import { FormatoDocumentoAuxiliarFiscal, OrigemNotaFiscal, SelectOption, StatusNotaFiscal, TipoContingenciaFiscal, TipoDocumentoAuxiliarFiscal, TipoDocumentoFiscal, TipoEventoFiscal, TipoOperacaoFiscal, TipoServicoTransmissaoFiscal, TipoXmlFiscal } from '@/types/erp';
-import { AcaoWorkflowFiscalResponse, AcoesResumoFiscalResponse, NotaFiscalResponse, ResumoOperacionalNotaFiscalResponse, WorkflowOperacionalNotaFiscalResponse } from '@/features/fiscal/types/fiscal.types';
+import { AcaoWorkflowFiscalResponse, AcoesResumoFiscalResponse, ImpostoNotaFiscalResponse, NotaFiscalResponse, OrigemImpostoNotaFiscal, ResumoOperacionalNotaFiscalResponse, SituacaoLinhaImpostoNoTotal, WorkflowOperacionalNotaFiscalResponse } from '@/features/fiscal/types/fiscal.types';
 
 export const formatFiscalMoney = (value?: number | null) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value ?? 0));
 
@@ -205,6 +205,164 @@ export const fiscalActionDisabledReason = (permissionDisabled: boolean, actionSt
 };
 
 export const notaPodeEditarItens = (nota?: NotaFiscalResponse | null) => [StatusNotaFiscal.Rascunho, StatusNotaFiscal.Validada].includes(Number(nota?.statusFiscal));
+
+// D33: valores acessórios só em Rascunho -- o motor de tributação só recalcula nesse status
+export const notaPodeDefinirValoresAcessorios = (nota?: NotaFiscalResponse | null) => Number(nota?.statusFiscal) === StatusNotaFiscal.Rascunho;
+
+export const motivoValoresAcessoriosIndisponivel = (nota?: NotaFiscalResponse | null) =>
+    notaPodeDefinirValoresAcessorios(nota) ? null : `Disponível somente com a nota em Rascunho. Status atual: ${statusNotaFiscalLabel(nota?.statusFiscal)}.`;
+
+export const origemImpostoNotaFiscalLabel = (value?: number | string | null) => {
+    if (value === undefined || value === null || value === '') return 'Não informada';
+    const numeric = Number(value);
+    if (numeric === OrigemImpostoNotaFiscal.Manual) return 'Manual';
+    if (numeric === OrigemImpostoNotaFiscal.Motor) return 'Motor';
+    return `Origem desconhecida (${value})`;
+};
+
+// NotaFiscal.cs:674-676 -- ValorEfetivoPorNomeImposto só é chamado para estes três nomes
+export const IMPOSTOS_QUE_COMPOEM_TOTAL = ['IPI', 'ICMS ST', 'FCP ST'] as const;
+
+export type AgregadosImpostoNotaFiscal = {
+    valorIpi?: number | null;
+    valorIcmsSt?: number | null;
+    valorFcpSt?: number | null;
+};
+
+export type SituacaoLinhasImpostoNoTotalResult = {
+    porId: Record<string, SituacaoLinhaImpostoNoTotal>;
+    nomesNaoConferidos: string[];
+};
+
+const CHAVE_ITEM_NOTA = '__nota__';
+const chaveLinhaImposto = (linha: ImpostoNotaFiscalResponse) => linha.itemNotaFiscalId ?? CHAVE_ITEM_NOTA;
+
+const agregadoPorNomeImposto = (agregados: AgregadosImpostoNotaFiscal | undefined | null, nome: (typeof IMPOSTOS_QUE_COMPOEM_TOTAL)[number]) => {
+    if (nome === 'IPI') return Number(agregados?.valorIpi ?? 0);
+    if (nome === 'ICMS ST') return Number(agregados?.valorIcmsSt ?? 0);
+    return Number(agregados?.valorFcpSt ?? 0);
+};
+
+// D34 / NotaFiscal.cs:672-695 / FiscalNotaFiscalMapper.cs:40: a marcação por linha lê os agregados do
+// backend em vez de re-somar o total no cliente. Só IPI, ICMS ST e FCP ST entram na composição (nome
+// exato); as demais linhas ficam "fora_do_total". A chave de agrupamento é (itemNotaFiscalId ?? null,
+// nome). Se a soma das linhas vencedoras não bater em centavos com o agregado do backend, ou se houver
+// dois manuais ativos na mesma chave, ou se faltar `origem`, todas as linhas daquele nome ficam
+// "nao_conferida" e o nome entra em `nomesNaoConferidos`.
+export const situacaoLinhasImpostoNoTotal = (impostos: ImpostoNotaFiscalResponse[] | undefined | null, agregados: AgregadosImpostoNotaFiscal | undefined | null): SituacaoLinhasImpostoNoTotalResult => {
+    const linhas = impostos ?? [];
+    const porId: Record<string, SituacaoLinhaImpostoNoTotal> = {};
+    linhas.forEach((linha) => {
+        porId[linha.id] = 'fora_do_total';
+    });
+
+    const nomesNaoConferidos: string[] = [];
+
+    IMPOSTOS_QUE_COMPOEM_TOTAL.forEach((nome) => {
+        const linhasDoNome = linhas.filter((linha) => linha.nome === nome);
+        if (linhasDoNome.length === 0) return;
+
+        const chaves: string[] = [];
+        const gruposPorChave: Record<string, ImpostoNotaFiscalResponse[]> = {};
+        linhasDoNome.forEach((linha) => {
+            const chave = chaveLinhaImposto(linha);
+            if (!gruposPorChave[chave]) {
+                gruposPorChave[chave] = [];
+                chaves.push(chave);
+            }
+            gruposPorChave[chave].push(linha);
+        });
+
+        let estruturaInvalida = false;
+        const vencedorPorChave: Record<string, ImpostoNotaFiscalResponse | null> = {};
+        const suprimidasPorChave: Record<string, ImpostoNotaFiscalResponse[]> = {};
+
+        chaves.forEach((chave) => {
+            const grupo = gruposPorChave[chave];
+            const semOrigem = grupo.some((linha) => linha.origem === undefined || linha.origem === null);
+            if (semOrigem) {
+                estruturaInvalida = true;
+                return;
+            }
+
+            const manuais = grupo.filter((linha) => Number(linha.origem) === OrigemImpostoNotaFiscal.Manual);
+            const motores = grupo.filter((linha) => Number(linha.origem) === OrigemImpostoNotaFiscal.Motor);
+
+            if (manuais.length > 1) {
+                estruturaInvalida = true;
+                return;
+            }
+
+            if (manuais.length === 1) {
+                vencedorPorChave[chave] = manuais[0];
+                suprimidasPorChave[chave] = motores;
+                return;
+            }
+
+            if (motores.length > 0) {
+                vencedorPorChave[chave] = motores[0];
+                suprimidasPorChave[chave] = motores.slice(1);
+                return;
+            }
+
+            vencedorPorChave[chave] = null;
+            suprimidasPorChave[chave] = [];
+        });
+
+        if (estruturaInvalida) {
+            nomesNaoConferidos.push(nome);
+            linhasDoNome.forEach((linha) => {
+                porId[linha.id] = 'nao_conferida';
+            });
+            return;
+        }
+
+        const somaVencedoras = chaves.reduce((total, chave) => total + Number(vencedorPorChave[chave]?.valor ?? 0), 0);
+        const agregado = agregadoPorNomeImposto(agregados, nome);
+        const bate = Math.round(somaVencedoras * 100) === Math.round(agregado * 100);
+
+        if (!bate) {
+            nomesNaoConferidos.push(nome);
+            linhasDoNome.forEach((linha) => {
+                porId[linha.id] = 'nao_conferida';
+            });
+            return;
+        }
+
+        chaves.forEach((chave) => {
+            const vencedora = vencedorPorChave[chave];
+            if (vencedora) porId[vencedora.id] = 'compoe';
+            suprimidasPorChave[chave].forEach((linha) => {
+                porId[linha.id] = 'suprimida';
+            });
+        });
+    });
+
+    return { porId, nomesNaoConferidos };
+};
+
+export type LinhaComposicaoTotalNotaFiscal = {
+    codigo: string;
+    label: string;
+    valor: number;
+    negativo?: boolean;
+};
+
+// AC-6/D34: composição vem inteira da resposta do backend, o total nunca é somado no cliente
+export const composicaoTotalNotaFiscal = (nota?: NotaFiscalResponse | null): LinhaComposicaoTotalNotaFiscal[] => {
+    if (!nota) return [];
+    return [
+        { codigo: 'produtos', label: 'Produtos', valor: Number(nota.valorProdutos ?? 0) },
+        { codigo: 'desconto', label: 'Desconto', valor: Number(nota.valorDesconto ?? 0), negativo: true },
+        { codigo: 'frete', label: 'Frete', valor: Number(nota.valorFrete ?? 0) },
+        { codigo: 'seguro', label: 'Seguro', valor: Number(nota.valorSeguro ?? 0) },
+        { codigo: 'outrasDespesas', label: 'Outras despesas', valor: Number(nota.valorOutrasDespesas ?? 0) },
+        { codigo: 'ipi', label: 'IPI', valor: Number(nota.valorIpi ?? 0) },
+        { codigo: 'icmsSt', label: 'ICMS ST', valor: Number(nota.valorIcmsSt ?? 0) },
+        { codigo: 'fcpSt', label: 'FCP ST', valor: Number(nota.valorFcpSt ?? 0) },
+        { codigo: 'total', label: 'Total', valor: Number(nota.valorTotal ?? 0) }
+    ];
+};
 export const notaPodeValidar = (nota?: NotaFiscalResponse | null, resumo?: ResumoOperacionalNotaFiscalResponse | null) => acaoResumo(resumo)?.podeValidar ?? (Number(nota?.statusFiscal) === StatusNotaFiscal.Rascunho && (nota?.itens?.length ?? 0) > 0);
 export const notaPodeGerarXml = (nota?: NotaFiscalResponse | null, resumo?: ResumoOperacionalNotaFiscalResponse | null) =>
     acaoResumo(resumo)?.podeGerarXmlEnvio ?? [StatusNotaFiscal.Rascunho, StatusNotaFiscal.Validada].includes(Number(nota?.statusFiscal));

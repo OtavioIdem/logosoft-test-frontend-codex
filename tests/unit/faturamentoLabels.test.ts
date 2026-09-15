@@ -92,10 +92,16 @@ describe('Faturamento — rótulos e regras de UI', () => {
         expect(lines[5].registro).toBeNull();
     });
 
-    it('AC-2/D25: montarLinhasDeLegs mostra "Sem registro" (null registro) para leg ausente', () => {
+    // QA3-2 (b55): o `it` original só afirmava `registro === null` e `legLabel !== 'Sem registro'`, sem
+    // travar a ordem/identidade de cada uma das 6 linhas -- um bug que trocasse a ordem ou duplicasse um
+    // leg passaria batido. Agora cada linha afirma `leg === i+1` nominalmente (LegIntegracaoFaturamento
+    // é 1..6 em sequência), e o texto "Sem registro" (quem decide o rótulo é a tela, FaturamentoDetalhePage.tsx:163) é
+    // provado por linha no teste de componente (FaturamentoDetalhePage.test.tsx).
+    it('AC-2/D25: montarLinhasDeLegs mostra as 6 linhas na ordem do enum, cada uma com registro null', () => {
         const lines = montarLinhasDeLegs([]);
         expect(lines).toHaveLength(6);
-        lines.forEach((line) => {
+        lines.forEach((line, index) => {
+            expect(line.leg).toBe(index + 1);
             expect(line.registro).toBeNull();
             expect(line.legLabel).not.toBe('Sem registro');
         });

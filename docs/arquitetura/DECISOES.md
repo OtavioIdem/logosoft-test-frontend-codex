@@ -1019,3 +1019,151 @@ Quem arbitrou: orquestrador
 Impacto: `tests/unit/faturamentoLabels.test.ts`, `tests/unit/faturamentoStructure.test.ts`,
 `tests/components/FaturamentoDetalhePage.test.tsx`, `tests/e2e/faturamento-legs.spec.ts`,
 `scripts/guard-permission-map.allowlist.json`.
+
+### D33 — valores acessórios da nota só se definem pela tela em Rascunho
+
+Data: 2026-09-15
+Rodada: sem rodada de debate. Arbitrada sobre a proposta P-1 do nó `planner` da `b56`
+(`docs/fatias/v1.11.0a8b56-f2-impostos-valores-acessorios.md`), com os fatos conferidos pela sessão principal no código.
+Decisão: o botão "Valores acessórios" do detalhe da nota fica habilitado só com `statusFiscal === 1` (Rascunho), por
+uma função própria (`notaPodeDefinirValoresAcessorios`), além do guard `FISCAL_GERENCIAR`. `notaPodeEditarItens` não muda.
+Alternativas descartadas:
+1. Reusar `notaPodeEditarItens` (Rascunho e Validada). Em Validada o backend aceita a escrita e recalcula `ValorTotal`
+   (`NotaFiscal.cs:176-187`), mas o motor recusa tudo fora de Rascunho (`CalculoTributarioNotaFiscalService.cs:54`).
+   IPI, ICMS-ST e FCP-ST ficariam com a base antiga, e o XML já guardado seria assinado e transmitido com `vNF`
+   desatualizado. Isso levaria a fatia a `CRITICAL`.
+2. O complemento de `GarantirPodeAlterar` (1, 2, 3, 6 e 10). Mesmo defeito, em mais estados.
+Por quê: em Rascunho a validação sempre recalcula (`ValidarNotaFiscalUseCase.cs:155-163`), então frete, seguro e
+outras despesas entram na base dos tributos. Nota Rejeitada volta a Rascunho pela correção
+(`NotaFiscal.cs:457-467`), então não fica sem caminho.
+O que se abre mão: corrigir acessórios em nota Validada pela tela, embora o backend aceite.
+Risco de acesso: `NENHUM`. O botão é novo; ninguém perde o que já tinha.
+Reversível: sim. Gatilho de revisita: resposta do backend à pergunta B-1 da `b56` (exigir Rascunho no domínio).
+Quem arbitrou: orquestrador
+Impacto: `features/fiscal/components/fiscalUiUtils.ts`, `NotaFiscalDetalhePage.tsx`. Os botões Item e Imposto seguem
+em Validada, com a mesma defasagem: restringi-los tira capacidade que conclui hoje (`CAPACIDADE`) e fica para fatia
+própria com decisão do usuário.
+
+### D34 — a composição do total e a marcação de linha de imposto leem os agregados do backend
+
+Data: 2026-09-15
+Rodada: proposta P-2 do `planner` da `b56`.
+Decisão: o cartão de composição mostra os valores da resposta e `nota.valorTotal`, sem somar no cliente. A coluna
+"No total" aplica a regra D7 do backend só a `IPI`, `ICMS ST` e `FCP ST`, com comparação exata de nome e chave
+`(itemNotaFiscalId ?? null, nome)`. A marcação só aparece quando a soma das linhas marcadas "compõe" bate, em
+centavos, com `valorIpi`, `valorIcmsSt` ou `valorFcpSt`. Se não bater, ou se houver dois manuais ativos na mesma
+chave, as linhas daquele nome ficam "Não conferida" e um aviso diz que vale o total do servidor.
+Alternativas descartadas:
+1. Re-somar no cliente: replica a D7 e a fórmula do total, e diverge em silêncio se o backend mudar.
+2. Só a coluna Origem: não diz qual linha compõe o total, que é o defeito do P5.
+Por quê: o mapper devolve só linhas ativas (`FiscalNotaFiscalMapper.cs:37-40`) e o nome já vem normalizado
+(`ImpostoNotaFiscal.cs:46`), então a marcação é implementável sem falso positivo. A conferência contra o agregado
+transforma mudança de regra no backend em aviso, e não em afirmação falsa.
+O que se abre mão: marcar linhas em nota com manual duplicado legado, e conferir a fórmula do total.
+Risco de acesso: `NENHUM`.
+Reversível: sim. Gatilho de revisita: o backend publicar por linha se ela compõe o total.
+Quem arbitrou: orquestrador
+Impacto: `features/fiscal/components/fiscalUiUtils.ts`, `NotaFiscalImpostosPanels.tsx` (novo).
+
+### D35 — o diálogo de imposto manual entra na `b56`: motivo obrigatório, sem texto padrão
+
+Data: 2026-09-15
+Rodada: proposta P-3 do `planner` da `b56`.
+Decisão: `ImpostoNotaFiscalDialog` passa a abrir com a observação vazia, rotulada "Motivo do lançamento manual",
+obrigatória de 1 a 500 caracteres após trim, e com hint que nomeia os três impostos que substituem o motor no total.
+O hint "O frontend não calcula imposto automaticamente nesta etapa." e o padrão "Imposto parametrizado manualmente."
+saem.
+Alternativa descartada: deixar para depois. O texto padrão sempre passa na checagem de não vazio do backend
+(`NotaFiscalBasicaUseCases.cs:326-329`), então todo override grava o mesmo motivo pronto e a auditoria da D7 fica
+sem conteúdo. É a mesma desinformação da legenda, no diálogo que cria a linha que suprime o motor.
+O que se abre mão: agilidade; o operador digita o motivo.
+Risco de acesso: `NENHUM`.
+Reversível: sim. Gatilho de revisita: nenhum previsto.
+Quem arbitrou: orquestrador
+Impacto: `features/fiscal/components/FiscalActionDialogs.tsx`, `features/fiscal/schemas/fiscalSchemas.ts`.
+
+### D36 — `calcular-tributos` fica fora da `b56`, e o adendo D22 leva só `valores-acessorios`
+
+Data: 2026-09-15
+Rodada: proposta P-4 do `planner` da `b56`.
+Decisão: a `b56` não consome `POST /api/fiscal/notas-fiscais/{id}/calcular-tributos`. O adendo D22 em
+`docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md` §9 acrescenta só `valores-acessorios`, e o catálogo do gate vai de 577 para
+578 rotas. Destino de `calcular-tributos`: F3, junto dos cadastros que alimentam o motor.
+Alternativa descartada: incluir um botão de recalcular. É escrita nova, que inativa linhas do motor, fora de F2.2 e
+F2.3; e, com a D33, desnecessária, porque a validação já recalcula.
+Por quê: a D22 fala em rota consumida que falta. Grep em `features/`, `app/`, `lib/` e `types/` sem ocorrência.
+O que se abre mão: recalcular antes de validar.
+Risco de acesso: `NENHUM`.
+Reversível: sim. Gatilho de revisita: a fatia F3 que abrir o motor na tela.
+Quem arbitrou: orquestrador
+Impacto: `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md` (§9), `tests/unit/backendContractMap.test.ts`. Esta decisão corrige
+a frase da D22 que citava `calcular-tributos` "na `b56`".
+
+### D37 — `onSettled` só nas duas mutações cujos diálogos a `b56` toca
+
+Data: 2026-09-15
+Rodada: proposta P-5 do `planner` da `b56`.
+Decisão: a D27 se aplica a `definirValoresAcessoriosMutation` (nova) e `adicionarImpostoMutation`. As outras 21
+mutações fiscais ficam como estão, com destino F5.5.
+Alternativa descartada: trocar as 23 de uma vez. Mistura correção de classe com a entrega de tela (argumento T7).
+O que se abre mão: consistência de reconsulta no erro no restante do detalhe fiscal, até a F5.5.
+Risco de acesso: `NENHUM`.
+Reversível: sim. Gatilho de revisita: a F5.5.
+Quem arbitrou: orquestrador
+Impacto: `features/fiscal/hooks/useFiscalResources.ts`.
+
+### D38 — a tabela de impostos mostra a observação da linha, e as outras sobras do inventário da `b56` têm destino
+
+Data: 2026-09-15
+Rodada: sem rodada de debate. Arbitrada sobre INV-1 a INV-4 de `docs/arquitetura/debate/03-inventario-impostos-nota-fiscal.md`.
+Decisão:
+1. **INV-2 entra.** A tabela de impostos ganha a coluna "Observação" com `ImpostoNotaFiscalResponse.observacao` em
+   texto (vazio vira "-"). É o motivo do lançamento manual que a D35 torna obrigatório; sem a coluna, o operador grava
+   o motivo e não o vê de volta, e a linha Manual que suprime o Motor fica sem explicação na tela. O `id` da linha passa
+   a ser lido pela marcação da D34 (situação por id).
+2. **INV-1 corrigido e com destino.** `NotaFiscalResponse.id` tem leitor: `useFiscalResources.ts:84-99`
+   (`invalidateNota(nota.id)`), fora dos três arquivos varridos. `NotaFiscalResponse.observacao` fica sem exibição,
+   com destino F5 (refino do detalhe fiscal).
+3. **INV-3** já é o AC-8 da `b56` (`.strict()` no schema novo). Sem ação.
+4. **INV-4** amplia a pergunta B-2 ao backend: o gerador cola comentário ao campo seguinte e pode perder campo em
+   qualquer record comentado assim, não só em `NotaFiscalResponse`.
+Alternativa descartada: deixar a observação da linha para a F5. O P5 é justamente a linha manual vencer em silêncio;
+mostrar a origem sem o motivo resolve metade.
+O que se abre mão: largura da tabela, que já tem nove colunas.
+Risco de acesso: `NENHUM`.
+Reversível: sim. Gatilho de revisita: nenhum previsto.
+Quem arbitrou: orquestrador
+Impacto: `features/fiscal/components/NotaFiscalImpostosPanels.tsx`; AC-19 da `b56`.
+
+### D39 — o campo de moeda que grava centavo errado é defeito de classe pré-existente (DEF-1), e não se corrige na `b56`
+
+Data: 2026-09-15
+Rodada: sem rodada de debate. Arbitrada sobre o `failed` do nó `e2e` da `b56` (S2 de `tests/e2e/fiscal-impostos.spec.ts`,
+15 passed | 1 failed nas duas rodadas, servidor 3411 PID 28724) e sobre o diagnóstico da sessão principal.
+Medição (Playwright em Chromium, eventos de teclado reais, servidor isolado 3411 PID 25040 conferido por
+`Get-CimInstance`; roteiro em scratchpad `diag-b56/diag-moeda.spec.ts`, fora do repositório):
+- `InputNumber` com `mode="currency" currency="BRL" locale="pt-BR"`: depois de um dígito digitado na parte decimal, o
+  cursor não avança, e o dígito seguinte sobrescreve o anterior.
+- "12,50" exibe R$ 12,00 e grava `12`. "12,05" exibe R$ 12,50 e grava `12.5`. "12,5" grava `12.5`.
+- Igual com 150 ms entre teclas: não é velocidade de digitação.
+- Igual no campo "Valor unitário" do diálogo de item, que já está em produção (`FiscalActionDialogs.tsx:230`).
+- Alcance: 22 usos diretos (`FiscalActionDialogs.tsx` 7, `features/tributacao/**` 14, `MoneyInput.tsx` 1) e o
+  `components/forms/MoneyInput.tsx`, mesmo modo e locale, usado em 21 arquivos de 17 módulos. Se o `MoneyInput`
+  reproduz não foi medido. Reprodução por pessoa digitando não foi medida; os eventos são os do navegador.
+Decisão:
+1. **DEF-1 fica fora da `b56`.** Destino: fatia corretiva própria, recomendada antes da `b57`, com diagnóstico da causa
+   no componente e E2E que digita "12,50" e "12,05" em cada padrão de campo de moeda.
+2. **O S2 do e2e passa a digitar "12,5"** e a afirmar que o campo exibe 12,50 antes de salvar. O corpo exato e o frete
+   devolvido, que é o que o AC-11 pede, continuam afirmados. Nenhum teste afirma o valor errado.
+3. **Aviso operacional em negrito no `CHANGELOG`**: conferir o valor exibido antes de salvar em qualquer campo de moeda.
+Alternativas descartadas:
+1. Corrigir só o diálogo novo na `b56`: desenho de componente sem causa diagnosticada, e comportamento divergente
+   entre o campo novo e os demais.
+2. Segurar a `b56` até a correção: a `b56` não agrava o defeito e corrige desinformação fiscal que já está no ar.
+3. `test.fixme` ou remover o S2: é supressão.
+4. Manter o S2 vermelho: o release gate exige e2e verde.
+O que se abre mão: entregar o diálogo novo com o defeito conhecido, igual aos campos que já existem.
+Risco de acesso: `NENHUM`.
+Reversível: sim. Gatilho de revisita: a fatia de DEF-1; com ela, o S2 volta a digitar "12,50".
+Quem arbitrou: orquestrador
+Impacto: `tests/e2e/fiscal-impostos.spec.ts`, `CHANGELOG.md`.

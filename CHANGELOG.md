@@ -1,3 +1,144 @@
+# v1.11.0a8b56
+
+## A aba de Impostos diz de onde vem cada linha e qual compõe o total, e a nota ganha frete, seguro e outras despesas
+
+Segunda fatia da onda F2 (`D21`). Corrige o P5 do plano da onda: a aba de Impostos afirmava que o imposto era
+"parametrizado/manual" e que nada era calculado, o que é falso desde a v1.22.0/G2, e escondia que uma linha
+lançada à mão vence a do motor no total para IPI, ICMS ST e FCP ST. Plano e estado da execução em
+`docs/fatias/v1.11.0a8b56-f2-impostos-valores-acessorios.md`; inventário em
+`docs/arquitetura/debate/03-inventario-impostos-nota-fiscal.md`; decisões `D33` a `D39`.
+
+**Risco da fatia: `HIGH`.** Valor monetário que compõe o total de um documento fiscal, contrato que muda e um
+diálogo que grava. Não emite, não transmite e não estorna. Ficaria `CRITICAL` se os valores acessórios pudessem
+ser gravados em nota Validada, e é por isso que não podem (`D33`).
+
+### O que o backend já entregava e a tela não lia
+
+Conferido no código do backend (`New project 3/src`), porque o `CONTRATO-API-v1.23.md` não publica `ValorIpi`,
+`OrigemImpostoNotaFiscal` nem os campos de proveniência da linha de imposto.
+
+| O que a UI fazia | O que o backend entrega |
+| --- | --- |
+| `NotaFiscalResponse` sem os valores acessórios nem os tributos agregados | `valorFrete`, `valorSeguro`, `valorOutrasDespesas`, `valorIpi`, `valorIcmsSt`, `valorFcpSt`, todos somados em `valorTotal` (`NotaFiscal.cs:653-660`) |
+| Linha de imposto sem proveniência | `origem` (`Manual = 1`, `Motor = 2`), `regraFiscalAplicadaId`, `excecaoFiscalAplicadaId` |
+| Não chamava `POST /api/fiscal/notas-fiscais/{id}/valores-acessorios` | Endpoint sob `FISCAL_GERENCIAR`, com os três valores obrigatórios e não negativos |
+| Lançamento manual com motivo pré-preenchido | O motivo é obrigatório e é a auditoria do override (`NotaFiscalBasicaUseCases.cs:326-329`) |
+
+### O que a tela de detalhe da nota passa a fazer
+
+**Aba de Impostos** (`D34`, `D38`)
+
+- A legenda falsa sai. A nova diz o que o código sustenta: o motor calcula na validação, e um lançamento manual
+  substitui o motor no total só para IPI, ICMS ST e FCP ST do mesmo item.
+- Colunas novas: **Origem** (Manual ou Motor), **No total** e **Observação**.
+- "No total" mostra, por linha, "Compõe o total", "Suprimida pelo lançamento manual" ou "Não compõe o total"
+  (ICMS, PIS, COFINS e os demais não entram no total da nota).
+- A tela não recalcula o total. Ela confere a marcação contra o valor agregado que o servidor devolve. Quando não
+  bate, as linhas daquele imposto aparecem como "Não conferida" e um aviso diz que vale o total do servidor.
+
+**Composição do total** (`D34`)
+
+Cartão novo abaixo do cabeçalho: produtos, desconto, frete, seguro, outras despesas, IPI, ICMS ST, FCP ST e o
+total. Todos os números vêm da resposta do servidor; nenhum é somado na tela.
+
+**Valores acessórios** (`D33`)
+
+Botão novo "Valores acessórios", sob `FISCAL_GERENCIAR`, habilitado **só com a nota em Rascunho**. O diálogo abre
+com os valores atuais e recusa valor vazio ou negativo. Depois de gravar, com sucesso ou erro, a nota é consultada
+de novo (`D37`).
+
+**Lançamento manual de imposto** (`D35`)
+
+O diálogo passa a se chamar "Lançar imposto manual". O motivo começa vazio, é obrigatório e aceita até 500
+caracteres. O texto padrão "Imposto parametrizado manualmente." e a dica falsa saem.
+
+### Seção operacional — leia antes do deploy
+
+1. **Nenhuma permissão a conceder.** Nenhuma permissão entra ou sai do union, da regra de rota ou do menu. O botão
+   novo usa `FISCAL_GERENCIAR`, que quem já lança item e imposto tem. Risco de acesso: `NENHUM`.
+2. **Valores acessórios só em Rascunho, embora o backend aceite mais.** O backend grava frete, seguro e outras
+   despesas também em Validada, Assinada, Rejeitada e Contingência, mas o motor de tributação só recalcula em
+   Rascunho (`CalculoTributarioNotaFiscalService.cs:54`). Em Validada, o total mudaria e IPI, ICMS ST e FCP ST
+   ficariam com a base antiga, e o XML já gerado seguiria para assinatura com o total anterior. Nota rejeitada volta
+   a Rascunho pela correção e pode então ser ajustada.
+3. **O motivo do lançamento manual passa a ser digitado.** Quem lança imposto à mão precisa escrever por quê; o
+   motivo aparece na coluna Observação.
+4. **Condição que já existe hoje, e não muda nesta versão:** os botões Item e Imposto seguem habilitados em
+   Validada, com a mesma defasagem de base tributária. Restringi-los tiraria uma operação que conclui hoje, e fica
+   para fatia própria com decisão do dono do produto (`D33`).
+5. **Confira o valor exibido antes de salvar qualquer campo de moeda.** Defeito que já existia, encontrado pelo E2E
+   desta versão e não corrigido nela (`D39`): digitando os centavos com dois dígitos, o segundo sobrescreve o
+   primeiro. "12,50" grava R$ 12,00, e "12,05" grava R$ 12,50. Medido no campo de frete e no "Valor unitário" do item. Os
+   demais campos de moeda do fiscal e da tributação usam a mesma configuração e provavelmente têm o mesmo defeito, assim
+   como os outros campos de moeda do sistema.
+   O valor que aparece no campo é o que será gravado. Correção em fatia própria, antes da `b57`.
+
+### Gate de contrato (`D22`, `D36`)
+
+A rota `valores-acessorios` foi acrescentada como adendo a `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md`, citando
+`NotasFiscaisController.cs:95-102`. `calcular-tributos`, que também falta ali, ficou fora de propósito: a tela não
+a consome e o destino é a F3. Medido logo após o adendo: `validate:backend-contract-map` com saída `0`.
+
+### Testes, e a prova de que sabem falhar
+
+Dois recortes, rodados com `npx vitest run` pela sessão principal depois do nó `tests`:
+
+- **Fiscal, contrato e permissões:** 12 arquivos, **99 testes** ("Tests 99 passed (99)"). Novos:
+  `tests/unit/fiscalImpostosComposicao.test.ts`, `fiscalImpostosStructure.test.ts` e, em `tests/components/`,
+  `ValoresAcessoriosDialog`, `ImpostoNotaFiscalDialog`, `NotaFiscalImpostosPanels` e
+  `useFiscalMutationsValoresAcessorios`. `backendContractMap.test.ts` passa de 577 para 578 rotas, com asserção
+  nominal de `valores-acessorios`.
+- **Pendências da b55 (QA3-2, QA3-3, QA3-4):** 3 arquivos de faturamento, **27 testes** ("Tests 27 passed (27)").
+
+`npx tsc --noEmit` com saída 0. Os nove casos da regra de supressão (IPI manual contra motor, ICMS fora do total, só motor,
+item nulo, soma que não bate, manual duplicado, nome com hífen, minúsculas, origem ausente) têm um teste cada.
+
+Cada sabotagem abaixo foi feita no código de produção pelo `engenheiro-testes`, com backup e restauração
+conferida por `sha256sum -c`, e derrubou os testes que a nomeiam:
+
+| Sabotagem | Reprovou |
+| --- | --- |
+| S1: o motor volta a vencer o lançamento manual | AC-4 (a) e (e) no unitário; AC-5 no componente |
+| S2: o cartão soma o total no cliente | AC-6 (total 999 com componentes que não somam 999) |
+| S3: o schema de acessórios perde o `.strict()` | AC-8 (chave extra) |
+| S4: a mutação de acessórios volta a reconsultar só no sucesso | AC-9 na estrutura e no `renderHook` com POST rejeitado |
+| S5: valores acessórios liberados em Validada | os dois testes de AC-10 |
+| S6: a legenda falsa volta | os dois testes de AC-2 |
+| S7: `cancelarMutation` do faturamento volta a `onSuccess` com comentário decorativo | QA3-3 |
+
+**E2E.** `tests/e2e/fiscal-impostos.spec.ts` (novo) roda com `fiscal.spec.ts` e `permissions.spec.ts`, porque a fixture
+compartilhada mudou. Quatro sessões nominais:
+
+- **S1:** só consultar. Botão visível e desabilitado.
+- **S2:** consultar e gerenciar, nota em Rascunho. Envia o corpo exato e mostra o frete devolvido.
+- **S3:** só gerenciar. A página nega acesso e nenhum POST sai.
+- **S4:** depois de Validar. Botão desabilitado com o motivo.
+
+A primeira execução reprovou o S2 nas duas rodadas (15 passed | 1 failed): digitado "12,50", o corpo saiu com
+`valorFrete: 12`. A sessão principal mediu a causa, que é o DEF-1 (`D39`), e o S2 passou a digitar "12,5" e a
+conferir o campo exibindo 12,50 antes de salvar. Segunda execução: **16 passed | 0 failed nas duas rodadas**, num
+servidor isolado na 3411 (PID 31684, `next dev -p 3411` neste diretório, identidade conferida antes de cada rodada e
+porta liberada ao fim).
+
+**QA.** O `qa-revisor` rodou os gates e o `build` com saída 0 e os dois recortes (99 e 27), e reproduziu três
+sabotagens com restauração conferida por `sha256sum -c` (28 arquivos OK): S1 com 3 failed | 20 passed, S2 com
+1 failed | 22 passed e S5 com 2 failed | 18 passed. Veredito `APROVADO_COM_RESSALVA`: ele não reexecutou o E2E, e
+faltam dois testes menores, valor negativo no componente do diálogo e GUID no cartão de composição, com destino F5.
+
+### Pendências nomeadas fora desta versão
+
+- **DEF-1, campo de moeda que grava centavo errado:** fatia corretiva própria, recomendada antes da `b57` (`D39`).
+- **F2.4 a F2.6** (alertas da transmissão, `FISCAL_REPROCESSAR` na rota e no menu, `correlationId`): `b57` (`D21`).
+- **Recalcular tributos pela tela** (`calcular-tributos`): F3 (`D36`).
+- **Reconsulta no erro nas outras 21 mutações fiscais:** F5.5 (`D37`).
+- **Observação da nota, e GUIDs de regra e exceção fiscal:** F5 (`D38`).
+- **`Descartada` ausente do enum de status no frontend; `pessoaId` sem par; `numeroDocumento` não tipado:** fatias
+  de classe de enum e de campo, depois das respostas do backend.
+- **Perguntas ao backend:** B-1 (exigir Rascunho no domínio), B-2 (gerador do contrato perde campo depois de
+  comentário), B-3 (request de acessórios publicado como opcional), B-4 (manual duplicado legado na mesma chave).
+- **Esteira:** o builder desta fatia rodou `git stash`, que `policies.yaml` proíbe e nenhum hook impede (VIOL-1,
+  sem dano, conferido).
+
 # v1.11.0a8b55
 
 ## Faturamento mostra os seis legs, avisa quando a etapa mente, e oferece a retomada de reversão

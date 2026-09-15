@@ -3,6 +3,7 @@ import {
     buildAdicionarImpostoNotaFiscalPayload,
     buildAdicionarItemNotaFiscalPayload,
     buildCriarNotaFiscalPayload,
+    buildDefinirValoresAcessoriosPayload,
     buildGerarNotaFiscalPedidoVendaPayload,
     buildExportarNotasFiscaisCsvQueryParams,
     buildInutilizarNumeracaoPayload,
@@ -66,15 +67,51 @@ describe('payloads fiscais', () => {
             observacao: null
         });
         expect(() => buildAdicionarItemNotaFiscalPayload({ codigoItem: 'P001', descricao: 'Produto', unidadeComercial: 'UN', quantidade: 1, valorUnitario: 100, valorDesconto: 101 })).toThrow('O desconto não pode ultrapassar');
-        expect(buildAdicionarImpostoNotaFiscalPayload({ itemNotaFiscalId: '', nome: 'ICMS', cstCsosn: '', baseCalculo: 100, aliquota: 0, valor: 0, observacao: '' })).toEqual({
+        expect(buildAdicionarImpostoNotaFiscalPayload({ itemNotaFiscalId: '', nome: 'ICMS', cstCsosn: '', baseCalculo: 100, aliquota: 0, valor: 0, observacao: 'Lançamento manual conferido.' })).toEqual({
             itemNotaFiscalId: null,
             nome: 'ICMS',
             cstCsosn: null,
             baseCalculo: 100,
             aliquota: 0,
             valor: 0,
-            observacao: null
+            observacao: 'Lançamento manual conferido.'
         });
+    });
+
+    // AC-12 / D35: o motivo do lançamento manual passa a ser obrigatório (1-500, após trim); sem texto
+    // padrão, o backend recusa a checagem de não vazio (NotaFiscalBasicaUseCases.cs:326-329).
+    it('AC-12: exige motivo de 1 a 500 caracteres no lançamento manual de imposto, sem texto padrão', () => {
+        const base = { itemNotaFiscalId: '', nome: 'IPI', cstCsosn: '', baseCalculo: 100, aliquota: 10, valor: 10 };
+
+        expect(() => buildAdicionarImpostoNotaFiscalPayload({ ...base, observacao: '' })).toThrow('Informe o motivo do lançamento manual.');
+        expect(() => buildAdicionarImpostoNotaFiscalPayload({ ...base, observacao: '     ' })).toThrow('Informe o motivo do lançamento manual.');
+        expect(() => buildAdicionarImpostoNotaFiscalPayload({ ...base })).toThrow();
+
+        const motivo500 = 'x'.repeat(500);
+        expect(buildAdicionarImpostoNotaFiscalPayload({ ...base, observacao: motivo500 })).toMatchObject({ observacao: motivo500 });
+
+        const motivo501 = 'x'.repeat(501);
+        expect(() => buildAdicionarImpostoNotaFiscalPayload({ ...base, observacao: motivo501 })).toThrow('Informe no máximo 500 caracteres.');
+    });
+
+    // AC-8: os 3 campos são obrigatórios e não-negativos; .strict() recusa chave extra; sem coerção de string.
+    it('AC-8: valores acessórios exige os 3 campos numéricos não-negativos, sem coerção e sem chave extra', () => {
+        expect(buildDefinirValoresAcessoriosPayload({ valorFrete: 0, valorSeguro: 0, valorOutrasDespesas: 0 })).toEqual({
+            valorFrete: 0,
+            valorSeguro: 0,
+            valorOutrasDespesas: 0
+        });
+        expect(buildDefinirValoresAcessoriosPayload({ valorFrete: 12.5, valorSeguro: 3, valorOutrasDespesas: 7.25 })).toEqual({
+            valorFrete: 12.5,
+            valorSeguro: 3,
+            valorOutrasDespesas: 7.25
+        });
+
+        expect(() => buildDefinirValoresAcessoriosPayload({ valorFrete: -0.01, valorSeguro: 0, valorOutrasDespesas: 0 })).toThrow();
+        expect(() => buildDefinirValoresAcessoriosPayload({ valorFrete: '10', valorSeguro: 0, valorOutrasDespesas: 0 })).toThrow();
+        expect(() => buildDefinirValoresAcessoriosPayload({ valorFrete: null, valorSeguro: 0, valorOutrasDespesas: 0 })).toThrow();
+        expect(() => buildDefinirValoresAcessoriosPayload({ valorFrete: 0, valorSeguro: 0 })).toThrow();
+        expect(() => buildDefinirValoresAcessoriosPayload({ valorFrete: 0, valorSeguro: 0, valorOutrasDespesas: 0, extra: 1 })).toThrow();
     });
 
     it('monta exportação CSV auditada sem paginação visual e bloqueia filtros conflitantes', () => {

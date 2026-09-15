@@ -79,15 +79,31 @@ describe('Faturamento — estrutura e scaffold', () => {
         );
     });
 
-    it('confirmar, cancelar e retomar usam onSettled', () => {
+    // QA3-3 (b55): `toContain('onSettled: invalidate')` mais `toBeGreaterThanOrEqual(3)` passa mesmo se
+    // uma mutação voltar a `onSuccess` e deixar um comentário decorativo `// onSettled: invalidate` em
+    // outro lugar do arquivo (sabotagem S7 da b56). Agora cada uma das 3 mutações é lida pela própria
+    // declaração (`const <nome>Mutation = useMutation({...});`), comentários são descartados antes de
+    // contar, e o total é exato (`toBe(3)`), não um piso.
+    it('confirmar, cancelar e retomar usam onSettled: invalidate nominalmente, cada uma por nome (QA3-3)', () => {
         const hooks = read('features/faturamento/hooks/useFaturamentoResources.ts');
-        // Deve conter onSettled em todas as mutações
-        expect(hooks).toContain('confirmarMutation = useMutation({ mutationFn:');
-        expect(hooks).toContain('onSettled: invalidate');
-        expect(hooks).toContain('cancelarMutation = useMutation({ mutationFn:');
-        expect(hooks).toContain('retomarReversaoMutation = useMutation({ mutationFn:');
-        // Verificar que todas as mutações têm onSettled (contando quantas vezes aparece)
-        const onSettledCount = (hooks.match(/onSettled: invalidate/g) || []).length;
-        expect(onSettledCount).toBeGreaterThanOrEqual(3);
+
+        // A declaração vive numa única linha por mutação; [^\n]* evita parar no primeiro "}" das
+        // desestruturações internas (ex.: "{ id, values }") sem depender de flag de regex proibida (E-1).
+        const declaracaoDe = (nome: string) => hooks.match(new RegExp('const ' + nome + ' = useMutation\\(\\{[^\\n]*\\}\\);'))?.[0] ?? '';
+
+        const confirmar = declaracaoDe('confirmarMutation');
+        const cancelar = declaracaoDe('cancelarMutation');
+        const retomar = declaracaoDe('retomarReversaoMutation');
+
+        expect(confirmar).toMatch(/onSettled: invalidate\s*\}\);$/);
+        expect(cancelar).toMatch(/onSettled: invalidate\s*\}\);$/);
+        expect(retomar).toMatch(/onSettled: invalidate\s*\}\);$/);
+
+        const linhasSemComentario = hooks
+            .split('\n')
+            .filter((linha) => linha.trim().indexOf('//') !== 0)
+            .join('\n');
+        const ocorrenciasReais = (linhasSemComentario.match(/onSettled: invalidate/g) || []).length;
+        expect(ocorrenciasReais).toBe(3);
     });
 });

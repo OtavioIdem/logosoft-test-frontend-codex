@@ -12,6 +12,7 @@ import { Tag } from 'primereact/tag';
 import { PageHeader } from '@/components/common/PageHeader';
 import { StatusTag } from '@/components/data/StatusTag';
 import { FiscalDocumentosAuxiliaresPanel, FiscalIntegracoesTable } from '@/features/fiscal/components/FiscalOperationalPanels';
+import { ComposicaoTotalNotaFiscalCard, ImpostosNotaFiscalTabela } from '@/features/fiscal/components/NotaFiscalImpostosPanels';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
@@ -32,6 +33,7 @@ import {
     RegistrarRejeicaoDialog,
     ReprocessarSefazDialog,
     TransmitirSefazDialog,
+    ValoresAcessoriosDialog,
     XmlPipelineDialog
 } from '@/features/fiscal/components/FiscalActionDialogs';
 import {
@@ -39,10 +41,12 @@ import {
     fiscalReferenceContextLabel,
     formatFiscalDate,
     formatFiscalMoney,
+    motivoValoresAcessoriosIndisponivel,
     notaFiscalBloqueiosVisuais,
     notaPodeAssinarXml,
     notaPodeCancelar,
     notaPodeCartaCorrecao,
+    notaPodeDefinirValoresAcessorios,
     notaPodeEditarItens,
     fiscalActionDisabledReason,
     notaPodeBaixarEstoque,
@@ -147,6 +151,7 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
     const gerarDanfe = (values: unknown) => run('DANFE', async () => setUltimoDocumento(await mutations.gerarDanfeMutation.mutateAsync({ id: notaId, values })), 'Documento auxiliar gerado.');
     const baixarEstoque = (values: unknown) => run('Baixa de estoque', async () => { await mutations.baixarEstoqueMutation.mutateAsync({ id: notaId, values }); }, 'Baixa de estoque processada.');
     const gerarContaReceber = (values: unknown) => run('Financeiro fiscal', async () => { await mutations.gerarContaReceberMutation.mutateAsync({ id: notaId, values }); }, 'Conta a receber gerada ou conciliada.');
+    const definirValoresAcessorios = (values: unknown) => run('Valores acessórios', async () => { await mutations.definirValoresAcessoriosMutation.mutateAsync({ id: notaId, values }); }, 'Valores acessórios atualizados.');
 
     const documentosAuxiliares = useMemo(() => (ultimoDocumento ? [ultimoDocumento] : []), [ultimoDocumento]);
 
@@ -172,6 +177,7 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
             <Button label="Atualizar" icon="pi pi-refresh" outlined onClick={() => { notaQuery.refetch(); resumoQuery.refetch(); workflowQuery.refetch(); integracoesQuery.refetch(); }} loading={notaQuery.isFetching || resumoQuery.isFetching || workflowQuery.isFetching || integracoesQuery.isFetching} />
             <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Item" icon="pi pi-plus" disabled={disabled || !notaPodeEditarItens(nota)} onClick={() => setDialog('item')} />}</PermissionGuard>
             <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Imposto" icon="pi pi-percentage" disabled={disabled || !notaPodeEditarItens(nota)} onClick={() => setDialog('imposto')} />}</PermissionGuard>
+            <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Valores acessórios" icon="pi pi-wallet" outlined disabled={disabled || !notaPodeDefinirValoresAcessorios(nota)} title={disabled ? 'Permissão necessária: FISCAL_GERENCIAR.' : motivoValoresAcessoriosIndisponivel(nota) ?? undefined} onClick={() => setDialog('valoresAcessorios')} />}</PermissionGuard>
             <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Validar" icon="pi pi-check-circle" severity="success" disabled={disabled || !actionStates.validar.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.validar, 'FISCAL_GERENCIAR')} loading={mutations.validarMutation.isPending} onClick={() => run('Validação fiscal', () => mutations.validarMutation.mutateAsync(notaId), 'Nota validada tecnicamente.')} />}</PermissionGuard>
             <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Gerar XML" icon="pi pi-code" disabled={disabled || !actionStates.gerarXml.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.gerarXml, 'FISCAL_GERENCIAR')} onClick={() => setDialog('gerarXml')} />}</PermissionGuard>
             <PermissionGuard permission="FISCAL_EMITIR" mode="disable">{({ disabled }) => <Button label="Assinar" icon="pi pi-lock" disabled={disabled || !actionStates.assinarXml.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.assinarXml, 'FISCAL_EMITIR')} onClick={() => setDialog('assinarXml')} />}</PermissionGuard>
@@ -219,6 +225,7 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
                                 {nota.codigoRejeicao || nota.mensagemRejeicao ? <Message severity="warn" className="w-full mt-3" text={`${nota.codigoRejeicao ?? '-'} • ${nota.mensagemRejeicao ?? ''}`} /> : null}
                                 {nota.motivoCancelamento ? <Message severity="error" className="w-full mt-3" text={nota.motivoCancelamento} /> : null}
                             </Card>
+                            <ComposicaoTotalNotaFiscalCard nota={nota} />
                         </div>
                         <div className="col-12 lg:col-4">
                             <Card title="Governança fiscal" className="mb-3">
@@ -291,14 +298,7 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
                             </DataTable>
                         </TabPanel>
                         <TabPanel header={`Impostos (${nota.impostos?.length ?? 0})`}>
-                            <Message severity="info" className="w-full mb-3" text="Impostos são parametrizados/manuais nesta etapa. O frontend não calcula ICMS, IPI, PIS, COFINS ou ISS automaticamente." />
-                            <DataTable value={nota.impostos ?? []} emptyMessage="Nenhum imposto informado." size="small" paginator rows={10}>
-                                <Column field="nome" header="Imposto" />
-                                <Column field="cstCsosn" header="CST/CSOSN" />
-                                <Column header="Base" body={(row) => formatFiscalMoney(row.baseCalculo)} />
-                                <Column field="aliquota" header="Alíquota" />
-                                <Column header="Valor" body={(row) => formatFiscalMoney(row.valor)} />
-                            </DataTable>
+                            <ImpostosNotaFiscalTabela nota={nota} />
                         </TabPanel>
                         <TabPanel header={`XMLs (${nota.xmls?.length ?? 0})`}>
                             <Message severity="info" className="w-full mb-3" text="Esta aba exibe somente metadados de XML. O conteúdo XML completo não deve ser carregado ou exibido no detalhe fiscal." />
@@ -327,6 +327,7 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
 
                     <ItemNotaFiscalDialog empresaId={nota.empresaId} filialId={nota.filialId} visible={dialog === 'item'} loading={mutations.adicionarItemMutation.isPending} onHide={() => setDialog(null)} onSubmit={(values) => run('Item fiscal', () => mutations.adicionarItemMutation.mutateAsync({ id: notaId, values }), 'Item incluído.')} />
                     <ImpostoNotaFiscalDialog itens={nota.itens ?? []} visible={dialog === 'imposto'} loading={mutations.adicionarImpostoMutation.isPending} onHide={() => setDialog(null)} onSubmit={(values) => run('Imposto fiscal', () => mutations.adicionarImpostoMutation.mutateAsync({ id: notaId, values }), 'Imposto incluído.')} />
+                    <ValoresAcessoriosDialog nota={nota} visible={dialog === 'valoresAcessorios'} loading={mutations.definirValoresAcessoriosMutation.isPending} onHide={() => setDialog(null)} onSubmit={definirValoresAcessorios} />
                     <XmlPipelineDialog mode="gerar" visible={dialog === 'gerarXml'} loading={mutations.gerarXmlMutation.isPending} onHide={() => setDialog(null)} onSubmit={gerarXml} />
                     <XmlPipelineDialog mode="assinar" visible={dialog === 'assinarXml'} loading={mutations.assinarXmlMutation.isPending} onHide={() => setDialog(null)} onSubmit={assinarXml} />
                     <TransmitirSefazDialog visible={dialog === 'transmitir'} loading={mutations.transmitirMutation.isPending} onHide={() => setDialog(null)} onSubmit={transmitir} />

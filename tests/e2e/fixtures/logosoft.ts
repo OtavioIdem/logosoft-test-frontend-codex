@@ -319,7 +319,14 @@ const createFiscalNote = (overrides: Record<string, unknown> = {}) => ({
     statusFiscal: 1,
     valorProdutos: 251,
     valorDesconto: 0,
+    // b56 / D33-D34: valores acessórios e agregados tributários novos do contrato (NotaFiscalResponse.cs:43-86)
+    valorFrete: 0,
+    valorSeguro: 0,
+    valorOutrasDespesas: 0,
     valorTotal: 251,
+    valorIpi: 0,
+    valorIcmsSt: 0,
+    valorFcpSt: 0,
     codigoRejeicao: null,
     mensagemRejeicao: null,
     motivoCancelamento: null,
@@ -351,7 +358,11 @@ const createFiscalNote = (overrides: Record<string, unknown> = {}) => ({
             baseCalculo: 251,
             aliquota: 0,
             valor: 0,
-            observacao: 'Parametrizado para teste E2E.'
+            observacao: 'Parametrizado para teste E2E.',
+            // b56 / AC-1: origem do imposto (ImpostoNotaFiscal.cs:11-15, Manual = 1, Motor = 2)
+            origem: 1,
+            regraFiscalAplicadaId: null,
+            excecaoFiscalAplicadaId: null
         }
     ],
     xmls: [],
@@ -595,6 +606,18 @@ export const mockApiRoutes = async (page: Page) => {
         if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}/validar` && method === 'POST') {
             notaFiscal = { ...notaFiscal, statusFiscal: 2, eventos: [...notaFiscal.eventos, { id: 'nf-evento-validacao', tipo: 2, codigo: 'VALIDADA', descricao: 'Nota validada no E2E', protocolo: null, dataEvento: new Date().toISOString(), usuarioId: e2eUsuarioId }] };
             appendFiscalLog('ValidacaoFiscal', 2, 'Nota fiscal validada.');
+            return route.fulfill(json(notaFiscal));
+        }
+        // b56 / D22 / D36: POST /valores-acessorios grava frete, seguro e outras despesas na nota (AC-11 S2)
+        if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}/valores-acessorios` && method === 'POST') {
+            const body = request.postDataJSON() as Record<string, unknown>;
+            notaFiscal = {
+                ...notaFiscal,
+                valorFrete: Number(body.valorFrete ?? 0),
+                valorSeguro: Number(body.valorSeguro ?? 0),
+                valorOutrasDespesas: Number(body.valorOutrasDespesas ?? 0)
+            };
+            appendFiscalLog('DefinirValoresAcessorios', 2, 'Valores acessórios atualizados.');
             return route.fulfill(json(notaFiscal));
         }
         if (path === `/api/fiscal/notas-fiscais/${notaFiscal.id}/gerar-xml-envio` && method === 'POST') {

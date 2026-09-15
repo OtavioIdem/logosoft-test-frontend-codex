@@ -153,15 +153,25 @@ beforeEach(() => {
 });
 
 describe('FaturamentoDetalhePage — legs de integração', () => {
-    it('AC-2: mostra 6 linhas na ordem do catálogo e Sem registro para o leg 4', async () => {
+    // QA3-2 (b55): o `it` original só cobria a linha 3 (positivo) e as linhas 0 e 4 (negativo); uma
+    // regressão nas linhas 1, 2 ou 5 passaria batida. Agora "Sem registro" (FaturamentoDetalhePage.tsx:163)
+    // é afirmado nas 6 linhas, cada uma pelo seu leg presente/ausente em `baseFaturamento().legs`.
+    it('AC-2: mostra 6 linhas na ordem do catálogo, com "Sem registro" só na linha sem leg (QA3-2)', async () => {
         api.obter.mockResolvedValue(baseFaturamento());
         renderPage();
 
         const linhas = await linhasDaTabelaDeLegs();
         expect(linhas.map(rotuloDaLinha)).toEqual(['Gerar nota fiscal', 'Gerar XML de envio', 'Assinar XML', 'Transmitir e autorizar na SEFAZ', 'Baixar estoque', 'Gerar conta a receber']);
-        expect(within(linhas[3]).getByText('Sem registro')).toBeInTheDocument();
-        expect(within(linhas[0]).queryByText('Sem registro')).not.toBeInTheDocument();
-        expect(within(linhas[4]).queryByText('Sem registro')).not.toBeInTheDocument();
+
+        // baseFaturamento().legs tem os legs 1, 2, 3, 5 e 6; falta o leg 4 (Transmitir e autorizar na SEFAZ), índice 3.
+        const temRegistroPorLinha = [true, true, true, false, true, true];
+        linhas.forEach((linha, index) => {
+            if (temRegistroPorLinha[index]) {
+                expect(within(linha).queryByText('Sem registro')).not.toBeInTheDocument();
+            } else {
+                expect(within(linha).getByText('Sem registro')).toBeInTheDocument();
+            }
+        });
     });
 
     it('AC-3: estado desconhecido aparece cru e Revertido só uma vez', async () => {
@@ -296,6 +306,10 @@ describe('FaturamentoDetalhePage — legs de integração', () => {
             expect(screen.getAllByText('Revertido')).toHaveLength(1);
             expect(within(await linhaDoLeg('Assinar XML')).getByText('Revertido')).toBeInTheDocument();
             expect(screen.getByRole('dialog', { name: 'Retomar reversão' })).toBeInTheDocument();
+
+            // QA3-4 (b55): sem este waitFor, o `process.off` do finally pode desinscrever o listener antes
+            // da rejeição não tratada chegar, e a asserção final passaria mesmo sem captura real.
+            await waitFor(() => expect(rejeicoes).toHaveLength(1));
         } finally {
             process.off('unhandledRejection', capturar);
         }

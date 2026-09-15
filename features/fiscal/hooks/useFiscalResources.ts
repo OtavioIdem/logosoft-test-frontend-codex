@@ -84,7 +84,9 @@ export const useFiscalMutations = () => {
     const criarNotaMutation = useMutation({ mutationFn: (values: unknown) => fiscalApi.criarNota(values), onSuccess: (nota) => invalidateNota(nota.id) });
     const gerarNotaPedidoMutation = useMutation({ mutationFn: (values: unknown) => fiscalApi.gerarNotaDePedidoVenda(values), onSuccess: (result) => invalidateNota(result.notaFiscal.id) });
     const adicionarItemMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.adicionarItem(id, values), onSuccess: (nota) => invalidateNota(nota.id) });
-    const adicionarImpostoMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.adicionarImposto(id, values), onSuccess: (nota) => invalidateNota(nota.id) });
+    // D27/D37: definirValoresAcessorios e adicionarImposto reconsultam também no erro (onSettled)
+    const adicionarImpostoMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.adicionarImposto(id, values), onSettled: (_nota, _error, variables) => invalidateNota(variables.id) });
+    const definirValoresAcessoriosMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.definirValoresAcessorios(id, values), onSettled: (_nota, _error, variables) => invalidateNota(variables.id) });
     const armazenarXmlMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.armazenarXml(id, values), onSuccess: (nota) => invalidateNota(nota.id) });
     const validarMutation = useMutation({ mutationFn: (id: string) => fiscalApi.validar(id), onSuccess: (nota) => invalidateNota(nota.id) });
     const gerarXmlMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.gerarXmlEnvio(id, values), onSuccess: (result) => invalidateNota(result.notaFiscalId) });
@@ -117,6 +119,7 @@ export const useFiscalMutations = () => {
         gerarNotaPedidoMutation,
         adicionarItemMutation,
         adicionarImpostoMutation,
+        definirValoresAcessoriosMutation,
         armazenarXmlMutation,
         validarMutation,
         gerarXmlMutation,
