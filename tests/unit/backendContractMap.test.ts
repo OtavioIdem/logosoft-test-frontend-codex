@@ -65,12 +65,17 @@ describe('backend contract map', () => {
 
     it('resolve constantes, templates e clients indiretos sem divergências do contrato canônico', () => {
         const result = readContractMapInputs(root);
-        expect(result.backendRoutes).toHaveLength(576);
+        expect(result.backendRoutes).toHaveLength(578);
         expect(new Set(result.frontendRoutes.map((route: { key: string }) => route.key)).size).toBeGreaterThanOrEqual(450);
         expect(result.comparison.incompatible).toEqual([]);
         expect(result.comparison.methodMismatch).toEqual([]);
         expect(result.comparison.indirectMissing).toEqual([]);
         expect(result.comparison.unresolved).toEqual([]);
+        // AC-15: a rota de retomada está no catálogo (D22)
+        expect(new Set(result.backendRoutes.map((route: { key: string }) => route.key)).has('POST /api/faturamento/{param}/retomar-reversao')).toBe(true);
+        // AC-13 / D22 / D36: 577 -> 578 com a rota de valores acessórios, consumida em fiscalApi.ts (b56)
+        expect(new Set(result.backendRoutes.map((route: { key: string }) => route.key)).has('POST /api/fiscal/notas-fiscais/{param}/valores-acessorios')).toBe(true);
+        expect(new Set(result.frontendRoutes.map((route: { key: string }) => route.key)).has('POST /api/fiscal/notas-fiscais/{param}/valores-acessorios')).toBe(true);
     });
 
     it('não trata allowlist como supressão silenciosa', () => {

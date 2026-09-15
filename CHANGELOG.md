@@ -1,3 +1,308 @@
+# v1.11.0a8b56
+
+## A aba de Impostos diz de onde vem cada linha e qual compõe o total, e a nota ganha frete, seguro e outras despesas
+
+Segunda fatia da onda F2 (`D21`). Corrige o P5 do plano da onda: a aba de Impostos afirmava que o imposto era
+"parametrizado/manual" e que nada era calculado, o que é falso desde a v1.22.0/G2, e escondia que uma linha
+lançada à mão vence a do motor no total para IPI, ICMS ST e FCP ST. Plano e estado da execução em
+`docs/fatias/v1.11.0a8b56-f2-impostos-valores-acessorios.md`; inventário em
+`docs/arquitetura/debate/03-inventario-impostos-nota-fiscal.md`; decisões `D33` a `D39`.
+
+**Risco da fatia: `HIGH`.** Valor monetário que compõe o total de um documento fiscal, contrato que muda e um
+diálogo que grava. Não emite, não transmite e não estorna. Ficaria `CRITICAL` se os valores acessórios pudessem
+ser gravados em nota Validada, e é por isso que não podem (`D33`).
+
+### O que o backend já entregava e a tela não lia
+
+Conferido no código do backend (`New project 3/src`), porque o `CONTRATO-API-v1.23.md` não publica `ValorIpi`,
+`OrigemImpostoNotaFiscal` nem os campos de proveniência da linha de imposto.
+
+| O que a UI fazia | O que o backend entrega |
+| --- | --- |
+| `NotaFiscalResponse` sem os valores acessórios nem os tributos agregados | `valorFrete`, `valorSeguro`, `valorOutrasDespesas`, `valorIpi`, `valorIcmsSt`, `valorFcpSt`, todos somados em `valorTotal` (`NotaFiscal.cs:653-660`) |
+| Linha de imposto sem proveniência | `origem` (`Manual = 1`, `Motor = 2`), `regraFiscalAplicadaId`, `excecaoFiscalAplicadaId` |
+| Não chamava `POST /api/fiscal/notas-fiscais/{id}/valores-acessorios` | Endpoint sob `FISCAL_GERENCIAR`, com os três valores obrigatórios e não negativos |
+| Lançamento manual com motivo pré-preenchido | O motivo é obrigatório e é a auditoria do override (`NotaFiscalBasicaUseCases.cs:326-329`) |
+
+### O que a tela de detalhe da nota passa a fazer
+
+**Aba de Impostos** (`D34`, `D38`)
+
+- A legenda falsa sai. A nova diz o que o código sustenta: o motor calcula na validação, e um lançamento manual
+  substitui o motor no total só para IPI, ICMS ST e FCP ST do mesmo item.
+- Colunas novas: **Origem** (Manual ou Motor), **No total** e **Observação**.
+- "No total" mostra, por linha, "Compõe o total", "Suprimida pelo lançamento manual" ou "Não compõe o total"
+  (ICMS, PIS, COFINS e os demais não entram no total da nota).
+- A tela não recalcula o total. Ela confere a marcação contra o valor agregado que o servidor devolve. Quando não
+  bate, as linhas daquele imposto aparecem como "Não conferida" e um aviso diz que vale o total do servidor.
+
+**Composição do total** (`D34`)
+
+Cartão novo abaixo do cabeçalho: produtos, desconto, frete, seguro, outras despesas, IPI, ICMS ST, FCP ST e o
+total. Todos os números vêm da resposta do servidor; nenhum é somado na tela.
+
+**Valores acessórios** (`D33`)
+
+Botão novo "Valores acessórios", sob `FISCAL_GERENCIAR`, habilitado **só com a nota em Rascunho**. O diálogo abre
+com os valores atuais e recusa valor vazio ou negativo. Depois de gravar, com sucesso ou erro, a nota é consultada
+de novo (`D37`).
+
+**Lançamento manual de imposto** (`D35`)
+
+O diálogo passa a se chamar "Lançar imposto manual". O motivo começa vazio, é obrigatório e aceita até 500
+caracteres. O texto padrão "Imposto parametrizado manualmente." e a dica falsa saem.
+
+### Seção operacional — leia antes do deploy
+
+1. **Nenhuma permissão a conceder.** Nenhuma permissão entra ou sai do union, da regra de rota ou do menu. O botão
+   novo usa `FISCAL_GERENCIAR`, que quem já lança item e imposto tem. Risco de acesso: `NENHUM`.
+2. **Valores acessórios só em Rascunho, embora o backend aceite mais.** O backend grava frete, seguro e outras
+   despesas também em Validada, Assinada, Rejeitada e Contingência, mas o motor de tributação só recalcula em
+   Rascunho (`CalculoTributarioNotaFiscalService.cs:54`). Em Validada, o total mudaria e IPI, ICMS ST e FCP ST
+   ficariam com a base antiga, e o XML já gerado seguiria para assinatura com o total anterior. Nota rejeitada volta
+   a Rascunho pela correção e pode então ser ajustada.
+3. **O motivo do lançamento manual passa a ser digitado.** Quem lança imposto à mão precisa escrever por quê; o
+   motivo aparece na coluna Observação.
+4. **Condição que já existe hoje, e não muda nesta versão:** os botões Item e Imposto seguem habilitados em
+   Validada, com a mesma defasagem de base tributária. Restringi-los tiraria uma operação que conclui hoje, e fica
+   para fatia própria com decisão do dono do produto (`D33`).
+5. **Confira o valor exibido antes de salvar qualquer campo de moeda.** Defeito que já existia, encontrado pelo E2E
+   desta versão e não corrigido nela (`D39`): digitando os centavos com dois dígitos, o segundo sobrescreve o
+   primeiro. "12,50" grava R$ 12,00, e "12,05" grava R$ 12,50. Medido no campo de frete e no "Valor unitário" do item. Os
+   demais campos de moeda do fiscal e da tributação usam a mesma configuração e provavelmente têm o mesmo defeito, assim
+   como os outros campos de moeda do sistema.
+   O valor que aparece no campo é o que será gravado. Correção em fatia própria, antes da `b57`.
+
+### Gate de contrato (`D22`, `D36`)
+
+A rota `valores-acessorios` foi acrescentada como adendo a `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md`, citando
+`NotasFiscaisController.cs:95-102`. `calcular-tributos`, que também falta ali, ficou fora de propósito: a tela não
+a consome e o destino é a F3. Medido logo após o adendo: `validate:backend-contract-map` com saída `0`.
+
+### Testes, e a prova de que sabem falhar
+
+Dois recortes, rodados com `npx vitest run` pela sessão principal depois do nó `tests`:
+
+- **Fiscal, contrato e permissões:** 12 arquivos, **99 testes** ("Tests 99 passed (99)"). Novos:
+  `tests/unit/fiscalImpostosComposicao.test.ts`, `fiscalImpostosStructure.test.ts` e, em `tests/components/`,
+  `ValoresAcessoriosDialog`, `ImpostoNotaFiscalDialog`, `NotaFiscalImpostosPanels` e
+  `useFiscalMutationsValoresAcessorios`. `backendContractMap.test.ts` passa de 577 para 578 rotas, com asserção
+  nominal de `valores-acessorios`.
+- **Pendências da b55 (QA3-2, QA3-3, QA3-4):** 3 arquivos de faturamento, **27 testes** ("Tests 27 passed (27)").
+
+`npx tsc --noEmit` com saída 0. Os nove casos da regra de supressão (IPI manual contra motor, ICMS fora do total, só motor,
+item nulo, soma que não bate, manual duplicado, nome com hífen, minúsculas, origem ausente) têm um teste cada.
+
+Cada sabotagem abaixo foi feita no código de produção pelo `engenheiro-testes`, com backup e restauração
+conferida por `sha256sum -c`, e derrubou os testes que a nomeiam:
+
+| Sabotagem | Reprovou |
+| --- | --- |
+| S1: o motor volta a vencer o lançamento manual | AC-4 (a) e (e) no unitário; AC-5 no componente |
+| S2: o cartão soma o total no cliente | AC-6 (total 999 com componentes que não somam 999) |
+| S3: o schema de acessórios perde o `.strict()` | AC-8 (chave extra) |
+| S4: a mutação de acessórios volta a reconsultar só no sucesso | AC-9 na estrutura e no `renderHook` com POST rejeitado |
+| S5: valores acessórios liberados em Validada | os dois testes de AC-10 |
+| S6: a legenda falsa volta | os dois testes de AC-2 |
+| S7: `cancelarMutation` do faturamento volta a `onSuccess` com comentário decorativo | QA3-3 |
+
+**E2E.** `tests/e2e/fiscal-impostos.spec.ts` (novo) roda com `fiscal.spec.ts` e `permissions.spec.ts`, porque a fixture
+compartilhada mudou. Quatro sessões nominais:
+
+- **S1:** só consultar. Botão visível e desabilitado.
+- **S2:** consultar e gerenciar, nota em Rascunho. Envia o corpo exato e mostra o frete devolvido.
+- **S3:** só gerenciar. A página nega acesso e nenhum POST sai.
+- **S4:** depois de Validar. Botão desabilitado com o motivo.
+
+A primeira execução reprovou o S2 nas duas rodadas (15 passed | 1 failed): digitado "12,50", o corpo saiu com
+`valorFrete: 12`. A sessão principal mediu a causa, que é o DEF-1 (`D39`), e o S2 passou a digitar "12,5" e a
+conferir o campo exibindo 12,50 antes de salvar. Segunda execução: **16 passed | 0 failed nas duas rodadas**, num
+servidor isolado na 3411 (PID 31684, `next dev -p 3411` neste diretório, identidade conferida antes de cada rodada e
+porta liberada ao fim).
+
+**QA.** O `qa-revisor` rodou os gates e o `build` com saída 0 e os dois recortes (99 e 27), e reproduziu três
+sabotagens com restauração conferida por `sha256sum -c` (28 arquivos OK): S1 com 3 failed | 20 passed, S2 com
+1 failed | 22 passed e S5 com 2 failed | 18 passed. Veredito `APROVADO_COM_RESSALVA`: ele não reexecutou o E2E, e
+faltam dois testes menores, valor negativo no componente do diálogo e GUID no cartão de composição, com destino F5.
+
+### Pendências nomeadas fora desta versão
+
+- **DEF-1, campo de moeda que grava centavo errado:** fatia corretiva própria, recomendada antes da `b57` (`D39`).
+- **F2.4 a F2.6** (alertas da transmissão, `FISCAL_REPROCESSAR` na rota e no menu, `correlationId`): `b57` (`D21`).
+- **Recalcular tributos pela tela** (`calcular-tributos`): F3 (`D36`).
+- **Reconsulta no erro nas outras 21 mutações fiscais:** F5.5 (`D37`).
+- **Observação da nota, e GUIDs de regra e exceção fiscal:** F5 (`D38`).
+- **`Descartada` ausente do enum de status no frontend; `pessoaId` sem par; `numeroDocumento` não tipado:** fatias
+  de classe de enum e de campo, depois das respostas do backend.
+- **Perguntas ao backend:** B-1 (exigir Rascunho no domínio), B-2 (gerador do contrato perde campo depois de
+  comentário), B-3 (request de acessórios publicado como opcional), B-4 (manual duplicado legado na mesma chave).
+- **Esteira:** o builder desta fatia rodou `git stash`, que `policies.yaml` proíbe e nenhum hook impede (VIOL-1,
+  sem dano, conferido).
+
+# v1.11.0a8b55
+
+## Faturamento mostra os seis legs, avisa quando a etapa mente, e oferece a retomada de reversão
+
+É a primeira fatia da onda F2 (`D21`). Corrige o P4 do plano da onda: um leg preso em reversão deixava
+estoque baixado ou título a receber de pé, com o faturamento em "Cancelado" ou "Erro", sem que a tela
+dissesse isso e sem caminho de UI para resolver. Plano e estado da execução em
+`docs/fatias/v1.11.0a8b55-f2-legs-faturamento.md`; inventário em
+`docs/arquitetura/debate/02-inventario-legs-faturamento.md`; decisões `D21` a `D32`.
+
+**Risco da fatia: `CRITICAL`.** A retomada chama porta inversa real: descarta nota não transmitida (legs 1
+a 3), estorna baixa de estoque (leg 5) e cancela conta a receber (leg 6). A declaração de efeito desfeito é
+afirmação humana. Conferido em `CatalogoLegIntegracaoFaturamento.cs` e `RetomarReversaoLegUseCase.cs`.
+
+### O que o backend já entregava e a tela não lia
+
+Tudo conferido no código do backend (`New project 3/src`), porque o documento de contrato não publica
+valores de enum e tem três erros nesta seção (armadilhas 2 a 4 do plano).
+
+| O que a UI fazia | O que o backend entrega |
+| --- | --- |
+| `FaturamentoResponse` com 13 campos | 18: mais `legs`, `possuiLegComFalha`, `possuiLegRevertido`, `etapaDivergeDosLegs`, `possuiLegEmReversao` |
+| Não chamava `POST /api/faturamento/{id}/retomar-reversao` | Endpoint sob `FATURAMENTO_RETOMAR_REVERSAO`, motivo obrigatório de até 500 caracteres |
+| Motivo do cancelamento sem teto | `MaximumLength(300)` (`FaturamentoValidators.cs:35`) |
+| Recarregava o detalhe só em sucesso | É a falha no meio do cancelamento que cria o leg `EmReversao` e a ocorrência de erro |
+
+### O que a tela de detalhe do faturamento passa a fazer
+
+**Legs de integração** (`D25`)
+
+Um cartão novo mostra sempre os seis legs, na ordem da cadeia:
+1. Gerar nota fiscal
+2. Gerar XML de envio
+3. Assinar XML
+4. Transmitir e autorizar na SEFAZ
+5. Baixar estoque
+6. Gerar conta a receber
+
+Cada linha traz o estado, a data e o motivo. Leg que ainda não rodou aparece como "Sem registro". Estado
+com valor desconhecido aparece como "Estado desconhecido (n)", e nunca como "Revertido".
+
+**Os dois alertas**
+
+- **Etapa × legs.** Quando `etapaDivergeDosLegs` vem verdadeiro, a tela avisa que a etapa não reflete o
+  estado dos legs. Em Erro ou Cancelado, isso quer dizer que um efeito pode continuar de pé.
+- **Leg em reversão.** Quando `possuiLegEmReversao` vem verdadeiro, a tela avisa que o efeito original pode
+  continuar de pé até a retomada.
+
+**Retomar reversão** (`D27`, `D28`)
+
+O botão aparece só na linha do leg em reversão, sob `FATURAMENTO_RETOMAR_REVERSAO`.
+
+- **O diálogo.** O leg da linha aparece só para leitura. A ação ("Reaplicar a inversa" ou "Declarar efeito
+  desfeito") começa vazia. O motivo é obrigatório e aceita até 500 caracteres.
+- **Declarar.** Escolher essa ação mostra o aviso de afirmação humana.
+- **Toasts.** Sucesso dá "Reversão confirmada pelo sistema" para Reaplicar e "Declaração registrada" para
+  Declarar.
+- **Estado exibido.** A tela não troca o estado por conta própria. O que aparece vem sempre da nova consulta.
+
+**Confirmar** (`D23`)
+
+Fica desabilitado quando há leg em reversão, com o motivo no tooltip.
+
+**Reconsulta no erro** (`D27`)
+
+Confirmar, cancelar e retomar recarregam o detalhe, o histórico e as ocorrências também quando falham. É
+na falha que o leg em reversão e a ocorrência de erro aparecem.
+
+**Motivo do cancelamento** (`D30`)
+
+Limitado a 300 caracteres, igual ao backend.
+
+**O que não muda** (`D26`)
+
+A listagem de faturamentos, a rota e o menu continuam como estavam. O backend não traz legs na listagem, e
+um sinal ali diria "sem problema" em toda linha.
+
+### Seção operacional — leia antes do deploy
+
+1. **Conceder `FATURAMENTO_RETOMAR_REVERSAO` junto com `FATURAMENTO_CONSULTAR`** a quem resolve reversão
+   de faturamento, antes do deploy. Só a permissão de retomada não abre a tela: a rota e o detalhe exigem
+   consultar. Nenhuma rota ou item de menu muda.
+2. **Confirmar fica indisponível quando o faturamento tem leg em reversão** (`D23`, risco de acesso
+   `ILUSAO`). O backend já recusava esse caso depois de o operador preencher os campos fiscais. Nenhuma
+   operação que conclui hoje deixa de concluir.
+3. **"Declarar efeito desfeito" é afirmação humana, auditada como estorno**, e encerra o aviso de reversão
+   pendente sem nenhuma chamada ao sistema. Oriente quem recebe a permissão: só declarar depois de
+   conferir fora do sistema que o estoque foi reposto, a nota descartada ou o título cancelado.
+4. **Condição que já existe hoje, e não muda nesta versão:** cancelar faturamento com leg integrado exige
+   também `FATURAMENTO_REVERTER_INTEGRACAO`, que não aparece na tela de grupos. Sem ela, o cancelamento
+   devolve "Recurso não encontrado.". Fica para a fatia de cancelamento (`D24`).
+5. **Limite do dano, conferido no domínio:** cancelar conta a receber com qualquer valor recebido é
+   recusado pelo backend (`ContaReceber.cs:80`), e o descarte de nota só vale para nota não transmitida.
+
+### Gate de contrato (`D22`)
+
+O `validate:backend-contract-map` lê `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md`, levantamento manual da
+v1.18 (commit único `9c16a39`, sem gerador no backend, sem proteção de hook). A rota de retomada foi
+acrescentada ali como adendo, citando `FaturamentosController.cs:99-106`, e o teste do mapa passa de 576
+para 577 rotas com asserção nominal. Medido logo após o adendo: gate com saída `0`, e o teste antigo
+vermelho com "expected 576 but got 577". A migração do gate para o `CONTRATO-API-v1.23.md` gerado fica como
+fatia de esteira.
+
+### Testes, e a prova de que sabem falhar
+
+Recorte de 7 arquivos, com **67 testes**. A contagem é a saída "Tests 67 passed (67)" do `npx vitest run` nos 7 arquivos, medida pelo QA da tentativa 3, duas vezes. Antes da correção `D32` eram 66:
+
+- **Unitários:** `tests/unit/faturamentoPayload.test.ts`, `faturamentoStructure.test.ts`, `faturamentoLabels.test.ts` (novo), `backendContractMap.test.ts` (576 → 577, com asserção nominal da rota) e `backendPermissions.test.ts`.
+- **Componente:** `tests/components/RetomarReversaoDialog.test.tsx` (novo, 4 casos) e `FaturamentoDetalhePage.test.tsx` (novo, 10 casos).
+
+Cada sabotagem abaixo foi feita no código de produção, com backup e restauração conferida com `cmp`, e derrubou **exatamente um** dos 13 testes de componente da bateria anterior à correção ("1 failed | 12 passed (13)"): o que a nomeia. As linhas de AC-6 e AC-10 foram reproduzidas também pela sessão principal, com o mesmo resultado.
+
+| Sabotagem | Reprovou |
+| --- | --- |
+| Retomar aparece também em leg Integrado | `AC-6: botão Retomar existe só na linha em reversão` |
+| Retomada volta a reconsultar só no sucesso (`onSuccess`) | `AC-10: após retomada rejeitada reconsulta o detalhe…` |
+| Aviso de "Declarar" sempre oculto | `AC-8: Declarar exibe o aviso de afirmação humana; Reaplicar não` |
+| Confirmar sem o bloqueio por reversão | `AC-12: Confirmar desabilitado com leg em reversão e habilitado sem` |
+| Tabela sem as linhas "Sem registro" | `AC-2: mostra 6 linhas na ordem do catálogo e Sem registro para o leg 4` |
+
+Unitários: estado desconhecido (0, 5, 99) nunca vira "Revertido". Os motivos aceitam 500 e 300 caracteres e recusam 501 e 301. Enum em string e campo extra são recusados.
+
+**Foram precisas três tentativas neste nó.** A primeira não entregou os testes de componente nem o spec, alegando que o `Dropdown` do PrimeReact não era testável em jsdom — alegação já medida e derrubada na b54.c2. A segunda entregou testes que passavam sem testar: um único caso na tela, e seleção de opção dentro de um `if` que pulava em silêncio. A terceira teve títulos de caso prescritos e sabotagem obrigatória, e fechou.
+
+**O QA bloqueou a primeira versão desta bateria, com razão.** Numa segunda revisão, feita no nível de modelo que o grafo exige, o QA fez nove sabotagens. Quatro passaram sem nenhum teste vermelho:
+
+- valores do enum trocados (o teste comparava pelo membro, não pelo número);
+- "Revertido" inventado pela tela depois de uma falha;
+- tooltip do Confirmar sem `showOnDisabled`;
+- permissão a mais no `anyOf` da rota.
+
+O nó `correction` (`D32`) acrescentou os valores literais dos enums, o cenário direto de POST falho com o GET ainda em 4, o teste do tooltip no e2e e as listas `anyOf` literais. Depois disso, cada uma das três sabotagens de unidade e componente (S1, S2 e S4) derrubou exatamente o teste que a nomeia: "1 failed | 66 passed (67)" em cada uma, no recorte de 7 arquivos, medido pelo QA da tentativa 3. A sabotagem do tooltip foi medida no navegador:
+
+- **Com a sabotagem (sem `showOnDisabled`):** o teste `AC-12 S4` do e2e falhou, com `.p-tooltip` não encontrado.
+- **Restaurado:** o mesmo teste passou.
+- **Como foi rodado:** `--grep "AC-12 S4"`, num servidor isolado na 3411 (PID 7344, `next dev -p 3411` em `Documents\New project`).
+- **Antes de cada rodada:** o chunk servido confirmou que a sabotagem, e depois a restauração, estavam no ar.
+
+O registro de exceção GC-01, com alvo `b54` vencido desde a b53, passou a apontar para a F5.6.
+
+**Dívida registrada (`D31`).** Quando a gravação falha, o diálogo que faz `await onSubmit` sem `catch` gera uma rejeição não tratada no console. O toast e o diálogo aberto estão certos. É padrão da base (142 `rethrow: true` em 63 arquivos de `features/`, medido por grep) e vai para a F5.5.
+
+### E2E
+
+`tests/e2e/faturamento-legs.spec.ts` (novo) cobre quatro sessões nominais:
+
+| Sessão | Permissões | O que se afirma |
+| --- | --- | --- |
+| S1 | `FATURAMENTO_CONSULTAR` | Retomar visível e desabilitado |
+| S2 | `FATURAMENTO_CONSULTAR` + `FATURAMENTO_RETOMAR_REVERSAO` | Retomar habilitado. O corpo enviado é exatamente `{ leg: 5, acao: 1, motivo }`, numérico |
+| S3 | só `FATURAMENTO_RETOMAR_REVERSAO` | Estado não autorizado, sem tabela de legs e nenhum `POST` (contador registrado antes da navegação) |
+| S4 | `FATURAMENTO_CONSULTAR` + `FATURAMENTO_CONFIRMAR` | Confirmar desabilitado mostra o tooltip do motivo (`showOnDisabled`) |
+
+**Servidor.** Único, na porta 3411. A identidade foi conferida pela linha de comando do PID, que roda `next dev -p 3411` a partir de `Documents\New project`. Antes de subir, a porta estava livre. No fim, foi liberada.
+
+**Resultado.** Rodou `faturamento-legs.spec.ts` junto com `permissions.spec.ts`, porque a fixture compartilhada ganhou as rotas de faturamento. Foram **14 de 14 nas duas execuções**, com os mesmos títulos. Depois da correção pós-QA, com o teste S4 acrescentado, rodou de novo em outro servidor isolado (PID 26544, identidade conferida da mesma forma): **15 de 15 nas duas execuções**.
+
+### O que fica aberto, nomeado
+
+- **Fluxo de Cancelar** (`D24`): guard por leg 4 integrado, recusa como lista, `FATURAMENTO_REVERTER_INTEGRACAO`.
+- **Sinal de legs na listagem** (`D26`): a listagem do backend não traz legs; depende da pergunta B-3.
+- **Identificadores de usuário crus** (`D30`): F5.
+- **Perguntas ao backend** B-1 a B-9, na seção 8 do plano.
+
 # v1.11.0a8b54.c2
 
 ## Estado de Bens remodelado contra o contrato, a baixa volta a concluir, e o gate de campo ganha prova durável

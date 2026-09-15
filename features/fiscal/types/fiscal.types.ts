@@ -110,6 +110,12 @@ export type ItemNotaFiscalResponse = {
     observacao?: string | null;
 };
 
+// ImpostoNotaFiscal.cs:11-15
+export enum OrigemImpostoNotaFiscal {
+    Manual = 1,
+    Motor = 2
+}
+
 export type ImpostoNotaFiscalResponse = {
     id: Guid;
     itemNotaFiscalId?: Guid | null;
@@ -119,6 +125,10 @@ export type ImpostoNotaFiscalResponse = {
     aliquota: number;
     valor: number;
     observacao?: string | null;
+    // NotaFiscalResponse.cs:220-233
+    origem?: OrigemImpostoNotaFiscal | number | null;
+    regraFiscalAplicadaId?: Guid | null;
+    excecaoFiscalAplicadaId?: Guid | null;
 };
 
 export type XmlNotaFiscalResponse = {
@@ -159,6 +169,10 @@ export type NotaFiscalResponse = {
     statusFiscal: StatusNotaFiscal | number;
     valorProdutos: number;
     valorDesconto: number;
+    // NotaFiscalResponse.cs:43-86
+    valorFrete: number;
+    valorSeguro: number;
+    valorOutrasDespesas: number;
     valorTotal: number;
     codigoRejeicao?: string | null;
     mensagemRejeicao?: string | null;
@@ -168,6 +182,10 @@ export type NotaFiscalResponse = {
     impostos: ImpostoNotaFiscalResponse[];
     xmls: XmlNotaFiscalResponse[];
     eventos: EventoNotaFiscalResponse[];
+    // NotaFiscalResponse.cs:84-86 -- opcionais, default 0m; agregados lidos pela UI, nunca re-somados (D34)
+    valorIpi?: number | null;
+    valorIcmsSt?: number | null;
+    valorFcpSt?: number | null;
 };
 
 export type ResumoPedidoVendaFiscalResponse = {
@@ -356,6 +374,16 @@ export type AdicionarImpostoNotaFiscalRequest = {
     valor: number;
     observacao?: string | null;
 };
+
+// NotaFiscalRequests.cs:104-107 -- os 3 campos são posicionais sem default, logo obrigatórios
+export type DefinirValoresAcessoriosNotaFiscalRequest = {
+    valorFrete: number;
+    valorSeguro: number;
+    valorOutrasDespesas: number;
+};
+
+// D34: situação da linha de imposto na composição do total, derivada dos agregados do backend
+export type SituacaoLinhaImpostoNoTotal = 'compoe' | 'suprimida' | 'fora_do_total' | 'nao_conferida';
 
 export type ArmazenarXmlNotaFiscalRequest = {
     tipo: TipoXmlFiscal | number;

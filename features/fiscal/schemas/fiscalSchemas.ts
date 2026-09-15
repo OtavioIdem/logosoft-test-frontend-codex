@@ -75,8 +75,17 @@ export const adicionarImpostoNotaFiscalSchema = z.object({
     baseCalculo: moneySchema,
     aliquota: moneySchema,
     valor: moneySchema,
-    observacao: z.preprocess((value) => (typeof value === 'string' && value.trim() === '' ? null : value), z.string().trim().max(500).nullable().optional())
+    // D35: override manual exige motivo auditável; sem texto padrão (NotaFiscalBasicaUseCases.cs:326-329)
+    observacao: requiredText('Informe o motivo do lançamento manual.', 500)
 });
+
+// NotaFiscalRequests.cs:104-107 / NotaFiscalValidators.cs:108-116 -- request, .strict() por T5
+const valorAcessorioSchema = z.number({ invalid_type_error: 'Informe um valor.' }).finite('Informe um valor válido.').min(0, 'O valor não pode ser negativo.');
+export const definirValoresAcessoriosNotaFiscalSchema = z.object({
+    valorFrete: valorAcessorioSchema,
+    valorSeguro: valorAcessorioSchema,
+    valorOutrasDespesas: valorAcessorioSchema
+}).strict();
 
 export const gerarXmlEnvioSchema = z.object({
     armazenarXml: z.boolean(),

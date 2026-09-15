@@ -33,8 +33,10 @@ export const useFaturamentoMutations = () => {
     };
 
     const prepararMutation = useMutation({ mutationFn: (values: unknown) => faturamentoApi.preparar(values), onSuccess: invalidate });
-    const confirmarMutation = useMutation({ mutationFn: ({ id, values }: IdValues) => faturamentoApi.confirmar(id, values), onSuccess: invalidate });
-    const cancelarMutation = useMutation({ mutationFn: ({ id, motivo }: { id: string; motivo: string }) => faturamentoApi.cancelar(id, motivo), onSuccess: invalidate });
+    // D27: confirmar, cancelar e retomar reconsultam também no erro — é o que deixa o leg EmReversao visível de novo.
+    const confirmarMutation = useMutation({ mutationFn: ({ id, values }: IdValues) => faturamentoApi.confirmar(id, values), onSettled: invalidate });
+    const cancelarMutation = useMutation({ mutationFn: ({ id, motivo }: { id: string; motivo: string }) => faturamentoApi.cancelar(id, motivo), onSettled: invalidate });
+    const retomarReversaoMutation = useMutation({ mutationFn: ({ id, values }: IdValues) => faturamentoApi.retomarReversao(id, values), onSettled: invalidate });
 
-    return { prepararMutation, confirmarMutation, cancelarMutation };
+    return { prepararMutation, confirmarMutation, cancelarMutation, retomarReversaoMutation };
 };

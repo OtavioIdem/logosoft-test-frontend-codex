@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { isValidGuid } from '@/lib/http/requestUtils';
-import { TipoDocumentoFiscal } from '@/features/faturamento/types/faturamento.types';
+import { AcaoRetomadaReversaoLeg, LegIntegracaoFaturamento, TipoDocumentoFiscal } from '@/features/faturamento/types/faturamento.types';
 
 const requiredGuid = (label: string) => z.string().trim().refine(isValidGuid, `${label} deve ser selecionado corretamente.`);
 const optionalGuid = z
@@ -31,4 +31,13 @@ export const confirmarFaturamentoSchema = z.object({
     primeiraDataVencimentoContaReceber: requiredDate
 });
 
-export const cancelarFaturamentoSchema = z.object({ motivo: textRequired('Informe o motivo.') });
+export const cancelarFaturamentoSchema = z.object({ motivo: textRequired('Informe o motivo.').max(300, 'O motivo aceita até 300 caracteres.') });
+
+// RetomarReversaoLegRequestValidator (FaturamentoValidators.cs:44-52): motivo obrigatório, até 500 caracteres.
+export const retomarReversaoLegSchema = z
+    .object({
+        leg: z.nativeEnum(LegIntegracaoFaturamento, { required_error: 'Leg inválido.', invalid_type_error: 'Leg inválido.' }),
+        acao: z.nativeEnum(AcaoRetomadaReversaoLeg, { required_error: 'Selecione a ação.', invalid_type_error: 'Selecione uma ação válida.' }),
+        motivo: z.string().trim().min(1, 'Informe o motivo.').max(500, 'O motivo aceita até 500 caracteres.')
+    })
+    .strict();
