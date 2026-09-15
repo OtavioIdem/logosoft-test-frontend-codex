@@ -143,8 +143,7 @@ describe('Gate de permissão × guard — prova histórica (F1.6.b)', () => {
         expect(resto).toHaveLength(0);
         expect(entrada.resource).toBe('seguranca-grupos');
         expect(entrada.declaredPermission).toBe('SEGURANCA_PERMISSOES_GERENCIAR');
-        // Alvo próprio: a decisão entre corrigir e remover o scaffold morto é da b54 (D2).
-        // As chamadas órfãs, que são outra classe, apontam para F5.6.
-        expect(entrada.target).toMatch(/b54/);
+        // Alvo: a camada de CRUD genérico órfã vai para F5.6 (D32, QA-7 da b55).
+        expect(entrada.target).toMatch(/F5\.6/);
     });
 });
