@@ -410,7 +410,7 @@ export const TransmitirSefazDialog = ({ visible, loading, onHide, onSubmit }: Ba
                 <Field label="UF autorizadora"><InputText value={values.ufAutorizadora} maxLength={2} onChange={(e) => setValues((v) => ({ ...v, ufAutorizadora: e.target.value.toUpperCase() }))} /></Field>
                 <Field label="Serviço"><Dropdown value={values.servico} options={servicoTransmissaoFiscalOptions} onChange={(e) => setValues((v) => ({ ...v, servico: e.value }))} /></Field>
                 <Field label="Schema set"><InputText value={values.schemaSetName} onChange={(e) => setValues((v) => ({ ...v, schemaSetName: e.target.value }))} /></Field>
-                <Field label="Correlation ID"><InputText value={values.correlationId} onChange={(e) => setValues((v) => ({ ...v, correlationId: e.target.value }))} /></Field>
+                <Field label="Correlation ID" hint="Gerado automaticamente a cada abertura deste diálogo; identifica esta tentativa de transmissão perante a SEFAZ."><InputText value={values.correlationId} readOnly /></Field>
                 <div className="field col-12 flex align-items-center gap-2"><Checkbox inputId="validarSchemaAntesTransmissao" checked={values.validarSchemaAntesTransmissao} onChange={(e) => setValues((v) => ({ ...v, validarSchemaAntesTransmissao: Boolean(e.checked) }))} /><label htmlFor="validarSchemaAntesTransmissao">Validar schema antes da transmissão</label></div>
                 <TextAreaField label="XML assinado opcional" value={values.xmlEnvioAssinado} rows={8} onChange={(xmlEnvioAssinado) => setValues((v) => ({ ...v, xmlEnvioAssinado }))} hint="Se ficar vazio, o backend buscará o XML de envio armazenado." />
                 <button type="submit" className="hidden" />

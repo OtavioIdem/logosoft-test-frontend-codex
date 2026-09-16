@@ -412,7 +412,8 @@ export type TransmitirNotaFiscalSefazRequest = {
     xmlEnvioAssinado?: string | null;
     validarSchemaAntesTransmissao: boolean;
     schemaSetName?: string | null;
-    correlationId?: string | null;
+    // NotaFiscalValidators.cs:238 -- CorrelationId obrigatório na transmissão (D43, F2.6)
+    correlationId: string;
 };
 
 export type ReprocessarNotaFiscalSefazRequest = TransmitirNotaFiscalSefazRequest & {
@@ -628,6 +629,8 @@ export type TransmissaoSefazResponse = {
     protocolo?: string | null;
     chaveAcesso?: string | null;
     deveReprocessar: boolean;
+    // NotaFiscalResponse.cs:273-275 -- aditivo no fim do record, sempre presente (Array.Empty<string>() quando vazio)
+    alertas?: string[];
 };
 
 export type EventoFiscalOperacionalResponse = {

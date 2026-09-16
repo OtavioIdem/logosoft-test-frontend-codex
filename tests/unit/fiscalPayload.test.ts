@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
     buildAdicionarImpostoNotaFiscalPayload,
@@ -172,13 +173,39 @@ describe('payloads fiscais', () => {
         });
     });
 
-    it('normaliza transmissão e contrato de inutilização fiscal', () => {
-        expect(buildTransmitirSefazPayload({ ufAutorizadora: 'sp', servico: TipoServicoTransmissaoFiscal.Autorizacao, xmlEnvioAssinado: '', validarSchemaAntesTransmissao: false, schemaSetName: 'NFe-4.00', correlationId: '' })).toMatchObject({
+    // AC-2 (v1.11.0a8b57): correlationId da transmissão vira requiredText (NotaFiscalValidators.cs:238) --
+    // antes '' virava null e passava; agora recusa. Caso reescrito, não apagado (D43).
+    it('recusa correlationId vazio, em branco, nulo, ausente ou acima de 120 na transmissão SEFAZ; aceita até 120 com trim', () => {
+        const base = { ufAutorizadora: 'sp', servico: TipoServicoTransmissaoFiscal.Autorizacao, xmlEnvioAssinado: '', validarSchemaAntesTransmissao: false, schemaSetName: 'NFe-4.00' };
+
+        expect(() => buildTransmitirSefazPayload({ ...base, correlationId: '' })).toThrow('Informe o correlation ID da transmissão.');
+        expect(() => buildTransmitirSefazPayload({ ...base, correlationId: '   ' })).toThrow('Informe o correlation ID da transmissão.');
+        expect(() => buildTransmitirSefazPayload({ ...base, correlationId: null })).toThrow('Expected string, received null');
+        expect(() => buildTransmitirSefazPayload({ ...base })).toThrow('Required');
+        expect(() => buildTransmitirSefazPayload({ ...base, correlationId: 'a'.repeat(121) })).toThrow('Informe no máximo 120 caracteres.');
+
+        expect(buildTransmitirSefazPayload({ ...base, correlationId: 'a'.repeat(120) })).toMatchObject({
             ufAutorizadora: 'SP',
             xmlEnvioAssinado: null,
-            correlationId: null
+            correlationId: 'a'.repeat(120)
         });
 
+        expect(buildTransmitirSefazPayload({ ...base, correlationId: '  front-transmitir-20260916-abc123  ' })).toMatchObject({
+            correlationId: 'front-transmitir-20260916-abc123'
+        });
+    });
+
+    // AC-2: correlationIdSchema (:13) não muda -- reprocessar continua recusando vazio (é requiredText desde antes) e
+    // as demais 9 chamadas do schema opcional (correlationIdSchema) ficam intactas.
+    it('não altera correlationIdSchema; só a transmissão passou a exigir o campo', () => {
+        const schemaSource = readFileSync('features/fiscal/schemas/fiscalSchemas.ts', 'utf8');
+        expect((schemaSource.match(/correlationId: correlationIdSchema/g) ?? []).length).toBe(9);
+        expect(schemaSource).toContain(
+            "const correlationIdSchema = z.preprocess((value) => (typeof value === 'string' && value.trim() === '' ? null : value), z.string().trim().max(120, 'Correlation ID deve ter no máximo 120 caracteres.').nullable().optional());"
+        );
+    });
+
+    it('normaliza contrato de inutilização fiscal', () => {
         expect(
             buildInutilizarNumeracaoPayload({
                 empresaId,

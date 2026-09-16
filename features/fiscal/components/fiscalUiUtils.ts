@@ -522,3 +522,23 @@ export const createFiscalCorrelationId = (fluxo: string, notaFiscalId?: string |
 };
 
 export const gerarCorrelationId = createFiscalCorrelationId;
+
+// D43 P-1/P-3: alertas aditivos de TransmissaoSefazResponse/ConsultaProtocoloSefazResponse
+// (NotaFiscalResponse.cs:273-275), sem confiar no tipo -- filtra o que não é string ou está em branco.
+export const alertasDoRetorno = (retorno?: { alertas?: unknown } | null): string[] => {
+    if (!retorno || !Array.isArray(retorno.alertas)) return [];
+    return retorno.alertas.filter((item): item is string => typeof item === 'string' && item.trim() !== '');
+};
+
+export type FeedbackRetornoSefaz = { severity: 'warn' | 'success'; detail: string };
+
+// D43 P-1: alerta vira toast warn (sem fechar sozinho) em vez de success -- o painel é quem sustenta o aviso
+export const feedbackRetornoSefaz = (alertas: string[], sucesso: string): FeedbackRetornoSefaz => {
+    if (alertas.length > 0) {
+        return {
+            severity: 'warn',
+            detail: `Retorno recebido com ${alertas.length} alerta(s). Leia o painel "Último retorno operacional" antes de seguir.`
+        };
+    }
+    return { severity: 'success', detail: sucesso };
+};

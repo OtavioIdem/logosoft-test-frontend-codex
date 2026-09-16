@@ -1,3 +1,104 @@
+# v1.11.0a8b57
+
+## Transmissão à SEFAZ: alertas da resposta na tela, reprocessamento no menu e Correlation ID obrigatório (F2.4 a F2.6)
+
+Fecha a onda F2 (`D21`). Plano e estado em `docs/fatias/v1.11.0a8b57-f2-transmissao.md`; decisões `D43`.
+
+**Risco da fatia: `CRITICAL`** (emissão e reprocessamento de documento fiscal). Exige aprovação humana antes do release.
+
+### O que muda
+
+- **Alertas da resposta chegam à tela.** Transmitir, reprocessar e consultar protocolo podem concluir com alerta, como
+  "Nota fiscal autorizada, mas o pedido de venda não pôde ser faturado". Antes o aviso era descartado. Agora aparece no
+  painel "Último retorno operacional", um aviso por alerta, e continua visível até o próximo retorno ou até sair da nota;
+  o toast passa de sucesso para atenção.
+- **Correlation ID da transmissão é obrigatório e somente leitura.** Um novo é gerado a cada abertura do diálogo. O
+  backend já recusava o campo vazio com 400; agora a tela não deixa chegar lá.
+- **`FISCAL_REPROCESSAR` na rota e no menu.** O botão Reprocessar já exigia essa permissão desde a `b52`; a rota de
+  notas e os itens "Fiscal" e "Notas fiscais" do menu passam a aceitá-la.
+- **Transmitir, reprocessar e consultar protocolo recarregam a nota também quando falham**, para a aba de integrações
+  não mostrar estado velho no caminho de recuperação.
+
+### Seção operacional — leia antes do deploy
+
+1. **Nenhuma permissão a conceder e ninguém perde acesso.** Risco de acesso: `NENHUM`.
+2. **Quem tem só `FISCAL_REPROCESSAR` passa a ver "Fiscal > Notas fiscais"**, mas a tela exige também
+   `FISCAL_CONSULTAR` para abrir notas e reprocessar. Conceda as duas a quem reprocessa.
+3. **Grupos criados depois da concessão automática não têm `FISCAL_REPROCESSAR`.** O backend deu a permissão uma única
+   vez aos grupos que já tinham `FISCAL_EMITIR` (`FiscalReprocessarConcessaoAutomatica.cs:10-14`).
+4. **O Correlation ID da transmissão não é mais editável.** Para uma nova tentativa, feche e reabra o diálogo.
+5. **Leia o painel "Último retorno operacional" depois de transmitir.** Alerta ali significa que a operação concluiu pela
+   metade e alguém precisa agir (por exemplo, faturar o pedido manualmente).
+
+### Testes, E2E e QA
+
+- **Unit e estrutura** (155 testes no recorte fiscal, permissões e contrato): tipos com `alertas` e `correlationId`
+  obrigatório; schema da transmissão recusa vazio, só espaços, nulo, ausente e 121 caracteres; rota e menu com listas
+  exatas; `onSettled` nominal nas três mutações; o endpoint de reprocessar aparece uma única vez.
+- **Componente** (34 testes): diálogo de transmissão somente leitura e com ID novo a cada abertura; painel com 0, 1 e 2
+  alertas iguais e com a consulta de protocolo; botão Reprocessar com o guard e o texto de `FISCAL_REPROCESSAR`; a
+  nota é reconsultada quando a transmissão falha.
+- **Sabotagens SB1 a SB9**, cada uma derrubando os testes nominais, com restauração conferida por `sha256sum -c`.
+  O QA refez SB1, SB4, SB6 e SB8; a sessão principal refez a SB6 (2 testes do AC-8 caem).
+- **E2E** (`fiscal-transmissao`, `fiscal`, `fiscal-impostos`, `permissions`): 21 passed nas duas rodadas, servidor
+  único na 3411. A primeira tentativa teve o R1 vermelho nas duas rodadas por defeito do teste (o log simulado não
+  tinha id GUID, e o schema recusava antes do POST); corrigido o teste, a produção não mudou.
+- **QA: APROVADO**, sem achados. Gates rodados pelo próprio QA, inclusive `npm run build` com `.next` apagado.
+- **Limite conhecido (`D44`):** a checagem de hierarquia do menu no `validate:guard-permission-map` não enxerga o
+  formato do `AppMenu.tsx`. Nesta versão, quem protege pai e filho do menu é o teste estrutural. O gate será refeito em
+  fatia própria.
+
+### Pendências nomeadas fora desta versão
+
+- Gate de hierarquia do menu cego: fatia de gate própria (`D44`).
+- Alertas de habilitar contingência; Correlation ID editável no reprocessamento: F5.
+- `onSettled` nas demais mutações fiscais, erro de validação cru no toast, 409 como fluxo normal: F5.5.
+- Perguntas ao backend B-5 (contrato publica `correlationId` opcional) e B-6 (`Alertas` ausente do documento de contrato).
+
+# v1.11.0a8b56.c2
+
+## A dashboard carrega os indicadores da empresa selecionada (DEF-3)
+
+Fatia corretiva (`D42`), antes da `b57`. Os cards de contas a receber e contas a pagar pediam uma empresa e continuavam
+pedindo depois de a empresa ser escolhida em "Selecionar contexto". Plano e estado em
+`docs/fatias/v1.11.0a8b56.c2-dashboard-contexto-empresa.md`.
+
+**Risco da fatia: `HIGH`** (valor monetário e contexto organizacional). Nenhuma permissão, rota ou menu muda.
+
+### A causa, por leitura
+
+A dashboard consultava vendas, contas a receber, contas a pagar, saldos de estoque e compras **sem enviar a empresa**,
+e o backend exige `empresaId` nessas cinco rotas. A chave do cache não levava a empresa: trocar o contexto reconsultava,
+mas de novo sem empresa, e o aviso voltava igual. Nos saldos de estoque era pior: o backend devolve lista vazia sem erro
+(`ListarSaldosEstoqueUseCase.cs:23-24`), e o card mostrava "0 produtos sem saldo" como se fosse dado.
+
+### O que muda
+
+- As cinco consultas levam a empresa e a filial do contexto (a filial só quando houver).
+- A chave do cache inclui o contexto: trocar a empresa recarrega os cards com a empresa nova.
+- Sem empresa no contexto, as cinco consultas não saem; os cards ficam indisponíveis e um único aviso orienta a
+  selecionar a empresa. A auditoria recente continua carregando.
+
+### Seção operacional
+
+1. **Nenhuma permissão a conceder.** Risco de acesso: `NENHUM`.
+2. **O card "Produtos sem saldo disponível" pode mudar de 0 para o número real** da empresa selecionada.
+
+### Testes, E2E e QA
+
+- **Unit** (`dashboardApiContexto.test.ts`, 6 testes): parâmetros por rota com e sem filial; sem empresa, nenhuma das
+  cinco rotas é chamada e o aviso sai uma vez.
+- **Componente** (`DashboardContexto.test.tsx`, 2 testes): a chave leva o contexto; trocar a empresa reconsulta com o id
+  novo e o card mostra o valor novo.
+- **Sabotagens:** sem `empresaId` nas consultas, caem os testes de parâmetro; com a chave antiga, caem os de chave e de
+  troca de empresa; sem a guarda de empresa, cai o de "sem empresa". Medidas pelo nó `tests` e refeitas pelo QA (SB1 e
+  SB2), com restauração conferida por `sha256sum -c`.
+- **E2E** (`dashboard-contexto.spec.ts`, com `auth` e `logosoft-critical-flows`): 6 passed nas duas rodadas, servidor
+  único na 3411 (PID e linha de comando conferidos). O teste afirma o `empresaId` na URL, porque a simulação responde
+  igual sem ele.
+- **QA: APROVADO.** Recorte Vitest 45/45, `tsc`, `lint`, `validate:source`, `validate:ci`, os três gates de permissão e
+  contrato e `npm run build` com `.next` apagado, rodados pelo próprio QA.
+
 # v1.11.0a8b56.c1
 
 ## Campo de valor com casas decimais volta a gravar o que foi digitado em pt-BR

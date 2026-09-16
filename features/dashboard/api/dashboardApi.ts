@@ -1,16 +1,20 @@
 import { httpClient, rawHttpClient } from '@/lib/http/httpClient';
 import { formatMoney } from '@/lib/formatters/money';
 import { mapApiError } from '@/lib/http/apiError';
+import { cleanQueryParams } from '@/lib/http/requestUtils';
 import { DashboardAuditItem, DashboardData, DashboardMetric } from '@/features/dashboard/types/dashboard.types';
 import { EstoqueSaldo, PedidoCompra, PedidoVenda, StatusContaFinanceira, StatusPedidoCompra, StatusPedidoVenda } from '@/types/erp';
 
 type ContaFinanceiraResumo = { valorSaldo?: number | null; valorOriginal?: number | null; status?: number | string | null };
 type AuditoriaEventoResumo = { id: string; modulo: string; entidade: string; acao: number; descricao: string; criadoEm: string };
 type EndpointResult<T> = { data: T; warning?: string };
+type DashboardContext = { empresaId: string | null; filialId: string | null };
 
-const safeGet = async <T>(label: string, endpoint: string, fallback: T): Promise<EndpointResult<T>> => {
+const SELECIONE_EMPRESA_WARNING = 'Selecione a empresa em "Selecionar contexto" para carregar os indicadores.';
+
+const safeGet = async <T>(label: string, endpoint: string, fallback: T, params?: Record<string, unknown>): Promise<EndpointResult<T>> => {
     try {
-        const response = await httpClient.get<T>(endpoint);
+        const response = await httpClient.get<T>(endpoint, params ? { params } : undefined);
         return { data: response.data };
     } catch (error) {
         const apiError = mapApiError(error);
@@ -57,24 +61,30 @@ const buildMetrics = (data: {
 };
 
 export const dashboardApi = {
-    async carregar(): Promise<DashboardData> {
+    async carregar(contexto: DashboardContext): Promise<DashboardData> {
+        const temEmpresa = Boolean(contexto.empresaId);
+        const paramsPorEmpresa = temEmpresa ? cleanQueryParams({ empresaId: contexto.empresaId, filialId: contexto.filialId }) : undefined;
+        const semEmpresa = <T>(fallback: T): EndpointResult<T> => ({ data: fallback });
+
         const [health, pedidosVenda, contasReceber, contasPagar, saldos, pedidosCompra, auditoria] = await Promise.all([
             safeHealth(),
-            safeGet<PedidoVenda[]>('Vendas', '/api/vendas/pedidos', []),
-            safeGet<ContaFinanceiraResumo[]>('Contas a receber', '/api/financeiro/contas-receber', []),
-            safeGet<ContaFinanceiraResumo[]>('Contas a pagar', '/api/financeiro/contas-pagar', []),
-            safeGet<EstoqueSaldo[]>('Saldos de estoque', '/api/estoque/saldos', []),
-            safeGet<PedidoCompra[]>('Compras', '/api/compras/pedidos', []),
+            temEmpresa ? safeGet<PedidoVenda[]>('Vendas', '/api/vendas/pedidos', [], paramsPorEmpresa) : Promise.resolve(semEmpresa<PedidoVenda[]>([])),
+            temEmpresa ? safeGet<ContaFinanceiraResumo[]>('Contas a receber', '/api/financeiro/contas-receber', [], paramsPorEmpresa) : Promise.resolve(semEmpresa<ContaFinanceiraResumo[]>([])),
+            temEmpresa ? safeGet<ContaFinanceiraResumo[]>('Contas a pagar', '/api/financeiro/contas-pagar', [], paramsPorEmpresa) : Promise.resolve(semEmpresa<ContaFinanceiraResumo[]>([])),
+            temEmpresa ? safeGet<EstoqueSaldo[]>('Saldos de estoque', '/api/estoque/saldos', [], paramsPorEmpresa) : Promise.resolve(semEmpresa<EstoqueSaldo[]>([])),
+            temEmpresa ? safeGet<PedidoCompra[]>('Compras', '/api/compras/pedidos', [], paramsPorEmpresa) : Promise.resolve(semEmpresa<PedidoCompra[]>([])),
             safeGet<AuditoriaEventoResumo[]>('Auditoria', '/api/auditoria/eventos', [])
         ]);
-        const warnings = [pedidosVenda.warning, contasReceber.warning, contasPagar.warning, saldos.warning, pedidosCompra.warning, auditoria.warning].filter((warning): warning is string => Boolean(warning));
+        const warnings = temEmpresa
+            ? [pedidosVenda.warning, contasReceber.warning, contasPagar.warning, saldos.warning, pedidosCompra.warning, auditoria.warning].filter((warning): warning is string => Boolean(warning))
+            : [SELECIONE_EMPRESA_WARNING, auditoria.warning].filter((warning): warning is string => Boolean(warning));
         if (health !== 'ok') warnings.push('Health check da API indisponível ou fora do padrão esperado.');
         const unavailable = new Set<string>();
-        if (pedidosVenda.warning) unavailable.add('vendas');
-        if (contasReceber.warning) unavailable.add('receber');
-        if (contasPagar.warning) unavailable.add('pagar');
-        if (saldos.warning) unavailable.add('estoque');
-        if (pedidosCompra.warning) unavailable.add('compras');
+        if (!temEmpresa || pedidosVenda.warning) unavailable.add('vendas');
+        if (!temEmpresa || contasReceber.warning) unavailable.add('receber');
+        if (!temEmpresa || contasPagar.warning) unavailable.add('pagar');
+        if (!temEmpresa || saldos.warning) unavailable.add('estoque');
+        if (!temEmpresa || pedidosCompra.warning) unavailable.add('compras');
         if (auditoria.warning) unavailable.add('auditoria');
         const metrics = buildMetrics({ pedidosVenda: pedidosVenda.data, contasReceber: contasReceber.data, contasPagar: contasPagar.data, saldos: saldos.data, pedidosCompra: pedidosCompra.data, auditoria: auditoria.data, unavailable });
         const criticalFlows = [

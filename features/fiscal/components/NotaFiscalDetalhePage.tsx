@@ -13,6 +13,7 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { StatusTag } from '@/components/data/StatusTag';
 import { FiscalDocumentosAuxiliaresPanel, FiscalIntegracoesTable } from '@/features/fiscal/components/FiscalOperationalPanels';
 import { ComposicaoTotalNotaFiscalCard, ImpostosNotaFiscalTabela } from '@/features/fiscal/components/NotaFiscalImpostosPanels';
+import { NotaFiscalRetornoOperacionalPanel } from '@/features/fiscal/components/NotaFiscalRetornoOperacionalPanel';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
@@ -37,6 +38,8 @@ import {
     XmlPipelineDialog
 } from '@/features/fiscal/components/FiscalActionDialogs';
 import {
+    alertasDoRetorno,
+    feedbackRetornoSefaz,
     fiscalOrigemContextLabel,
     fiscalReferenceContextLabel,
     formatFiscalDate,
@@ -68,7 +71,7 @@ import {
 } from '@/features/fiscal/components/fiscalUiUtils';
 import { fiscalApi, formatFiscalApiError } from '@/features/fiscal/api/fiscalApi';
 import { useFiscalMutations, useNotaFiscal, useNotaFiscalIntegracoes, useNotaFiscalResumo, useNotaFiscalWorkflow } from '@/features/fiscal/hooks/useFiscalResources';
-import { DocumentoAuxiliarFiscalResponse, LogIntegracaoFiscalResponse, NotaFiscalXmlPipelineResponse, TransmissaoSefazResponse } from '@/features/fiscal/types/fiscal.types';
+import { ConsultaProtocoloSefazResponse, DocumentoAuxiliarFiscalResponse, LogIntegracaoFiscalResponse, NotaFiscalXmlPipelineResponse, TransmissaoSefazResponse } from '@/features/fiscal/types/fiscal.types';
 import { useAppToast } from '@/hooks/useAppToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { StatusNotaFiscal } from '@/types/erp';
@@ -79,17 +82,6 @@ const DetailValue = ({ label, value, mono }: { label: string; value?: React.Reac
         <strong className={mono ? 'font-mono text-sm break-all' : undefined}>{value ?? '-'}</strong>
     </div>
 );
-
-const ResponsePanel = ({ xml, transmissao, documento }: { xml?: NotaFiscalXmlPipelineResponse | null; transmissao?: TransmissaoSefazResponse | null; documento?: DocumentoAuxiliarFiscalResponse | null }) => {
-    if (!xml && !transmissao && !documento) return null;
-    return (
-        <Card title="Último retorno operacional" className="mb-3">
-            {xml ? <Message severity="info" className="w-full mb-2" text={`XML ${tipoXmlFiscalLabel(xml.tipoXml)} gerado. Schema validado: ${xml.schemaValidado ? 'sim' : 'não'}. Armazenado: ${xml.armazenado ? 'sim' : 'não'}.`} /> : null}
-            {transmissao ? <Message severity={transmissao.autorizada ? 'success' : 'warn'} className="w-full mb-2" text={`${transmissao.codigoStatus ?? '-'} • ${transmissao.motivo ?? 'Sem motivo retornado'}${transmissao.deveReprocessar ? ' • Reprocessamento recomendado.' : ''}`} /> : null}
-            {documento ? <Message severity="success" className="w-full" text={`Documento ${documento.nomeArquivo} gerado com hash ${documento.hashSha256}.`} /> : null}
-        </Card>
-    );
-};
 
 export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
     const router = useRouter();
@@ -107,6 +99,7 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
     const [dialog, setDialog] = useState<string | null>(null);
     const [ultimoXml, setUltimoXml] = useState<NotaFiscalXmlPipelineResponse | null>(null);
     const [ultimaTransmissao, setUltimaTransmissao] = useState<TransmissaoSefazResponse | null>(null);
+    const [ultimaConsulta, setUltimaConsulta] = useState<ConsultaProtocoloSefazResponse | null>(null);
     const [ultimoDocumento, setUltimoDocumento] = useState<DocumentoAuxiliarFiscalResponse | null>(null);
     const [logReprocessamento, setLogReprocessamento] = useState<LogIntegracaoFiscalResponse | null>(null);
 
@@ -142,11 +135,27 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
         }
     };
 
+    // D31/D43 P-1: retorno operacional (transmitir, reprocessar, consultar protocolo) guarda o resultado para o
+    // painel e vira toast warn com alerta em vez de success quando o backend devolve alertas; erro mantém
+    // toast.error e o rethrow (padrão da base, F5.5).
+    const runRetornoSefaz = async <T extends { alertas?: unknown }>(title: string, action: () => Promise<T>, sucesso: string, guardarResultado: (resultado: T) => void) => {
+        try {
+            const resultado = await action();
+            guardarResultado(resultado);
+            const feedback = feedbackRetornoSefaz(alertasDoRetorno(resultado), sucesso);
+            toast[feedback.severity](title, feedback.detail);
+            setDialog(null);
+        } catch (error) {
+            toast.error(title, formatFiscalApiError(error, 'Operação fiscal não concluída.'));
+            throw error;
+        }
+    };
+
     const gerarXml = (values: unknown) => run('XML fiscal', async () => setUltimoXml(await mutations.gerarXmlMutation.mutateAsync({ id: notaId, values })), 'XML de envio gerado.');
     const assinarXml = (values: unknown) => run('Assinatura XML', async () => setUltimoXml(await mutations.assinarXmlMutation.mutateAsync({ id: notaId, values })), 'XML de envio assinado.');
-    const transmitir = (values: unknown) => run('Transmissão SEFAZ', async () => setUltimaTransmissao(await mutations.transmitirMutation.mutateAsync({ id: notaId, values })), 'Retorno da transmissão recebido.');
-    const reprocessar = (values: unknown) => run('Reprocessamento SEFAZ', async () => setUltimaTransmissao(await mutations.reprocessarMutation.mutateAsync({ id: notaId, values })), 'Reprocessamento concluído.');
-    const consultarProtocolo = (values: unknown) => run('Consulta protocolo', async () => { await mutations.consultarProtocoloMutation.mutateAsync({ id: notaId, values }); }, 'Consulta realizada.');
+    const transmitir = (values: unknown) => runRetornoSefaz('Transmissão SEFAZ', () => mutations.transmitirMutation.mutateAsync({ id: notaId, values }), 'Retorno da transmissão recebido.', setUltimaTransmissao);
+    const reprocessar = (values: unknown) => runRetornoSefaz('Reprocessamento SEFAZ', () => mutations.reprocessarMutation.mutateAsync({ id: notaId, values }), 'Reprocessamento concluído.', setUltimaTransmissao);
+    const consultarProtocolo = (values: unknown) => runRetornoSefaz('Consulta protocolo', () => mutations.consultarProtocoloMutation.mutateAsync({ id: notaId, values }), 'Consulta realizada.', setUltimaConsulta);
     const habilitarContingencia = (values: unknown) => run('Contingência fiscal', async () => { await mutations.habilitarContingenciaMutation.mutateAsync({ id: notaId, values }); }, 'Contingência avaliada/habilitada.');
     const gerarDanfe = (values: unknown) => run('DANFE', async () => setUltimoDocumento(await mutations.gerarDanfeMutation.mutateAsync({ id: notaId, values })), 'Documento auxiliar gerado.');
     const baixarEstoque = (values: unknown) => run('Baixa de estoque', async () => { await mutations.baixarEstoqueMutation.mutateAsync({ id: notaId, values }); }, 'Baixa de estoque processada.');
@@ -195,7 +204,7 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
             {integracoesQuery.error ? <ApiErrorPanel error={mapApiError(integracoesQuery.error)} title="Não foi possível carregar os logs de integração fiscal." /> : null}
             {nota ? (
                 <>
-                    <ResponsePanel xml={ultimoXml} transmissao={ultimaTransmissao} documento={ultimoDocumento} />
+                    <NotaFiscalRetornoOperacionalPanel xml={ultimoXml} transmissao={ultimaTransmissao} consulta={ultimaConsulta} documento={ultimoDocumento} />
                     {resumo ? (
                         <div className="grid mb-3">
                             <div className="col-12 md:col-3"><Card><span className="block text-color-secondary mb-1">XML envio</span><strong>{resumo.possuiXmlEnvio ? 'Gerado' : 'Pendente'}</strong></Card></div>

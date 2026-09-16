@@ -107,7 +107,8 @@ export const transmitirNotaFiscalSefazSchema = z.object({
     xmlEnvioAssinado: z.preprocess((value) => (typeof value === 'string' && value.trim() === '' ? null : value), xmlSchema.nullable().optional()),
     validarSchemaAntesTransmissao: z.boolean(),
     schemaSetName: schemaSetNameSchema,
-    correlationId: correlationIdSchema
+    // NotaFiscalValidators.cs:238 -- CorrelationId obrigatório na transmissão (D43, F2.6)
+    correlationId: requiredText('Informe o correlation ID da transmissão.', 120)
 });
 
 export const reprocessarNotaFiscalSefazSchema = transmitirNotaFiscalSefazSchema.extend({
