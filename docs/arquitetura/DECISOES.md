@@ -1262,3 +1262,63 @@ Quem arbitrou: orquestrador
 Impacto: `features/tributacao/components/RegraFiscalFormDialog.tsx`, `ExcecaoFiscalFormDialog.tsx`,
 `ItensTributaveisGrid.tsx`, `features/contratos/components/ContratosDialogs.tsx`, `components/forms/PercentInput.tsx`,
 `components/forms/QuantityInput.tsx`, testes novos, `CHANGELOG.md`.
+
+### D42 — DEF-3: a dashboard não envia a empresa do contexto; corrige-se na `.c2` da `b56`, antes da `b57`
+
+Data: 2026-09-16
+Rodada: sem rodada de debate. Arbitrada sobre relato do usuário: "os cards de contas a pagar e contas a receber
+solicitam uma empresa selecionada, porém mesmo selecionando a empresa os cards não são atualizados".
+Medição, por leitura na árvore `537347e` e no backend (`New project 3/src`):
+- `features/dashboard/api/dashboardApi.ts` chama `/api/vendas/pedidos`, `/api/financeiro/contas-receber`,
+  `/api/financeiro/contas-pagar`, `/api/estoque/saldos` e `/api/compras/pedidos` **sem parâmetro nenhum**.
+- Os cinco controllers recebem `[FromQuery] Guid empresaId` obrigatório: `ContasReceberController.cs:22`,
+  `ContasPagarController.cs:22`, `PedidosVendaController.cs:25`, `PedidosCompraController.cs:25`,
+  `EstoqueController.cs:24`. Só `AuditoriaController.cs:24` (`eventos`) não recebe empresa.
+- `OrganizationalContextGuard.cs:14-18` recusa `Guid.Empty` com "Empresa é obrigatória para operação multiempresa.":
+  é a mensagem que o card mostra.
+- `features/dashboard/hooks/useDashboard.ts` usa a chave fixa `['dashboard', 'overview']`. A troca de empresa
+  (`OrganizationalContextProvider.tsx:65-74`) invalida a query e ela reconsulta, mas **de novo sem empresa**, e o card
+  continua com o mesmo aviso. Nenhum botão resolve.
+- Hipótese não medida: `EstoqueController.ListarSaldos` não passa pelo guard e pode devolver lista vazia com
+  `Guid.Empty`, mostrando "0 produtos sem saldo" como se fosse dado. O builder confere.
+Decisão:
+1. **Fatia corretiva própria, `v1.11.0a8b56.c2`**, executada antes do builder da `b57`.
+2. `useDashboard` lê `useOrganizationalContext`; a chave passa a incluir `organizationalScopeKey(snapshot)`.
+3. `dashboardApi.carregar` recebe `{ empresaId, filialId }` do contexto e envia os dois (filial só quando houver) nas
+   cinco consultas por empresa. Auditoria e health seguem globais.
+4. **Sem empresa no contexto, as cinco consultas não saem.** Os cinco cards ficam indisponíveis com um único aviso
+   "Selecione a empresa em "Selecionar contexto" para carregar os indicadores.", e a auditoria continua carregando.
+Alternativas descartadas:
+1. Entrar na `b57`: mistura dashboard e contexto organizacional num diff `CRITICAL` fiscal (argumento de `D21` e `T7`).
+2. Esperar a F5.1/F5.3 (empresaId em toda query key, política declarativa): o defeito é visível hoje e bloqueia a
+   primeira tela do sistema; a F5 generaliza depois.
+3. Usar `organizationalContext: { scope: 'query' }` do interceptor: só 2 usos na base e a F5.3 é quem faz esse rollout;
+   parâmetro explícito é o padrão de `financeiroApi.ts:52`.
+Risco de acesso: `NENHUM`. Risco da fatia: `HIGH` (valor monetário que o operador lê e contexto organizacional).
+Reversível: sim. Gatilho de revisita: F5.1/F5.3, que podem absorver o parâmetro explícito.
+Quem arbitrou: orquestrador
+Impacto: `features/dashboard/**`, testes novos, `CHANGELOG.md`.
+
+### D43 — arbitragem das propostas P-1 a P-6 do planner da `b57`
+
+Data: 2026-09-16
+Rodada: sem rodada de debate. Arbitrada sobre o `completed_with_warnings` do nó `planner` da `b57`.
+Decisão (todas pela recomendada do planner):
+1. **P-1 (b):** os alertas ficam no painel "Último retorno operacional", um `Message warn` por alerta, sem fechar, até o
+   próximo retorno ou até sair da página; o toast vira `warn`. Sem persistência.
+2. **P-2 (b):** o Correlation ID da transmissão fica somente leitura, novo a cada abertura, sem regenerar sozinho
+   depois de erro. O schema também exige o campo.
+3. **P-3 (a):** os alertas da consulta de protocolo entram na `b57`, no mesmo painel.
+4. **P-4 (b):** `onSettled` em transmitir, reprocessar e consultar protocolo; as demais seguem para a F5.5 (`D37`).
+5. **P-5 (a):** o nó `inventario` é pulado; a contagem do planner (10 × 9 campos, 6 × 6, 9 × 9, 4 listas) é a evidência.
+6. **P-6 (a):** aviso informativo no CHANGELOG sobre `FISCAL_REPROCESSAR` sem `FISCAL_CONSULTAR`; sem `allPermissions`.
+Medição que corrige a seção 0 da `b57`: `accessRisk` é `NENHUM` (o botão Reprocessar já exige `FISCAL_REPROCESSAR`
+desde a `b52`, `FiscalOperationalPanels.tsx:144-145`; rota e menu só ganham). As sessões de E2E passam a ser
+`CONSULTAR+REPROCESSAR`, `CONSULTAR+EMITIR` e só `REPROCESSAR`.
+Alternativas descartadas: as não recomendadas de cada proposta, com o motivo na seção 9 do planner, transcrita no
+plano da fatia.
+Risco de acesso: `NENHUM`. A fatia continua `CRITICAL` e exige aprovação humana antes do release.
+Reversível: sim. Gatilho de revisita: o backend passar a exigir `correlationId` em outras operações, ou mudar o
+`TransmissaoSefazResponse`.
+Quem arbitrou: orquestrador
+Impacto: `features/fiscal/**`, `lib/security/routePermissions.ts`, `layout/AppMenu.tsx`, testes, `CHANGELOG.md`.

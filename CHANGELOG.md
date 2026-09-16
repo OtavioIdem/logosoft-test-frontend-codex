@@ -1,3 +1,47 @@
+# v1.11.0a8b56.c2
+
+## A dashboard carrega os indicadores da empresa selecionada (DEF-3)
+
+Fatia corretiva (`D42`), antes da `b57`. Os cards de contas a receber e contas a pagar pediam uma empresa e continuavam
+pedindo depois de a empresa ser escolhida em "Selecionar contexto". Plano e estado em
+`docs/fatias/v1.11.0a8b56.c2-dashboard-contexto-empresa.md`.
+
+**Risco da fatia: `HIGH`** (valor monetário e contexto organizacional). Nenhuma permissão, rota ou menu muda.
+
+### A causa, por leitura
+
+A dashboard consultava vendas, contas a receber, contas a pagar, saldos de estoque e compras **sem enviar a empresa**,
+e o backend exige `empresaId` nessas cinco rotas. A chave do cache não levava a empresa: trocar o contexto reconsultava,
+mas de novo sem empresa, e o aviso voltava igual. Nos saldos de estoque era pior: o backend devolve lista vazia sem erro
+(`ListarSaldosEstoqueUseCase.cs:23-24`), e o card mostrava "0 produtos sem saldo" como se fosse dado.
+
+### O que muda
+
+- As cinco consultas levam a empresa e a filial do contexto (a filial só quando houver).
+- A chave do cache inclui o contexto: trocar a empresa recarrega os cards com a empresa nova.
+- Sem empresa no contexto, as cinco consultas não saem; os cards ficam indisponíveis e um único aviso orienta a
+  selecionar a empresa. A auditoria recente continua carregando.
+
+### Seção operacional
+
+1. **Nenhuma permissão a conceder.** Risco de acesso: `NENHUM`.
+2. **O card "Produtos sem saldo disponível" pode mudar de 0 para o número real** da empresa selecionada.
+
+### Testes, E2E e QA
+
+- **Unit** (`dashboardApiContexto.test.ts`, 6 testes): parâmetros por rota com e sem filial; sem empresa, nenhuma das
+  cinco rotas é chamada e o aviso sai uma vez.
+- **Componente** (`DashboardContexto.test.tsx`, 2 testes): a chave leva o contexto; trocar a empresa reconsulta com o id
+  novo e o card mostra o valor novo.
+- **Sabotagens:** sem `empresaId` nas consultas, caem os testes de parâmetro; com a chave antiga, caem os de chave e de
+  troca de empresa; sem a guarda de empresa, cai o de "sem empresa". Medidas pelo nó `tests` e refeitas pelo QA (SB1 e
+  SB2), com restauração conferida por `sha256sum -c`.
+- **E2E** (`dashboard-contexto.spec.ts`, com `auth` e `logosoft-critical-flows`): 6 passed nas duas rodadas, servidor
+  único na 3411 (PID e linha de comando conferidos). O teste afirma o `empresaId` na URL, porque a simulação responde
+  igual sem ele.
+- **QA: APROVADO.** Recorte Vitest 45/45, `tsc`, `lint`, `validate:source`, `validate:ci`, os três gates de permissão e
+  contrato e `npm run build` com `.next` apagado, rodados pelo próprio QA.
+
 # v1.11.0a8b56.c1
 
 ## Campo de valor com casas decimais volta a gravar o que foi digitado em pt-BR
