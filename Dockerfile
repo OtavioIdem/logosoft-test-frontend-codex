@@ -3,6 +3,7 @@
 FROM node:24-alpine AS deps
 WORKDIR /app
 COPY package*.json .npmrc ./
+COPY patches ./patches
 RUN --mount=type=cache,target=/root/.npm \
     npm config set registry https://registry.npmjs.org/ && \
     npm config set fetch-retries 5 && \

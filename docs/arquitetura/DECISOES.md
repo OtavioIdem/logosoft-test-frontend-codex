@@ -1167,3 +1167,98 @@ Risco de acesso: `NENHUM`.
 Reversível: sim. Gatilho de revisita: a fatia de DEF-1; com ela, o S2 volta a digitar "12,50".
 Quem arbitrou: orquestrador
 Impacto: `tests/e2e/fiscal-impostos.spec.ts`, `CHANGELOG.md`.
+
+### D40 — DEF-1 é defeito do `InputNumber` 10.2.1 com separador decimal vírgula, e se corrige na biblioteca por `patch-package`
+
+Data: 2026-09-15
+Rodada: sem rodada de debate. Diagnóstico da sessão principal, gatilho de revisita da `D39`.
+Medição:
+- **Causa, por leitura** de `node_modules/primereact/inputnumber/inputnumber.esm.js` (10.2.1). Digitar na parte decimal
+  sobrescreve o caractere sob o cursor (`insert`, `:764-769`). Depois, `updateInput` (`:942-945`) só avança o cursor quando
+  `isDecimalSign(value) || isDecimalSign(insertedValueStr)`. `value` é o número JS, que o regex testa como `"12.5"`, com
+  ponto. Em pt-BR o separador é vírgula, então o cursor nunca avança depois de um dígito decimal e o dígito seguinte
+  sobrescreve o anterior. Em en-US o teste casa por acaso com o ponto do número, e por isso o defeito não aparece lá.
+- **Confirmação A/B**, com Vitest, jsdom e user-event, roteiro fora do repositório (scratchpad `diag-def1/`). O mesmo teste
+  roda contra o arquivo original e contra uma cópia com a correção abaixo, em três padrões (moeda direta, `MoneyInput`,
+  decimal pt-BR com sufixo `%`) e cinco digitações ("12,50", "12,05", "12,5", "1234,56", "0,99"). Original: 15 de 15
+  exibem errado ("12,50" → "R$ 12,00", "0,99" → "R$ 0,90", "1234,56" → "R$ 1.234,60"). Com a correção: 15 de 15 exibem
+  o digitado. O valor do modelo não foi medido nesse roteiro: `onValueChange` só dispara no blur, e o roteiro não sai do
+  campo. O que o blur grava é a leitura do texto exibido.
+- **Upstream.** O `master` do PrimeReact, lido no GitHub em 2026-09-15, mantém a mesma expressão e só acrescenta um caso
+  especial para o dígito `0`. Atualizar a biblioteca não corrige "12,50".
+- **Alcance maior que o da `D39`.** Além dos 22 campos de moeda e do `MoneyInput`, os campos decimais sem `locale` (58
+  linhas com `FractionDigits`: alíquotas e MVA da tributação, quantidade do simulador, percentual de reajuste de contratos)
+  seguem o idioma do navegador e, num navegador pt-BR, caem no mesmo ramo. Medido só com `locale="pt-BR"` explícito; o
+  caso sem `locale` é inferência de leitura, a confirmar no E2E com o navegador em pt-BR.
+Decisão:
+1. **Corrigir na biblioteca**, com `patch-package` em versão exata nas dependências de desenvolvimento,
+   `"postinstall": "patch-package --error-on-fail"` e `patches/primereact+10.2.1.patch`, cobrindo `inputnumber.esm.js` e
+   `inputnumber.cjs.js`. No ramo de comprimento igual de `updateInput`, a operação `insert` com o cursor depois do
+   separador decimal avança o cursor pelo tamanho do texto inserido. Fora desse caso, a expressão original fica.
+2. **Nenhum arquivo de `features/`, `components/` ou `app/` muda.**
+3. **O `Dockerfile` copia `patches/` antes do `npm install`** do estágio `deps`. Sem isso a imagem sai sem a correção, e
+   sem erro, porque o `patch-package` não acha patch nenhum para aplicar.
+4. **O S2 de `fiscal-impostos.spec.ts` volta a digitar "12,50"** (gatilho da `D39`).
+Alternativas descartadas:
+1. Atualizar o PrimeReact: o `master` tem o mesmo defeito.
+2. Componente próprio em volta do `InputNumber`, com migração dos cerca de 80 campos: diff em 17 módulos, e todo
+   `InputNumber` cru escrito depois traz o defeito de volta.
+3. Campo de digitação no estilo caixa eletrônico, com os dígitos entrando pela direita: muda a digitação de todo campo de
+   moeda. É desenho de UX, não correção.
+4. Cópia do arquivo no repositório com alias no `next.config.js` e no Vitest: deriva em silêncio na próxima atualização
+   do PrimeReact. Com `--error-on-fail`, o install reprova.
+5. Script próprio de substituição no `postinstall`: reinventa o `patch-package` sem o diff revisável.
+O que se abre mão: uma dependência de desenvolvimento a mais, um `postinstall`, e um patch em código de terceiro que
+precisa ser refeito ou removido a cada atualização do PrimeReact.
+Risco de acesso: `NENHUM`.
+Reversível: sim. Gatilho de revisita: atualização do PrimeReact, quando o install reprova se o patch não aplicar; ou
+correção upstream da expressão `isDecimalSign(value)`.
+Quem arbitrou: orquestrador
+Impacto: `package.json`, `package-lock.json`, `patches/`, `Dockerfile`, `.claude/graph/policies.yaml`,
+`tests/e2e/fiscal-impostos.spec.ts`, testes novos.
+Medição corrigida por `D41`: a frase "os campos decimais sem `locale` seguem o idioma do navegador" era inferência de
+leitura e está errada. O E2E da `.c1` mediu que eles usam o `'en'` do PrimeReact.
+
+### D41 — DEF-2: campo decimal sem `locale` usa o `'en'` do PrimeReact e ignora a vírgula; corrige-se na `.c1` declarando `locale="pt-BR"`
+
+Data: 2026-09-15
+Rodada: sem rodada de debate. Arbitrada sobre o `failed` do nó `e2e` da `.c1`: AC-7e com 11 passed | 1 failed nas duas
+rodadas, servidor isolado 3411, PID 12784, identidade conferida antes de cada rodada.
+Medição:
+- **Sintoma, no E2E** (Chromium com `locale: 'pt-BR'`, e o teste afirma `navigator.language === 'pt-BR'`): no campo
+  Quantidade do simulador, que não declara `locale`, digitar "1,25" exibe "125".
+- **Causa, por leitura.** `inputnumber.esm.js:274` resolve `props.locale || context.locale || PrimeReact.locale`;
+  `api.esm.js:306` define `PrimeReact.locale = 'en'`; `app/layout.tsx:25` usa `<PrimeReactProvider>` sem `value`. Em
+  `'en'` a vírgula é separador de milhar, e a digitação só insere dígito, sinal de menos e separador decimal. O idioma do
+  navegador não entra.
+- **Alcance, por script sobre o JSX** (`conta-inputnumber.cjs` no scratchpad, que casa cada `<InputNumber … />` e
+  procura `FractionDigits`, `mode="currency"` e `locale=`). São 53 `InputNumber` decimais: 22 declaram `locale`, 31 não.
+  Os 31: 20 em `RegraFiscalFormDialog.tsx`, 7 em `ExcecaoFiscalFormDialog.tsx`, 1 em `ItensTributaveisGrid.tsx`
+  (Quantidade), 1 em `ContratosDialogs.tsx` (percentual de reajuste), e os compartilhados `PercentInput` (usado em 2
+  arquivos) e `QuantityInput` (usado em 22 arquivos: estoque, compras, vendas, PDV, produção, frota, qualidade, serviços,
+  CRM, alimentar). Em todos, alíquota "12,5" vira 125 e quantidade "1,5" vira 15.
+- **Nenhum teste existente** cita esses componentes ou digita neles.
+Decisão:
+1. **DEF-2 entra na `.c1`:** `locale="pt-BR"` nos 31 componentes, e nada mais muda neles.
+2. **Um teste enumera** todo `InputNumber` decimal de `features/`, `components/`, `app/` e `layout/`, e reprova, pelo
+   nome do arquivo e da linha, o que não declara `locale`.
+3. **O AC-7e fica como está.** Ele exigia o comportamento certo; o que estava errado era a premissa da `D40`.
+4. **O AC-8 da `.c1` passa a admitir exatamente esses 6 arquivos**, e só a inclusão da prop.
+Alternativas descartadas:
+1. Fatia `.c2` própria, tirando do AC-7e a metade da Quantidade (precedente da `D39`). O objetivo da `.c1` já promete
+   "toda alíquota ou quantidade com casas decimais"; a causa está medida e a correção é mecânica. E manter as alíquotas
+   das regras fiscais, que alimentam o motor, aceitando "12,5" como 125 até outra fatia é o maior dano da classe.
+2. `PrimeReactProvider value={{ locale: 'pt-BR' }}` global. O contexto também alimenta os textos de Calendar, DataTable e
+   dos demais componentes: sem `addLocale('pt-BR')`, `localeOption` lança erro; com ele, muda texto em toda tela. É
+   desenho de UX, não correção.
+3. `PrimeReact.locale = 'pt-BR'` em tempo de execução: o mesmo efeito global, e ainda mutável.
+O que se abre mão: o AC-8 original (nenhum arquivo de produção muda); 6 arquivos de produção entram no diff. A
+exibição desses campos muda de "12.50 %" para "12,50 %" e de "1,234.5" para "1.234,5"; o valor gravado de um número
+já cadastrado não muda.
+Risco de acesso: `NENHUM`.
+Reversível: sim. Gatilho de revisita: adoção de locale global com `addLocale('pt-BR')`, quando a declaração por campo
+fica redundante.
+Quem arbitrou: orquestrador
+Impacto: `features/tributacao/components/RegraFiscalFormDialog.tsx`, `ExcecaoFiscalFormDialog.tsx`,
+`ItensTributaveisGrid.tsx`, `features/contratos/components/ContratosDialogs.tsx`, `components/forms/PercentInput.tsx`,
+`components/forms/QuantityInput.tsx`, testes novos, `CHANGELOG.md`.

@@ -1,0 +1,32 @@
+diff --git a/node_modules/primereact/inputnumber/inputnumber.cjs.js b/node_modules/primereact/inputnumber/inputnumber.cjs.js
+index 7141c38..3cf7feb 100644
+--- a/node_modules/primereact/inputnumber/inputnumber.cjs.js
++++ b/node_modules/primereact/inputnumber/inputnumber.cjs.js
+@@ -968,7 +968,10 @@ var InputNumber = /*#__PURE__*/React__namespace.memo( /*#__PURE__*/React__namesp
+         inputEl.setSelectionRange(_selectionEnd, _selectionEnd);
+       } else if (newLength === currentLength) {
+         if (operation === 'insert' || operation === 'delete-back-single') {
+-          var newSelectionEnd = _selectionEnd + Number(isDecimalSign(value) || isDecimalSign(insertedValueStr));
++          var decimalCharIndexBefore = inputValue.search(_decimal.current);
++          _decimal.current.lastIndex = 0;
++          var insertedInFraction = operation === 'insert' && decimalCharIndexBefore > 0 && _selectionEnd > decimalCharIndexBefore;
++          var newSelectionEnd = _selectionEnd + (insertedInFraction ? insertedValueStr.length : Number(isDecimalSign(value) || isDecimalSign(insertedValueStr)));
+           inputEl.setSelectionRange(newSelectionEnd, newSelectionEnd);
+         } else if (operation === 'delete-single') {
+           inputEl.setSelectionRange(_selectionEnd - 1, _selectionEnd - 1);
+diff --git a/node_modules/primereact/inputnumber/inputnumber.esm.js b/node_modules/primereact/inputnumber/inputnumber.esm.js
+index 646b266..7c60651 100644
+--- a/node_modules/primereact/inputnumber/inputnumber.esm.js
++++ b/node_modules/primereact/inputnumber/inputnumber.esm.js
+@@ -941,7 +941,10 @@ var InputNumber = /*#__PURE__*/React.memo( /*#__PURE__*/React.forwardRef(functio
+         inputEl.setSelectionRange(_selectionEnd, _selectionEnd);
+       } else if (newLength === currentLength) {
+         if (operation === 'insert' || operation === 'delete-back-single') {
+-          var newSelectionEnd = _selectionEnd + Number(isDecimalSign(value) || isDecimalSign(insertedValueStr));
++          var decimalCharIndexBefore = inputValue.search(_decimal.current);
++          _decimal.current.lastIndex = 0;
++          var insertedInFraction = operation === 'insert' && decimalCharIndexBefore > 0 && _selectionEnd > decimalCharIndexBefore;
++          var newSelectionEnd = _selectionEnd + (insertedInFraction ? insertedValueStr.length : Number(isDecimalSign(value) || isDecimalSign(insertedValueStr)));
+           inputEl.setSelectionRange(newSelectionEnd, newSelectionEnd);
+         } else if (operation === 'delete-single') {
+           inputEl.setSelectionRange(_selectionEnd - 1, _selectionEnd - 1);

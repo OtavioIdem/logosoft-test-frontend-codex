@@ -79,4 +79,16 @@ describe('ValoresAcessoriosDialog', () => {
 
         expect(valorMoeda(inputMoeda('Frete'))).toBe('R$ 99,00');
     });
+
+    it('AC-5: digitar "12,50" no Frete: onSubmit com valorFrete: 12.5', async () => {
+        const onSubmit = vi.fn().mockResolvedValue(undefined);
+        render(<ValoresAcessoriosDialog visible onHide={vi.fn()} onSubmit={onSubmit} nota={notaComValores({ valorFrete: 0 })} />);
+
+        await userEvent.clear(inputMoeda('Frete'));
+        await userEvent.type(inputMoeda('Frete'), '12,50');
+        await userEvent.click(botaoSalvar());
+
+        expect(onSubmit).toHaveBeenCalledTimes(1);
+        expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ valorFrete: 12.5 }));
+    });
 });
