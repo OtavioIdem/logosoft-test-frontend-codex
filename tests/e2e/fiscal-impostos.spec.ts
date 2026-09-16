@@ -42,10 +42,7 @@ test.describe('AC-11: valores acessórios da nota fiscal (b56)', () => {
         const campoFrete = campoDoDialogo(dialog, 'Frete');
         await campoFrete.click();
         await page.keyboard.press('Control+A');
-        await campoFrete.pressSequentially('12,5');
-        // DEF-1/D39: InputNumber currency pt-BR sobrescreve o dígito decimal ao digitar '12,50'
-        // (grava 12); '12,5' é a sequência que o campo aceita corretamente. Correção do campo
-        // fica fora do escopo da b56 — ver docs/arquitetura/DECISOES.md D39.
+        await campoFrete.pressSequentially('12,50');
         await expect(campoFrete).toHaveValue(/12,50/);
 
         const campoOutras = campoDoDialogo(dialog, 'Outras despesas');
@@ -66,6 +63,33 @@ test.describe('AC-11: valores acessórios da nota fiscal (b56)', () => {
         const composicao = page.locator('.p-card').filter({ hasText: 'Composição do total' });
         await expect(composicao.getByText('Frete', { exact: true })).toBeVisible();
         await expect(composicao).toContainText(/R\$\s*12,50/);
+    });
+
+    test('S2b: digitar "12,05" no Frete — envia valorFrete: 12.05 no corpo', async ({ page }) => {
+        await mockApiRoutes(page);
+        await writeSession(page, { permissions: ['FISCAL_CONSULTAR', 'FISCAL_GERENCIAR'], email: 'fiscal-impostos-s2b@logosoft.local', name: 'Fiscal Impostos S2b' });
+
+        await page.goto(rotaDetalhe);
+
+        const botao = botaoValoresAcessorios(page);
+        await expect(botao).toBeEnabled();
+        await botao.click();
+
+        const dialog = page.getByRole('dialog', { name: 'Valores acessórios da nota' });
+        await expect(dialog).toBeVisible();
+
+        const campoFrete = campoDoDialogo(dialog, 'Frete');
+        await campoFrete.click();
+        await page.keyboard.press('Control+A');
+        await campoFrete.pressSequentially('12,05');
+        await expect(campoFrete).toHaveValue(/12,05/);
+
+        const requestPromise = page.waitForRequest((request) => isPostValoresAcessorios(request.method(), request.url()));
+        await dialog.getByRole('button', { name: 'Salvar valores', exact: true }).click();
+        const request = await requestPromise;
+
+        const body = request.postDataJSON() as Record<string, unknown>;
+        expect(body).toEqual({ valorFrete: 12.05, valorSeguro: 0, valorOutrasDespesas: 0 });
     });
 
     test('S3: só FISCAL_GERENCIAR — detalhe mostra acesso negado e nenhum POST fiscal sai', async ({ page }) => {

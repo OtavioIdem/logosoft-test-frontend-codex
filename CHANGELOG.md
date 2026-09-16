@@ -1,3 +1,90 @@
+# v1.11.0a8b56.c1
+
+## Campo de valor com casas decimais volta a gravar o que foi digitado em pt-BR
+
+Fatia corretiva do DEF-1 (`D39`), pré-requisito da `b57`. Digitando "12,50" num campo de moeda, a tela gravava
+R$ 12,00; digitando "12,05", gravava R$ 12,50. Plano e estado da execução em
+`docs/fatias/v1.11.0a8b56.c1-campo-decimal-pt-br.md`; decisão `D40`.
+
+**Risco da fatia: `HIGH`.** Muda o valor gravado por todo campo de moeda do sistema. Nenhuma tela, rota, permissão ou
+contrato do backend muda.
+
+### A causa, medida
+
+O defeito é do `InputNumber` do PrimeReact 10.2.1, e não das telas. Na parte decimal, cada dígito sobrescreve o
+caractere sob o cursor. Depois, o componente só avança o cursor se o número, convertido em texto JavaScript ("12.5"),
+contiver o separador decimal do idioma. Em pt-BR o separador é vírgula e o texto do número usa ponto, então o cursor
+nunca avança, e o dígito seguinte apaga o anterior. Em en-US o ponto coincide por acaso, e o defeito não aparece.
+
+Confirmação A/B, com o mesmo teste (Vitest e jsdom) contra o arquivo original e contra uma cópia corrigida, em três
+padrões de campo e cinco digitações: 15 de 15 exibem errado no original ("0,99" vira R$ 0,90; "1234,56" vira
+R$ 1.234,60) e 15 de 15 exibem o digitado com a correção. O `master` do PrimeReact, lido em 2026-09-15, ainda tem o
+mesmo defeito, então atualizar a biblioteca não resolve.
+
+### O que muda
+
+- **A correção é na biblioteca, por `patch-package`** (`patches/primereact+10.2.1.patch`). Quando a digitação cai
+  depois do separador decimal, o cursor avança pelo tamanho do que foi digitado. Nenhum arquivo de `features/`,
+  `components/` ou `app/` muda.
+- **Alcance da correção:** os 22 campos de moeda escritos direto nas telas fiscal e de tributação, e o `MoneyInput`
+  compartilhado, usado em 21 arquivos de 17 módulos.
+- **`package.json`** ganha `patch-package` 8.0.1 em versão exata e `"postinstall": "patch-package --error-on-fail"`.
+- **`Dockerfile`** copia `patches/` antes do `npm install`. Sem isso, a imagem sairia sem a correção e sem erro.
+- **O `package-lock.json` continua fora do repositório** (`D8`).
+
+### E um segundo defeito, achado pelo E2E desta versão: campo decimal sem idioma ignora a vírgula (DEF-2)
+
+Com o navegador em pt-BR, digitar "1,25" na Quantidade do simulador exibia "125". Um `InputNumber` que não declara
+`locale` não segue o navegador: usa o `'en'` padrão do PrimeReact, em que a vírgula é separador de milhar e é ignorada
+na digitação. Medido na Quantidade: "1,25" gravava 125. Pela mesma regra, nos demais campos a vírgula some e o número
+fica maior, até o teto do campo quando ele tem um (o `PercentInput` vai até 100 %). Já existia antes desta versão (`D41`).
+
+- **Correção:** `locale="pt-BR"` nos 31 campos decimais que não declaravam idioma. Nada mais muda neles.
+- **Alcance:** 27 alíquotas, MVA e reduções nas regras e exceções fiscais; o percentual de reajuste de contratos; a
+  quantidade do simulador; o `PercentInput` compartilhado (2 arquivos) e o `QuantityInput` compartilhado (22 arquivos
+  de estoque, compras, vendas, PDV, produção, frota, qualidade, serviços, CRM e alimentar).
+- **Um teste passa a enumerar** todo `InputNumber` decimal do código e reprova o que não declarar idioma.
+
+### Seção operacional — leia antes do deploy
+
+1. **Nenhuma permissão a conceder.** Risco de acesso: `NENHUM`.
+2. **Quem já tem `node_modules` na máquina precisa rodar `npm install` depois do pull.** A correção só entra pelo
+   `postinstall`. Sem isso, o servidor local continua com o defeito.
+3. **Apague `.next` antes de subir o servidor ou buildar** numa máquina que já rodou a versão anterior. O cache do
+   webpack identifica o PrimeReact pela versão, que não mudou, e pode continuar servindo o arquivo antigo.
+4. **Sai o aviso da `b56`** de conferir o valor exibido antes de salvar campo de moeda.
+5. **Atualizar o PrimeReact passa a reprovar o install** se o patch não aplicar. É de propósito: a correção precisa
+   ser refeita ou removida a cada atualização.
+6. **Alíquotas, percentuais e quantidades passam a ser exibidos no formato brasileiro:** "12,50 %" em vez de "12.50 %",
+   e "1.234,5" em vez de "1,234.5". O valor já cadastrado não muda; muda só como aparece e como se digita.
+7. **Confira alíquotas e quantidades gravadas recentemente pela tela.** Até esta versão, quem digitou vírgula nesses
+   campos gravou um número sem a vírgula, maior que o digitado, ou o teto do campo. Nas regras fiscais, isso chega ao
+   cálculo de tributos.
+
+### Testes, E2E e QA
+
+- **Componente** (`InputNumberDigitacaoPtBr.test.tsx`, `ValoresAcessoriosDialog.test.tsx`): `InputNumber` de moeda e
+  de percentual reais, `MoneyInput`, `PercentInput` e `QuantityInput` reais, digitados com `user-event` e conferidos
+  depois do blur. Sem o patch (`npx patch-package --reverse`), 11 de 23 caem nominalmente (AC-1, AC-2, AC-3, AC-5);
+  com o patch restaurado e conferido por `sha256sum -c`, 23 de 23 passam. Medido duas vezes: nó `tests` e QA.
+- **Estrutura** (`primereactPatchStructure.test.ts`): dependência exata, `postinstall`, nome do patch igual à versão
+  instalada, só os dois arquivos, e `COPY patches` antes do `npm install` no `Dockerfile`. Cada item derrubado pela
+  sua sabotagem (SB2 a SB4).
+- **Idioma declarado** (`inputNumberDecimalLocale.test.ts`): 53 de 53 `InputNumber` decimais com `locale`. Tirar o
+  `locale` do `QuantityInput` ou de uma linha de `RegraFiscalFormDialog.tsx` reprova nomeando arquivo:linha (SB5, SB6).
+- **E2E** (Chromium, teclado real, `next dev -p 3411` único com PID e linha de comando conferidos, `.next` apagado):
+  `fiscal-impostos`, `campo-decimal-pt-br`, `financeiro-estoque` e `fiscal`, 12 passed nas duas rodadas, com os mesmos
+  títulos. O S2 volta a digitar "12,50"; entram "12,05" no Frete, o Valor unitário do Item, o "Receber" de Contas a
+  receber e o simulador com navegador em pt-BR.
+- **QA: APROVADO.** Recortes Vitest 57/57 e 47/47, `tsc`, `lint`, `validate:source`, `validate:ci`, os três gates
+  de permissão e contrato (177 códigos, 483 chamadas, 459 rotas) e `npm run build` com `.next` apagado, todos rodados
+  pelo próprio QA. Diff de produção restrito aos 6 arquivos da `D41`, só pela prop `locale`.
+
+### Pendências nomeadas fora desta versão
+
+- **Issue no PrimeReact** com a causa e a correção: sugestão, fora do repositório.
+- **F2.4 a F2.6:** `b57` (`D21`).
+
 # v1.11.0a8b56
 
 ## A aba de Impostos diz de onde vem cada linha e qual compõe o total, e a nota ganha frete, seguro e outras despesas

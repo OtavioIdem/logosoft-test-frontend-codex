@@ -379,6 +379,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                 <Campo label="Alíquota do ICMS" htmlFor="aliquotaIcms">
                                     <InputNumber
                                         inputId="aliquotaIcms"
+                                        locale="pt-BR"
                                         value={values.icms.aliquota}
                                         suffix=" %"
                                         min={0}
@@ -391,6 +392,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                 <Campo label="Redução da base" htmlFor="percentualReducaoBase">
                                     <InputNumber
                                         inputId="percentualReducaoBase"
+                                        locale="pt-BR"
                                         value={values.icms.percentualReducaoBase}
                                         suffix=" %"
                                         min={0}
@@ -403,6 +405,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                 <Campo label="Alíquota interna de destino" htmlFor="aliquotaInternaDestino">
                                     <InputNumber
                                         inputId="aliquotaInternaDestino"
+                                        locale="pt-BR"
                                         value={values.icms.aliquotaInternaDestino}
                                         suffix=" %"
                                         min={0}
@@ -416,11 +419,12 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                     <Dropdown inputId="modalidadeBaseCalculoSt" value={values.icms.modalidadeBaseCalculoSt} options={modalidadeBaseIcmsStOptions} onChange={(event) => alterarIcms({ modalidadeBaseCalculoSt: Number(event.value) })} />
                                 </Campo>
                                 <Campo label="MVA" htmlFor="mva">
-                                    <InputNumber inputId="mva" value={values.icms.mva} suffix=" %" min={0} max={100} minFractionDigits={2} maxFractionDigits={4} onValueChange={(event) => alterarIcms({ mva: Number(event.value ?? 0) })} />
+                                    <InputNumber inputId="mva" value={values.icms.mva} locale="pt-BR" suffix=" %" min={0} max={100} minFractionDigits={2} maxFractionDigits={4} onValueChange={(event) => alterarIcms({ mva: Number(event.value ?? 0) })} />
                                 </Campo>
                                 <Campo label="MVA ajustada" htmlFor="mvaAjustada">
                                     <InputNumber
                                         inputId="mvaAjustada"
+                                        locale="pt-BR"
                                         value={values.icms.mvaAjustada}
                                         suffix=" %"
                                         min={0}
@@ -433,6 +437,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                 <Campo label="Redução da base de ST" htmlFor="percentualReducaoBaseSt">
                                     <InputNumber
                                         inputId="percentualReducaoBaseSt"
+                                        locale="pt-BR"
                                         value={values.icms.percentualReducaoBaseSt}
                                         suffix=" %"
                                         min={0}
@@ -445,6 +450,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                 <Campo label="Percentual de FCP" htmlFor="percentualFcp" ajuda="Vazio = usa o percentual geral da UF. Zero = FCP não devido para este produto. Não são a mesma coisa.">
                                     <InputNumber
                                         inputId="percentualFcp"
+                                        locale="pt-BR"
                                         value={values.icms.percentualFcp}
                                         suffix=" %"
                                         min={0}
@@ -458,6 +464,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                 <Campo label="Percentual de FCP-ST" htmlFor="percentualFcpSt" ajuda="Mesma semântica do FCP: vazio ≠ zero.">
                                     <InputNumber
                                         inputId="percentualFcpSt"
+                                        locale="pt-BR"
                                         value={values.icms.percentualFcpSt}
                                         suffix=" %"
                                         min={0}
@@ -471,6 +478,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                 <Campo label="Percentual de diferimento" htmlFor="percentualDiferimento">
                                     <InputNumber
                                         inputId="percentualDiferimento"
+                                        locale="pt-BR"
                                         value={values.icms.percentualDiferimento}
                                         suffix=" %"
                                         min={0}
@@ -483,6 +491,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                 <Campo label="Crédito do Simples Nacional" htmlFor="percentualCreditoSimplesNacional">
                                     <InputNumber
                                         inputId="percentualCreditoSimplesNacional"
+                                        locale="pt-BR"
                                         value={values.icms.percentualCreditoSimplesNacional}
                                         suffix=" %"
                                         min={0}
@@ -515,6 +524,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                 <Campo label="Alíquota" htmlFor="aliquotaIpi">
                                     <InputNumber
                                         inputId="aliquotaIpi"
+                                        locale="pt-BR"
                                         value={values.ipi.aliquota}
                                         suffix=" %"
                                         min={0}
@@ -564,6 +574,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                 <Campo label="Alíquota do PIS" htmlFor="aliquotaPis">
                                     <InputNumber
                                         inputId="aliquotaPis"
+                                        locale="pt-BR"
                                         value={values.pisCofins.aliquotaPis}
                                         suffix=" %"
                                         min={0}
@@ -576,6 +587,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                 <Campo label="Alíquota da COFINS" htmlFor="aliquotaCofins">
                                     <InputNumber
                                         inputId="aliquotaCofins"
+                                        locale="pt-BR"
                                         value={values.pisCofins.aliquotaCofins}
                                         suffix=" %"
                                         min={0}
@@ -630,6 +642,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                 <Campo label="Alíquota do ISS" htmlFor="aliquotaIss">
                                     <InputNumber
                                         inputId="aliquotaIss"
+                                        locale="pt-BR"
                                         value={values.iss.aliquota}
                                         suffix=" %"
                                         min={0}
@@ -645,6 +658,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                 <Campo label="Redução da base do ISS" htmlFor="percentualReducaoBaseIss">
                                     <InputNumber
                                         inputId="percentualReducaoBaseIss"
+                                        locale="pt-BR"
                                         value={values.iss.percentualReducaoBase}
                                         suffix=" %"
                                         min={0}
@@ -668,6 +682,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                 <Campo label="Alíquota do IRRF" htmlFor="irrfAliquota">
                                     <InputNumber
                                         inputId="irrfAliquota"
+                                        locale="pt-BR"
                                         value={values.retencao.irrfAliquota}
                                         suffix=" %"
                                         min={0}
@@ -702,6 +717,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                 <Campo label="Alíquota do INSS" htmlFor="inssAliquota">
                                     <InputNumber
                                         inputId="inssAliquota"
+                                        locale="pt-BR"
                                         value={values.retencao.inssAliquota}
                                         suffix=" %"
                                         min={0}
@@ -714,6 +730,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                 <Campo label="Alíquota da CSLL" htmlFor="csllAliquota">
                                     <InputNumber
                                         inputId="csllAliquota"
+                                        locale="pt-BR"
                                         value={values.retencao.csllAliquota}
                                         suffix=" %"
                                         min={0}
@@ -726,6 +743,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                 <Campo label="Alíquota do PIS retido" htmlFor="pisRetidoAliquota">
                                     <InputNumber
                                         inputId="pisRetidoAliquota"
+                                        locale="pt-BR"
                                         value={values.retencao.pisRetidoAliquota}
                                         suffix=" %"
                                         min={0}
@@ -738,6 +756,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                 <Campo label="Alíquota da COFINS retida" htmlFor="cofinsRetidoAliquota">
                                     <InputNumber
                                         inputId="cofinsRetidoAliquota"
+                                        locale="pt-BR"
                                         value={values.retencao.cofinsRetidoAliquota}
                                         suffix=" %"
                                         min={0}

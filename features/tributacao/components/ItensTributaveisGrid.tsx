@@ -102,6 +102,7 @@ export const ItensTributaveisGrid = ({ itens, disabled, onChange }: { itens: Ite
                             <Campo label="Quantidade" htmlFor={`quantidade-${item.chave}`} className="field col-12 md:col-4 xl:col-2">
                                 <InputNumber
                                     inputId={`quantidade-${item.chave}`}
+                                    locale="pt-BR"
                                     value={item.quantidade}
                                     min={0}
                                     minFractionDigits={0}

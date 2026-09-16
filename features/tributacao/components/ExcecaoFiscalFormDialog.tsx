@@ -256,6 +256,7 @@ export const ExcecaoFiscalFormDialog = ({ visible, variante, excecaoId, empresaI
                                 <Campo label="Alíquota do ICMS" htmlFor="excecaoAliquotaIcms">
                                     <InputNumber
                                         inputId="excecaoAliquotaIcms"
+                                        locale="pt-BR"
                                         value={values.icms.aliquota}
                                         suffix=" %"
                                         min={0}
@@ -268,6 +269,7 @@ export const ExcecaoFiscalFormDialog = ({ visible, variante, excecaoId, empresaI
                                 <Campo label="Redução da base" htmlFor="excecaoReducaoBase">
                                     <InputNumber
                                         inputId="excecaoReducaoBase"
+                                        locale="pt-BR"
                                         value={values.icms.percentualReducaoBase}
                                         suffix=" %"
                                         min={0}
@@ -280,6 +282,7 @@ export const ExcecaoFiscalFormDialog = ({ visible, variante, excecaoId, empresaI
                                 <Campo label="Percentual de diferimento" htmlFor="excecaoDiferimento">
                                     <InputNumber
                                         inputId="excecaoDiferimento"
+                                        locale="pt-BR"
                                         value={values.icms.percentualDiferimento}
                                         suffix=" %"
                                         min={0}
@@ -292,6 +295,7 @@ export const ExcecaoFiscalFormDialog = ({ visible, variante, excecaoId, empresaI
                                 <Campo label="Percentual de FCP" htmlFor="excecaoFcp" ajuda="Vazio = usa o percentual geral da UF. Zero = FCP não devido. Não são a mesma coisa.">
                                     <InputNumber
                                         inputId="excecaoFcp"
+                                        locale="pt-BR"
                                         value={values.icms.percentualFcp}
                                         suffix=" %"
                                         min={0}
@@ -305,6 +309,7 @@ export const ExcecaoFiscalFormDialog = ({ visible, variante, excecaoId, empresaI
                                 <Campo label="Crédito do Simples Nacional" htmlFor="excecaoCreditoSimples">
                                     <InputNumber
                                         inputId="excecaoCreditoSimples"
+                                        locale="pt-BR"
                                         value={values.icms.percentualCreditoSimplesNacional}
                                         suffix=" %"
                                         min={0}
@@ -333,6 +338,7 @@ export const ExcecaoFiscalFormDialog = ({ visible, variante, excecaoId, empresaI
                                 <Campo label="Alíquota do PIS" htmlFor="excecaoAliquotaPis">
                                     <InputNumber
                                         inputId="excecaoAliquotaPis"
+                                        locale="pt-BR"
                                         value={values.pisCofins.aliquotaPis}
                                         suffix=" %"
                                         min={0}
@@ -345,6 +351,7 @@ export const ExcecaoFiscalFormDialog = ({ visible, variante, excecaoId, empresaI
                                 <Campo label="Alíquota da COFINS" htmlFor="excecaoAliquotaCofins">
                                     <InputNumber
                                         inputId="excecaoAliquotaCofins"
+                                        locale="pt-BR"
                                         value={values.pisCofins.aliquotaCofins}
                                         suffix=" %"
                                         min={0}

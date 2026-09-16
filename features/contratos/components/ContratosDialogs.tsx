@@ -211,7 +211,7 @@ export const ReajustarDialog = ({ visible, loading, onHide, onSubmit }: { visibl
     return (
         <Dialog header="Reajustar contrato" visible={visible} modal style={{ width: 'min(32rem, 96vw)' }} footer={footer('Reajustar', loading, onHide, confirmar)} onHide={onHide}>
             <label htmlFor="reajPercentual" className="block font-medium mb-2">Percentual de reajuste *</label>
-            <InputNumber inputId="reajPercentual" className="w-full" value={percentual ?? null} min={0} maxFractionDigits={2} suffix="%" onValueChange={(event) => { setPercentual(event.value ?? null); setErro(''); }} />
+            <InputNumber inputId="reajPercentual" className="w-full" value={percentual ?? null} locale="pt-BR" min={0} maxFractionDigits={2} suffix="%" onValueChange={(event) => { setPercentual(event.value ?? null); setErro(''); }} />
             <FieldError message={erro} />
         </Dialog>
     );

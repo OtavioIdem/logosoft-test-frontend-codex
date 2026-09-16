@@ -1,9 +1,10 @@
 {
     "name": "logosoft-frontend",
-    "version": "1.11.0-a.8.b56",
-    "logosoftVersion": "1.11.0a8b56",
+    "version": "1.11.0-a.8.b56.c1",
+    "logosoftVersion": "1.11.0a8b56.c1",
     "private": true,
     "scripts": {
+        "postinstall": "patch-package --error-on-fail",
         "dev": "next dev",
         "build": "npm run validate:source && next build",
         "start": "next start",
@@ -80,6 +81,7 @@
         "eslint-config-next": "13.4.8",
         "js-yaml": "^4.1.0",
         "jsdom": "^25.0.1",
+        "patch-package": "8.0.1",
         "prettier": "^2.8.8",
         "sass": "^1.63.4",
         "typescript": "^5.8.3",

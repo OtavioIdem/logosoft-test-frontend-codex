@@ -92,6 +92,9 @@ agents:
       - styles/**
       - tests/mocks/**          # mock tipado que o typecheck exige
       - tests/e2e/fixtures/**   # fixture que acompanha o código novo
+      - package.json            # ritual de versão e dependência (D40)
+      - package-lock.json
+      - patches/**              # patch-package sobre código de terceiro (D40)
     blocked:
       - tests/unit/**
       - tests/components/**
