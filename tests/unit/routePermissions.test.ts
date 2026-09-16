@@ -40,6 +40,41 @@ describe('route permission rules', () => {
         expect(findRoutePermissionRule('/fiscal/inutilizacoes')?.anyOf).toEqual(['FISCAL_INUTILIZAR']);
     });
 
+    // AC-7 (v1.11.0a8b57): FISCAL_REPROCESSAR entra no fim das listas atuais de /fiscal/notas e /fiscal;
+    // as demais regras fiscais (inclusive inutilizações, já coberta acima) ficam intactas.
+    it('acrescenta FISCAL_REPROCESSAR no fim de /fiscal/notas, preservando a lista atual', () => {
+        expect(findRoutePermissionRule('/fiscal/notas/x')?.anyOf).toEqual([
+            'FISCAL_CONSULTAR',
+            'FISCAL_EXPORTAR',
+            'FISCAL_GERENCIAR',
+            'FISCAL_EMITIR',
+            'FISCAL_CANCELAR',
+            'FISCAL_CARTA_CORRECAO',
+            'FISCAL_REPROCESSAR'
+        ]);
+    });
+
+    it('acrescenta FISCAL_REPROCESSAR no fim de /fiscal, preservando a lista atual', () => {
+        expect(findRoutePermissionRule('/fiscal')?.anyOf).toEqual([
+            'FISCAL_CONSULTAR',
+            'FISCAL_EXPORTAR',
+            'FISCAL_GERENCIAR',
+            'FISCAL_EMITIR',
+            'FISCAL_CANCELAR',
+            'FISCAL_INUTILIZAR',
+            'FISCAL_CARTA_CORRECAO',
+            'FISCAL_REPROCESSAR'
+        ]);
+    });
+
+    it('não altera as demais regras fiscais (observabilidade, simulador, regras, exceções)', () => {
+        expect(findRoutePermissionRule('/fiscal/observabilidade')?.anyOf).toEqual(['FISCAL_CONSULTAR']);
+        expect(findRoutePermissionRule('/fiscal/simulador')?.anyOf).toEqual(['FISCAL_REGRAS_CONSULTAR']);
+        expect(findRoutePermissionRule('/fiscal/regras')?.anyOf).toEqual(['FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR']);
+        expect(findRoutePermissionRule('/fiscal/excecoes-ncm')?.anyOf).toEqual(['FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR']);
+        expect(findRoutePermissionRule('/fiscal/excecoes')?.anyOf).toEqual(['FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR']);
+    });
+
     it('não exige permissão granular para dashboard autenticado', () => {
         expect(findRoutePermissionRule('/dashboard')).toBeUndefined();
     });

@@ -1322,3 +1322,30 @@ Reversível: sim. Gatilho de revisita: o backend passar a exigir `correlationId`
 `TransmissaoSefazResponse`.
 Quem arbitrou: orquestrador
 Impacto: `features/fiscal/**`, `lib/security/routePermissions.ts`, `layout/AppMenu.tsx`, testes, `CHANGELOG.md`.
+
+### D44 — a checagem de hierarquia do menu (`menuHierarquia`) do gate de guard é cega; corrige-se em fatia de gate própria, fora da `b57`
+
+Data: 2026-09-16
+Rodada: sem rodada de debate. Arbitrada sobre o relato do nó `tests` da `b57` (SB6).
+Medição:
+- `scripts/lib/guard-permission-map.mjs:232` e `:243` casam `label:`/`to:` e `anyPermissions:` **na mesma linha**. No
+  `layout/AppMenu.tsx` real, os grupos declaram `label` e `anyPermissions` em linhas separadas.
+- `node -e` com `parseMenuPermissions(fs.readFileSync('layout/AppMenu.tsx'))` devolve `hierarchy.length === 0` na
+  árvore da `b57`, sabotada ou não (medido pela sessão principal em 2026-09-16). A verificação C2 nunca teve universo
+  para comparar: é o sintoma `filtro_largo`/gate vácuo de `risk.yaml`.
+- SB6 (tirar `FISCAL_REPROCESSAR` só do pai "Fiscal") derruba o teste estrutural da `b57`
+  (`tests/unit/fiscalTransmissaoStructure.test.ts`, AC-8), mas não o gate.
+Decisão:
+1. **A `b57` não corrige o gate.** A proteção do AC-8 é o teste estrutural nominal, que a SB6 prova vermelho. O
+   critério "SB6 derruba `validate:guard-permission-map`" sai do plano da `b57`.
+2. **Fatia própria de gate** (regime `gate`, `structuralGate: true`), com prova vermelha contra árvore com defeito
+   conhecido de hierarquia: a regra passa a ler o menu pela AST (como `scanFrontendRoutes`), enumera todos os grupos e
+   itens, e afirma sobre cada par pai-filho.
+Alternativas descartadas:
+1. Corrigir na `b57`: acrescenta gate estrutural novo a uma fatia `CRITICAL` fiscal; `risk.yaml` manda bloco menor com
+   risco alto, e gate novo passa a reprovar trabalho de todo mundo.
+2. Aceitar sem destino: gate vácuo dá sensação de proteção, que é pior que ausência (`risk.yaml`, `gateRisk`).
+Risco de acesso: `NENHUM`.
+Reversível: sim. Gatilho de revisita: a fatia do gate fechar com a prova vermelha.
+Quem arbitrou: orquestrador
+Impacto: `scripts/lib/guard-permission-map.mjs` e testes do gate, na fatia própria.

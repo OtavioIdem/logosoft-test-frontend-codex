@@ -32,10 +32,18 @@ describe('Fiscal (b56) — estrutura: legenda, onSettled e guard de valores aces
         expect(hooks).toContain('definirValoresAcessoriosMutation,');
     });
 
-    it('AC-9: as outras mutações fiscais não ganham onSettled (D37 restringe às duas)', () => {
+    // v1.11.0a8b57/D43 P-4: transmitir, reprocessar e consultar protocolo passam a usar onSettled também --
+    // o teto sobe de 2 (b56) para 5. A lista nominal das cinco permitidas evita que onSettled se espalhe em
+    // silêncio para o restante das mutações fiscais (cobertura ampliada em fiscalTransmissaoStructure.test.ts AC-10).
+    it('AC-9/AC-10: só as cinco mutações nomeadas (D37 + D43 P-4) ganham onSettled', () => {
         const hooks = read('features/fiscal/hooks/useFiscalResources.ts');
         const ocorrencias = hooks.match(/onSettled:/g) ?? [];
-        expect(ocorrencias).toHaveLength(2);
+        expect(ocorrencias).toHaveLength(5);
+        expect(hooks).toContain('const adicionarImpostoMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.adicionarImposto(id, values), onSettled:');
+        expect(hooks).toContain('const definirValoresAcessoriosMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.definirValoresAcessorios(id, values), onSettled:');
+        expect(hooks).toContain('const transmitirMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.transmitirSefaz(id, values), onSettled:');
+        expect(hooks).toContain('const reprocessarMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.reprocessarSefaz(id, values), onSettled:');
+        expect(hooks).toContain('const consultarProtocoloMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.consultarProtocoloSefaz(id, values), onSettled:');
     });
 
     // AC-10 / D33: o botão novo tem guard de permissão e motivo de bloqueio por status.

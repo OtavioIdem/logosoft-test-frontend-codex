@@ -1,3 +1,60 @@
+# v1.11.0a8b57
+
+## Transmissão à SEFAZ: alertas da resposta na tela, reprocessamento no menu e Correlation ID obrigatório (F2.4 a F2.6)
+
+Fecha a onda F2 (`D21`). Plano e estado em `docs/fatias/v1.11.0a8b57-f2-transmissao.md`; decisões `D43`.
+
+**Risco da fatia: `CRITICAL`** (emissão e reprocessamento de documento fiscal). Exige aprovação humana antes do release.
+
+### O que muda
+
+- **Alertas da resposta chegam à tela.** Transmitir, reprocessar e consultar protocolo podem concluir com alerta, como
+  "Nota fiscal autorizada, mas o pedido de venda não pôde ser faturado". Antes o aviso era descartado. Agora aparece no
+  painel "Último retorno operacional", um aviso por alerta, e continua visível até o próximo retorno ou até sair da nota;
+  o toast passa de sucesso para atenção.
+- **Correlation ID da transmissão é obrigatório e somente leitura.** Um novo é gerado a cada abertura do diálogo. O
+  backend já recusava o campo vazio com 400; agora a tela não deixa chegar lá.
+- **`FISCAL_REPROCESSAR` na rota e no menu.** O botão Reprocessar já exigia essa permissão desde a `b52`; a rota de
+  notas e os itens "Fiscal" e "Notas fiscais" do menu passam a aceitá-la.
+- **Transmitir, reprocessar e consultar protocolo recarregam a nota também quando falham**, para a aba de integrações
+  não mostrar estado velho no caminho de recuperação.
+
+### Seção operacional — leia antes do deploy
+
+1. **Nenhuma permissão a conceder e ninguém perde acesso.** Risco de acesso: `NENHUM`.
+2. **Quem tem só `FISCAL_REPROCESSAR` passa a ver "Fiscal > Notas fiscais"**, mas a tela exige também
+   `FISCAL_CONSULTAR` para abrir notas e reprocessar. Conceda as duas a quem reprocessa.
+3. **Grupos criados depois da concessão automática não têm `FISCAL_REPROCESSAR`.** O backend deu a permissão uma única
+   vez aos grupos que já tinham `FISCAL_EMITIR` (`FiscalReprocessarConcessaoAutomatica.cs:10-14`).
+4. **O Correlation ID da transmissão não é mais editável.** Para uma nova tentativa, feche e reabra o diálogo.
+5. **Leia o painel "Último retorno operacional" depois de transmitir.** Alerta ali significa que a operação concluiu pela
+   metade e alguém precisa agir (por exemplo, faturar o pedido manualmente).
+
+### Testes, E2E e QA
+
+- **Unit e estrutura** (155 testes no recorte fiscal, permissões e contrato): tipos com `alertas` e `correlationId`
+  obrigatório; schema da transmissão recusa vazio, só espaços, nulo, ausente e 121 caracteres; rota e menu com listas
+  exatas; `onSettled` nominal nas três mutações; o endpoint de reprocessar aparece uma única vez.
+- **Componente** (34 testes): diálogo de transmissão somente leitura e com ID novo a cada abertura; painel com 0, 1 e 2
+  alertas iguais e com a consulta de protocolo; botão Reprocessar com o guard e o texto de `FISCAL_REPROCESSAR`; a
+  nota é reconsultada quando a transmissão falha.
+- **Sabotagens SB1 a SB9**, cada uma derrubando os testes nominais, com restauração conferida por `sha256sum -c`.
+  O QA refez SB1, SB4, SB6 e SB8; a sessão principal refez a SB6 (2 testes do AC-8 caem).
+- **E2E** (`fiscal-transmissao`, `fiscal`, `fiscal-impostos`, `permissions`): 21 passed nas duas rodadas, servidor
+  único na 3411. A primeira tentativa teve o R1 vermelho nas duas rodadas por defeito do teste (o log simulado não
+  tinha id GUID, e o schema recusava antes do POST); corrigido o teste, a produção não mudou.
+- **QA: APROVADO**, sem achados. Gates rodados pelo próprio QA, inclusive `npm run build` com `.next` apagado.
+- **Limite conhecido (`D44`):** a checagem de hierarquia do menu no `validate:guard-permission-map` não enxerga o
+  formato do `AppMenu.tsx`. Nesta versão, quem protege pai e filho do menu é o teste estrutural. O gate será refeito em
+  fatia própria.
+
+### Pendências nomeadas fora desta versão
+
+- Gate de hierarquia do menu cego: fatia de gate própria (`D44`).
+- Alertas de habilitar contingência; Correlation ID editável no reprocessamento: F5.
+- `onSettled` nas demais mutações fiscais, erro de validação cru no toast, 409 como fluxo normal: F5.5.
+- Perguntas ao backend B-5 (contrato publica `correlationId` opcional) e B-6 (`Alertas` ausente do documento de contrato).
+
 # v1.11.0a8b56.c2
 
 ## A dashboard carrega os indicadores da empresa selecionada (DEF-3)
