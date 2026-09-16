@@ -167,13 +167,23 @@ describe('guardPermissionMap — gate de permissão por rota', () => {
             expect(menu).toContain('items:');
         });
 
-        it('menu real deve ter 0 quebras de hierarquia após passo 6.a', () => {
-            const allowlist = JSON.parse(read('scripts/guard-permission-map.allowlist.json'));
-            // Após passo 6.a, teto deve ser 0
-            expect(allowlist.teto.menuHierarquia).toBe(0);
-            // E a lista deve estar vazia
-            expect(allowlist.menuHierarquia).toEqual([]);
-        });
+        it('AC-7: parser executa análise real e C2 está vazio no HEAD', async () => {
+            // Este teste executa a análise real sobre a árvore atual,
+            // não lê o registro de allowlist.
+            const lib = await import(
+                join(root, 'scripts/lib/guard-permission-map.mjs').replace(/\\/g, '/')
+            );
+
+            const inputs = lib.readGuardPermissionMapInputs(root);
+            const divergences = lib.analyzeGuardDivergences(inputs);
+
+            // C2 deve estar vazio na árvore atual (corrigida)
+            expect(divergences.menuHierarquia).toEqual([]);
+
+            // C3 também deve estar vazio
+            expect(divergences.menuSemRegra).toEqual([]);
+            expect(divergences.menuForaDaRegra).toEqual([]);
+        }, 60_000);
 
         it('validador deve detectar pai e filho', () => {
             const lib = read('scripts/lib/guard-permission-map.mjs');

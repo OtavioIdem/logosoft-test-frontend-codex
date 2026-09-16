@@ -1,3 +1,55 @@
+# v1.11.0a8b57.c1
+
+## O gate de guard volta a enxergar o menu: hierarquia pai-filho e menu contra regra de rota (D44, D45, D46)
+
+Fatia corretiva de gate, fora do código de produção. Plano e estado em `docs/fatias/v1.11.0a8b57.c1-gate-menu.md`.
+
+**Risco da fatia: `CRITICAL`** (gate estrutural que passa a reprovar o trabalho de todos). Exige aprovação humana antes
+do release. Nenhuma tela, rota, permissão ou item de menu muda.
+
+### O defeito
+
+Desde a `b53`, duas checagens do `validate:guard-permission-map` pareciam proteger o menu e não mediam nada:
+
+- **C2 (`menuHierarquia`)**: o grupo do menu precisa admitir quem o item filho admite, ou o grupo some para quem tem
+  direito ao filho.
+- **C3 (`menuSemRegra`/`menuForaDaRegra`)**: o menu não pode oferecer rota que a regra de rota recusa.
+
+O leitor do menu exigia nome e permissões na mesma linha, e o `AppMenu.tsx` os escreve em linhas separadas: ele lia
+**0 itens** (medido importando a função sobre o arquivo). Mesmo lido, C3 comparava a rota com o texto escapado do
+padrão e nunca casaria.
+
+### O que muda
+
+- O menu é lido pela AST: 83 itens, com as três formas de permissão (`permission`, `anyPermissions`, `allPermissions`).
+- C2 aplica a semântica de `isVisible` em toda profundidade. Forma não suportada reprova com mensagem nominal, inclusive
+  item com mais de uma forma (`D46`); nenhum item do menu atual tem essa forma.
+- C3 resolve cada rota pelo `RegExp` real, e vale a primeira regra que casa, como no runtime.
+- Na árvore atual o gate fica verde: 0 divergências de C2 e 0 de C3.
+
+### Prova de que o gate sabe ficar vermelho
+
+- **Árvore anterior à `b53` (`66a69b5~1`)**: o gate acusa, par a par, os 16 pares de grupo e permissão que a `b53`
+  corrigiu (Cadastros 7, Compras 3, Estoque 3, Financeiro 3) e `/estoque/locais` fora da regra. A `D4` falava em 15; a
+  medição dá 16. Teste: `tests/unit/guardPermissionMapMenuProofHistoric.test.ts`, um `it` por item nos dois sentidos.
+- **Armadilha de plataforma encontrada no caminho**: no Windows, `execSync` passa pelo cmd.exe, onde `^` é escape, e
+  `66a69b5^` virava `66a69b5`, a árvore já corrigida. A prova usa `~1`. Com `^`, 18 testes caem nomeando os pares.
+- **Fixtures** (`tests/unit/guardPermissionMapMenuRules.test.ts`): um caso vermelho e um verde por forma, aninhamento em
+  dois níveis, forma não suportada, forma múltipla, rota sem regra, rota fora da regra e a primeira regra que casa.
+- **Sabotagens na árvore atual**: tirar `FISCAL_REPROCESSAR` só do pai "Fiscal", apagar a regra de `/estoque/locais` e
+  trocar a permissão de um filho derrubam o gate; restauração conferida por `sha256sum -c`.
+- Recorte `npx vitest run tests/unit/guardPermissionMap`: 97 passed, 0 skipped, conferido pela sessão principal.
+
+### Seção operacional
+
+Nada a conceder e ninguém perde acesso. Quem mexer em `layout/AppMenu.tsx` ou `lib/security/routePermissions.ts` passa
+a ter o CI vermelho se o grupo não admitir a permissão do filho, ou se o menu oferecer rota que a regra recusa.
+
+### Pendências nomeadas
+
+- Mensagem do validador para C2 diz "teto excedido — observado N" sem nomear o par; o nome aparece no `--report`.
+- Duas worktrees temporárias antigas da prova de C1 (`gate-prova-*/b51`) seguem registradas no git desta máquina.
+
 # v1.11.0a8b57
 
 ## Transmissão à SEFAZ: alertas da resposta na tela, reprocessamento no menu e Correlation ID obrigatório (F2.4 a F2.6)

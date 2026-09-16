@@ -215,50 +215,174 @@ export const parseRoutePermissions = (source) => {
     return rules;
 };
 
-// Extrai permissões do menu em AppMenu.tsx
+// Determina a forma de permissão de um item ou grupo de menu. Mais de uma forma
+// declarada ao mesmo tempo (permission + anyPermissions + allPermissions, em
+// qualquer combinação) é forma não suportada — D46.
+const resolvePermissionForm = (permission, anyPermissions, allPermissions) => {
+    const formasPresentes = [
+        permission ? 'permission' : null,
+        anyPermissions.length > 0 ? 'anyPermissions' : null,
+        allPermissions.length > 0 ? 'allPermissions' : null
+    ].filter(Boolean);
+
+    if (formasPresentes.length > 1) return 'multiple';
+    if (formasPresentes.length === 1) return formasPresentes[0];
+    return null;
+};
+
+// Extrai permissões do menu em AppMenu.tsx pela AST
 export const parseMenuPermissions = (source) => {
+    const ts = require('typescript');
     const result = {
         permissions: new Map(), // rota → permissões
         hierarchy: [] // estrutura de pai-filho
     };
 
-    const lines = String(source ?? '').split(/\r?\n/);
-    let currentGroup = null;
-    let currentGroupPermissions = [];
-    let indentStack = [];
+    const sourceStr = String(source ?? '');
+    const sf = ts.createSourceFile(
+        'AppMenu.tsx',
+        sourceStr,
+        ts.ScriptTarget.Latest,
+        true,
+        ts.ScriptKind.TSX
+    );
 
-    for (const line of lines) {
-        // Match group definition: label: 'Cadastros', anyPermissions: [...]
-        const groupMatch = line.match(/label:\s*'([^']+)'[^}]*?anyPermissions:\s*\[(.*?)\]/);
-        if (groupMatch) {
-            const groupLabel = groupMatch[1];
-            const permsStr = groupMatch[2];
-            const perms = [...permsStr.matchAll(/'([^']+)'/g)].map(m => m[1]);
-            currentGroup = { label: groupLabel, permissions: perms };
-            currentGroupPermissions = perms;
-            continue;
-        }
+    // Encontra o array do modelo dentro de useMemo
+    let modelArray = null;
 
-        // Match item: to: '/rota', anyPermissions: [...]
-        const itemMatch = line.match(/to:\s*'([^']+)'[^}]*?anyPermissions:\s*\[(.*?)\]/);
-        if (itemMatch) {
-            const itemRota = itemMatch[1];
-            const permsStr = itemMatch[2];
-            const perms = [...permsStr.matchAll(/'([^']+)'/g)].map(m => m[1]);
-
-            if (currentGroup) {
-                result.hierarchy.push({
-                    type: 'item-in-group',
-                    group: currentGroup.label,
-                    rota: itemRota,
-                    permissions: perms,
-                    parentPermissions: currentGroupPermissions
-                });
-                result.permissions.set(itemRota, perms);
+    const visit = (node) => {
+        // Procura por useMemo<AppMenuItem[]>( () => [ ... ] )
+        if (ts.isCallExpression(node)) {
+            const expr = node.expression;
+            if (ts.isIdentifier(expr) && expr.text === 'useMemo') {
+                // Primeiro argumento é a função arrow
+                if (node.arguments.length > 0) {
+                    const callback = node.arguments[0];
+                    if (ts.isArrowFunction(callback) && ts.isArrayLiteralExpression(callback.body)) {
+                        modelArray = callback.body;
+                    }
+                }
             }
         }
+        ts.forEachChild(node, visit);
+    };
+
+    visit(sf);
+
+    if (!modelArray) {
+        return result;
     }
 
+    // Extrai propriedades de um literal de objeto
+    const extractObjectProperties = (objLiteral) => {
+        const props = {};
+        if (!ts.isObjectLiteralExpression(objLiteral)) {
+            return props;
+        }
+
+        for (const prop of objLiteral.properties) {
+            if (ts.isPropertyAssignment(prop)) {
+                const name = prop.name.text || (ts.isComputedPropertyName(prop.name) ? '' : prop.name);
+                if (typeof name === 'string') {
+                    // Extrai valor simples (string, array, objeto)
+                    props[name] = prop.initializer;
+                }
+            }
+        }
+        return props;
+    };
+
+    // Extrai valores de array de strings
+    const extractStringArray = (arrayExpr) => {
+        const result = [];
+        if (ts.isArrayLiteralExpression(arrayExpr)) {
+            for (const elem of arrayExpr.elements) {
+                if (ts.isStringLiteral(elem)) {
+                    result.push(elem.text);
+                }
+            }
+        }
+        return result;
+    };
+
+    // Processa recursivamente grupos e itens
+    const processMenuItems = (items, parentGroup = null, parentProps = null) => {
+        if (!ts.isArrayLiteralExpression(items)) {
+            return;
+        }
+
+        for (const itemExpr of items.elements) {
+            if (!ts.isObjectLiteralExpression(itemExpr)) {
+                continue;
+            }
+
+            const props = extractObjectProperties(itemExpr);
+
+            // Extrai campos
+            let label = '';
+            let to = null;
+            let permission = null;
+            let anyPermissions = [];
+            let allPermissions = [];
+            const childItems = props.items;
+
+            // label (obrigatório para grupos, opcional para itens em items)
+            if (props.label && ts.isStringLiteral(props.label)) {
+                label = props.label.text;
+            }
+
+            // to (rota)
+            if (props.to && ts.isStringLiteral(props.to)) {
+                to = props.to.text;
+            }
+
+            // Formas de permissão: permission (singular), anyPermissions, allPermissions
+            if (props.permission && ts.isStringLiteral(props.permission)) {
+                permission = props.permission.text;
+            }
+            if (props.anyPermissions) {
+                anyPermissions = extractStringArray(props.anyPermissions);
+            }
+            if (props.allPermissions) {
+                allPermissions = extractStringArray(props.allPermissions);
+            }
+
+            // Se tem rota (item) e estamos dentro de um grupo
+            if (to && parentGroup) {
+                const itemPerms = anyPermissions.length > 0 ? anyPermissions :
+                                  allPermissions.length > 0 ? allPermissions :
+                                  permission ? [permission] : [];
+
+                result.hierarchy.push({
+                    type: 'item-in-group',
+                    group: parentGroup.label,
+                    groupPermissionForm: parentGroup.form,
+                    rota: to,
+                    permissions: itemPerms,
+                    permissionForm: resolvePermissionForm(permission, anyPermissions, allPermissions),
+                    parentPermissions: parentGroup.permissions,
+                    parentPermissionForm: parentGroup.form
+                });
+                result.permissions.set(to, itemPerms.length > 0 ? itemPerms : (permission ? [permission] : []));
+            }
+
+            // Se é um grupo (tem items)
+            if (childItems) {
+                const groupPerms = anyPermissions.length > 0 ? anyPermissions :
+                                   allPermissions.length > 0 ? allPermissions :
+                                   permission ? [permission] : [];
+                const groupForm = resolvePermissionForm(permission, anyPermissions, allPermissions);
+
+                processMenuItems(childItems, {
+                    label,
+                    permissions: groupPerms,
+                    form: groupForm
+                }, { to, permission, anyPermissions, allPermissions });
+            }
+        }
+    };
+
+    processMenuItems(modelArray);
     return result;
 };
 
@@ -578,32 +702,107 @@ export const analyzeGuardDivergences = ({ frontendRoutes, operationPermissionMap
     }
 
     // C2: Hierarquia de menu (pai sem permissão de filho)
+    // Regra: o pai deve admitir toda sessão que um filho admite.
+    // Formas de permissão: 'permission' (singular), 'anyPermissions', 'allPermissions'
+    // Semântica: todas as três em conjunção (se uma falta, item não é visível)
     for (const item of menuData.hierarchy) {
         if (item.type === 'item-in-group') {
-            const parentPerms = new Set(item.parentPermissions);
-            for (const itemPerm of item.permissions) {
-                if (!parentPerms.has(itemPerm)) {
+            // Forma do pai
+            const parentForm = item.parentPermissionForm;
+            // Se pai tem forma não suportada (permission ou allPermissions), reprova
+            if (parentForm && parentForm !== 'anyPermissions' && parentForm !== null) {
+                divergences.menuHierarquia.push({
+                    group: item.group,
+                    rota: item.rota,
+                    issue: `parent-form-unsupported-${parentForm}`,
+                    id: `menu-${item.group}-form-${parentForm}`
+                });
+            }
+
+            // Forma do filho
+            const itemForm = item.permissionForm;
+            // Se filho tem forma não suportada, reprova
+            if (itemForm && itemForm !== 'permission' && itemForm !== 'anyPermissions' && itemForm !== 'allPermissions') {
+                divergences.menuHierarquia.push({
+                    group: item.group,
+                    rota: item.rota,
+                    issue: `child-form-unsupported-${itemForm}`,
+                    id: `menu-${item.group}-form-${itemForm}`
+                });
+            }
+
+            // Validar hierarquia: pai deve admitir sessão do filho
+            const parentPerms = new Set(item.parentPermissions || []);
+
+            if (itemForm === 'permission' && item.permissions.length === 1) {
+                // Filho com permission: X. Pai deve ter X em anyPermissions
+                const childPerm = item.permissions[0];
+                if (!parentPerms.has(childPerm)) {
                     divergences.menuHierarquia.push({
                         group: item.group,
                         rota: item.rota,
-                        permission: itemPerm,
-                        id: `menu-${item.group}-${itemPerm}`
+                        permission: childPerm,
+                        form: 'permission',
+                        id: `menu-${item.group}-${childPerm}`
                     });
+                }
+            } else if (itemForm === 'anyPermissions' && item.permissions.length > 0) {
+                // Filho com anyPermissions: ['X', 'Y', ...]. Pai deve ter TODAS em anyPermissions
+                for (const childPerm of item.permissions) {
+                    if (!parentPerms.has(childPerm)) {
+                        divergences.menuHierarquia.push({
+                            group: item.group,
+                            rota: item.rota,
+                            permission: childPerm,
+                            form: 'anyPermissions',
+                            id: `menu-${item.group}-${childPerm}`
+                        });
+                    }
+                }
+            } else if (itemForm === 'allPermissions' && item.permissions.length > 0) {
+                // Filho com allPermissions: ['X', 'Y', ...]. Pai deve ter PELO MENOS UMA em anyPermissions
+                // (porque qualquer uma delas pode ser a "permissão de entrada" que o abre)
+                if (item.permissions.length > 0) {
+                    const hasAny = item.permissions.some(p => parentPerms.has(p));
+                    if (!hasAny) {
+                        divergences.menuHierarquia.push({
+                            group: item.group,
+                            rota: item.rota,
+                            permissions: item.permissions,
+                            form: 'allPermissions',
+                            id: `menu-${item.group}-allPermissions`
+                        });
+                    }
                 }
             }
         }
     }
 
     // C3: Menu vs Route Rules
+    // Resolve cada rota pelo RegExp real (primeira regra que casa)
     for (const [rota, perms] of menuData.permissions) {
-        let foundRule = false;
-        let rulePerms = null;
+        let foundRule = null;
 
+        // Usa a mesma lógica do runtime: primeira regra que casa
         for (const rule of routeRules) {
-            // Simple pattern match (não é perfeito, mas suficiente para análise)
-            if (rota.startsWith(rule.pattern.split('(?')[0] + '/')) {
-                foundRule = true;
-                rulePerms = new Set(rule.permissions);
+            let patternRegex;
+
+            // Se pattern é string (parseRoutePermissions), converte para RegExp
+            if (typeof rule.pattern === 'string') {
+                try {
+                    // pattern vem como "^/path(?:/.*)?", precisa virar /^\/path(?:\/.*)?$/
+                    patternRegex = new RegExp('^' + rule.pattern + '$');
+                } catch (e) {
+                    // Skip invalid patterns
+                    continue;
+                }
+            } else {
+                // Se já é RegExp
+                patternRegex = rule.pattern;
+            }
+
+            if (patternRegex.test(rota)) {
+                foundRule = rule;
                 break;
             }
         }
@@ -614,7 +813,8 @@ export const analyzeGuardDivergences = ({ frontendRoutes, operationPermissionMap
                 permissions: perms,
                 id: `menu-sem-regra-${rota}`
             });
-        } else if (foundRule && rulePerms) {
+        } else if (foundRule) {
+            const rulePerms = new Set(foundRule.anyOf || foundRule.permissions || []);
             for (const perm of perms) {
                 if (!rulePerms.has(perm)) {
                     divergences.menuForaDaRegra.push({

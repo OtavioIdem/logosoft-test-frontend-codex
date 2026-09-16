@@ -1,0 +1,31 @@
+import React, { useMemo } from 'react';
+import { AppMenuItem } from '@/types';
+
+/**
+ * Fixture C: Filho com allPermissions sem nenhuma permissão em comum com o pai
+ * Pai tem anyPermissions: ['PERM_X']
+ * Filho tem allPermissions: ['PERM_Y', 'PERM_Z'] (nenhuma em comum)
+ *
+ * Divergência esperada: menuHierarquia acusando falta de pelo menos uma permissão
+ * do allPermissions do filho no anyPermissions do pai
+ */
+export const MenuFixtureC = () => {
+  const model = useMemo<AppMenuItem[]>(
+    () => [
+      {
+        label: 'Grupo Pai C',
+        anyPermissions: ['PERM_X'],
+        items: [
+          {
+            label: 'Item Filho C',
+            to: '/grupo-c/item-c',
+            allPermissions: ['PERM_Y', 'PERM_Z']
+          }
+        ]
+      }
+    ],
+    []
+  );
+
+  return model;
+};

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "1.11.0a8b57",
+  "version": "1.11.0a8b57.c1",
   "status": "registro-fechado-monotonico",
   "contractDocument": "docs/backend-v1.23/CONTRATO-API-v1.23.md",
   "auditPolicy": {
@@ -10,7 +10,7 @@
     "target": "F1.6.b — fechar a classe de divergências de permissão por rota"
   },
   "suppressions": [],
-  "description": "Registro auditável, fechado e monotônico das divergências entre as permissões que o contrato exige em cada operação HTTP e as permissões que os módulos frontend declaram. Calibração: 9 órfãs registradas nominalmente em C1 — módulos bancos, auditoria e relatorios sem página de rota ativa. Hierarquia de menu: 0. Menu sem regra: 0. Catálogo genérico: 1 (GC-01). Nota: filtro de alcançabilidade desabilitado pois estava eliminando divergências legítimas junto com órfãs.",
+  "description": "Registro auditável, fechado e monotônico das divergências entre as permissões que o contrato exige em cada operação HTTP e as permissões que os módulos frontend declaram. Calibração: 9 órfãs registradas nominalmente em C1 — módulos bancos, auditoria e relatorios sem página de rota ativa. C2 e C3 leem o menu pela AST desde a v1.11.0a8b57.c1 (D44, D45, D46). Hierarquia de menu: 0. Menu sem regra: 0. Catálogo genérico: 1 (GC-01). Nota: filtro de alcançabilidade desabilitado pois estava eliminando divergências legítimas junto com órfãs.",
   "teto": {
     "chamadaSemGuard": 9,
     "menuHierarquia": 0,
