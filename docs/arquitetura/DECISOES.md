@@ -1349,3 +1349,49 @@ Risco de acesso: `NENHUM`.
 Reversível: sim. Gatilho de revisita: a fatia do gate fechar com a prova vermelha.
 Quem arbitrou: orquestrador
 Impacto: `scripts/lib/guard-permission-map.mjs` e testes do gate, na fatia própria.
+
+### D45 — a fatia do gate de menu (`D44`) inclui C3, usa a semântica de `isVisible` e prova contra `66a69b5^`
+
+Data: 2026-09-16
+Rodada: sem rodada de debate. Arbitrada pela sessão principal ao escrever o plano `docs/fatias/v1.11.0a8b57.c1-gate-menu.md`.
+Medição:
+- `parseMenuPermissions` sobre `layout/AppMenu.tsx` (árvore `eccea79`) devolve `hierarchy 0` **e** `permissions 0`
+  (node importando a função, sessão principal). C3 (`menuSemRegra`/`menuForaDaRegra`) itera o mesmo mapa vazio.
+- Por leitura, o casamento de C3 (`rota.startsWith(rule.pattern.split('(?')[0] + '/')`) compara a rota com o texto-fonte
+  escapado do padrão e nunca casaria, mesmo com o parser consertado.
+- O diff da `b53` (`66a69b5`) em `AppMenu.tsx` e `routePermissions.ts` dá, por leitura, 16 pares de hierarquia e a regra
+  de `/estoque/locais`; `D4` falava em 15, sem registro de medição.
+Decisão:
+1. A fatia `v1.11.0a8b57.c1` conserta C2 **e** C3: parser pela AST, C3 pelo `RegExp` real com a primeira regra que casa
+   (`findRoutePermissionRule`).
+2. A regra de hierarquia é derivada de `isVisible`/`filterMenu` (`AppMenu.tsx:281-286`), com as três formas de
+   permissão; forma não suportada reprova.
+3. A prova vermelha roda na árvore `66a69b5^`; a lista nominal do teste é a **medida** por execução, com a diferença
+   para a leitura do diff explicada item a item.
+4. Divergência na árvore atual: aditiva no pai corrige-se na fatia (precedente `D4`); qualquer outra volta ao usuário.
+Alternativas descartadas:
+1. Consertar só C2, como `D44` escreveu: deixaria C3 vácuo com a mesma aparência de proteção, que `gateRisk` chama de pior
+   que ausência.
+2. Usar SB6 da `b57` como única prova: sabotagem prova um caso; a árvore antiga prova a classe com 16 itens reais.
+Risco de acesso: `NENHUM` previsto.
+Reversível: sim. Gatilho de revisita: o gate acusar divergência na árvore atual.
+Quem arbitrou: orquestrador
+Impacto: `scripts/lib/guard-permission-map.mjs`, testes do gate, ritual de versão.
+
+### D46 — GATE-Q1: item de menu com mais de uma forma de permissão é forma não suportada e reprova
+
+Data: 2026-09-16
+Rodada: sem rodada de debate. Arbitrada pela sessão principal na correção da `v1.11.0a8b57.c1`.
+Medição: nenhuma linha de item ou grupo em `layout/AppMenu.tsx` declara duas formas (`permission`, `anyPermissions`,
+`allPermissions`) ao mesmo tempo; `allPermissions` aparece 1 vez no arquivo, no `isVisible` (node sobre o arquivo, sessão
+principal). A lib reescrita escolhe uma forma só quando há mais de uma (`guard-permission-map.mjs`, extração do item), o
+que diverge da conjunção de `isVisible`.
+Decisão: o gate trata item ou grupo com mais de uma forma como forma não suportada e reprova com `issue` nominal, como
+`D45` item 2 já faz para pai com `permission`/`allPermissions`. Quem precisar da combinação estende a regra com fixture
+vermelha e verde na mesma fatia.
+Alternativas descartadas:
+1. Implementar a conjunção completa agora: regra sem caso real para exercitá-la, que é código de gate sem prova de uso.
+2. Deixar como está: o gate escolheria uma forma em silêncio, e isso é o sintoma `filtro_largo`.
+Risco de acesso: `NENHUM`. Reversível: sim. Gatilho de revisita: o menu precisar de duas formas num item.
+Quem arbitrou: orquestrador
+Impacto: `scripts/lib/guard-permission-map.mjs` e `tests/unit/guardPermissionMapMenuRules.test.ts`.

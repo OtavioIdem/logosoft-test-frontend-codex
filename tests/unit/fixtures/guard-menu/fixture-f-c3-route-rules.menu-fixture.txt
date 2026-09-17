@@ -1,0 +1,35 @@
+import React, { useMemo } from 'react';
+import { AppMenuItem } from '@/types';
+
+/**
+ * Fixture F: C3 - Validação de rota vs regra
+ *
+ * Caso 1: Item com rota que não tem regra em routePermissions.ts
+ * Caso 2: Item com rota que tem regra, mas a permissão não está em anyOf da regra
+ * Caso 3: Regra genérica ANTES de específica (primeira que casa vale)
+ */
+export const MenuFixtureF = () => {
+  const model = useMemo<AppMenuItem[]>(
+    () => [
+      {
+        label: 'Grupo F - Rotas',
+        anyPermissions: ['PERM_X', 'PERM_UNMAPPED'],
+        items: [
+          {
+            label: 'Item sem regra',
+            to: '/nonexistent/unmapped',
+            anyPermissions: ['PERM_UNMAPPED']
+          },
+          {
+            label: 'Item com regra conflitante',
+            to: '/existing/route',
+            permission: 'PERM_CONFLICT'
+          }
+        ]
+      }
+    ],
+    []
+  );
+
+  return model;
+};

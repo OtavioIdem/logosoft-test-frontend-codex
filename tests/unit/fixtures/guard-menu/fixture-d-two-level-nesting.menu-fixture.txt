@@ -1,0 +1,42 @@
+import React, { useMemo } from 'react';
+import { AppMenuItem } from '@/types';
+
+/**
+ * Fixture D: Aninhamento em dois níveis (neto fora do avó/pai)
+ * Avó tem anyPermissions: ['PERM_X']
+ * Pai tem anyPermissions: ['PERM_X', 'PERM_Y'] (estende avó)
+ * Neto tem permission: 'PERM_Y' (válido para pai, mas não para avó)
+ *
+ * Neste caso, o parser recursivo precisa tratar neto como "item-in-group"
+ * com grupo = pai (não avó), então a validação é: neto vs pai
+ *
+ * Divergência esperada: nenhuma (estrutura válida recursivamente)
+ *
+ * Mas se o neto tivesse uma permissão que o pai não tém, seria acusado.
+ */
+export const MenuFixtureD = () => {
+  const model = useMemo<AppMenuItem[]>(
+    () => [
+      {
+        label: 'Avó',
+        anyPermissions: ['PERM_X'],
+        items: [
+          {
+            label: 'Pai (sem rota)',
+            anyPermissions: ['PERM_X', 'PERM_Y'],
+            items: [
+              {
+                label: 'Neto com permission válida',
+                to: '/avo/pai/neto',
+                permission: 'PERM_Y'
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    []
+  );
+
+  return model;
+};

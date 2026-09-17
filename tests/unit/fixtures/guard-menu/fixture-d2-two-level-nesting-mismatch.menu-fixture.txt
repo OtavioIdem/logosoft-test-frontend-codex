@@ -1,0 +1,43 @@
+import React, { useMemo } from 'react';
+import { AppMenuItem } from '@/types';
+
+/**
+ * Fixture D2: variação vermelha da D — aninhamento em dois níveis onde o neto
+ * tem uma permissão que está na avó, mas NÃO está no pai imediato.
+ *
+ * Avó tem anyPermissions: ['PERM_X', 'PERM_Z']
+ * Pai tem anyPermissions: ['PERM_X', 'PERM_Y'] (não inclui PERM_Z)
+ * Neto tem permission: 'PERM_Z' (válido para avó, mas não para o pai imediato)
+ *
+ * A validação de hierarquia compara o neto contra o pai imediato, não contra
+ * a avó — como a própria D já documentava. Aqui a permissão do neto falta no
+ * pai, então a divergência precisa aparecer.
+ *
+ * Divergência esperada: menuHierarquia acusando PERM_Z no grupo "Pai (sem rota)"
+ */
+export const MenuFixtureD2 = () => {
+  const model = useMemo<AppMenuItem[]>(
+    () => [
+      {
+        label: 'Avó',
+        anyPermissions: ['PERM_X', 'PERM_Z'],
+        items: [
+          {
+            label: 'Pai (sem rota)',
+            anyPermissions: ['PERM_X', 'PERM_Y'],
+            items: [
+              {
+                label: 'Neto com permission fora do pai',
+                to: '/avo/pai/neto-z',
+                permission: 'PERM_Z'
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    []
+  );
+
+  return model;
+};

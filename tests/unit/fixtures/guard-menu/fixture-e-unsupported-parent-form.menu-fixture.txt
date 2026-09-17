@@ -1,0 +1,30 @@
+import React, { useMemo } from 'react';
+import { AppMenuItem } from '@/types';
+
+/**
+ * Fixture E: Pai com forma não suportada
+ * Pai tem allPermissions: ['PERM_X', 'PERM_Y'] (forma não suportada para pai)
+ * Filho tem permission: 'PERM_X'
+ *
+ * Divergência esperada: menuHierarquia com issue "parent-form-unsupported-allPermissions"
+ */
+export const MenuFixtureE = () => {
+  const model = useMemo<AppMenuItem[]>(
+    () => [
+      {
+        label: 'Grupo Pai E (forma não suportada)',
+        allPermissions: ['PERM_X', 'PERM_Y'],
+        items: [
+          {
+            label: 'Item Filho E',
+            to: '/grupo-e/item-e',
+            permission: 'PERM_X'
+          }
+        ]
+      }
+    ],
+    []
+  );
+
+  return model;
+};

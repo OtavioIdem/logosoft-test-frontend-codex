@@ -1,0 +1,35 @@
+import React, { useMemo } from 'react';
+import { AppMenuItem } from '@/types';
+
+/**
+ * Fixture G: Item com permission E anyPermissions juntos
+ *
+ * Semântica real de isVisible (AppMenu.tsx:280):
+ *   hasPermission(permission) AND hasAnyPermission(anyPermissions) AND hasAllPermissions(allPermissions)
+ *
+ * D46: o gate não implementa a conjunção das três formas — item ou grupo com
+ * mais de uma forma declarada ao mesmo tempo é forma não suportada e reprova
+ * com issue 'child-form-unsupported-multiple' (ou 'parent-form-unsupported-multiple'
+ * quando é o grupo pai que declara mais de uma forma).
+ */
+export const MenuFixtureG = () => {
+  const model = useMemo<AppMenuItem[]>(
+    () => [
+      {
+        label: 'Grupo Pai G (anyPermissions apenas)',
+        anyPermissions: ['PERM_X', 'PERM_Y'],
+        items: [
+          {
+            label: 'Item com permission + anyPermissions',
+            to: '/grupo-g/item-g',
+            permission: 'PERM_REQUIRED',
+            anyPermissions: ['PERM_X', 'PERM_Z']
+          }
+        ]
+      }
+    ],
+    []
+  );
+
+  return model;
+};
