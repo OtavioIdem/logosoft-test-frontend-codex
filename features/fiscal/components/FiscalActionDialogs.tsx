@@ -15,6 +15,8 @@ import { EntitySelect } from '@/components/forms/EntitySelect';
 import { EmpresaSelect } from '@/components/forms/EmpresaSelect';
 import { FieldError } from '@/components/forms/FieldError';
 import { FilialSelect } from '@/components/forms/FilialSelect';
+import { usePermissions } from '@/features/auth/hooks/usePermissions';
+import { NotaFiscalSerieField } from '@/features/fiscal/components/NotaFiscalSerieField';
 import { usePessoas } from '@/features/pessoas/hooks/usePessoasResources';
 import { PessoaResponse } from '@/features/pessoas/types/pessoas.types';
 import { useProdutos } from '@/features/produtos/hooks/useProdutosResources';
@@ -99,20 +101,23 @@ const pedidoVendaOptions = (pedidos: PedidoVendaResponse[]) =>
 const findById = <T extends { id: string }>(items: T[], id?: string | null) => items.find((item) => item.id === id);
 
 export const CriarNotaFiscalDialog = ({ visible, loading, onHide, onSubmit }: BaseDialogProps<Record<string, unknown>>) => {
-    const [values, setValues] = useState({
+    const { hasAllPermissions } = usePermissions();
+    // AC-15: o padrão '1' só vale no modo texto (sem as duas permissões do combo); com elas, nada fica
+    // pré-selecionado.
+    const [values, setValues] = useState(() => ({
         empresaId: '',
         filialId: '',
         tipoDocumento: TipoDocumentoFiscal.NFe,
         tipoOperacao: TipoOperacaoFiscal.Venda,
         origem: OrigemNotaFiscal.Manual,
         origemId: '',
-        serie: '1',
+        serie: hasAllPermissions(['FISCAL_SERIES_CONSULTAR', 'FISCAL_MODELOS_CONSULTAR']) ? '' : '1',
         numero: '',
         dataEmissao: new Date().toISOString(),
         naturezaOperacaoId: '',
         pessoaId: '',
         observacao: ''
-    });
+    }));
     const [pessoaSearch, setPessoaSearch] = useState('');
     const pessoaSearchTerm = useDebouncedValue(pessoaSearch.trim());
     const pessoasQuery = usePessoas({ empresaId: values.empresaId || null, filialId: values.filialId || null, termo: pessoaSearchTerm || null });
@@ -130,7 +135,7 @@ export const CriarNotaFiscalDialog = ({ visible, loading, onHide, onSubmit }: Ba
                 <Field label="Filial"><FilialSelect empresaId={values.empresaId || null} value={values.filialId || null} onChange={(filialId) => setValues((v) => ({ ...v, filialId: filialId ?? '', pessoaId: '' }))} /></Field>
                 <Field label="Tipo documento"><Dropdown value={values.tipoDocumento} options={tipoDocumentoFiscalOptions} onChange={(e) => setValues((v) => ({ ...v, tipoDocumento: e.value }))} /></Field>
                 <Field label="Operação"><Dropdown value={values.tipoOperacao} options={tipoOperacaoFiscalOptions} onChange={(e) => setValues((v) => ({ ...v, tipoOperacao: e.value }))} /></Field>
-                <Field label="Série"><InputText value={values.serie} onChange={(e) => setValues((v) => ({ ...v, serie: e.target.value }))} /></Field>
+                <Field label="Série"><NotaFiscalSerieField value={values.serie} onChange={(serie) => setValues((v) => ({ ...v, serie }))} empresaId={values.empresaId || null} filialId={values.filialId || null} tipoDocumento={values.tipoDocumento} /></Field>
                 <Field label="Número"><InputText value={values.numero} onChange={(e) => setValues((v) => ({ ...v, numero: e.target.value }))} /></Field>
                 <Field label="Pessoa/cliente" hint="Seleção carregada da API de Pessoas; o backend valida se a pessoa pode ser usada na nota."><EntitySelect entityName="pessoa" value={values.pessoaId || null} options={pessoasOptions} disabled={!values.empresaId || pessoasQuery.isLoading} loading={pessoasQuery.isFetching} onSearch={setPessoaSearch} onChange={(pessoaId) => setValues((v) => ({ ...v, pessoaId: pessoaId ?? '' }))} /></Field>
                 <Field label="Natureza de operação" hint="Ainda sem endpoint operacional no backend; deixe vazio até parametrização fiscal oficial."><InputText value={values.naturezaOperacaoId} disabled placeholder="Parametrização fiscal futura" onChange={(e) => setValues((v) => ({ ...v, naturezaOperacaoId: e.target.value }))} /></Field>
@@ -141,24 +146,31 @@ export const CriarNotaFiscalDialog = ({ visible, loading, onHide, onSubmit }: Ba
     );
 };
 
-export const GerarNotaFiscalPedidoVendaDialog = ({ visible, loading, onHide, onSubmit, pedidoVendaId }: BaseDialogProps<Record<string, unknown>> & { pedidoVendaId?: string }) => {
-    const [values, setValues] = useState({
+export const GerarNotaFiscalPedidoVendaDialog = ({ visible, loading, onHide, onSubmit, pedidoVendaId, escopoPedido }: BaseDialogProps<Record<string, unknown>> & { pedidoVendaId?: string; escopoPedido?: { empresaId: string; filialId?: string | null } }) => {
+    const { hasAllPermissions } = usePermissions();
+    // AC-15: o padrão '1' só vale no modo texto (sem as duas permissões do combo); com elas, nada fica
+    // pré-selecionado.
+    const [values, setValues] = useState(() => ({
         empresaId: '',
         filialId: '',
         pedidoVendaId: pedidoVendaId ?? '',
         tipoDocumento: TipoDocumentoFiscal.NFe,
-        serie: '1',
+        serie: hasAllPermissions(['FISCAL_SERIES_CONSULTAR', 'FISCAL_MODELOS_CONSULTAR']) ? '' : '1',
         numero: '',
         naturezaOperacaoId: '',
         cfopPadrao: '5102',
         unidadeComercialPadrao: 'UN',
         validarDadosFiscaisProduto: true,
         observacao: 'Gerada a partir do pedido de venda.'
-    });
+    }));
     const [pedidoSearch, setPedidoSearch] = useState('');
     const pedidoSearchTerm = useDebouncedValue(pedidoSearch.trim());
     const pedidosQuery = usePedidosVenda({ empresaId: values.empresaId || null, filialId: values.filialId || null, status: StatusPedidoVenda.Aprovado, termo: pedidoSearchTerm || null });
     const pedidosOptions = useMemo(() => pedidoVendaOptions(pedidosQuery.data ?? []), [pedidosQuery.data]);
+    // AC-15: escopo da série vem da prop `escopoPedido` (fluxo iniciado do detalhe do pedido) ou do pedido
+    // selecionado inline; sem nenhum dos dois, o combo fica desabilitado aguardando a escolha do pedido.
+    const pedidoSelecionadoInline = pedidoVendaId ? null : findById(pedidosQuery.data ?? [], values.pedidoVendaId);
+    const escopoEfetivo = escopoPedido ?? (pedidoSelecionadoInline ? { empresaId: pedidoSelecionadoInline.empresaId, filialId: pedidoSelecionadoInline.filialId ?? null } : undefined);
 
     useEffect(() => {
         if (visible && pedidoVendaId) setValues((current) => ({ ...current, pedidoVendaId }));
@@ -180,7 +192,7 @@ export const GerarNotaFiscalPedidoVendaDialog = ({ visible, loading, onHide, onS
                     </div>
                 )}
                 <Field label="Tipo documento"><Dropdown value={values.tipoDocumento} options={tipoDocumentoFiscalOptions} onChange={(e) => setValues((v) => ({ ...v, tipoDocumento: e.value }))} /></Field>
-                <Field label="Série"><InputText value={values.serie} onChange={(e) => setValues((v) => ({ ...v, serie: e.target.value }))} /></Field>
+                <Field label="Série"><NotaFiscalSerieField value={values.serie} onChange={(serie) => setValues((v) => ({ ...v, serie }))} empresaId={escopoEfetivo?.empresaId ?? null} filialId={escopoEfetivo?.filialId ?? null} tipoDocumento={values.tipoDocumento} aguardandoPedido={!escopoEfetivo} /></Field>
                 <Field label="Número"><InputText value={values.numero} onChange={(e) => setValues((v) => ({ ...v, numero: e.target.value }))} /></Field>
                 <Field label="CFOP padrão" hint="Obrigatório quando a validação fiscal do produto estiver ativa."><InputText value={values.cfopPadrao} onChange={(e) => setValues((v) => ({ ...v, cfopPadrao: e.target.value }))} /></Field>
                 <Field label="Unidade padrão"><InputText value={values.unidadeComercialPadrao} onChange={(e) => setValues((v) => ({ ...v, unidadeComercialPadrao: e.target.value }))} /></Field>

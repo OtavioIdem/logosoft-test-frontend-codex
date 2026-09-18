@@ -130,9 +130,10 @@ const AppMenu = () => {
             },
             {
                 label: 'Fiscal',
-                anyPermissions: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_CANCELAR', 'FISCAL_INUTILIZAR', 'FISCAL_CARTA_CORRECAO', 'FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR', 'FISCAL_REPROCESSAR'],
+                anyPermissions: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_CANCELAR', 'FISCAL_INUTILIZAR', 'FISCAL_CARTA_CORRECAO', 'FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR', 'FISCAL_REPROCESSAR', 'FISCAL_SERIES_CONSULTAR', 'FISCAL_SERIES_GERENCIAR'],
                 items: [
                     { label: 'Notas fiscais', icon: 'pi pi-fw pi-file', to: '/fiscal/notas', anyPermissions: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_REPROCESSAR'] },
+                    { label: 'Séries fiscais', icon: 'pi pi-fw pi-hashtag', to: '/fiscal/series', anyPermissions: ['FISCAL_SERIES_CONSULTAR', 'FISCAL_SERIES_GERENCIAR'] },
                     { label: 'Simulador de tributação', icon: 'pi pi-fw pi-calculator', to: '/fiscal/simulador', permission: 'FISCAL_REGRAS_CONSULTAR' },
                     { label: 'Regras fiscais', icon: 'pi pi-fw pi-sliders-h', to: '/fiscal/regras', anyPermissions: ['FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR'] },
                     { label: 'Exceções e benefícios', icon: 'pi pi-fw pi-percentage', to: '/fiscal/excecoes', anyPermissions: ['FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR'] },

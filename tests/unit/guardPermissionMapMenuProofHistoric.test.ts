@@ -175,8 +175,8 @@ describe('Gate de menu (C2 e C3) — prova histórica da b53', () => {
   });
 
   describe('Contagem de itens do menu', () => {
-    it('parser enumera 83 itens na árvore atual', () => {
-      expect(hierarchyCountAtuais).toBe(83);
+    it('parser enumera 84 itens na árvore atual', () => {
+      expect(hierarchyCountAtuais).toBe(84); // b58: +1 "Séries fiscais"
     });
   });
 });

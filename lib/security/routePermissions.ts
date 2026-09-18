@@ -45,6 +45,7 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/fiscal\/regras(?:\/.*)?$/, anyOf: ['FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR'], description: 'Regras fiscais' },
     { pattern: /^\/fiscal\/excecoes-ncm(?:\/.*)?$/, anyOf: ['FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR'], description: 'Exceções fiscais por NCM' },
     { pattern: /^\/fiscal\/excecoes(?:\/.*)?$/, anyOf: ['FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR'], description: 'Exceções e benefícios fiscais' },
+    { pattern: /^\/fiscal\/series(?:\/.*)?$/, anyOf: ['FISCAL_SERIES_CONSULTAR', 'FISCAL_SERIES_GERENCIAR'], description: 'Séries fiscais' },
     { pattern: /^\/fiscal(?:\/.*)?$/, anyOf: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_CANCELAR', 'FISCAL_INUTILIZAR', 'FISCAL_CARTA_CORRECAO', 'FISCAL_REPROCESSAR'], description: 'Fiscal' },
     { pattern: /^\/pdv(?:\/.*)?$/, anyOf: ['PDV_CONSULTAR', 'PDV_CAIXA_GERENCIAR', 'PDV_VENDER'], description: 'PDV (Caixa e Venda)' },
     { pattern: /^\/faturamento(?:\/.*)?$/, anyOf: ['FATURAMENTO_CONSULTAR', 'FATURAMENTO_PREPARAR', 'FATURAMENTO_CONFIRMAR', 'FATURAMENTO_CANCELAR'], description: 'Faturamento' },
