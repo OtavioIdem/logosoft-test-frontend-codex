@@ -294,7 +294,7 @@ export const PedidoVendaDetalhePage = ({ pedidoId }: { pedidoId?: string }) => {
             <ReasonDialog visible={cancelarVisible} title="Motivo do cancelamento" confirmLabel="Cancelar pedido" loading={mutations.cancelarMutation.isPending} onHide={() => setCancelarVisible(false)} onConfirm={cancelar} />
             <AprovarPedidoVendaDialog visible={aprovarVisible} loading={mutations.aprovarMutation.isPending} onHide={() => setAprovarVisible(false)} onSubmit={aprovar} />
             <FaturarPedidoVendaDialog visible={faturarVisible} loading={mutations.faturarMutation.isPending} onHide={() => setFaturarVisible(false)} onSubmit={faturar} />
-            <GerarNotaFiscalPedidoVendaDialog visible={gerarNotaFiscalVisible} loading={fiscalMutations.gerarNotaPedidoMutation.isPending} onHide={() => setGerarNotaFiscalVisible(false)} onSubmit={gerarNotaFiscal} pedidoVendaId={pedido?.id} />
+            <GerarNotaFiscalPedidoVendaDialog visible={gerarNotaFiscalVisible} loading={fiscalMutations.gerarNotaPedidoMutation.isPending} onHide={() => setGerarNotaFiscalVisible(false)} onSubmit={gerarNotaFiscal} pedidoVendaId={pedido?.id} escopoPedido={pedido ? { empresaId: pedido.empresaId, filialId: pedido.filialId ?? null } : undefined} />
         </>
     );
 };

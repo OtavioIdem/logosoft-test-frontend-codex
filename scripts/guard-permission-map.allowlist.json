@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "1.11.0a8b57.c1",
+  "version": "1.11.0a8b58",
   "status": "registro-fechado-monotonico",
   "contractDocument": "docs/backend-v1.23/CONTRATO-API-v1.23.md",
   "auditPolicy": {

@@ -40,6 +40,11 @@ describe('route permission rules', () => {
         expect(findRoutePermissionRule('/fiscal/inutilizacoes')?.anyOf).toEqual(['FISCAL_INUTILIZAR']);
     });
 
+    it('AC-14: protege nominalmente /fiscal/series pelas permissões de consulta ou gestão de séries', () => {
+        expect(findRoutePermissionRule('/fiscal/series')?.anyOf).toEqual(['FISCAL_SERIES_CONSULTAR', 'FISCAL_SERIES_GERENCIAR']);
+        expect(findRoutePermissionRule('/fiscal/series/55555555-5555-5555-5555-555555555555')?.anyOf).toEqual(['FISCAL_SERIES_CONSULTAR', 'FISCAL_SERIES_GERENCIAR']);
+    });
+
     // AC-7 (v1.11.0a8b57): FISCAL_REPROCESSAR entra no fim das listas atuais de /fiscal/notas e /fiscal;
     // as demais regras fiscais (inclusive inutilizações, já coberta acima) ficam intactas.
     it('acrescenta FISCAL_REPROCESSAR no fim de /fiscal/notas, preservando a lista atual', () => {

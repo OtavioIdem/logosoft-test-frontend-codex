@@ -1,3 +1,35 @@
+# v1.11.0a8b58
+
+## Séries fiscais: cadastro, vigência, numeração e uso na emissão (F3)
+
+Entrega a gestão de séries por empresa/filial e modelo fiscal, com criação, ampliação de faixa, encerramento de
+vigência, inativação definitiva e consulta de buracos de numeração. A emissão passa a oferecer as séries válidas no
+contexto da nota e preserva o campo textual quando o operador não tem as duas permissões de consulta necessárias.
+O painel de validação também direciona erros cadastrais D47-D54 para a nova tela.
+
+**Risco da fatia: `HIGH`** (numeração e emissão fiscal). Plano e evidências em
+`docs/fatias/v1.11.0a8b58-f3-series-fiscais.md`.
+
+### Seção operacional — leia antes do deploy
+
+1. **Risco de acesso: `NENHUM`.** A fatia não remove acesso existente. A rota e o menu aceitam
+   `FISCAL_SERIES_CONSULTAR` ou `FISCAL_SERIES_GERENCIAR`.
+2. **O combo de série só aparece com `FISCAL_SERIES_CONSULTAR` e `FISCAL_MODELOS_CONSULTAR`.** Sem uma delas, a nota
+   continua com o campo textual compatível com o fluxo anterior.
+3. **Inativar uma série é definitivo para aquele número.** A confirmação exige motivo e a série inativa não volta a
+   ser oferecida para emissão.
+4. **A consulta de buracos inclui notas em andamento.** Os números encontrados precisam ser avaliados antes de uma
+   inutilização; a ação de inutilizar continua exigindo `FISCAL_INUTILIZAR`.
+5. **A validação E2E completa do fluxo de emissão permanece condicionada à b61.** Esta fatia valida o contrato e a
+   integração da tela com APIs isoladas; não antecipa o backend futuro.
+
+### Testes e QA
+
+- Testes unitários e de componente cobrem contratos, permissões, filtros, diálogos, buracos, fallback textual e erros
+  cadastrais.
+- O E2E isolado cobre as sessões de permissão, payloads, resposta 204, recarga e integração com a nota fiscal.
+- O resultado final dos gates, build, duas rodadas de E2E e parecer de QA fica registrado no plano da fatia.
+
 # v1.11.0a8b57.c1
 
 ## O gate de guard volta a enxergar o menu: hierarquia pai-filho e menu contra regra de rota (D44, D45, D46)
