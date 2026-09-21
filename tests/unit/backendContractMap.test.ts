@@ -30,13 +30,14 @@ describe('backend contract map', () => {
         const dialog = read('features/produtos/components/ProdutoComplementoDialogs.tsx');
         const tests = read('tests/unit/produtosPayload.test.ts');
 
-        expect(types).toContain('codigoProdutoFornecedor?: string | null');
-        expect(schema).toContain('codigoProdutoFornecedor: nullableText');
+        expect(types).toContain('codigoFornecedor?: string | null');
+        expect(schema).toContain('codigoFornecedor: textRequired(\'Informe o código do fornecedor.\')');
         expect(dialog).toContain('Código do produto no fornecedor');
         expect(dialog).toContain('Number(item.status) === EntityStatus.Ativo');
-        expect(tests).toContain('codigoProdutoFornecedor');
+        expect(tests).toContain('codigoFornecedor');
 
         const requestType = types.match(/VincularFornecedorProdutoRequest\s*=\s*{[\s\S]*?};/)?.[0] ?? '';
+        expect(requestType).toContain('codigoFornecedor: string');
         expect(requestType).not.toContain('descricaoFornecedor');
     });
 

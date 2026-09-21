@@ -25,9 +25,9 @@ type FieldErrors = Record<string, string | undefined>;
 const initialValues: TransferenciaEstoqueFormValues = {
     empresaId: '',
     filialOrigemId: '',
-    localOrigemId: '',
+    localEstoqueOrigemId: '',
     filialDestinoId: '',
-    localDestinoId: '',
+    localEstoqueDestinoId: '',
     produtoId: '',
     quantidade: 0,
     motivo: ''
@@ -73,8 +73,8 @@ export const TransferenciaEstoquePage = () => {
                     <div className="field col-12 md:col-4"><label htmlFor="empresaTransferencia" className="font-medium">Empresa *</label><EmpresaSelect id="empresaTransferencia" value={textValue(values.empresaId) || null} onChange={(value) => update('empresaId', value ?? '')} /><FieldError message={errors.empresaId} /></div>
                     <div className="field col-12 md:col-4"><label htmlFor="filialOrigemId" className="font-medium">Filial origem *</label><FilialSelect id="filialOrigemId" empresaId={textValue(values.empresaId) || null} value={textValue(values.filialOrigemId) || null} disabled={!values.empresaId} onChange={(value) => update('filialOrigemId', value ?? '')} /><FieldError message={errors.filialOrigemId} /></div>
                     <div className="field col-12 md:col-4"><label htmlFor="filialDestinoId" className="font-medium">Filial destino *</label><FilialSelect id="filialDestinoId" empresaId={textValue(values.empresaId) || null} value={textValue(values.filialDestinoId) || null} disabled={!values.empresaId} onChange={(value) => update('filialDestinoId', value ?? '')} /><FieldError message={errors.filialDestinoId} /></div>
-                    <div className="field col-12 md:col-6"><label htmlFor="localOrigemId" className="font-medium">Local origem *</label><EntitySelect id="localOrigemId" entityName="local de origem" value={textValue(values.localOrigemId) || null} options={localOptions(locaisQuery.data ?? [])} loading={locaisQuery.isFetching} onChange={(value) => update('localOrigemId', value ?? '')} /><FieldError message={errors.localOrigemId} /></div>
-                    <div className="field col-12 md:col-6"><label htmlFor="localDestinoId" className="font-medium">Local destino *</label><EntitySelect id="localDestinoId" entityName="local de destino" value={textValue(values.localDestinoId) || null} options={localOptions(locaisQuery.data ?? [])} loading={locaisQuery.isFetching} onChange={(value) => update('localDestinoId', value ?? '')} /><FieldError message={errors.localDestinoId} /></div>
+                    <div className="field col-12 md:col-6"><label htmlFor="localEstoqueOrigemId" className="font-medium">Local origem *</label><EntitySelect id="localEstoqueOrigemId" entityName="local de origem" value={textValue(values.localEstoqueOrigemId) || null} options={localOptions(locaisQuery.data ?? [])} loading={locaisQuery.isFetching} onChange={(value) => update('localEstoqueOrigemId', value ?? '')} /><FieldError message={errors.localEstoqueOrigemId} /></div>
+                    <div className="field col-12 md:col-6"><label htmlFor="localEstoqueDestinoId" className="font-medium">Local destino *</label><EntitySelect id="localEstoqueDestinoId" entityName="local de destino" value={textValue(values.localEstoqueDestinoId) || null} options={localOptions(locaisQuery.data ?? [])} loading={locaisQuery.isFetching} onChange={(value) => update('localEstoqueDestinoId', value ?? '')} /><FieldError message={errors.localEstoqueDestinoId} /></div>
                     <div className="field col-12 md:col-8"><label htmlFor="produtoId" className="font-medium">Produto *</label><EntitySelect id="produtoId" entityName="produto" value={textValue(values.produtoId) || null} options={produtoOptions(produtosQuery.data ?? [])} loading={produtosQuery.isFetching} onChange={(value) => update('produtoId', value ?? '')} /><FieldError message={errors.produtoId} /></div>
                     <div className="field col-12 md:col-4"><label htmlFor="quantidadeTransferencia" className="font-medium">Quantidade *</label><QuantityInput id="quantidadeTransferencia" value={Number(values.quantidade ?? 0)} onChange={(value) => update('quantidade', value ?? 0)} /><FieldError message={errors.quantidade} /></div>
                     <div className="field col-12"><label htmlFor="motivoTransferencia" className="font-medium">Motivo *</label><InputTextarea id="motivoTransferencia" value={textValue(values.motivo)} rows={3} autoResize onChange={(event) => update('motivo', event.target.value)} /><FieldError message={errors.motivo} /></div>

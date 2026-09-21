@@ -472,7 +472,8 @@ export const MenuFixtureFRulePrecedence = () => {
       // (hierarquia.length é cada par pai-filho ou item isolado)
       // Número total deve refletir a contagem
       expect(result.hierarchy.length).toBeGreaterThan(0);
-      expect(itemsWithTo).toBe(84); // b58: +1 "Séries fiscais"
+      // b62: -1 "Bloqueios" removido — o item apontava para /estoque/bloqueios que só faz redirect('/estoque/avancado')
+      expect(itemsWithTo).toBe(83);
     });
 
     it('D46: nenhum item ou grupo do AppMenu.tsx atual declara mais de uma forma de permissão', () => {

@@ -87,10 +87,10 @@ export const ProdutosPage = () => {
                 if (values.id) {
                     await precoCustoMutation.mutateAsync({ id: produtoId, values: { precoVendaBase: values.precoVendaBase, custoReferencial: values.custoReferencial } });
                     if (hasPermission('PRODUTOS_DADOS_FISCAIS_GERENCIAR')) {
-                        await dadosFiscaisMutation.mutateAsync({ id: produtoId, values: { ncm: values.ncm, cest: values.cest, origemMercadoriaCodigo: values.origemMercadoriaCodigo, tipoItemFiscal: values.tipoItemFiscal, unidadeTributavelId: values.unidadeTributavelId, codigoFiscalExterno: values.codigoFiscalExterno } });
+                        await dadosFiscaisMutation.mutateAsync({ id: produtoId, values: { ncmCodigo: values.ncmCodigo, cestCodigo: values.cestCodigo, origemMercadoriaCodigo: values.origemMercadoriaCodigo, tipoItemFiscal: values.tipoItemFiscal, unidadeMedidaTributavelId: values.unidadeMedidaTributavelId, codigoFiscalExterno: values.codigoFiscalExterno } });
                     }
                 } else if (hasPermission('PRODUTOS_DADOS_FISCAIS_GERENCIAR')) {
-                    await dadosFiscaisMutation.mutateAsync({ id: produtoId, values: { ncm: values.ncm, cest: values.cest, origemMercadoriaCodigo: values.origemMercadoriaCodigo, tipoItemFiscal: values.tipoItemFiscal, unidadeTributavelId: values.unidadeTributavelId, codigoFiscalExterno: values.codigoFiscalExterno } });
+                    await dadosFiscaisMutation.mutateAsync({ id: produtoId, values: { ncmCodigo: values.ncmCodigo, cestCodigo: values.cestCodigo, origemMercadoriaCodigo: values.origemMercadoriaCodigo, tipoItemFiscal: values.tipoItemFiscal, unidadeMedidaTributavelId: values.unidadeMedidaTributavelId, codigoFiscalExterno: values.codigoFiscalExterno } });
                 }
 
                 setFormVisible(false);

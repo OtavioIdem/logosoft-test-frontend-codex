@@ -110,7 +110,7 @@ export const ColaboradoresPage = () => {
         setFilters((current) => ({ ...current, [name]: value === '' ? null : value }));
     };
 
-    const admitir = async (values: ColaboradorFormValues) => {
+    const admitir = async (values: ColaboradorFormValues & { pessoaId?: string | null }) => {
         await runWithToast(async () => { await admitirMutation.mutateAsync(values); setAdmitirVisible(false); }, { success: { summary: 'Colaborador admitido', detail: `${values.nome} adicionado.` }, error: { summary: 'Erro ao admitir colaborador' }, rethrow: true });
     };
     const desligar = async (values: DesligarColaboradorFormValues) => {

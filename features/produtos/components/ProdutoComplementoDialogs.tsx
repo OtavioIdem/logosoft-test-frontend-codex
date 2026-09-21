@@ -66,7 +66,7 @@ export const CodigoBarrasDialog = ({ visible, loading, onHide, onSubmit }: { vis
 };
 
 export const ProdutoFornecedorDialog = ({ visible, loading, fornecedores, onHide, onSubmit }: { visible: boolean; loading?: boolean; fornecedores: FornecedorResponse[]; onHide: () => void; onSubmit: (values: ProdutoFornecedorFormValues) => Promise<void> }) => {
-    const [values, setValues] = useState<ProdutoFornecedorFormValues>({ fornecedorId: '', codigoProdutoFornecedor: null, principal: true });
+    const [values, setValues] = useState<ProdutoFornecedorFormValues>({ fornecedorId: '', codigoFornecedor: '', principal: true });
     const [errors, setErrors] = useState<FieldErrors>({});
     const pessoasQuery = usePessoas({});
     const pessoaLabelMap = useMemo(() => new Map((pessoasQuery.data ?? []).map((pessoa) => [pessoa.id, pessoa.nomeFantasia ? `${pessoa.nomeRazaoSocial} • ${pessoa.nomeFantasia}` : pessoa.nomeRazaoSocial])), [pessoasQuery.data]);
@@ -75,7 +75,7 @@ export const ProdutoFornecedorDialog = ({ visible, loading, fornecedores, onHide
 
     useEffect(() => {
         if (visible) {
-            setValues({ fornecedorId: '', codigoProdutoFornecedor: null, principal: true });
+            setValues({ fornecedorId: '', codigoFornecedor: '', principal: true });
             setErrors({});
         }
     }, [visible]);
@@ -106,9 +106,9 @@ export const ProdutoFornecedorDialog = ({ visible, loading, fornecedores, onHide
                     <FieldError message={errors.fornecedorId} />
                 </div>
                 <div className="field col-12 md:col-6">
-                    <label htmlFor="codigoProdutoFornecedor" className="font-medium">Código do produto no fornecedor</label>
-                    <InputText id="codigoProdutoFornecedor" value={textValue(values.codigoProdutoFornecedor)} className={className('codigoProdutoFornecedor')} onChange={(event) => update('codigoProdutoFornecedor', event.target.value)} />
-                    <FieldError message={errors.codigoProdutoFornecedor} />
+                    <label htmlFor="codigoFornecedor" className="font-medium">Código do produto no fornecedor *</label>
+                    <InputText id="codigoFornecedor" value={textValue(values.codigoFornecedor)} className={className('codigoFornecedor')} onChange={(event) => update('codigoFornecedor', event.target.value)} />
+                    <FieldError message={errors.codigoFornecedor} />
                 </div>
                 <div className="field col-12 flex align-items-center gap-2">
                     <Checkbox inputId="principalFornecedor" checked={Boolean(values.principal)} onChange={(event) => update('principal', Boolean(event.checked))} />

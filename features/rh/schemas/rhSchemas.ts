@@ -28,6 +28,7 @@ export const admitirColaboradorSchema = z.object({
     cpf: textRequired('Informe o CPF.'),
     cargoId: requiredGuid('Cargo'),
     setorId: optionalGuid,
+    pessoaId: optionalGuid,
     jornadaId: optionalGuid,
     regime: z.nativeEnum(RegimeTrabalho),
     salarioBase: money('Salário base'),

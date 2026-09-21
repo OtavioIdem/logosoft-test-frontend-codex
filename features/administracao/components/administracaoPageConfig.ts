@@ -12,9 +12,11 @@ import {
     criarSetorSchema
 } from '@/features/administracao/schemas/administracaoSchemas';
 import { AdministracaoResourceKey } from '@/features/administracao/hooks/useAdministracaoResources';
+import { regimeTributarioOptions } from '@/features/administracao/components/administracaoLabels';
 
-export type AdministracaoFieldKind = 'text' | 'textarea' | 'number' | 'guid' | 'documento';
-export type AdministracaoFieldConfig = { name: string; label: string; kind: AdministracaoFieldKind; required?: boolean; helperText?: string; createOnly?: boolean; updateOnly?: boolean; disabledOnUpdate?: boolean; col?: string };
+export type AdministracaoFieldKind = 'text' | 'textarea' | 'number' | 'guid' | 'documento' | 'select' | 'checkbox';
+export type AdministracaoFieldOption = { label: string; value: number | string };
+export type AdministracaoFieldConfig = { name: string; label: string; kind: AdministracaoFieldKind; required?: boolean; helperText?: string; createOnly?: boolean; updateOnly?: boolean; disabledOnUpdate?: boolean; col?: string; options?: AdministracaoFieldOption[] };
 export type AdministracaoColumnConfig = { field: string; header: string; type?: 'text' | 'number' | 'status' | 'datetime' | 'document' };
 export type AdministracaoPageConfig = {
     resourceKey: AdministracaoResourceKey;
@@ -57,7 +59,9 @@ export const administracaoPageConfigs: Record<AdministracaoResourceKey, Administ
             { name: 'nomeFantasia', label: 'Nome fantasia', kind: 'text', col: 'col-12 md:col-6' },
             { name: 'documento', label: 'CNPJ/Documento', kind: 'documento', required: true, createOnly: true, helperText: 'Enviado apenas na criação. O backend valida CNPJ numérico ou alfanumérico.', col: 'col-12 md:col-4' },
             { name: 'inscricaoEstadual', label: 'Inscrição estadual', kind: 'text', col: 'col-12 md:col-4' },
-            { name: 'inscricaoMunicipal', label: 'Inscrição municipal', kind: 'text', col: 'col-12 md:col-4' }
+            { name: 'inscricaoMunicipal', label: 'Inscrição municipal', kind: 'text', col: 'col-12 md:col-4' },
+            { name: 'regimeTributario', label: 'Regime tributário', kind: 'select', required: true, options: regimeTributarioOptions, helperText: 'Enviado em toda gravação da empresa; o backend não mantém o regime anterior quando o campo falta.', col: 'col-12 md:col-6' },
+            { name: 'contribuinteIpi', label: 'Contribuinte de IPI', kind: 'checkbox', createOnly: true, helperText: 'Informado apenas na criação da empresa.', col: 'col-12 md:col-6' }
         ]
     },
     filiais: {

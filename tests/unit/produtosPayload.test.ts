@@ -59,25 +59,25 @@ describe('payloads de Produtos / Catálogo', () => {
         expect(() => buildAtualizarPrecoCustoProdutoPayload({ precoVendaBase: -1, custoReferencial: 10 })).toThrow('Preço de venda não pode ser negativo.');
     });
 
-    it('monta dados fiscais com enum numérico e unidade tributável null', () => {
-        expect(buildAtualizarDadosFiscaisProdutoPayload({ ncm: '01012100', cest: '', origemMercadoriaCodigo: '0', tipoItemFiscal: TipoItemFiscal.Mercadoria, unidadeTributavelId: '', codigoFiscalExterno: '' })).toEqual({
-            ncm: '01012100',
-            cest: null,
+    it('monta dados fiscais com NCM, CEST e unidade tributável conforme contrato', () => {
+        expect(buildAtualizarDadosFiscaisProdutoPayload({ ncmCodigo: '84713012', cestCodigo: '01048100', origemMercadoriaCodigo: '0', tipoItemFiscal: TipoItemFiscal.Mercadoria, unidadeMedidaTributavelId: unidadeMedidaId, codigoFiscalExterno: '' })).toEqual({
+            ncmCodigo: '84713012',
+            cestCodigo: '01048100',
             origemMercadoriaCodigo: '0',
             tipoItemFiscal: TipoItemFiscal.Mercadoria,
-            unidadeTributavelId: null,
+            unidadeMedidaTributavelId: unidadeMedidaId,
             codigoFiscalExterno: null
         });
     });
 
-    it('monta código de barras e vínculo com fornecedor', () => {
+    it('monta código de barras e vínculo com fornecedor conforme contrato', () => {
         expect(buildAdicionarCodigoBarrasProdutoPayload({ codigo: '7891234567895', descricao: '', principal: true })).toEqual({ codigo: '7891234567895', descricao: null, principal: true });
-        expect(buildVincularFornecedorProdutoPayload({ fornecedorId, codigoProdutoFornecedor: 'ABC-123', principal: true })).toEqual({ fornecedorId, codigoProdutoFornecedor: 'ABC-123', principal: true });
+        expect(buildVincularFornecedorProdutoPayload({ fornecedorId, codigoFornecedor: 'SUP-001', principal: true })).toEqual({ fornecedorId, codigoFornecedor: 'SUP-001', principal: true });
     });
 
     it('rejeita vínculo de fornecedor sem fornecedor operacional válido', () => {
-        expect(() => buildVincularFornecedorProdutoPayload({ fornecedorId: '', codigoProdutoFornecedor: 'ABC-123', principal: true })).toThrow('Fornecedor deve ser selecionado corretamente.');
-        expect(() => buildVincularFornecedorProdutoPayload({ fornecedorId: 'pessoa-001', codigoProdutoFornecedor: 'ABC-123', principal: true })).toThrow('Fornecedor deve ser selecionado corretamente.');
+        expect(() => buildVincularFornecedorProdutoPayload({ fornecedorId: '', codigoFornecedor: 'SUP-001', principal: true })).toThrow('Fornecedor deve ser selecionado corretamente.');
+        expect(() => buildVincularFornecedorProdutoPayload({ fornecedorId: 'pessoa-001', codigoFornecedor: 'SUP-001', principal: true })).toThrow('Fornecedor deve ser selecionado corretamente.');
     });
 
     it('monta unidade de medida e exige motivo na inativação', () => {

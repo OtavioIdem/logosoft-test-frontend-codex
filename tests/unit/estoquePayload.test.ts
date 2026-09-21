@@ -27,14 +27,14 @@ describe('estoque payloads', () => {
 
 
 
-    it('monta transferência com origem, destino, quantidade e motivo', () => {
-        const payload = buildTransferenciaEstoquePayload({ empresaId, filialOrigemId, localOrigemId: localEstoqueId, filialDestinoId, localDestinoId, produtoId, quantidade: 3, motivo: 'Reposição entre filiais' });
+    it('monta transferência com locais de origem/destino e origemModulo conforme contrato', () => {
+        const payload = buildTransferenciaEstoquePayload({ empresaId, filialOrigemId, localEstoqueOrigemId: localEstoqueId, filialDestinoId, localEstoqueDestinoId: localDestinoId, produtoId, quantidade: 3, motivo: 'Reposição entre filiais', origemModulo: 'ESTOQUE' });
 
-        expect(payload).toEqual({ empresaId, filialOrigemId, localOrigemId: localEstoqueId, filialDestinoId, localDestinoId, produtoId, quantidade: 3, motivo: 'Reposição entre filiais' });
+        expect(payload).toEqual({ empresaId, filialOrigemId, localEstoqueOrigemId: localEstoqueId, filialDestinoId, localEstoqueDestinoId: localDestinoId, produtoId, quantidade: 3, motivo: 'Reposição entre filiais', origemModulo: 'ESTOQUE' });
     });
 
     it('bloqueia transferência para o mesmo local da mesma filial', () => {
-        expect(() => buildTransferenciaEstoquePayload({ empresaId, filialOrigemId, localOrigemId: localEstoqueId, filialDestinoId: filialOrigemId, localDestinoId: localEstoqueId, produtoId, quantidade: 3, motivo: 'Mesmo local' })).toThrow('Destino deve ser diferente da origem.');
+        expect(() => buildTransferenciaEstoquePayload({ empresaId, filialOrigemId, localEstoqueOrigemId: localEstoqueId, filialDestinoId: filialOrigemId, localEstoqueDestinoId: localEstoqueId, produtoId, quantidade: 3, motivo: 'Mesmo local', origemModulo: 'ESTOQUE' })).toThrow('Destino deve ser diferente da origem.');
     });
 
     it('monta fechamento do inventário simples com motivo obrigatório', () => {

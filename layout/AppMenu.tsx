@@ -92,7 +92,6 @@ const AppMenu = () => {
                     { label: 'Saídas', icon: 'pi pi-fw pi-arrow-circle-up', to: '/estoque/saidas', permission: 'ESTOQUE_MOVIMENTAR' },
                     { label: 'Transferências', icon: 'pi pi-fw pi-send', to: '/estoque/transferencias', permission: 'ESTOQUE_MOVIMENTAR' },
                     { label: 'Ajustes', icon: 'pi pi-fw pi-sliders-h', to: '/estoque/ajustes', permission: 'ESTOQUE_MOVIMENTAR' },
-                    { label: 'Bloqueios', icon: 'pi pi-fw pi-lock', to: '/estoque/bloqueios', permission: 'ESTOQUE_MOVIMENTAR' },
                     { label: 'Reservas', icon: 'pi pi-fw pi-bookmark', to: '/estoque/reservas', anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_RESERVAR'] },
                     { label: 'Inventários', icon: 'pi pi-fw pi-clipboard', to: '/estoque/inventarios', anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_INVENTARIO_GERENCIAR'] },
                     { label: 'Estoque avançado', icon: 'pi pi-fw pi-sliders-v', to: '/estoque/avancado', anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_INVENTARIO_GERENCIAR', 'ESTOQUE_AJUSTAR', 'ESTOQUE_BLOQUEIO_GERENCIAR'] }

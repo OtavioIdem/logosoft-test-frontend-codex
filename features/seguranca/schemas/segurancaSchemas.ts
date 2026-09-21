@@ -15,11 +15,9 @@ const optionalGuidSchema = z
 export const criarUsuarioSegurancaSchema = z.object({
     nome: z.string().trim().min(3, 'Informe o nome com pelo menos 3 caracteres.'),
     email: z.string().trim().email('Informe um e-mail válido.'),
-    login: z.string().trim().optional().nullable(),
     senha: z.string().min(8, 'Informe uma senha com pelo menos 8 caracteres.'),
     empresaId: z.string().refine((value) => isValidGuid(value), 'Selecione uma empresa válida.'),
-    filialId: optionalGuidSchema,
-    gruposAcessoIds: z.array(z.string().refine((value) => isValidGuid(value), 'Grupo de acesso inválido.')).optional()
+    filialId: optionalGuidSchema
 });
 
 export const motivoSegurancaSchema = z.object({

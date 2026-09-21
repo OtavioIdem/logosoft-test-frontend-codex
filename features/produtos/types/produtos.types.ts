@@ -48,7 +48,6 @@ export type CodigoBarrasProdutoResponse = {
 export type ProdutoFornecedorResponse = {
     id?: Guid;
     fornecedorId: Guid;
-    codigoProdutoFornecedor?: string | null;
     principal: boolean;
     codigoFornecedor?: string | null;
     descricaoFornecedor?: string | null;
@@ -75,7 +74,7 @@ export type ProdutoResponse = {
     cest?: string | null;
     origemMercadoriaCodigo?: string | null;
     tipoItemFiscal?: TipoItemFiscal | number | null;
-    unidadeTributavelId?: Guid | null;
+    unidadeMedidaTributavelId?: Guid | null;
     codigoFiscalExterno?: string | null;
     observacao?: string | null;
     status: EntityStatus | number;
@@ -162,11 +161,11 @@ export type AtualizarPrecoCustoProdutoRequest = {
 };
 
 export type AtualizarDadosFiscaisProdutoRequest = {
-    ncm?: string | null;
-    cest?: string | null;
+    ncmCodigo?: string | null;
+    cestCodigo?: string | null;
     origemMercadoriaCodigo?: string | null;
     tipoItemFiscal?: TipoItemFiscal | number | null;
-    unidadeTributavelId?: Guid | null;
+    unidadeMedidaTributavelId?: Guid | null;
     codigoFiscalExterno?: string | null;
 };
 
@@ -178,7 +177,7 @@ export type AdicionarCodigoBarrasProdutoRequest = {
 
 export type VincularFornecedorProdutoRequest = {
     fornecedorId: Guid;
-    codigoProdutoFornecedor?: string | null;
+    codigoFornecedor: string;
     principal: boolean;
 };
 
