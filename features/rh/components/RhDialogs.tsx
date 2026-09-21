@@ -19,6 +19,10 @@ import { SelectOption } from '@/types/erp';
 import { useCargos } from '@/features/administracao/hooks/useAdministracaoResources';
 import { useSetoresOptions } from '@/features/administracao/hooks/useEmpresaFilialOptions';
 import { useJornadas } from '@/features/rh/hooks/useRhResources';
+import { usePessoas } from '@/features/pessoas/hooks/usePessoasResources';
+import { PessoaResponse } from '@/features/pessoas/types/pessoas.types';
+import { usePermissions } from '@/features/auth/hooks/usePermissions';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { admitirColaboradorSchema, criarBeneficioSchema, criarJornadaSchema, registrarEventoRhSchema } from '@/features/rh/schemas/rhSchemas';
 import {
     AfastamentoFormValues,
@@ -47,6 +51,12 @@ const buildErrors = (error: z.ZodError) => {
     return map;
 };
 
+const pessoaOptions = (pessoas: PessoaResponse[]) =>
+    pessoas.map((pessoa) => ({
+        label: [pessoa.nomeRazaoSocial, pessoa.nomeFantasia, pessoa.documento].filter(Boolean).join(' • '),
+        value: pessoa.id
+    }));
+
 const footer = (label: string, loading: boolean | undefined, onHide: () => void, onConfirm: () => void) => (
     <div className="flex justify-content-end gap-2">
         <Button type="button" label="Cancelar" icon="pi pi-times" severity="secondary" outlined onClick={onHide} disabled={loading} />
@@ -56,13 +66,17 @@ const footer = (label: string, loading: boolean | undefined, onHide: () => void,
 
 const initialColaborador = (): ColaboradorFormValues => ({ empresaId: '', filialId: null, matricula: '', nome: '', cpf: '', cargoId: '', setorId: null, jornadaId: null, regime: RegimeTrabalho.Clt, salarioBase: 0, dataAdmissao: null, dataNascimento: null, email: '', telefone: '' });
 
-export const ColaboradorFormDialog = ({ visible, loading, onHide, onSubmit }: { visible: boolean; loading?: boolean; onHide: () => void; onSubmit: (values: ColaboradorFormValues) => Promise<void> }) => {
+export const ColaboradorFormDialog = ({ visible, loading, onHide, onSubmit }: { visible: boolean; loading?: boolean; onHide: () => void; onSubmit: (values: ColaboradorFormValues & { pessoaId?: string | null }) => Promise<void> }) => {
     const [values, setValues] = useState<ColaboradorFormValues>(initialColaborador);
+    const [pessoaId, setPessoaId] = useState<string | null>(null);
+    const [pessoaSearch, setPessoaSearch] = useState('');
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     useEffect(() => {
         if (visible) {
             setValues(initialColaborador());
+            setPessoaId(null);
+            setPessoaSearch('');
             setErrors({});
         }
     }, [visible]);
@@ -73,18 +87,47 @@ export const ColaboradorFormDialog = ({ visible, loading, onHide, onSubmit }: { 
     const cargoOptions = useMemo<SelectOption<string>[]>(() => (cargosQuery.listQuery.data ?? []).map((cargo) => ({ label: String(cargo.nome ?? cargo.id), value: String(cargo.id) })), [cargosQuery.listQuery.data]);
     const jornadaOptions = useMemo<SelectOption<string>[]>(() => (jornadasQuery.data ?? []).map((jornada) => ({ label: jornada.nome, value: jornada.id })), [jornadasQuery.data]);
 
+    const { hasPermission } = usePermissions();
+    const podeConsultarPessoas = hasPermission('PESSOAS_CONSULTAR');
+    const pessoaSearchTerm = useDebouncedValue(pessoaSearch.trim());
+    const pessoasQuery = usePessoas({ empresaId: values.empresaId || null, filialId: values.filialId || null, termo: pessoaSearchTerm || null }, { enabled: Boolean(values.empresaId) && podeConsultarPessoas });
+    const pessoaSelectOptions = useMemo<SelectOption<string>[]>(() => pessoaOptions(pessoasQuery.data ?? []), [pessoasQuery.data]);
+    const pessoaEmptyMessage = !podeConsultarPessoas
+        ? 'Consulta de pessoas indisponível: seu usuário não possui PESSOAS_CONSULTAR.'
+        : pessoasQuery.isError
+            ? 'Não foi possível carregar as pessoas agora. Tente novamente.'
+            : 'Nenhuma pessoa encontrada para esta empresa.';
+    const pessoaHint = !values.empresaId
+        ? 'Selecione uma empresa para buscar pessoas.'
+        : !podeConsultarPessoas
+            ? 'Seu usuário não possui PESSOAS_CONSULTAR; admissão segue sem vínculo de Pessoa.'
+            : 'Opcional; liga o colaborador a uma Pessoa já cadastrada nesta empresa.';
+
     const update = (name: keyof ColaboradorFormValues, value: unknown) => {
         setValues((current) => ({ ...current, [name]: value }));
         setErrors((current) => ({ ...current, [name]: '' }));
     };
 
+    const changeEmpresa = (value: string | null) => {
+        update('empresaId', value);
+        setPessoaId(null);
+        setPessoaSearch('');
+    };
+
+    const changeFilial = (value: string | null) => {
+        update('filialId', value);
+        setPessoaId(null);
+        setPessoaSearch('');
+    };
+
     const submit = async () => {
-        const parsed = admitirColaboradorSchema.safeParse(values);
+        const payload = { ...values, pessoaId };
+        const parsed = admitirColaboradorSchema.safeParse(payload);
         if (!parsed.success) {
             setErrors(buildErrors(parsed.error));
             return;
         }
-        await onSubmit(values);
+        await onSubmit(payload);
     };
 
     const invalid = (field: string) => classNames({ 'p-invalid': errors[field] });
@@ -92,7 +135,7 @@ export const ColaboradorFormDialog = ({ visible, loading, onHide, onSubmit }: { 
     return (
         <Dialog header="Admitir colaborador" visible={visible} modal style={{ width: 'min(60rem, 98vw)' }} footer={footer('Admitir', loading, onHide, submit)} onHide={onHide}>
             <FormGrid>
-                <EmpresaFilialFields empresaId={values.empresaId || null} filialId={values.filialId || null} empresaError={errors.empresaId} filialError={errors.filialId} empresaCol="col-12 md:col-6" filialCol="col-12 md:col-6" onEmpresaChange={(value) => update('empresaId', value)} onFilialChange={(value) => update('filialId', value)} />
+                <EmpresaFilialFields empresaId={values.empresaId || null} filialId={values.filialId || null} empresaError={errors.empresaId} filialError={errors.filialId} empresaCol="col-12 md:col-6" filialCol="col-12 md:col-6" onEmpresaChange={changeEmpresa} onFilialChange={changeFilial} />
                 <div className="field col-6 md:col-3">
                     <label htmlFor="colMatricula" className="font-medium">Matrícula *</label>
                     <InputText id="colMatricula" value={values.matricula} className={invalid('matricula')} onChange={(event) => update('matricula', event.target.value)} />
@@ -116,6 +159,11 @@ export const ColaboradorFormDialog = ({ visible, loading, onHide, onSubmit }: { 
                 <div className="field col-12 md:col-4">
                     <label htmlFor="colSetor" className="font-medium">Setor</label>
                     <EntitySelect id="colSetor" entityName="setor" value={values.setorId ?? null} options={setoresQuery.options} loading={setoresQuery.isFetching} onChange={(value) => update('setorId', value)} />
+                </div>
+                <div className="field col-12 md:col-4">
+                    <label htmlFor="colPessoa" className="font-medium">Pessoa vinculada</label>
+                    <EntitySelect id="colPessoa" entityName="pessoa" value={pessoaId} options={pessoaSelectOptions} disabled={!values.empresaId || !podeConsultarPessoas} loading={pessoasQuery.isFetching} emptyMessage={pessoaEmptyMessage} onSearch={setPessoaSearch} onChange={setPessoaId} />
+                    <small className="text-color-secondary">{pessoaHint}</small>
                 </div>
                 <div className="field col-12 md:col-4">
                     <label htmlFor="colJornada" className="font-medium">Jornada</label>

@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ZodError, ZodType } from 'zod';
 import { Button } from 'primereact/button';
+import { Checkbox } from 'primereact/checkbox';
 import { Dialog } from 'primereact/dialog';
+import { Dropdown } from 'primereact/dropdown';
 import { InputNumber } from 'primereact/inputnumber';
 import { InputText } from 'primereact/inputtext';
 import { InputTextarea } from 'primereact/inputtextarea';
@@ -39,6 +41,16 @@ const buildInitialValues = (fields: AdministracaoFieldConfig[], record?: Record<
         }
 
         if (field.updateOnly && !record) {
+            return acc;
+        }
+
+        if (field.kind === 'checkbox') {
+            acc[field.name] = record?.[field.name] ?? false;
+            return acc;
+        }
+
+        if (field.kind === 'select') {
+            acc[field.name] = record?.[field.name] ?? (field.options?.[0]?.value ?? '');
             return acc;
         }
 
@@ -106,6 +118,14 @@ export const AdministracaoFormDialog = ({ visible, loading, title, fields, schem
 
         if (field.kind === 'documento') {
             return <CnpjInput id={field.name} value={getStringValue(value)} disabled={disabled} onChange={(nextValue) => updateField(field.name, nextValue)} />;
+        }
+
+        if (field.kind === 'checkbox') {
+            return <Checkbox inputId={field.name} checked={Boolean(value)} disabled={disabled} onChange={(event) => updateField(field.name, Boolean(event.checked))} />;
+        }
+
+        if (field.kind === 'select') {
+            return <Dropdown id={field.name} value={value ?? null} options={field.options ?? []} className={commonClassName} disabled={disabled} onChange={(event) => updateField(field.name, event.value)} />;
         }
 
         if (field.kind === 'guid' && field.name === 'empresaId') {

@@ -91,6 +91,20 @@
                 color: var(--orange-600);
             }
         }
+
+        // Severidade destrutiva do logout (AC-3): mesmo padrão de botão-ícone dos demais itens do
+        // topbar, só recolorido — não é um Button do PrimeReact para não quebrar a grade circular de
+        // 3rem que todo item da barra segue. Só a cor muda (igual ao modificador de atenção acima);
+        // `--red-50` do tema Lara é o mesmo tom quase-branco no claro e no escuro, então um fundo de
+        // hover nele ficaria ilegível no tema escuro — por isso o hover mantém o
+        // `--surface-hover` padrão do botão e só escurece o vermelho.
+        .layout-topbar-button--danger {
+            color: var(--red-500);
+
+            &:hover {
+                color: var(--red-600);
+            }
+        }
     }
 
     // Centralizado em relação ao topbar inteiro, e não ao espaço que sobra entre logo e ações — por isso

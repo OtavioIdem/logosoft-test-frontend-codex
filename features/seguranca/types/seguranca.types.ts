@@ -57,21 +57,17 @@ export type UsuarioResponse = {
 export type CriarUsuarioRequest = {
     nome: string;
     email: string;
-    login: string;
     senha: string;
     empresaId: Guid;
     filialId: Guid | null;
-    gruposAcessoIds?: Guid[];
 };
 
 export type UsuarioFormValues = {
     nome: string;
     email: string;
-    login?: string | null;
     senha: string;
     empresaId: string;
     filialId?: string | null;
-    gruposAcessoIds?: string[];
 };
 
 export type UsuarioMotivoRequest = {

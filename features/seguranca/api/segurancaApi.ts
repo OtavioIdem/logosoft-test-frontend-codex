@@ -49,18 +49,14 @@ export const buildCriarUsuarioPayload = (values: UsuarioFormValues): CriarUsuari
         throw new Error('Informe uma empresa válida para criar o usuário.');
     }
 
-    const gruposAcessoIds = (values.gruposAcessoIds ?? []).map((value) => normalizeGuidOrNull(value)).filter((value): value is string => Boolean(value));
     const email = values.email.trim();
-    const login = values.login?.trim() || email;
 
     return sanitizePayload({
         nome: values.nome.trim(),
         email,
-        login,
         senha: values.senha,
         empresaId,
-        filialId: normalizeGuidOrNull(values.filialId) ?? null,
-        gruposAcessoIds: gruposAcessoIds.length ? gruposAcessoIds : undefined
+        filialId: normalizeGuidOrNull(values.filialId) ?? null
     }) as CriarUsuarioRequest;
 };
 

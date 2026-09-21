@@ -1,25 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { buildAtualizarCargoPayload, buildCriarCargoPayload, buildCriarEmpresaPayload, buildCriarSetorPayload } from '@/features/administracao/api/administracaoApi';
+import { buildAtualizarCargoPayload, buildAtualizarEmpresaPayload, buildCriarCargoPayload, buildCriarEmpresaPayload, buildCriarSetorPayload } from '@/features/administracao/api/administracaoApi';
+import { RegimeTributario } from '@/features/administracao/types/administracao.types';
 
 const empresaId = '11111111-1111-1111-1111-111111111111';
 const filialId = '22222222-2222-2222-2222-222222222222';
 
 describe('administracao payload builders', () => {
-    it('monta payload de empresa conforme contrato, preservando documento alfanumérico', () => {
+    it('monta criar empresa conforme contrato com regime tributário e IPI', () => {
         expect(
             buildCriarEmpresaPayload({
                 razaoSocial: 'Logosoft Tecnologia LTDA',
                 nomeFantasia: 'Logosoft',
                 documento: '12ABC6780001DE',
                 inscricaoEstadual: '',
-                inscricaoMunicipal: null
+                inscricaoMunicipal: null,
+                regimeTributario: RegimeTributario.SimplesNacional,
+                contribuinteIpi: true
             })
         ).toEqual({
             razaoSocial: 'Logosoft Tecnologia LTDA',
             nomeFantasia: 'Logosoft',
             documento: '12ABC6780001DE',
             inscricaoEstadual: null,
-            inscricaoMunicipal: null
+            inscricaoMunicipal: null,
+            regimeTributario: RegimeTributario.SimplesNacional,
+            contribuinteIpi: true
         });
     });
 
@@ -43,5 +48,18 @@ describe('administracao payload builders', () => {
             descricao: null,
             nivelHierarquico: 10
         });
+    });
+
+    it('envia regimeTributario ao atualizar empresa (não reescreve com default)', () => {
+        // ACH-1: regimeTributario é obrigatório tanto em CREATE quanto em UPDATE
+        // para evitar que edição de razão social reescreva o regime com default
+        const payload = buildAtualizarEmpresaPayload({
+            razaoSocial: 'Nova Razão Social',
+            regimeTributario: RegimeTributario.LucroPresumido,
+            inscricaoEstadual: null,
+            inscricaoMunicipal: null
+        });
+        expect(payload).toHaveProperty('regimeTributario');
+        expect(payload.regimeTributario).toBe(RegimeTributario.LucroPresumido);
     });
 });

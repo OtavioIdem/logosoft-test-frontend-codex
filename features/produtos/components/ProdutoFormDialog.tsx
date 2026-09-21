@@ -55,11 +55,11 @@ const buildInitialValues = (record?: ProdutoResponse | null): ProdutoFormValues 
               controlaQualidade: record.controlaQualidade,
               permiteVenda: record.permiteVenda,
               permiteCompra: record.permiteCompra,
-              ncm: record.ncm,
-              cest: record.cest,
+              ncmCodigo: record.ncm,
+              cestCodigo: record.cest,
               origemMercadoriaCodigo: record.origemMercadoriaCodigo,
               tipoItemFiscal: record.tipoItemFiscal === null || record.tipoItemFiscal === undefined ? null : Number(record.tipoItemFiscal),
-              unidadeTributavelId: record.unidadeTributavelId,
+              unidadeMedidaTributavelId: record.unidadeMedidaTributavelId,
               codigoFiscalExterno: record.codigoFiscalExterno,
               observacao: record.observacao
           }
@@ -79,11 +79,11 @@ const buildInitialValues = (record?: ProdutoResponse | null): ProdutoFormValues 
               controlaQualidade: false,
               permiteVenda: true,
               permiteCompra: true,
-              ncm: null,
-              cest: null,
+              ncmCodigo: null,
+              cestCodigo: null,
               origemMercadoriaCodigo: null,
               tipoItemFiscal: TipoItemFiscal.Mercadoria,
-              unidadeTributavelId: null,
+              unidadeMedidaTributavelId: null,
               codigoFiscalExterno: null,
               observacao: null
           };
@@ -243,14 +243,14 @@ export const ProdutoFormDialog = ({
                         <Message severity="info" className="w-full mb-3" text="Campos fiscais são parametrizáveis. O backend e a validação fiscal oficial continuam sendo a fonte final." />
                         <FormGrid>
                             <div className="field col-12 md:col-3">
-                                <label htmlFor="ncm" className="font-medium">NCM</label>
-                                <InputText id="ncm" value={textValue(values.ncm)} className={className('ncm')} onChange={(event) => update('ncm', event.target.value)} />
-                                <FieldError message={errors.ncm} />
+                                <label htmlFor="ncmCodigo" className="font-medium">NCM</label>
+                                <InputText id="ncmCodigo" value={textValue(values.ncmCodigo)} className={className('ncmCodigo')} onChange={(event) => update('ncmCodigo', event.target.value)} />
+                                <FieldError message={errors.ncmCodigo} />
                             </div>
                             <div className="field col-12 md:col-3">
-                                <label htmlFor="cest" className="font-medium">CEST</label>
-                                <InputText id="cest" value={textValue(values.cest)} className={className('cest')} onChange={(event) => update('cest', event.target.value)} />
-                                <FieldError message={errors.cest} />
+                                <label htmlFor="cestCodigo" className="font-medium">CEST</label>
+                                <InputText id="cestCodigo" value={textValue(values.cestCodigo)} className={className('cestCodigo')} onChange={(event) => update('cestCodigo', event.target.value)} />
+                                <FieldError message={errors.cestCodigo} />
                             </div>
                             <div className="field col-12 md:col-3">
                                 <label htmlFor="origemMercadoriaCodigo" className="font-medium">Origem</label>
@@ -263,9 +263,9 @@ export const ProdutoFormDialog = ({
                                 <FieldError message={errors.tipoItemFiscal} />
                             </div>
                             <div className="field col-12 md:col-6">
-                                <label htmlFor="unidadeTributavelId" className="font-medium">Unidade tributável</label>
-                                <EntitySelect id="unidadeTributavelId" entityName="unidade tributável" value={textValue(values.unidadeTributavelId) || null} options={unidadeOptions} onChange={(value) => update('unidadeTributavelId', value)} />
-                                <FieldError message={errors.unidadeTributavelId} />
+                                <label htmlFor="unidadeMedidaTributavelId" className="font-medium">Unidade tributável</label>
+                                <EntitySelect id="unidadeMedidaTributavelId" entityName="unidade tributável" value={textValue(values.unidadeMedidaTributavelId) || null} options={unidadeOptions} onChange={(value) => update('unidadeMedidaTributavelId', value)} />
+                                <FieldError message={errors.unidadeMedidaTributavelId} />
                             </div>
                             <div className="field col-12 md:col-6">
                                 <label htmlFor="codigoFiscalExterno" className="font-medium">Código fiscal externo</label>

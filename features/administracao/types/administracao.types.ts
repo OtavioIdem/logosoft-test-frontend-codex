@@ -1,5 +1,17 @@
 import { BaseOperationalRecord, CentroCusto, Cargo, Empresa, Filial, Guid, Setor } from '@/types/erp';
 
+// RegimeTributario( SimplesNacional, LucroPresumido, LucroReal ) — o JSON trafega
+// número: src/Erp.Api/Program.cs não registra JsonStringEnumConverter e o enum em
+// src/Erp.Domain/Administration/RegimeTributario.cs não tem [JsonConverter], então
+// System.Text.Json serializa/desserializa pela numeração default do C# (0, 1, 2).
+// A coluna character varying de erp.empresas."RegimeTributario" é HasConversion<string>()
+// do EF em EmpresaConfiguration.cs — conversor de persistência, não forma de wire.
+export enum RegimeTributario {
+    SimplesNacional = 0,
+    LucroPresumido = 1,
+    LucroReal = 2
+}
+
 export type AdministracaoListQuery = {
     empresaId?: Guid | null;
     filialId?: Guid | null;
@@ -14,8 +26,8 @@ export type SetorResponse = Setor;
 export type CargoResponse = Cargo;
 export type CentroCustoResponse = CentroCusto;
 
-export type CriarEmpresaRequest = { razaoSocial: string; nomeFantasia?: string | null; documento: string; inscricaoEstadual?: string | null; inscricaoMunicipal?: string | null };
-export type AtualizarEmpresaRequest = { razaoSocial: string; nomeFantasia?: string | null; inscricaoEstadual?: string | null; inscricaoMunicipal?: string | null };
+export type CriarEmpresaRequest = { razaoSocial: string; nomeFantasia?: string | null; documento: string; inscricaoEstadual?: string | null; inscricaoMunicipal?: string | null; regimeTributario: RegimeTributario; contribuinteIpi: boolean };
+export type AtualizarEmpresaRequest = { razaoSocial: string; nomeFantasia?: string | null; inscricaoEstadual?: string | null; inscricaoMunicipal?: string | null; regimeTributario: RegimeTributario };
 export type CriarFilialRequest = { empresaId: Guid; nome: string; documento: string; inscricaoEstadual?: string | null; inscricaoMunicipal?: string | null };
 export type AtualizarFilialRequest = { nome: string; inscricaoEstadual?: string | null; inscricaoMunicipal?: string | null };
 export type CriarSetorRequest = { empresaId: Guid; filialId?: Guid | null; nome: string; descricao?: string | null };

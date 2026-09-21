@@ -95,11 +95,11 @@ export const atualizarPrecoCustoProdutoSchema = z.object({
 });
 
 export const atualizarDadosFiscaisProdutoSchema = z.object({
-    ncm: nullableText,
-    cest: nullableText,
+    ncmCodigo: nullableText,
+    cestCodigo: nullableText,
     origemMercadoriaCodigo: nullableText,
     tipoItemFiscal: z.union([z.nativeEnum(TipoItemFiscal), z.null(), z.undefined()]).transform((value) => value ?? null),
-    unidadeTributavelId: optionalGuid,
+    unidadeMedidaTributavelId: optionalGuid,
     codigoFiscalExterno: nullableText
 });
 
@@ -111,6 +111,6 @@ export const adicionarCodigoBarrasProdutoSchema = z.object({
 
 export const vincularFornecedorProdutoSchema = z.object({
     fornecedorId: requiredGuid('Fornecedor'),
-    codigoProdutoFornecedor: nullableText,
+    codigoFornecedor: textRequired('Informe o código do fornecedor.'),
     principal: z.boolean().default(false)
 });
