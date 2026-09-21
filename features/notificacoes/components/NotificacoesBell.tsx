@@ -4,12 +4,16 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Badge } from 'primereact/badge';
 import { Button } from 'primereact/button';
+import { Message } from 'primereact/message';
 import { OverlayPanel } from 'primereact/overlaypanel';
 import { Tag } from 'primereact/tag';
+import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { useAuth } from '@/features/auth/hooks/useAuth';
 import { useContagemNaoLidas, useNotificacoes, useNotificacoesMutations } from '@/features/notificacoes/hooks/useNotificacoesResources';
 import { NotificacaoResponse, SeveridadeNotificacao, StatusNotificacao } from '@/features/notificacoes/types/notificacoes.types';
+import { mapApiError } from '@/lib/http/apiError';
+import { ApiError } from '@/types/erp';
 
 const severidadeInfo = (severidade: number): { label: string; severity: 'info' | 'success' | 'warning' | 'danger'; icon: string } => {
     switch (Number(severidade)) {
@@ -35,6 +39,7 @@ export const NotificacoesBell = () => {
     const { user } = useAuth();
     const overlayRef = useRef<OverlayPanel>(null);
     const [aberto, setAberto] = useState(false);
+    const [erroPorItem, setErroPorItem] = useState<Record<string, ApiError>>({});
 
     const scope = { empresaId: user?.empresaId ?? null, filialId: user?.filialId ?? null };
     const podeConsultar = hasPermission('NOTIFICACOES_CONSULTAR');
@@ -50,14 +55,25 @@ export const NotificacoesBell = () => {
     const notificacoes = listaQuery.data?.items ?? [];
 
     const abrirNotificacao = async (notificacao: NotificacaoResponse) => {
-        try {
-            if (Number(notificacao.situacao) === StatusNotificacao.NaoLida) {
+        if (Number(notificacao.situacao) === StatusNotificacao.NaoLida) {
+            try {
                 await marcarLidaMutation.mutateAsync(notificacao.id);
+            } catch (error) {
+                // Falha ao marcar como lida não pode fechar o painel nem remover o item da
+                // lista: o operador precisa ver que a notificação continua pendente.
+                setErroPorItem((prev) => ({ ...prev, [notificacao.id]: mapApiError(error) }));
+                return;
             }
-        } finally {
-            overlayRef.current?.hide();
-            if (notificacao.acaoUrl) router.push(notificacao.acaoUrl);
         }
+
+        setErroPorItem((prev) => {
+            if (!(notificacao.id in prev)) return prev;
+            const resto = { ...prev };
+            delete resto[notificacao.id];
+            return resto;
+        });
+        overlayRef.current?.hide();
+        if (notificacao.acaoUrl) router.push(notificacao.acaoUrl);
     };
 
     return (
@@ -74,7 +90,16 @@ export const NotificacoesBell = () => {
                 <span className="layout-topbar-button-label">Notificações</span>
             </button>
 
-            <OverlayPanel ref={overlayRef} onShow={() => setAberto(true)} onHide={() => setAberto(false)} style={{ width: 'min(28rem, 96vw)' }} className="notificacoes-overlay">
+            <OverlayPanel
+                ref={overlayRef}
+                onShow={() => setAberto(true)}
+                onHide={() => {
+                    setAberto(false);
+                    setErroPorItem({});
+                }}
+                style={{ width: 'min(28rem, 96vw)' }}
+                className="notificacoes-overlay"
+            >
                 <div className="flex align-items-center justify-content-between mb-2">
                     <span className="font-semibold">Notificações não lidas</span>
                     <Button
@@ -89,11 +114,15 @@ export const NotificacoesBell = () => {
                 </div>
 
                 {listaQuery.isLoading ? <p className="text-color-secondary text-sm my-3">Carregando…</p> : null}
-                {!listaQuery.isLoading && notificacoes.length === 0 ? <p className="text-color-secondary text-sm my-3">Nenhuma notificação não lida.</p> : null}
+                {listaQuery.isError ? <ApiErrorPanel error={mapApiError(listaQuery.error)} title="Não foi possível carregar as notificações." /> : null}
+                {!listaQuery.isLoading && !listaQuery.isError && notificacoes.length === 0 ? (
+                    <p className="text-color-secondary text-sm my-3">Nenhuma notificação não lida.</p>
+                ) : null}
 
                 <ul className="list-none p-0 m-0" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
                     {notificacoes.map((notificacao) => {
                         const info = severidadeInfo(notificacao.severidade);
+                        const erroItem = erroPorItem[notificacao.id];
                         return (
                             <li key={notificacao.id} className="border-bottom-1 surface-border py-2">
                                 <button type="button" className="p-link w-full text-left flex gap-2 align-items-start" onClick={() => abrirNotificacao(notificacao)}>
@@ -110,6 +139,13 @@ export const NotificacoesBell = () => {
                                         </span>
                                     </span>
                                 </button>
+                                {erroItem ? (
+                                    <Message
+                                        severity="error"
+                                        className="w-full mt-1"
+                                        text={erroItem.message || 'Não foi possível marcar como lida. Tente novamente.'}
+                                    />
+                                ) : null}
                             </li>
                         );
                     })}

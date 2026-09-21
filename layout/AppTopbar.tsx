@@ -10,6 +10,7 @@ import { AppTopbarRef } from '@/types';
 import { LayoutContext } from './context/layoutcontext';
 import { usePaginaAtual } from './context/pageheadercontext';
 import { useAuth } from '@/features/auth/hooks/useAuth';
+import { ProfilePanel } from '@/features/auth/components/ProfilePanel';
 import { NotificacoesBell } from '@/features/notificacoes/components/NotificacoesBell';
 import { OrganizationalContextSelector } from '@/components/organizational/OrganizationalContextSelector';
 
@@ -17,7 +18,7 @@ const AppTopbar = forwardRef<AppTopbarRef>((_, ref) => {
     const { layoutConfig, layoutState, setLayoutConfig, onMenuToggle, showProfileSidebar } = useContext(LayoutContext);
     const { changeTheme } = useContext(PrimeReactContext);
     const pagina = usePaginaAtual();
-    const { user, logout } = useAuth();
+    const { logout } = useAuth();
     const menubuttonRef = useRef<HTMLButtonElement>(null);
     const topbarmenuRef = useRef<HTMLDivElement>(null);
     const topbarmenubuttonRef = useRef<HTMLButtonElement>(null);
@@ -79,11 +80,8 @@ const AppTopbar = forwardRef<AppTopbarRef>((_, ref) => {
                     <i className={layoutConfig.colorScheme === 'light' ? 'pi pi-moon' : 'pi pi-sun'}></i>
                     <span className="layout-topbar-button-label">{layoutConfig.colorScheme === 'light' ? 'Tema escuro' : 'Tema claro'}</span>
                 </button>
-                <button type="button" className="p-link layout-topbar-button" aria-label="Perfil do usuário">
-                    <i className="pi pi-user"></i>
-                    <span className="layout-topbar-button-label">{user?.nome ?? 'Perfil'}</span>
-                </button>
-                <button type="button" className="p-link layout-topbar-button" onClick={logout} aria-label="Sair da aplicação">
+                <ProfilePanel />
+                <button type="button" className="p-link layout-topbar-button layout-topbar-button--danger" onClick={logout} aria-label="Sair da aplicação">
                     <i className="pi pi-sign-out"></i>
                     <span className="layout-topbar-button-label">Sair</span>
                 </button>
