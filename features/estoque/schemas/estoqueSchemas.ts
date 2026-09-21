@@ -52,13 +52,14 @@ export const ajusteEstoqueSchema = z.object({
 export const transferenciaEstoqueSchema = z.object({
     empresaId: requiredGuid('Empresa'),
     filialOrigemId: requiredGuid('Filial de origem'),
-    localOrigemId: requiredGuid('Local de origem'),
+    localEstoqueOrigemId: requiredGuid('Local de origem'),
     filialDestinoId: requiredGuid('Filial de destino'),
-    localDestinoId: requiredGuid('Local de destino'),
+    localEstoqueDestinoId: requiredGuid('Local de destino'),
     produtoId: requiredGuid('Produto'),
     quantidade,
+    origemModulo: requiredText('Origem', 2).default('ESTOQUE'),
     motivo
-}).refine((values) => values.localOrigemId !== values.localDestinoId || values.filialOrigemId !== values.filialDestinoId, { path: ['localDestinoId'], message: 'Destino deve ser diferente da origem.' });
+}).refine((values) => values.localEstoqueOrigemId !== values.localEstoqueDestinoId || values.filialOrigemId !== values.filialDestinoId, { path: ['localEstoqueDestinoId'], message: 'Destino deve ser diferente da origem.' });
 
 export const criarBloqueioEstoqueSchema = z.object({
     empresaId: requiredGuid('Empresa'),

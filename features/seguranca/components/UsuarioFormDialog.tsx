@@ -5,7 +5,7 @@ import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Button } from 'primereact/button';
 import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
-import { MultiSelect } from 'primereact/multiselect';
+import { Message } from 'primereact/message';
 import { Password } from 'primereact/password';
 import { classNames } from 'primereact/utils';
 import { FieldError } from '@/components/forms/FieldError';
@@ -17,12 +17,14 @@ import { criarUsuarioSegurancaSchema } from '@/features/seguranca/schemas/segura
 type UsuarioFormDialogProps = {
     visible: boolean;
     loading?: boolean;
+    // Aceito por compatibilidade com o chamador (UsuariosPage.tsx); a criação não vincula mais
+    // grupo — o vínculo é feito depois, pela ação "Grupos" (D55).
     grupos?: GrupoAcessoResponse[];
     onHide: () => void;
     onSubmit: (values: UsuarioFormValues) => Promise<void>;
 };
 
-export const UsuarioFormDialog = ({ visible, loading, grupos = [], onHide, onSubmit }: UsuarioFormDialogProps) => {
+export const UsuarioFormDialog = ({ visible, loading, onHide, onSubmit }: UsuarioFormDialogProps) => {
     const {
         control,
         handleSubmit,
@@ -33,16 +35,13 @@ export const UsuarioFormDialog = ({ visible, loading, grupos = [], onHide, onSub
         defaultValues: {
             nome: '',
             email: '',
-            login: '',
             senha: '',
             empresaId: '',
-            filialId: '',
-            gruposAcessoIds: []
+            filialId: ''
         }
     });
 
     const empresaId = useWatch({ control, name: 'empresaId' });
-    const grupoOptions = grupos.filter((grupo) => grupo.ativo).map((grupo) => ({ label: grupo.nome, value: grupo.id }));
 
     const submit = async (values: UsuarioFormValues) => {
         await onSubmit(values);
@@ -72,13 +71,6 @@ export const UsuarioFormDialog = ({ visible, loading, grupos = [], onHide, onSub
                 </div>
 
                 <div className="field col-12 md:col-6">
-                    <label htmlFor="login" className="font-medium">Login</label>
-                    <Controller name="login" control={control} render={({ field }) => <InputText {...field} value={field.value ?? ''} id="login" className={classNames({ 'p-invalid': errors.login })} />} />
-                    <small className="text-color-secondary">Opcional. Se vazio, o e-mail será usado como login.</small>
-                    <FieldError message={errors.login?.message} />
-                </div>
-
-                <div className="field col-12 md:col-6">
                     <label htmlFor="senha" className="font-medium">Senha inicial</label>
                     <Controller name="senha" control={control} render={({ field }) => <Password {...field} inputId="senha" id="senha-wrapper" inputClassName="w-full" className={classNames('w-full', { 'p-invalid': errors.senha })} feedback toggleMask />} />
                     <FieldError message={errors.senha?.message} />
@@ -98,26 +90,7 @@ export const UsuarioFormDialog = ({ visible, loading, grupos = [], onHide, onSub
                 </div>
 
                 <div className="field col-12">
-                    <label htmlFor="gruposAcessoIds" className="font-medium">Grupos de acesso</label>
-                    <Controller
-                        name="gruposAcessoIds"
-                        control={control}
-                        render={({ field }) => (
-                            <MultiSelect
-                                inputId="gruposAcessoIds"
-                                value={field.value ?? []}
-                                options={grupoOptions}
-                                optionLabel="label"
-                                optionValue="value"
-                                display="chip"
-                                placeholder="Selecione os grupos"
-                                className={classNames('w-full', { 'p-invalid': errors.gruposAcessoIds })}
-                                onChange={(event) => field.onChange(event.value ?? [])}
-                            />
-                        )}
-                    />
-                    <small className="text-color-secondary">Opcional. O vínculo também pode ser feito depois pela ação Grupos.</small>
-                    <FieldError message={errors.gruposAcessoIds?.message} />
+                    <Message severity="info" className="w-full" text="O usuário nasce sem grupo de acesso. Depois de criado, use a ação Gerenciar > Grupos para vincular." />
                 </div>
             </form>
         </Dialog>

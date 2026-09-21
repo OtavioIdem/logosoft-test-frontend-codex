@@ -1516,3 +1516,96 @@ Alternativas descartadas: bloquear a nota sem série (P-1a, P-2b), porque vira `
 `FISCAL_GERENCIAR`/`FISCAL_EMITIR`.
 Risco de acesso: `NENHUM`. Reversível: sim. Gatilho de revisita: a `b61` fechar (a nota passa a validar de ponta a ponta).
 Quem arbitrou: orquestrador.
+
+### D55 — o gate da classe vem antes da correção, e o que a `c3` corrige
+
+Data: 2026-09-21
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre o inventário
+do `inventariante-contrato-tela` e o plano do `arquiteto-frontend` de 2026-09-18
+(sessões Codex `rollout-2026-09-18T14-59-12` e `15-07-43`), remedido contra o
+Swagger vivo e o documento de contrato em 2026-09-21. O quarteto não fechou:
+`plataforma` foi interrompido, `design` e `escopo` não rodaram.
+Decisão, em quatro partes:
+- A `v1.11.0a8b58.c3` constrói o gate de **campo de request sem par** ANTES de
+  corrigir os campos, porque a árvore de hoje é a árvore antiga com o defeito
+  conhecido que a prova vermelha exige. São 29 itens nominais, em
+  `docs/fatias/v1.11.0a8b58.c3-contratos-de-request.md` §5.1.
+- O gate reprova em `DESCARTE` (campo enviado que o record não declara) e em
+  `DEFAULT_SILENCIOSO` (campo não-anulável que o frontend não envia, e o backend
+  grava com o default). `LACUNA` — campo anulável sem destino na UI — imprime
+  com destino e não reprova: é capacidade não oferecida, não corrupção.
+- A anulabilidade vem do `?` na assinatura C# de
+  `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md`, nunca do Swagger, que renderiza
+  `Crt?` e `TipoItemSped?` como `$ref` sem `nullable`.
+- Grupos de acesso saem do diálogo de criação de usuário. Hoje o operador os
+  seleciona e o backend os descarta: o usuário nasce sem grupo nenhum. A
+  atribuição já existe em `VincularGrupoUsuarioDialog`; a criação que já atribui
+  é comportamento novo, com semântica de falha parcial, e vai para a `b63`.
+Alternativas descartadas:
+- Corrigir primeiro e construir o gate depois: destrói a prova vermelha e obriga
+  a fabricá-la por `git worktree`. Foi o que custou sete rodadas na `b53`.
+- Tratar a `c3` como regime `correcao`: `regimes.yaml` manda `implementacao`
+  quando a mudança altera contrato do backend, e `.cN` é sufixo de versão, não
+  regime.
+- Deixar o seletor de grupos na criação com um aviso: mantém uma ilusão de
+  clicar numa tela de segurança.
+Por quê: o argumento de ordem é do próprio `regimes.yaml` (`gate_que_nao_mede`)
+e do precedente medido da `b53`. O recorte da correção — 15 dos 29 itens — sai do
+critério de severidade: só entra na `.cN` o que corrompe dado hoje; campo novo na
+tela é entrega funcional e vai para a onda a que pertence.
+Risco de acesso: `NENHUM`. Corrigir a criação de usuário não retira capacidade:
+o caminho que funciona continua onde está.
+Reversível: sim. Gatilho de revisita: o backend tornar
+`AtualizarEmpresaRequest.RegimeTributario` anulável, como já fez com
+`ContribuinteIpi` no mesmo record e pelo mesmo motivo (contrato `:2332`) — nesse
+dia o item 24 muda de `DEFAULT_SILENCIOSO` para `LACUNA`.
+Quem arbitrou: orquestrador.
+Impacto: `features/produtos`, `features/estoque`, `features/administracao`,
+`features/seguranca`, `scripts/`, `tests/unit/`. Não toca permissão, rota, menu
+nem `features/faturamento`.
+
+### D56 — a onda do anexo de melhorias: ordem, recortes e o que não se constrói
+
+Data: 2026-09-21
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre as três saídas
+do Codex de 2026-09-18 (inventário, plano do `arquiteto-frontend` e posição do
+`arquiteto-operacao-erp`), remedidas contra o Swagger vivo, o documento de
+contrato e o banco em 2026-09-21. O quarteto não fechou: `plataforma` foi
+interrompido, `design` e `escopo` não rodaram.
+Decisão, em quatro partes:
+- O anexo "Melhorias e Implementações" vira a onda `b62`–`b69`, na ordem escrita
+  em `docs/PLANO-FRONTEND-ONDA-OPERACAO.md`: header, RH e acesso, empresa e
+  filial, cadastros mestres, estoque, venda e preço, compra e financeiro,
+  faturamento. PDV por código de barras fica sem versão reservada.
+- A **D53** não se replaneja. `b59`–`b61` continuam como estão e nenhum item do
+  anexo entra nelas.
+- O corte entre onda funcional e corretiva é a severidade: campo que corrompe
+  dado hoje vira `.cN`; campo novo na tela vira `bNN`. Foi esse critério que
+  separou os 15 itens da `c3` dos 14 `LACUNA`.
+- As oito perguntas B-1 a B-8 são o caminho crítico e andam em paralelo. A B-8 —
+  o OpenAPI publicar schema de resposta — atravessa a onda inteira: sem ela
+  nenhum gate prova o lado da resposta, e o Swagger já errou anulabilidade de
+  enum e forma no JSON nesta mesma fatia.
+Alternativas descartadas:
+- Manter o roteiro só na conversa, como esteve de 2026-09-18 a 2026-09-21: nesse
+  intervalo a `c3` citou `b62`–`b69` como destino de oito itens que nenhum arquivo
+  definia. `docs/fatias/README.md` já registra o custo medido disso na onda F1.
+- Numeração terminando em `b68` (plano do `arquiteto-frontend`) ou em `b70`
+  (posição da `operacao-erp`): a primeira não acomodava faturamento completo, a
+  segunda reservava versão para o PDV, que está bloqueado por contrato.
+- Tratar "não consegui usar" (simulador, regras fiscais, exceções, observabilidade,
+  inutilizações) como código novo: as cinco telas existem e estão integradas. É
+  revisão de estados, permissão e dados mínimos.
+Por quê: a ordem é por fluxo vertical — cadastro, transação, efeito no módulo
+vizinho, correção — e não por lista horizontal de telas. Melhorar uma tela sem
+fechar o ciclo desloca o erro para a etapa seguinte. O argumento é do
+`arquiteto-operacao-erp`; a numeração é arbitragem da sessão principal.
+Risco de acesso: `NENHUM` nesta decisão. A `b62` remove um item de menu com
+`accessRisk: ILUSAO`, declarado no plano da própria versão.
+Reversível: sim (ordem). Gatilho de revisita: qualquer resposta de B-1 a B-8 que
+mude a dependência de uma versão, ou o fechamento da rodada 05 dos enums, que
+pode impor trabalho estrutural antes de `b64`.
+Quem arbitrou: orquestrador.
+Impacto: `docs/PLANO-FRONTEND-ONDA-OPERACAO.md` passa a ser o documento da onda,
+ao lado de `docs/backend-v1.23/PLANO-FRONTEND-v1.23.md`, que continua governando
+F0–F3.

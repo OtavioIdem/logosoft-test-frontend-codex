@@ -39,11 +39,12 @@ export type AjusteEstoqueRequest = Omit<MovimentoManualEstoqueRequest, 'quantida
 export type TransferenciaEstoqueRequest = {
     empresaId: Guid;
     filialOrigemId: Guid;
-    localOrigemId: Guid;
+    localEstoqueOrigemId: Guid;
     filialDestinoId: Guid;
-    localDestinoId: Guid;
+    localEstoqueDestinoId: Guid;
     produtoId: Guid;
     quantidade: number;
+    origemModulo: string;
     motivo: string;
 };
 

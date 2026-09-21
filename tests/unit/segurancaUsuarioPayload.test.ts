@@ -6,29 +6,29 @@ const filialId = '22222222-2222-2222-2222-222222222222';
 const grupoAcessoId = '33333333-3333-3333-3333-333333333333';
 
 describe('segurança operacional payloads', () => {
-    it('monta CriarUsuarioRequest com login e grupos conforme backend', () => {
-        expect(
-            buildCriarUsuarioPayload({
-                nome: ' Administrador ',
-                email: ' admin@empresa.com ',
-                login: ' admin.login ',
-                senha: 'Admin@123456',
-                empresaId,
-                filialId,
-                gruposAcessoIds: [grupoAcessoId]
-            })
-        ).toEqual({
-            nome: 'Administrador',
-            email: 'admin@empresa.com',
-            login: 'admin.login',
+    it('monta CriarUsuarioRequest sem login e grupos conforme contrato', () => {
+        const payload = buildCriarUsuarioPayload({
+            nome: ' Administrador ',
+            email: ' admin@empresa.com ',
             senha: 'Admin@123456',
             empresaId,
-            filialId,
-            gruposAcessoIds: [grupoAcessoId]
+            filialId
         });
+
+        expect(payload).toEqual({
+            nome: 'Administrador',
+            email: 'admin@empresa.com',
+            senha: 'Admin@123456',
+            empresaId,
+            filialId
+        });
+
+        // ACH-5: não envia login e gruposAcessoIds (contrato não os aceita)
+        expect(payload).not.toHaveProperty('login');
+        expect(payload).not.toHaveProperty('gruposAcessoIds');
     });
 
-    it('usa e-mail como login e envia filialId como null quando não houver filial válida', () => {
+    it('envia filialId como null quando não houver filial válida', () => {
         expect(
             buildCriarUsuarioPayload({
                 nome: 'Administrador',
@@ -40,7 +40,6 @@ describe('segurança operacional payloads', () => {
         ).toEqual({
             nome: 'Administrador',
             email: 'admin@empresa.com',
-            login: 'admin@empresa.com',
             senha: 'Admin@123456',
             empresaId,
             filialId: null

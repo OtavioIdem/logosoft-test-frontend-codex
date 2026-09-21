@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { isValidGuid } from '@/lib/http/requestUtils';
+import { RegimeTributario } from '@/features/administracao/types/administracao.types';
 
 const nullableText = z.string().trim().optional().nullable().transform((value) => (value && value.length > 0 ? value : null));
 const requiredText = (label: string, min = 2) => z.string().trim().min(min, `${label} é obrigatório.`);
@@ -13,8 +14,10 @@ const optionalGuid = z
 const requiredGuid = (label: string) => z.string().trim().refine((value) => isValidGuid(value), `${label} deve ser selecionado corretamente.`);
 const documentoEmpresa = z.string().trim().min(11, 'Informe CPF/CNPJ válido para o backend validar.').max(32, 'Documento deve ter no máximo 32 caracteres.');
 
-export const criarEmpresaSchema = z.object({ razaoSocial: requiredText('Razão social', 3), nomeFantasia: nullableText, documento: documentoEmpresa, inscricaoEstadual: nullableText, inscricaoMunicipal: nullableText });
-export const atualizarEmpresaSchema = z.object({ razaoSocial: requiredText('Razão social', 3), nomeFantasia: nullableText, inscricaoEstadual: nullableText, inscricaoMunicipal: nullableText });
+const regimeTributarioSchema = z.nativeEnum(RegimeTributario, { errorMap: () => ({ message: 'Selecione o regime tributário.' }) });
+
+export const criarEmpresaSchema = z.object({ razaoSocial: requiredText('Razão social', 3), nomeFantasia: nullableText, documento: documentoEmpresa, inscricaoEstadual: nullableText, inscricaoMunicipal: nullableText, regimeTributario: regimeTributarioSchema, contribuinteIpi: z.boolean().default(false) });
+export const atualizarEmpresaSchema = z.object({ razaoSocial: requiredText('Razão social', 3), nomeFantasia: nullableText, inscricaoEstadual: nullableText, inscricaoMunicipal: nullableText, regimeTributario: regimeTributarioSchema });
 export const criarFilialSchema = z.object({ empresaId: requiredGuid('Empresa'), nome: requiredText('Nome da filial', 2), documento: documentoEmpresa, inscricaoEstadual: nullableText, inscricaoMunicipal: nullableText });
 export const atualizarFilialSchema = z.object({ nome: requiredText('Nome da filial', 2), inscricaoEstadual: nullableText, inscricaoMunicipal: nullableText });
 export const criarSetorSchema = z.object({ empresaId: requiredGuid('Empresa'), filialId: optionalGuid, nome: requiredText('Nome do setor', 2), descricao: nullableText });
