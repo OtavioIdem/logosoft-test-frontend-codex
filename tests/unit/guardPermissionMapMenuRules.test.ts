@@ -472,7 +472,7 @@ export const MenuFixtureFRulePrecedence = () => {
       // (hierarquia.length é cada par pai-filho ou item isolado)
       // Número total deve refletir a contagem
       expect(result.hierarchy.length).toBeGreaterThan(0);
-      expect(itemsWithTo).toBe(83);
+      expect(itemsWithTo).toBe(84); // b58: +1 "Séries fiscais"
     });
 
     it('D46: nenhum item ou grupo do AppMenu.tsx atual declara mais de uma forma de permissão', () => {

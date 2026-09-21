@@ -13,6 +13,7 @@ import { PageHeader } from '@/components/common/PageHeader';
 import { StatusTag } from '@/components/data/StatusTag';
 import { FiscalDocumentosAuxiliaresPanel, FiscalIntegracoesTable } from '@/features/fiscal/components/FiscalOperationalPanels';
 import { ComposicaoTotalNotaFiscalCard, ImpostosNotaFiscalTabela } from '@/features/fiscal/components/NotaFiscalImpostosPanels';
+import { NotaFiscalErroCadastroPanel } from '@/features/fiscal/components/NotaFiscalErroCadastroPanel';
 import { NotaFiscalRetornoOperacionalPanel } from '@/features/fiscal/components/NotaFiscalRetornoOperacionalPanel';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { LoadingState } from '@/components/feedback/LoadingState';
@@ -74,7 +75,7 @@ import { useFiscalMutations, useNotaFiscal, useNotaFiscalIntegracoes, useNotaFis
 import { ConsultaProtocoloSefazResponse, DocumentoAuxiliarFiscalResponse, LogIntegracaoFiscalResponse, NotaFiscalXmlPipelineResponse, TransmissaoSefazResponse } from '@/features/fiscal/types/fiscal.types';
 import { useAppToast } from '@/hooks/useAppToast';
 import { mapApiError } from '@/lib/http/apiError';
-import { StatusNotaFiscal } from '@/types/erp';
+import { ApiError, StatusNotaFiscal } from '@/types/erp';
 
 const DetailValue = ({ label, value, mono }: { label: string; value?: React.ReactNode; mono?: boolean }) => (
     <div className="col-12 md:col-4">
@@ -102,6 +103,9 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
     const [ultimaConsulta, setUltimaConsulta] = useState<ConsultaProtocoloSefazResponse | null>(null);
     const [ultimoDocumento, setUltimoDocumento] = useState<DocumentoAuxiliarFiscalResponse | null>(null);
     const [logReprocessamento, setLogReprocessamento] = useState<LogIntegracaoFiscalResponse | null>(null);
+    // AC-16 (D50): erro de cadastro da série fiscal (`Fiscal.SerieFiscalNaoCadastradaParaContexto`) abre o
+    // painel persistente; `run`/`resolveFiscalWorkflowActionState` não mudam.
+    const [erroCadastro, setErroCadastro] = useState<ApiError | null>(null);
 
     const bloqueios = useMemo(() => notaFiscalBloqueiosVisuais(nota), [nota]);
     const actionStates = useMemo(
@@ -121,6 +125,7 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
         }),
         [nota, resumo, workflow]
     );
+    const documentosAuxiliares = useMemo(() => (ultimoDocumento ? [ultimoDocumento] : []), [ultimoDocumento]);
 
     if (!hasPermission('FISCAL_CONSULTAR')) return <UnauthorizedState description="Detalhe fiscal exige FISCAL_CONSULTAR." />;
 
@@ -151,6 +156,16 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
         }
     };
 
+    // AC-16 (D50): limpa o painel antes de tentar de novo; some quando a validação passa, entra quando o
+    // backend rejeita com `Fiscal.SerieFiscalNaoCadastradaParaContexto` (outros códigos não abrem o painel --
+    // `NotaFiscalErroCadastroPanel` filtra pelo `code`).
+    const validar = () => {
+        setErroCadastro(null);
+        return run('Validação fiscal', () => mutations.validarMutation.mutateAsync(notaId), 'Nota validada tecnicamente.').catch((error) => {
+            setErroCadastro(mapApiError(error));
+        });
+    };
+
     const gerarXml = (values: unknown) => run('XML fiscal', async () => setUltimoXml(await mutations.gerarXmlMutation.mutateAsync({ id: notaId, values })), 'XML de envio gerado.');
     const assinarXml = (values: unknown) => run('Assinatura XML', async () => setUltimoXml(await mutations.assinarXmlMutation.mutateAsync({ id: notaId, values })), 'XML de envio assinado.');
     const transmitir = (values: unknown) => runRetornoSefaz('Transmissão SEFAZ', () => mutations.transmitirMutation.mutateAsync({ id: notaId, values }), 'Retorno da transmissão recebido.', setUltimaTransmissao);
@@ -161,8 +176,6 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
     const baixarEstoque = (values: unknown) => run('Baixa de estoque', async () => { await mutations.baixarEstoqueMutation.mutateAsync({ id: notaId, values }); }, 'Baixa de estoque processada.');
     const gerarContaReceber = (values: unknown) => run('Financeiro fiscal', async () => { await mutations.gerarContaReceberMutation.mutateAsync({ id: notaId, values }); }, 'Conta a receber gerada ou conciliada.');
     const definirValoresAcessorios = (values: unknown) => run('Valores acessórios', async () => { await mutations.definirValoresAcessoriosMutation.mutateAsync({ id: notaId, values }); }, 'Valores acessórios atualizados.');
-
-    const documentosAuxiliares = useMemo(() => (ultimoDocumento ? [ultimoDocumento] : []), [ultimoDocumento]);
 
     const baixarDocumento = async (documento: DocumentoAuxiliarFiscalResponse) => {
         try {
@@ -187,7 +200,7 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
             <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Item" icon="pi pi-plus" disabled={disabled || !notaPodeEditarItens(nota)} onClick={() => setDialog('item')} />}</PermissionGuard>
             <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Imposto" icon="pi pi-percentage" disabled={disabled || !notaPodeEditarItens(nota)} onClick={() => setDialog('imposto')} />}</PermissionGuard>
             <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Valores acessórios" icon="pi pi-wallet" outlined disabled={disabled || !notaPodeDefinirValoresAcessorios(nota)} title={disabled ? 'Permissão necessária: FISCAL_GERENCIAR.' : motivoValoresAcessoriosIndisponivel(nota) ?? undefined} onClick={() => setDialog('valoresAcessorios')} />}</PermissionGuard>
-            <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Validar" icon="pi pi-check-circle" severity="success" disabled={disabled || !actionStates.validar.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.validar, 'FISCAL_GERENCIAR')} loading={mutations.validarMutation.isPending} onClick={() => run('Validação fiscal', () => mutations.validarMutation.mutateAsync(notaId), 'Nota validada tecnicamente.')} />}</PermissionGuard>
+            <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Validar" icon="pi pi-check-circle" severity="success" disabled={disabled || !actionStates.validar.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.validar, 'FISCAL_GERENCIAR')} loading={mutations.validarMutation.isPending} onClick={validar} />}</PermissionGuard>
             <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Gerar XML" icon="pi pi-code" disabled={disabled || !actionStates.gerarXml.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.gerarXml, 'FISCAL_GERENCIAR')} onClick={() => setDialog('gerarXml')} />}</PermissionGuard>
             <PermissionGuard permission="FISCAL_EMITIR" mode="disable">{({ disabled }) => <Button label="Assinar" icon="pi pi-lock" disabled={disabled || !actionStates.assinarXml.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.assinarXml, 'FISCAL_EMITIR')} onClick={() => setDialog('assinarXml')} />}</PermissionGuard>
             <PermissionGuard permission="FISCAL_EMITIR" mode="disable">{({ disabled }) => <Button label="Transmitir" icon="pi pi-send" severity="warning" disabled={disabled || !actionStates.transmitir.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.transmitir, 'FISCAL_EMITIR')} onClick={() => setDialog('transmitir')} />}</PermissionGuard>
@@ -204,6 +217,7 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
             {integracoesQuery.error ? <ApiErrorPanel error={mapApiError(integracoesQuery.error)} title="Não foi possível carregar os logs de integração fiscal." /> : null}
             {nota ? (
                 <>
+                    <NotaFiscalErroCadastroPanel erro={erroCadastro} />
                     <NotaFiscalRetornoOperacionalPanel xml={ultimoXml} transmissao={ultimaTransmissao} consulta={ultimaConsulta} documento={ultimoDocumento} />
                     {resumo ? (
                         <div className="grid mb-3">

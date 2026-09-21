@@ -1395,3 +1395,124 @@ Alternativas descartadas:
 Risco de acesso: `NENHUM`. Reversível: sim. Gatilho de revisita: o menu precisar de duas formas num item.
 Quem arbitrou: orquestrador
 Impacto: `scripts/lib/guard-permission-map.mjs` e `tests/unit/guardPermissionMapMenuRules.test.ts`.
+
+## Rodada 04 — cadastros fiscais (F3)
+
+Fontes: `docs/arquitetura/debate/04-inventario-cadastros-fiscais.md` e as quatro posições `04-operacao`, `04-plataforma`,
+`04-escopo` e `04-design`. Síntese pela sessão principal em 2026-09-17, pela regra de convergência de
+`execution-graph.yaml`: prevalece a conclusão mais repetida; divergência isolada só vence com evidência que os outros
+não tinham.
+
+### D47 — fronteira de feature da F3
+
+Decisão:
+1. Séries fiscais, naturezas de operação com CFOP e o combo de modelos de documento moram em `features/fiscal`, em
+   arquivos nomeados por recurso (`seriesFiscaisApi.ts`, `naturezasOperacaoApi.ts`, `modelosDocumentoFiscalApi.ts` e
+   equivalentes em `types`, `schemas`, `hooks`, `components`). Convergência: operação, escopo e design (3 de 4).
+2. O bloco fiscal e os endereços da Pessoa moram em `features/pessoas` (4 de 4).
+3. Não existe uma terceira busca de CFOP: a fatia de naturezas move `CadastroFiscalSelects.tsx` e as buscas de NCM/CFOP
+   de `features/tributacao` para `features/fiscal`, e `tributacao` passa a importar de lá (design, com a condição
+   exigida pelo escopo e o argumento de plataforma sobre `queryKey`).
+4. Condição de plataforma, mantida para quando existir: se `POST /api/fiscal/cadastros/importar/{tabela}` ganhar tela,
+   a mutação invalida todos os namespaces que leem NCM/CFOP/CEST.
+Alternativa descartada: `features/fiscal-cadastros` novo (plataforma, isolada). O argumento de invalidação por prefixo
+é real, e a resposta é o item 4 mais `queryKey` próprio por recurso (`['fiscal','series',...]`), não pasta nova.
+Reversível: sim (troca de import). Gatilho de revisita: `features/fiscal` passar a ter tela de importação ou crescer além
+dos recursos da F3. Quem arbitrou: orquestrador.
+
+### D48 — padrão de tela da F3
+
+Decisão: sem componente compartilhado novo (4 de 4). Referência: `features/tabelas-preco/components/TabelasPrecoPage.tsx`
+(listagem, diálogo, vigência, ativar/inativar) e `ReasonDialog` para ações com motivo. "Ampliar", "Encerrar vigência" e o
+relatório de buracos de série são diálogos locais do módulo; o relatório só consulta sob demanda (`enabled: false` até o
+operador pedir). `EntityManagementPage.tsx` não é base (órfão, F5.6).
+Descartado nesta onda: `disabledReason` em `DataTableActions` (design, isolada; 40+ consumidores). Gatilho: uma tela da
+F3 precisar de ação desabilitada com motivo.
+Reversível: sim. Quem arbitrou: orquestrador.
+
+### D49 — navegação da F3
+
+Decisão:
+1. Itens planos no grupo "Fiscal" existente, sem subgrupo (4 de 4). O `anyPermissions` do pai recebe toda permissão
+   nova de filho na mesma edição, e o gate C2 da `v1.11.0a8b57.c1` confere isso.
+2. Endereços e bloco fiscal entram como abas do `PessoaFormDialog` (`TabView` existente), no precedente da aba "Dados
+   fiscais" de Produto (operação, escopo e design).
+Reversível: sim. Quem arbitrou: orquestrador.
+
+### D50 — DIV-5: erro fiscal que aponta para cadastro ausente
+
+Decisão:
+1. O mapeamento é por `Error.Code`, nunca pelo texto da mensagem (plataforma e operação; `ApiErrorResponseFilter.cs:4-8`
+   só garante `Code` e `Kind`).
+2. O mapa mora em `features/fiscal`, junto do tratamento de erro da nota, e não no `ApiErrorPanel` genérico (operação e
+   escopo, contra design).
+3. Cada código ganha link na fatia que cria a tela de destino (escopo). Até lá continua só texto, como hoje. Link com
+   `pessoaId` quando o erro é do destinatário; sem retorno automático à nota (operação abre mão).
+Reversível: sim. Quem arbitrou: orquestrador.
+
+### D51 — DIV-2, DIV-3, DIV-4 e DIV-8
+
+Decisão:
+1. DIV-2 é corrigida na fatia de naturezas: o campo vira seleção real, e o texto e a capacidade mudam juntos (4 de 4).
+2. DIV-3: o combo de natureza na nota passa `somenteAtivas=true`, e a pergunta vai ao backend (escopo e operação).
+3. DIV-4: aceita-se o 400; sem fluxo de 409, tratamento pelo código do erro (escopo, design e operação).
+4. DIV-8: Zod não estrito na resposta de todo código novo e do código movido pela D47 item 3 (T5).
+Perguntas ao backend: B-7 (natureza inativa na derivação de CFOP, `CfopDoItemResolver.cs:112-124`); B-8 (`Error.Conflict`
+de séries/naturezas sai como 400). Reversível: sim. Quem arbitrou: orquestrador.
+
+### D52 — volume dos cadastros de referência
+
+Decisão: NCM, CFOP, CEST e município só por busca no servidor (`termo` + paginação), com debounce, incluindo as buscas
+movidas pela D47 (hoje sem debounce). UF é combo estático (27, sem paginação na API) (4 de 4).
+Reversível: sim. Quem arbitrou: orquestrador.
+
+### D53 — sequência da F3 e o que fica fora
+
+Decisão, em quatro versões:
+- `b58` — Séries fiscais: listar, criar, ampliar, encerrar vigência, inativar, buracos de numeração, combo de modelo de
+  documento, combo real de série na nota, e link da `SerieFiscalNaoCadastradaParaContexto` (4 de 4 põem séries primeiro;
+  modelos como combo, 3 de 4).
+- `b59` — Naturezas de operação com mapeamento de CFOP, extração dos selects (D47 item 3), DIV-2 e DIV-3, e link da
+  `CfopSemMapeamentoParaAmbito`.
+- `b60` — Endereços da Pessoa (listar, criar, editar, marcar principal, excluir).
+- `b61` — Bloco fiscal da Pessoa, vínculo de município no endereço, e links das quatro `DestinatarioSem*`.
+Por quê: naturezas antes de Pessoa é a ordem de plataforma, design e operação (3 de 4). O escopo propôs Pessoa antes,
+para não mostrar uma segunda falha no mesmo clique (`CfopDoItemResolver` chama `DestinatarioFiscalResolver`); a
+evidência estava no inventário para todos, e a ordem não muda o estado final. Endereço de Pessoa entra na F3 (escopo,
+operação e design; plataforma registrou o risco de deixar fora).
+Obrigação de honestidade: a nota só valida de ponta a ponta depois de `b61`. Cada CHANGELOG de `b58` a `b60` diz qual
+mensagem fecha e quais continuam, sem declarar DIV-5 fechada antes da hora (operação e plataforma).
+Fora da F3, com gatilho:
+- Tela própria de modelos de documento: o backend não expõe escrita. Gatilho: o backend expor escrita.
+- 12 dos 16 endpoints de `CadastrosFiscaisController` como tela e a importação em lote. Gatilho: pedido de consulta ou
+  carga pela UI (pergunta ao cliente).
+- Contatos, bloquear/desbloquear, e exibição de `Bloqueada`/`MotivoBloqueio` da Pessoa: nenhuma falha fiscal depende
+  deles. Gatilho: pedido operacional.
+- `ClassificacoesPessoa`, e Zod retroativo nas demais chamadas de `features/tributacao`.
+Reversível: sim (ordem). Quem arbitrou: orquestrador.
+
+### D54 — arbitragem das propostas P-1 a P-15 do planner da `b58`
+
+Data: 2026-09-17
+Rodada: sem rodada de debate. Arbitrada pela sessão principal sobre o plano do `arquiteto-frontend`
+(`docs/fatias/v1.11.0a8b58-f3-series-fiscais.md`, seção 11).
+Decisão: adotadas as recomendações.
+- P-1b e P-2a: sem série cadastrada ou sem `FISCAL_SERIES_CONSULTAR`/`FISCAL_MODELOS_CONSULTAR`, o campo série da nota
+  continua texto livre, com aviso. Ninguém perde a criação de nota; é o que mantém `accessRisk: NENHUM`.
+- P-3a: prop `escopoPedido`.
+- P-4a: buracos compactados em faixas, teto de 1000 faixas (estimativa) e aviso de notas em andamento.
+- P-5a: inutilizar a partir dos buracos fica fora.
+- P-6a: ações de série inativa somem.
+- P-7a: o `design` escreve só os rótulos e a especificação.
+- P-8a: helper `DateOnly` local.
+- P-9a: a regra genérica `/fiscal` não muda.
+- P-10a: link sem parâmetros.
+- P-11a: motivo até 464.
+- P-12a: filtro padrão "Ativas".
+- P-13a: versão pela `D29`.
+- P-14a: `onSettled`.
+- P-15: perguntas B-9 a B-13 ao backend.
+Alternativas descartadas: bloquear a nota sem série (P-1a, P-2b), porque vira `accessRisk: CAPACIDADE` para quem tem
+`FISCAL_GERENCIAR`/`FISCAL_EMITIR`.
+Risco de acesso: `NENHUM`. Reversível: sim. Gatilho de revisita: a `b61` fechar (a nota passa a validar de ponta a ponta).
+Quem arbitrou: orquestrador.
