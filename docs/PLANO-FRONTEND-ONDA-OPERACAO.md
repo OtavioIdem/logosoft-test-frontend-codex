@@ -32,11 +32,18 @@ A `v1.11.0a8b58.c3` (contratos de request) tem plano próprio em
 Três regras vieram de defeito medido nesta esteira, não de preferência:
 
 1. **O Swagger não é fonte suficiente.** Ele não publica schema de resposta em
-   nenhuma das 580 operações, erra anulabilidade de enum (declara `Crt?` e
-   `TipoItemSped?` como `$ref` sem `nullable`) e erra a forma no JSON (declara
-   `regimeTributario` como `integer [0,1,2]`; a API devolve `"LucroPresumido"`).
-   Nome de membro vem de `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md`; forma no JSON
-   vem de observação autenticada.
+   nenhuma das 580 operações e erra anulabilidade de enum — declara `Crt?` e
+   `TipoItemSped?` como `$ref` sem `nullable`. Nome de membro e anulabilidade
+   vêm do `?` na assinatura C# em `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md`.
+   **Correção de 2026-09-21**: uma versão anterior deste documento afirmava que
+   a API devolvia `regimeTributario` como `"LucroPresumido"`. É falso. O JSON
+   trafega **número** nos dois sentidos — não existe `JsonStringEnumConverter`
+   no backend (`Program.cs:28`, `AddControllers` sem `.AddJsonOptions`) e
+   `AdministrationMapper.cs:12` passa o enum direto. A coluna `varchar` do banco
+   é `HasConversion<string>()` do EF (`EmpresaConfiguration.cs:19`), conversor de
+   **persistência**: armazenamento não é serialização. Tratar as 156 colunas de
+   texto como indício de JSON em texto produziu uma correção errada, duas
+   reconstruções de imagem e uma reversão.
 2. **Tela que "parece certa" não é medição.** O AC-8 da `c3` foi relatado como
    aprovado e o banco refutou: nada havia sido gravado. Comportamento se confirma
    em `UpdatedAt`, em `auditoria_eventos` e no log do backend.
@@ -51,7 +58,7 @@ Três regras vieram de defeito medido nesta esteira, não de preferência:
 | --- | --- | --- |
 | `b59`–`b61` | sequência fiscal — **D53**, não se replaneja | D47–D53 |
 | `b62` | Header e navegação sem prometer o que não existe | nada |
-| `b63` | Colaborador → usuário → acesso rastreável | B-1, B-2 |
+| `b63` | Pessoa vinculada na admissão do colaborador — **reduzida pela D57** | nada |
 | `b64` | Empresa, filial e endereço fiscal completos | `b60`–`b61` |
 | `b65` | Produto, cliente e fornecedor utilizáveis pelos fluxos seguintes | `b64` |
 | `b66` | Estoque transacional e auditável | `b65`, B-3 |
@@ -73,14 +80,22 @@ Três regras vieram de defeito medido nesta esteira, não de preferência:
   hoje só redireciona para `/estoque/avancado`. `accessRisk: ILUSAO` — quem tem
   apenas `ESTOQUE_MOVIMENTAR` clica e cai numa tela que talvez não possa abrir.
 
-### `b63` — RH e acesso
+### `b63` — a Pessoa na admissão — **reduzida pela D57**
 
 - `pessoaId` por autocomplete na admissão (`AdmitirColaboradorRequest` aceita,
-  a UI não envia).
-- Cargos de acesso, vigência e permissões efetivas com origem visível.
-- Criação de usuário que **já atribui grupo**, em duas chamadas, com semântica de
-  falha parcial. A `c3` removeu o seletor da criação porque o backend descartava
-  em silêncio; a atribuição real vive em `VincularGrupoUsuarioDialog`.
+  a UI não envia). É o que sobrou, e é verdadeiro.
+
+**Cargos de acesso saíram.** O inventário
+(`docs/arquitetura/debate/06-inventario-cargos-de-acesso.md`) provou que as duas
+cadeias de autorização são disjuntas: o guard lê `UsuarioGrupoAcesso →
+GrupoAcesso.Permissoes` (`UsuarioRepository.ObterCodigosPermissoesAsync:75`,
+que alimenta o claim do JWT), enquanto `permissoes-efetivas` calcula por
+`UsuarioCargoAcesso` (`CargosAcessoRepository:107`). O guard nunca lê a segunda.
+Atribuir cargo não concede nada, e uma tela que sugere o contrário ensina um
+modelo mental que faz alguém remover o grupo achando que o cargo cobre. Virou
+**B-9**.
+
+Criação de usuário que já atribui grupo continua fora, dependendo de **B-1**.
 
 ### `b64` — Empresa e filial
 
@@ -164,6 +179,7 @@ alavancagem e andam em paralelo com a `c3` e a `b59`.
 | B-6 | Como o faturamento obtém o certificado sem expor `certificateThumbprint`? | `b69` |
 | B-7 | Haverá busca exata de produto por código de barras? | PDV |
 | B-8 | **O OpenAPI vai publicar schema de resposta?** Sem isso o Swagger não tipa leitura, e nenhum gate prova o lado da resposta. | toda a onda |
+| B-9 | **Cargo de acesso vai passar a governar acesso?** Hoje o guard lê só `UsuarioGrupoAcesso`; `UsuarioCargoAcesso` é ignorado por ele. Unificar as cadeias, ou declarar que cargo é outra coisa? | tela de cargos (D57) |
 
 ## Correções fora da sequência funcional
 

@@ -1609,3 +1609,38 @@ Quem arbitrou: orquestrador.
 Impacto: `docs/PLANO-FRONTEND-ONDA-OPERACAO.md` passa a ser o documento da onda,
 ao lado de `docs/backend-v1.23/PLANO-FRONTEND-v1.23.md`, que continua governando
 F0–F3.
+
+### D57 — cargos de acesso saem da `b63`: administram uma estrutura que não governa acesso
+
+Data: 2026-09-21
+Rodada: inventário em `docs/arquitetura/debate/06-inventario-cargos-de-acesso.md`
+(`inventariante-contrato-tela`), com o achado reconferido pelo orquestrador
+direto no fonte do backend.
+Decisão: a `v1.11.0a8b63` entrega apenas `pessoaId` na admissão do colaborador.
+Cargos de acesso — CRUD, vínculo de grupo e atribuição ao usuário — **não são
+construídos**, e viram a pergunta **B-9** ao backend.
+Por quê: as duas cadeias de autorização são disjuntas, e isso foi medido nos
+dois lados.
+- O que **autoriza a chamada**: `UsuarioRepository.ObterCodigosPermissoesAsync:75`
+  lê `UsuarioGrupoAcessos → GrupoAcesso.Permissoes`, e alimenta o claim do JWT
+  por `AuthUserSessionIssuer:41`.
+- O que `permissoes-efetivas` **calcula**: `CargosAcessoRepository:107` lê
+  `Set<UsuarioCargoAcesso>` com regra de vigência, por outra árvore de tabelas.
+- O guard **nunca** lê `UsuarioCargoAcesso`. Atribuir um cargo de acesso a um
+  usuário hoje não altera nada do que ele consegue chamar.
+Alternativas descartadas:
+- Construir com aviso na tela: o aviso é ignorado depois de duas semanas, e o
+  que fica é uma tela de segurança que ensina um modelo mental falso.
+- Construir sem aviso: pior. Um administrador que acredite que cargo governa
+  acesso pode **remover o grupo** achando que o cargo cobre — e aí alguém perde
+  acesso de verdade, por causa da tela.
+- Exibir só as permissões efetivas, sem CRUD: é dado real, mas não entrega o
+  que o anexo pediu e ainda sugere que a estrutura está em uso.
+Risco de acesso: `NENHUM` — nada é construído. O risco estava em construir.
+Reversível: sim. Gatilho de revisita: o backend responder B-9 unificando as
+cadeias, ou declarar formalmente que cargo de acesso é outra coisa (trilha de
+auditoria, modelo futuro) e não um conceder.
+Quem arbitrou: orquestrador, com a escolha confirmada pelo usuário entre quatro
+alternativas apresentadas.
+Impacto: `docs/fatias/v1.11.0a8b63-f4-pessoa-na-admissao.md` (renomeada),
+`docs/PLANO-FRONTEND-ONDA-OPERACAO.md` (B-9 acrescentada). Nenhum código.
