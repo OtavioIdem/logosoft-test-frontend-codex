@@ -18,34 +18,28 @@ test.describe('Navegação Estoque — AC-8 e AC-9', () => {
   });
 
   test('AC-9: usuário com apenas ESTOQUE_MOVIMENTAR vê o grupo Estoque e itens a que tem direito, mas não vê "Bloqueios"', async ({ page }) => {
-    // Validar a premissa: `accessRisk: ILUSAO` — ninguém perde capacidade com a remoção de "Bloqueios".
-    // O usuário com ESTOQUE_MOVIMENTAR pode movimentar estoque, logo vê o grupo e o item correspondente.
-    // Não vê Bloqueios porque a permissão não existe e o item foi removido.
+    // AC-9 valida: `accessRisk: ILUSAO` — a ilusão era que quem tinha apenas ESTOQUE_MOVIMENTAR
+    // via o item "Bloqueios" no menu, clicava, passava no guard de /estoque/bloqueios
+    // (que exige ESTOQUE_MOVIMENTAR) mas caía em permissão negada em /estoque/avancado
+    // (que exige anyOf: ESTOQUE_CONSULTAR | ESTOQUE_INVENTARIO_GERENCIAR | ESTOQUE_AJUSTAR | ESTOQUE_BLOQUEIO_GERENCIAR).
+    // Agora que "Bloqueios" foi removido, essa ilusão desaparece.
     // ORDEM CRÍTICA: mockApiRoutes PRIMEIRO, depois writeSession, depois goto
     await mockApiRoutes(page);
     await writeSession(page, {
-      permissions: [
-        'ESTOQUE_CONSULTAR',
-        'ESTOQUE_MOVIMENTAR'
-        // Nota: ESTOQUE_BLOQUEIOS_GERENCIAR ou similar NUNCA foi permissão válida.
-        // O item apontava para rota que só faz redirect, portanto era "ilusão".
-      ]
+      permissions: ['ESTOQUE_MOVIMENTAR']
+      // Sessão nominal: apenas ESTOQUE_MOVIMENTAR, nenhuma outra permissão de estoque
     });
-    // Navegar para /estoque/movimentos (rota que existe e pertence a ESTOQUE_MOVIMENTAR)
-    // /estoque é só um grupo de menu, não tem página real
-    await page.goto('/estoque/movimentos');
+    // Navegar para /estoque/entradas (rota que existe e ESTOQUE_MOVIMENTAR sozinha a abre)
+    await page.goto('/estoque/entradas');
 
-    // Verificar que a página de movimentos carregou
-    await expect(page.locator('h1.layout-topbar-title-text')).toHaveText(/Movimentos/i);
+    // Verificar que a página de entradas carregou
+    await expect(page.locator('h1.layout-topbar-title-text')).toHaveText(/Entrada de estoque/i);
 
-    // AC-9 valida: `accessRisk: ILUSAO` — usuário com apenas ESTOQUE_MOVIMENTAR não perde capacidade
-    // Afirmações:
-    // 1. Menu está presente na página
+    // Menu está presente na página
     const menu = page.locator('ul.layout-menu');
     await expect(menu).toBeVisible();
 
-    // 2. O texto "Bloqueios" não aparece em nenhum lugar do menu
-    // (prova que foi removido da lista de itens do menu)
+    // "Bloqueios" não aparece em nenhum lugar do menu (prova que foi removido)
     const bloqueiosItem = page.locator('text="Bloqueios"');
     await expect(bloqueiosItem).not.toBeVisible();
   });
