@@ -65,6 +65,7 @@ describe('payloads de Produtos / Catálogo', () => {
             cestCodigo: '01048100',
             origemMercadoriaCodigo: '0',
             tipoItemFiscal: TipoItemFiscal.Mercadoria,
+            tipoItemSped: null,
             unidadeMedidaTributavelId: unidadeMedidaId,
             codigoFiscalExterno: null
         });
@@ -83,5 +84,75 @@ describe('payloads de Produtos / Catálogo', () => {
     it('monta unidade de medida e exige motivo na inativação', () => {
         expect(buildCriarUnidadeMedidaPayload({ empresaId, filialId: null, sigla: 'UN', descricao: 'Unidade', casasDecimais: 0, permiteFracionado: false })).toEqual({ empresaId, filialId: null, sigla: 'UN', descricao: 'Unidade', casasDecimais: 0, permiteFracionado: false });
         expect(() => buildProdutoMotivoPayload('')).toThrow('Informe o motivo.');
+    });
+
+    // AC-1: criar produto sem tocar em campo fiscal não envia tipoItemFiscal nem nenhum outro campo fiscal
+    it('AC-1: criar produto sem dados fiscais não envia nenhum campo de classificação fiscal', () => {
+        const payload = buildCriarProdutoPayload({
+            empresaId,
+            filialId: '',
+            codigo: 'PROD0002',
+            descricao: 'Produto sem dados fiscais',
+            descricaoComercial: '',
+            tipoProduto: TipoProduto.Mercadoria,
+            unidadeMedidaId,
+            categoriaProdutoId: '',
+            marcaId: '',
+            precoVendaBase: 100,
+            custoReferencial: 60,
+            controlaEstoque: true,
+            controlaQualidade: true,
+            permiteVenda: true,
+            permiteCompra: true,
+            observacao: ''
+        });
+
+        // Verifica que campos fiscais NÃO aparecem
+        expect(payload).not.toHaveProperty('tipoItemFiscal');
+        expect(payload).not.toHaveProperty('ncmCodigo');
+        expect(payload).not.toHaveProperty('cestCodigo');
+        expect(payload).not.toHaveProperty('origemMercadoriaCodigo');
+        expect(payload).not.toHaveProperty('tipoItemSped');
+        expect(payload).not.toHaveProperty('unidadeMedidaTributavelId');
+        expect(payload).not.toHaveProperty('codigoFiscalExterno');
+    });
+
+    // AC-3: editar produto com tipoItemSped gravado reenvia o mesmo valor, inclusive quando é 0
+    it('AC-3: editar dados fiscais com tipoItemSped=0 (MercadoriaParaRevenda) reenvia o valor 0 sem transformação', () => {
+        const payload = buildAtualizarDadosFiscaisProdutoPayload({
+            ncmCodigo: '84713012',
+            cestCodigo: '01048100',
+            origemMercadoriaCodigo: '0',
+            tipoItemFiscal: TipoItemFiscal.Mercadoria,
+            tipoItemSped: 0, // MercadoriaParaRevenda
+            unidadeMedidaTributavelId: unidadeMedidaId,
+            codigoFiscalExterno: ''
+        });
+
+        // Verifica que tipoItemSped = 0 é preservado (não virou null)
+        expect(payload.tipoItemSped).toBe(0);
+    });
+
+    // AC-4: editar produto sem classificação fiscal mantém o bloco em branco
+    it('AC-4: editar produto sem dados fiscais mantém todos os campos nulos', () => {
+        const payload = buildAtualizarDadosFiscaisProdutoPayload({
+            ncmCodigo: null,
+            cestCodigo: null,
+            origemMercadoriaCodigo: null,
+            tipoItemFiscal: null,
+            tipoItemSped: null,
+            unidadeMedidaTributavelId: null,
+            codigoFiscalExterno: null
+        });
+
+        expect(payload).toEqual({
+            ncmCodigo: null,
+            cestCodigo: null,
+            origemMercadoriaCodigo: null,
+            tipoItemFiscal: null,
+            tipoItemSped: null,
+            unidadeMedidaTributavelId: null,
+            codigoFiscalExterno: null
+        });
     });
 });

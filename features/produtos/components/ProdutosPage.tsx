@@ -22,8 +22,10 @@ import { useFornecedores } from '@/features/fornecedores/hooks/useFornecedoresRe
 import { CodigoBarrasDialog, ProdutoFornecedorDialog } from '@/features/produtos/components/ProdutoComplementoDialogs';
 import { ProdutoFormDialog } from '@/features/produtos/components/ProdutoFormDialog';
 import { useProdutoMutations, useProdutos } from '@/features/produtos/hooks/useProdutosResources';
-import { CodigoBarrasFormValues, ProdutoFormValues, ProdutoFornecedorFormValues, ProdutoListQuery, ProdutoResponse } from '@/features/produtos/types/produtos.types';
+import { isFilled } from '@/features/produtos/components/produtoFormUtils';
+import { AtualizarDadosFiscaisProdutoRequest, CodigoBarrasFormValues, ProdutoFormValues, ProdutoFornecedorFormValues, ProdutoListQuery, ProdutoResponse } from '@/features/produtos/types/produtos.types';
 import { useMutationWithToast } from '@/hooks/useMutationWithToast';
+import { useAppToast } from '@/hooks/useAppToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { EntityStatus, TipoProduto } from '@/types/erp';
 import { formatMoney } from '@/lib/formatters/money';
@@ -50,8 +52,35 @@ const tipoProdutoLabel = (tipo: number | TipoProduto) => {
 
 type ComplementoState = { kind: 'codigo' | 'fornecedor'; record: ProdutoResponse } | null;
 
+// O bloco fiscal do backend é tudo-ou-nada (`ProdutoDadosFiscaisResolver.EstaEmBranco`): ou os dez
+// campos vão nulos, ou `tipoItemSped` é obrigatório. Não existe meio-termo — mandar `ncmCodigo` sem
+// `tipoItemSped` continua dando 400. Por isso o disparo do PATCH fica condicionado a pelo menos um
+// campo fiscal preenchido; `tipoItemSped` participa da checagem porque `0` (MercadoriaParaRevenda)
+// também conta como preenchido — daí `isFilled`, não uma checagem de "truthy".
+const dadosFiscaisEstaoEmBranco = (values: ProdutoFormValues) =>
+    !isFilled(values.ncmCodigo) &&
+    !isFilled(values.cestCodigo) &&
+    !isFilled(values.origemMercadoriaCodigo) &&
+    !isFilled(values.tipoItemFiscal) &&
+    !isFilled(values.unidadeMedidaTributavelId) &&
+    !isFilled(values.codigoFiscalExterno) &&
+    !isFilled(values.tipoItemSped);
+
+const buildDadosFiscaisPatchValues = (values: ProdutoFormValues): AtualizarDadosFiscaisProdutoRequest => ({
+    ncmCodigo: values.ncmCodigo ?? null,
+    cestCodigo: values.cestCodigo ?? null,
+    origemMercadoriaCodigo: values.origemMercadoriaCodigo ?? null,
+    tipoItemFiscal: values.tipoItemFiscal ?? null,
+    // Só trafega — o operador não edita `tipoItemSped` nesta tela (b65). Vem do registro lido em
+    // `buildInitialValues` só para não ser apagado quando o backend recusa o bloco parcial.
+    tipoItemSped: values.tipoItemSped ?? null,
+    unidadeMedidaTributavelId: values.unidadeMedidaTributavelId ?? null,
+    codigoFiscalExterno: values.codigoFiscalExterno ?? null
+});
+
 export const ProdutosPage = () => {
     const runWithToast = useMutationWithToast();
+    const toast = useAppToast();
     const { hasPermission } = usePermissions();
     const [filters, setFilters] = useState<ProdutoListQuery>({});
     const [localSearch, setLocalSearch] = useState('');
@@ -79,25 +108,42 @@ export const ProdutosPage = () => {
     };
 
     const save = async (values: ProdutoFormValues) => {
-        await runWithToast(
-            async () => {
-                const saved = await saveMutation.mutateAsync({ id: values.id, values });
-                const produtoId = saved.id;
+        // O cadastro base e os PATCHs complementares (preço/custo, dados fiscais) são chamadas
+        // separadas no backend. Se o cadastro base gravar e só um PATCH falhar, o produto já existe —
+        // a mensagem de erro não pode dizer "não foi possível salvar o produto" (nega o que aconteceu).
+        const saved = await runWithToast(() => saveMutation.mutateAsync({ id: values.id, values }), {
+            error: { summary: 'Erro ao salvar produto', detail: 'Não foi possível salvar o produto.' },
+            rethrow: true
+        });
+        if (!saved) return;
 
-                if (values.id) {
-                    await precoCustoMutation.mutateAsync({ id: produtoId, values: { precoVendaBase: values.precoVendaBase, custoReferencial: values.custoReferencial } });
-                    if (hasPermission('PRODUTOS_DADOS_FISCAIS_GERENCIAR')) {
-                        await dadosFiscaisMutation.mutateAsync({ id: produtoId, values: { ncmCodigo: values.ncmCodigo, cestCodigo: values.cestCodigo, origemMercadoriaCodigo: values.origemMercadoriaCodigo, tipoItemFiscal: values.tipoItemFiscal, unidadeMedidaTributavelId: values.unidadeMedidaTributavelId, codigoFiscalExterno: values.codigoFiscalExterno } });
-                    }
-                } else if (hasPermission('PRODUTOS_DADOS_FISCAIS_GERENCIAR')) {
-                    await dadosFiscaisMutation.mutateAsync({ id: produtoId, values: { ncmCodigo: values.ncmCodigo, cestCodigo: values.cestCodigo, origemMercadoriaCodigo: values.origemMercadoriaCodigo, tipoItemFiscal: values.tipoItemFiscal, unidadeMedidaTributavelId: values.unidadeMedidaTributavelId, codigoFiscalExterno: values.codigoFiscalExterno } });
-                }
+        const produtoId = saved.id;
+        const isEdicao = Boolean(values.id);
+        const disparaDadosFiscais = hasPermission('PRODUTOS_DADOS_FISCAIS_GERENCIAR') && !dadosFiscaisEstaoEmBranco(values);
 
-                setFormVisible(false);
-                setSelected(null);
-            },
-            { success: { summary: 'Produto salvo', detail: 'Cadastro do produto gravado com sucesso.' }, error: { summary: 'Erro ao salvar produto', detail: 'Não foi possível salvar o produto.' }, rethrow: true }
-        );
+        if (isEdicao) {
+            try {
+                await precoCustoMutation.mutateAsync({ id: produtoId, values: { precoVendaBase: values.precoVendaBase, custoReferencial: values.custoReferencial } });
+            } catch (error) {
+                const apiError = mapApiError(error);
+                toast.error('Produto salvo, mas o preço não foi atualizado', `O cadastro do produto foi gravado. ${apiError.message}`);
+                throw error;
+            }
+        }
+
+        if (disparaDadosFiscais) {
+            try {
+                await dadosFiscaisMutation.mutateAsync({ id: produtoId, values: buildDadosFiscaisPatchValues(values) });
+            } catch (error) {
+                const apiError = mapApiError(error);
+                toast.error('Produto salvo, mas os dados fiscais não foram gravados', `O cadastro do produto foi gravado. ${apiError.message}`);
+                throw error;
+            }
+        }
+
+        toast.success('Produto salvo', 'Cadastro do produto gravado com sucesso.');
+        setFormVisible(false);
+        setSelected(null);
     };
 
     const inativar = async (motivo: string) => {

@@ -94,9 +94,10 @@ const LACUNA_TODOS_9FCDA80 = [
 ] as const;
 
 /**
- * Os 8 LACUNA que permanecem na árvore de hoje (após Bloco B e b64).
+ * Os 7 LACUNA que permanecem na árvore de hoje (após Bloco B e b64).
  * Foram removidos (preenchidos nos schemas):
  *   - ncmCodigo, cestCodigo, unidadeMedidaTributavelId (Bloco B)
+ *   - tipoItemSped (Bloco B)
  *   - CriarEmpresaRequest.crt, AtualizarEmpresaRequest.crt (b64)
  *   - AdmitirColaboradorRequest.pessoaId (b63)
  * DefinirEnderecoFiscalRequest não gera LACUNA porque seus 2 campos anuláveis foram adicionados ao schema na b64.
@@ -105,7 +106,6 @@ const LACUNA_ESPERADOS_HOJE = [
   'AtualizarDadosFiscaisProdutoRequest.unidadeTributavelSigla',
   'AtualizarDadosFiscaisProdutoRequest.exTipi',
   'AtualizarDadosFiscaisProdutoRequest.codigoBeneficioFiscalPadrao',
-  'AtualizarDadosFiscaisProdutoRequest.tipoItemSped',
   'VincularProdutoFornecedorRequest.descricaoFornecedor',
   'TransferirEstoqueRequest.origemId',
   'TransferirEstoqueRequest.documento',
@@ -380,11 +380,15 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
       }
     });
 
-    it('imprime 8 LACUNA com destino', () => {
-      // Verifica que a saída contém "8" e "anuláveis sem destino"
-      // (3 preenchidos no Bloco B, 3 no Bloco b64, 2 de DefinirEnderecoFiscalRequest adicionados à b64)
+    it('imprime 7 LACUNA com destino', () => {
+      // Verifica que a saída contém "7" e "anuláveis sem destino"
+      // (3 preenchidos no Bloco B = ncmCodigo, cestCodigo, unidadeMedidaTributavelId)
+      // (1 preenchido no Bloco B = tipoItemSped)
+      // (3 no Bloco b64 = CriarEmpresaRequest.crt, AtualizarEmpresaRequest.crt)
+      // (1 no Bloco b63 = AdmitirColaboradorRequest.pessoaId)
+      // (2 de DefinirEnderecoFiscalRequest adicionados à b64)
       const saida = resultadoHoje.stdout + resultadoHoje.stderr;
-      expect(saida).toContain('8');
+      expect(saida).toContain('7');
       expect(saida).toContain('anuláveis sem destino');
       expect(saida).toMatch(/→/); // Destino deve estar presente
     });
@@ -398,6 +402,11 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
     });
 
     // Itens que foram removidos da lista de LACUNA (adicionados aos schemas)
+    it('não imprime LACUNA: AtualizarDadosFiscaisProdutoRequest.tipoItemSped (adicionado no schema)', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).not.toContain('AtualizarDadosFiscaisProdutoRequest.tipoItemSped');
+    });
+
     it('não imprime LACUNA: CriarEmpresaRequest.crt (adicionado no schema)', () => {
       const saida = resultadoHoje.stdout + resultadoHoje.stderr;
       expect(saida).not.toContain('CriarEmpresaRequest.crt');

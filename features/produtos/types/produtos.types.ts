@@ -74,6 +74,7 @@ export type ProdutoResponse = {
     cest?: string | null;
     origemMercadoriaCodigo?: string | null;
     tipoItemFiscal?: TipoItemFiscal | number | null;
+    tipoItemSped?: number | null;
     unidadeMedidaTributavelId?: Guid | null;
     codigoFiscalExterno?: string | null;
     observacao?: string | null;
@@ -165,6 +166,12 @@ export type AtualizarDadosFiscaisProdutoRequest = {
     cestCodigo?: string | null;
     origemMercadoriaCodigo?: string | null;
     tipoItemFiscal?: TipoItemFiscal | number | null;
+    /**
+     * Só trafega — lido do response e devolvido sem controle de UI. O backend exige este campo
+     * sempre que qualquer outro campo fiscal está preenchido (ver `EstaEmBranco` no resolver).
+     * Campo editável na tela é escopo da v1.11.0a8b65.
+     */
+    tipoItemSped?: number | null;
     unidadeMedidaTributavelId?: Guid | null;
     codigoFiscalExterno?: string | null;
 };
