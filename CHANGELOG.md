@@ -1,3 +1,59 @@
+# v1.11.0a8b64
+
+## Empresa e Filial: CRT, `contribuinteIpi` sob demanda no PUT, e endereço fiscal compartilhado (D56)
+
+Entrega o que o anexo de melhorias apontava em Empresa e Filial: o CRT no criar e no atualizar, o
+indicador de IPI deixando de ser resetado em silêncio a cada PUT, e o bloco de endereço fiscal —
+até aqui nunca consumido pelo frontend — pelo mesmo componente nas duas telas, gravando por
+endpoint próprio. O gate de contratos de request cresce para cobrir `DefinirEnderecoFiscalRequest`
+e passa a falhar duro quando um schema mapeado não é encontrado, em vez de só avisar. Plano em
+`docs/fatias/v1.11.0a8b64-f4-empresa-filial-fiscal.md`.
+
+**Risco da fatia: `HIGH`** (muda tipo e campo contra o contrato, e cria um bloco de endereço
+herdado por duas telas). **Risco de acesso: `NENHUM`** — a fatia não remove acesso de ninguém.
+
+### Seção operacional — leia antes do deploy
+
+1. **Empresas e filiais cadastradas antes desta versão não têm endereço fiscal, e a nota fiscal vai
+   exigi-lo.** Isso é trabalho de cadastro para a operação assumir, não defeito desta versão.
+2. **`Crt?` é anulável e não tem zero** (1 Simples Nacional, 2 Simples Nacional com excesso de
+   sublimite, 3 Regime normal). Quando o operador não informa, a tela grava `null` explícito.
+3. **`contribuinteIpi` no PUT só é enviado quando o operador mexe no campo.** É `bool?`, onde
+   `null` significa "mantém o valor atual"; editar outro dado da empresa não altera mais o
+   indicador de IPI.
+4. **O endereço fiscal de Empresa e Filial usa o mesmo bloco compartilhado**, gravando por
+   endpoint próprio (`PUT .../endereco-fiscal`). O município tem ação própria de remoção
+   (`DELETE .../endereco-fiscal/municipio`) — nunca se apaga mandando o campo nulo no PUT.
+5. **Editar o endereço fiscal de um registro que já tem município vinculado exige a permissão
+   `FISCAL_CADASTROS_CONSULTAR`**, porque o município precisa ser resolvido no catálogo antes de o
+   endereço poder ser regravado. Sem ela, o bloco avisa em vez de falhar em silêncio.
+6. **Remover o vínculo do município é ação deliberada** e deixa o endereço incompleto até um novo
+   município ser selecionado e salvo.
+7. **O gate de contratos de request agora cobre `DefinirEnderecoFiscalRequest`** e ganha falha
+   dura quando um schema mapeado não é encontrado; antes disso era só aviso, e um recorte podia
+   sair do universo em silêncio.
+
+### Testes e QA
+
+**Rodado nesta sessão** (verificação estática; sem credencial de backend disponível):
+
+- Testes unitários e de payload do módulo administração: `npx vitest run tests/unit/administracaoPayload.test.ts tests/unit/administracaoFiliaisTransport.test.ts tests/unit/administracaoReferenceUx.test.ts` — 11 passam.
+- Prova durável do gate de contratos de request: `npx vitest run tests/unit/gateContractRequestFields.test.ts` — 46 passam.
+- `npm run validate:contract-request-fields` — verde, 0 divergências críticas.
+- `tsc --noEmit` — limpo.
+
+**Pendente**, e é trabalho de QA que ainda não rodou: AC-4 (reabrir a empresa com o município
+resolvido) e AC-7 (o CRT grava, e editar outro campo não o altera) precisam se confirmar **no
+banco** — `erp.empresas."Crt"`, `EnderecoFiscal_*`, `UpdatedAt` —, não por leitura de tela. Nesta
+sessão não há credencial de backend nem verificação em tela ou em banco: não houve QA aprovado.
+
+**Achado à parte, medido nesta sessão**: a prova durável do gate de contratos de request já
+estava vermelha antes desta fatia — a `b63` preencheu `AdmitirColaboradorRequest.pessoaId` e
+commitou sem atualizar a lista esperada do teste. Medido com `git worktree` sobre `4e589f7`: o
+gate imprime 10 lacunas e `AdmitirColaboradorRequest.pessoaId` está ausente delas, enquanto a
+prova esperava 11. Esta fatia reparou a prova (Bloco C). Registrado como fato medido; a decisão
+sobre o que fazer com o achado fica pendente, com o usuário.
+
 # v1.11.0a8b58
 
 ## Séries fiscais: cadastro, vigência, numeração e uso na emissão (F3)

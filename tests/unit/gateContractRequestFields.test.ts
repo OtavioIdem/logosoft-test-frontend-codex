@@ -5,18 +5,21 @@ import path from 'path';
 import { tmpdir } from 'os';
 
 /**
- * Prova durável do gate de campos em request — fatia v1.11.0a8b58.c3 (D19).
+ * Prova durável do gate de campos em request — fatia v1.11.0a8b58.c3 (D19) + b64 (Bloco C).
  *
  * POR QUE ESTE ARQUIVO EXISTE: o gate valida que schemas Zod de request do frontend não enviam
  * campos que o record C# do backend não declara, e que não omitem campos obrigatórios (não-anuláveis)
  * que o backend espera.
  *
- * Este teste automatiza essa prova com três sondas:
+ * Este teste automatiza essa prova com cinco sondas:
  *   - Sonda A: árvore de 9fcda80 (contém os 15 defeitos) — deve acusar 8 DESCARTE + 7 DEFAULT_SILENCIOSO
- *   - Sonda B: árvore de hoje (sem os 15) — deve sair 0, imprimindo 11 LACUNA
- *   - Sonda C: injeta um campo fake num schema — deve acusar e sair 1
+ *   - Sonda B: árvore de hoje (sem os 15) — deve sair 0, imprimindo 8 LACUNA
+ *   - Sonda C: injeta um campo fake em recorte antigo — deve acusar e sair 1
+ *   - Sonda D: injeita um campo fake em DefinirEnderecoFiscalRequest (DESCARTE) — deve acusar e sair 1
+ *   - Sonda E: remove um campo obrigatório de DefinirEnderecoFiscalRequest (DEFAULT_SILENCIOSO) — deve acusar e sair 1
  *
- * Os 15 críticos (8 + 7) compõem a prova vermelha. Os 11 LACUNA permanecem para a Sonda B.
+ * Os 15 críticos (8 + 7) compõem a prova vermelha de 9fcda80 (Sonda A). Os 8 LACUNA permanecem para a Sonda B.
+ * As Sondas D e E comprovam que o novo recorte DefinirEnderecoFiscalRequest é detectado em ambas direções.
  */
 
 const raizDoProjeto = process.cwd();
@@ -91,8 +94,12 @@ const LACUNA_TODOS_9FCDA80 = [
 ] as const;
 
 /**
- * Os 11 LACUNA que permanecem na árvore de hoje (após Bloco B).
- * Os 3 primeiros foram preenchidos: ncmCodigo, cestCodigo, unidadeMedidaTributavelId.
+ * Os 8 LACUNA que permanecem na árvore de hoje (após Bloco B e b64).
+ * Foram removidos (preenchidos nos schemas):
+ *   - ncmCodigo, cestCodigo, unidadeMedidaTributavelId (Bloco B)
+ *   - CriarEmpresaRequest.crt, AtualizarEmpresaRequest.crt (b64)
+ *   - AdmitirColaboradorRequest.pessoaId (b63)
+ * DefinirEnderecoFiscalRequest não gera LACUNA porque seus 2 campos anuláveis foram adicionados ao schema na b64.
  */
 const LACUNA_ESPERADOS_HOJE = [
   'AtualizarDadosFiscaisProdutoRequest.unidadeTributavelSigla',
@@ -102,18 +109,16 @@ const LACUNA_ESPERADOS_HOJE = [
   'VincularProdutoFornecedorRequest.descricaoFornecedor',
   'TransferirEstoqueRequest.origemId',
   'TransferirEstoqueRequest.documento',
-  'CriarEmpresaRequest.crt',
-  'AtualizarEmpresaRequest.crt',
-  'AtualizarEmpresaRequest.contribuinteIpi',
-  'AdmitirColaboradorRequest.pessoaId'
+  'AtualizarEmpresaRequest.contribuinteIpi'
 ] as const;
 
 /**
  * Monta um espelho temporário com o gate de request, allowlist, contrato e schemas.
  * Se refSchemas === 'HEAD-WORKING', usa os arquivos do disco (working directory).
  * Caso contrário, usa git show para trazer a versão específica dos schemas.
+ * Se stripNewMapping === true, remove DefinirEnderecoFiscalRequest do gate (para Sonda A em 9fcda80).
  */
-function montarEspelho(refSchemas: string): string {
+function montarEspelho(refSchemas: string, stripNewMapping?: boolean): string {
   const espelho = mkdtempSync(path.join(tmpdir(), 'gate-prova-request-'));
 
   // Estrutura mínima
@@ -135,8 +140,20 @@ function montarEspelho(refSchemas: string): string {
 
   // Copia gate de request da árvore atual (sempre)
   const gateSource = path.join(raizDoProjeto, 'scripts', 'gate-contract-request-fields.mjs');
+  let gateContent = readFileSync(gateSource, 'utf8');
+
+  // Para Sonda A, remove DefinirEnderecoFiscalRequest do mapa (não existia em 9fcda80)
+  if (stripNewMapping) {
+    // Remove do docstring
+    gateContent = gateContent.replace(/   - administracao: CriarEmpresaRequest, AtualizarEmpresaRequest, DefinirEnderecoFiscalRequest/, '   - administracao: CriarEmpresaRequest, AtualizarEmpresaRequest');
+    // Remove do SCHEMA_TO_REQUEST_MAP
+    gateContent = gateContent.replace(/    definirEnderecoFiscalSchema: 'DefinirEnderecoFiscalRequest',\n/, '');
+    // Remove da lista recordNames
+    gateContent = gateContent.replace(/    'DefinirEnderecoFiscalRequest',\n/, '');
+  }
+
   const gateDest = path.join(espelho, 'scripts', 'gate-contract-request-fields.mjs');
-  writeFileSync(gateDest, readFileSync(gateSource, 'utf8'));
+  writeFileSync(gateDest, gateContent);
 
   // Cria allowlist vazio
   const allowlistDest = path.join(espelho, 'scripts', 'gate-contract-request-fields.allowlist.json');
@@ -178,7 +195,7 @@ function montarEspelho(refSchemas: string): string {
 /**
  * Executa o gate num espelho e retorna { exitCode, stdout, stderr, nomesDivergencias }
  */
-function executarGate(espelho: string): {
+function executarGate(espelho: string, env?: Record<string, string>): {
   exitCode: number;
   stdout: string;
   stderr: string;
@@ -187,7 +204,8 @@ function executarGate(espelho: string): {
   const result = spawnSync('node', ['scripts/gate-contract-request-fields.mjs'], {
     cwd: espelho,
     encoding: 'utf8',
-    stdio: ['pipe', 'pipe', 'pipe']
+    stdio: ['pipe', 'pipe', 'pipe'],
+    env: env ? { ...process.env, ...env } : process.env
   });
 
   const stdout = result.stdout || '';
@@ -252,32 +270,68 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
   let espelhoAntigo = '';
   let espelhoHoje = '';
   let espelhoComFantasma = '';
+  let espelhoDefinirEnderecoFiscalComFantasma = '';
+  let espelhoDefinirEnderecoFiscalSemObrigatorio = '';
+  let espelhoComMapeamentoFake = '';
 
   let resultadoAntigo: Awaited<ReturnType<typeof executarGate>>;
   let resultadoHoje: Awaited<ReturnType<typeof executarGate>>;
   let resultadoFantasma: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoDefinirEnderecoFiscalComFantasma: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoDefinirEnderecoFiscalSemObrigatorio: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoMapeamentoFake: Awaited<ReturnType<typeof executarGate>>;
 
   beforeAll(() => {
     // Sonda A: árvore de 9fcda80 (contém os 15 defeitos)
-    espelhoAntigo = montarEspelho(REF_ANTIGA_C1);
-    resultadoAntigo = executarGate(espelhoAntigo);
+    // Passa GATE_RECORTES_IGNORADOS para ignorar recortes posteriores à revisão testada
+    espelhoAntigo = montarEspelho(REF_ANTIGA_C1, true);
+    resultadoAntigo = executarGate(espelhoAntigo, { GATE_RECORTES_IGNORADOS: 'DefinirEnderecoFiscalRequest' });
 
     // Sonda B: árvore de hoje (sem os 15 defeitos)
     espelhoHoje = montarEspelho('HEAD-WORKING');
     resultadoHoje = executarGate(espelhoHoje);
 
-    // Sonda C: árvore de hoje + campo fake injetado
+    // Sonda C: árvore de hoje + campo fake injetado em recorte antigo
     espelhoComFantasma = montarEspelho('HEAD-WORKING');
     const arquivoProdutos = path.join(espelhoComFantasma, 'features', 'produtos', 'schemas', 'produtosSchemas.ts');
     let conteudo = readFileSync(arquivoProdutos, 'utf8');
     conteudo = injetarCampoFantasma(conteudo, 'atualizarDadosFiscaisProdutoSchema');
     writeFileSync(arquivoProdutos, conteudo);
     resultadoFantasma = executarGate(espelhoComFantasma);
+
+    // Sonda D: DefinirEnderecoFiscalRequest + campo fake injetado (DESCARTE)
+    espelhoDefinirEnderecoFiscalComFantasma = montarEspelho('HEAD-WORKING');
+    const arquivoAdministracao = path.join(espelhoDefinirEnderecoFiscalComFantasma, 'features', 'administracao', 'schemas', 'administracaoSchemas.ts');
+    conteudo = readFileSync(arquivoAdministracao, 'utf8');
+    conteudo = injetarCampoFantasma(conteudo, 'definirEnderecoFiscalSchema');
+    writeFileSync(arquivoAdministracao, conteudo);
+    resultadoDefinirEnderecoFiscalComFantasma = executarGate(espelhoDefinirEnderecoFiscalComFantasma);
+
+    // Sonda E: DefinirEnderecoFiscalRequest com um obrigatório removido (DEFAULT_SILENCIOSO)
+    espelhoDefinirEnderecoFiscalSemObrigatorio = montarEspelho('HEAD-WORKING');
+    const arquivoAdministracaoE = path.join(espelhoDefinirEnderecoFiscalSemObrigatorio, 'features', 'administracao', 'schemas', 'administracaoSchemas.ts');
+    conteudo = readFileSync(arquivoAdministracaoE, 'utf8');
+    // Remove o campo `bairro` do schema de DefinirEnderecoFiscalRequest
+    conteudo = conteudo.replace(/    bairro: requiredText\('Bairro', 2\),[\n\r]*/g, '');
+    writeFileSync(arquivoAdministracaoE, conteudo);
+    resultadoDefinirEnderecoFiscalSemObrigatorio = executarGate(espelhoDefinirEnderecoFiscalSemObrigatorio);
+
+    // Sonda F: Prova vermelha da falha dura — mapeamento fake na árvore corrente
+    espelhoComMapeamentoFake = montarEspelho('HEAD-WORKING');
+    const arquivoGateFake = path.join(espelhoComMapeamentoFake, 'scripts', 'gate-contract-request-fields.mjs');
+    let gateContentFake = readFileSync(arquivoGateFake, 'utf8');
+    // Injeta um mapeamento fake: schema inexistente → record que nunca existirá
+    gateContentFake = gateContentFake.replace(
+      /administracao: \{[\s\S]*?atualizarEmpresaSchema: 'AtualizarEmpresaRequest'/,
+      (match) => match + ",\n    fakeSchemaForProva: 'FakeNeverExistsRequest'"
+    );
+    writeFileSync(arquivoGateFake, gateContentFake);
+    resultadoMapeamentoFake = executarGate(espelhoComMapeamentoFake);
   }, 120_000);
 
   afterAll(() => {
     // Limpa espelhos
-    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma]) {
+    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoDefinirEnderecoFiscalComFantasma, espelhoDefinirEnderecoFiscalSemObrigatorio, espelhoComMapeamentoFake]) {
       if (espelho && existsSync(espelho)) {
         try {
           rmSync(espelho, { recursive: true });
@@ -326,10 +380,11 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
       }
     });
 
-    it('imprime 11 LACUNA com destino', () => {
-      // Verifica que a saída contém "11" e "anuláveis sem destino"
+    it('imprime 8 LACUNA com destino', () => {
+      // Verifica que a saída contém "8" e "anuláveis sem destino"
+      // (3 preenchidos no Bloco B, 3 no Bloco b64, 2 de DefinirEnderecoFiscalRequest adicionados à b64)
       const saida = resultadoHoje.stdout + resultadoHoje.stderr;
-      expect(saida).toContain('11');
+      expect(saida).toContain('8');
       expect(saida).toContain('anuláveis sem destino');
       expect(saida).toMatch(/→/); // Destino deve estar presente
     });
@@ -342,12 +397,38 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
       });
     });
 
-    // Verifica que os 3 pares (preenchidos no Bloco B) NÃO aparecem mais
-    it('não imprime os 3 pares preenchidos (ncmCodigo, cestCodigo, unidadeMedidaTributavelId)', () => {
+    // Itens que foram removidos da lista de LACUNA (adicionados aos schemas)
+    it('não imprime LACUNA: CriarEmpresaRequest.crt (adicionado no schema)', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).not.toContain('CriarEmpresaRequest.crt');
+    });
+
+    it('não imprime LACUNA: AtualizarEmpresaRequest.crt (adicionado no schema)', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).not.toContain('AtualizarEmpresaRequest.crt');
+    });
+
+    it('não imprime LACUNA: AdmitirColaboradorRequest.pessoaId (adicionado no schema)', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).not.toContain('AdmitirColaboradorRequest.pessoaId');
+    });
+
+    // Verifica que os campos preenchidos nos schemas NÃO aparecem mais
+    it('não imprime os campos preenchidos (ncmCodigo, cestCodigo, unidadeMedidaTributavelId, crt, pessoaId)', () => {
       const saida = resultadoHoje.stdout + resultadoHoje.stderr;
       expect(saida).not.toContain('AtualizarDadosFiscaisProdutoRequest.ncmCodigo');
       expect(saida).not.toContain('AtualizarDadosFiscaisProdutoRequest.cestCodigo');
       expect(saida).not.toContain('AtualizarDadosFiscaisProdutoRequest.unidadeMedidaTributavelId');
+      expect(saida).not.toContain('CriarEmpresaRequest.crt');
+      expect(saida).not.toContain('AtualizarEmpresaRequest.crt');
+      expect(saida).not.toContain('AdmitirColaboradorRequest.pessoaId');
+    });
+
+    // Verifica que DefinirEnderecoFiscalRequest foi adicionado sem gerar LACUNA
+    it('não imprime LACUNA para DefinirEnderecoFiscalRequest (campos anuláveis no schema)', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).not.toContain('DefinirEnderecoFiscalRequest.complemento');
+      expect(saida).not.toContain('DefinirEnderecoFiscalRequest.codigoMunicipioIbge');
     });
   });
 
@@ -364,6 +445,60 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
     it('não acusa nenhum dos 15 críticos (árvore é limpa)', () => {
       for (const nome of CRITICOS_ESPERADOS_EM_9FCDA80) {
         expect(resultadoFantasma.nomesDivergencias.has(nome)).toBe(false);
+      }
+    });
+  });
+
+  describe('Sonda D: DefinirEnderecoFiscalRequest com campo fake (DESCARTE)', () => {
+    it('gate sai com código de erro ao injetar campo fake no novo recorte', () => {
+      expect(resultadoDefinirEnderecoFiscalComFantasma.exitCode).toBe(1);
+    });
+
+    it('acusa o campo injetado nomeando DefinirEnderecoFiscalRequest.campoFantasmaTesteSonda (DESCARTE)', () => {
+      const saida = resultadoDefinirEnderecoFiscalComFantasma.stdout + resultadoDefinirEnderecoFiscalComFantasma.stderr;
+      expect(saida).toContain('DefinirEnderecoFiscalRequest.campoFantasmaTesteSonda');
+      expect(saida).toContain('DESCARTE');
+    });
+
+    it('não acusa nenhum dos 15 críticos da árvore antiga', () => {
+      for (const nome of CRITICOS_ESPERADOS_EM_9FCDA80) {
+        expect(resultadoDefinirEnderecoFiscalComFantasma.nomesDivergencias.has(nome)).toBe(false);
+      }
+    });
+  });
+
+  describe('Sonda E: DefinirEnderecoFiscalRequest sem campo obrigatório (DEFAULT_SILENCIOSO)', () => {
+    it('gate sai com código de erro ao remover obrigatório do novo recorte', () => {
+      expect(resultadoDefinirEnderecoFiscalSemObrigatorio.exitCode).toBe(1);
+    });
+
+    it('acusa o campo obrigatório faltante nomeando DefinirEnderecoFiscalRequest.bairro (DEFAULT_SILENCIOSO)', () => {
+      const saida = resultadoDefinirEnderecoFiscalSemObrigatorio.stdout + resultadoDefinirEnderecoFiscalSemObrigatorio.stderr;
+      expect(saida).toContain('DefinirEnderecoFiscalRequest.bairro');
+      expect(saida).toContain('DEFAULT_SILENCIOSO');
+    });
+
+    it('não acusa nenhum dos 15 críticos da árvore antiga', () => {
+      for (const nome of CRITICOS_ESPERADOS_EM_9FCDA80) {
+        expect(resultadoDefinirEnderecoFiscalSemObrigatorio.nomesDivergencias.has(nome)).toBe(false);
+      }
+    });
+  });
+
+  describe('Sonda F: mapeamento fake (prova vermelha da falha dura)', () => {
+    it('gate sai com código de erro ao detectar schema mapeado inexistente', () => {
+      expect(resultadoMapeamentoFake.exitCode).toBe(1);
+    });
+
+    it('acusa FakeNeverExistsRequest como esquema estruturalmente quebrado', () => {
+      const saida = resultadoMapeamentoFake.stdout + resultadoMapeamentoFake.stderr;
+      expect(saida).toContain('FakeNeverExistsRequest');
+      expect(saida).toContain('FALHA ESTRUTURAL');
+    });
+
+    it('não acusa nenhum dos 15 críticos (árvore é limpa)', () => {
+      for (const nome of CRITICOS_ESPERADOS_EM_9FCDA80) {
+        expect(resultadoMapeamentoFake.nomesDivergencias.has(nome)).toBe(false);
       }
     });
   });

@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { isValidGuid } from '@/lib/http/requestUtils';
-import { RegimeTributario } from '@/features/administracao/types/administracao.types';
+import { Crt, RegimeTributario } from '@/features/administracao/types/administracao.types';
 
 const nullableText = z.string().trim().optional().nullable().transform((value) => (value && value.length > 0 ? value : null));
 const requiredText = (label: string, min = 2) => z.string().trim().min(min, `${label} é obrigatório.`);
@@ -16,8 +16,40 @@ const documentoEmpresa = z.string().trim().min(11, 'Informe CPF/CNPJ válido par
 
 const regimeTributarioSchema = z.nativeEnum(RegimeTributario, { errorMap: () => ({ message: 'Selecione o regime tributário.' }) });
 
-export const criarEmpresaSchema = z.object({ razaoSocial: requiredText('Razão social', 3), nomeFantasia: nullableText, documento: documentoEmpresa, inscricaoEstadual: nullableText, inscricaoMunicipal: nullableText, regimeTributario: regimeTributarioSchema, contribuinteIpi: z.boolean().default(false) });
-export const atualizarEmpresaSchema = z.object({ razaoSocial: requiredText('Razão social', 3), nomeFantasia: nullableText, inscricaoEstadual: nullableText, inscricaoMunicipal: nullableText, regimeTributario: regimeTributarioSchema });
+// `Crt?` é anulável (D55: LACUNA fechado pela b64) — o formulário nasce sem CRT selecionado
+// (sentinel `''` do Dropdown) e o valor vira `null`, nunca `0` (Crt não tem zero).
+const crtSchema = z
+    .union([z.nativeEnum(Crt), z.literal(''), z.null()])
+    .optional()
+    .transform((value) => (value === '' || value === undefined || value === null ? null : value));
+
+export const criarEmpresaSchema = z.object({ razaoSocial: requiredText('Razão social', 3), nomeFantasia: nullableText, documento: documentoEmpresa, inscricaoEstadual: nullableText, inscricaoMunicipal: nullableText, regimeTributario: regimeTributarioSchema, crt: crtSchema, contribuinteIpi: z.boolean().default(false) });
+// `contribuinteIpi` do PUT (`bool?`, `null` = mantém) fica fora deste schema de propósito: entra pelo
+// campo `contribuinteIpiPatch` (passthrough) de administracaoPageConfig.ts, resolvido em
+// administracaoApi.ts — nunca por aqui, para não nascer com `false` e resetar o indicador em
+// silêncio (D55, o mesmo defeito que a c3 fechou em `regimeTributario`).
+export const atualizarEmpresaSchema = z.object({ razaoSocial: requiredText('Razão social', 3), nomeFantasia: nullableText, inscricaoEstadual: nullableText, inscricaoMunicipal: nullableText, regimeTributario: regimeTributarioSchema, crt: crtSchema });
+
+// DefinirEnderecoFiscalRequest — seis obrigatórios, dois anuláveis (armadilha 1 do plano
+// v1.11.0a8b64; fonte C#, o Swagger declara os oito como `string | null` e está errado).
+export const definirEnderecoFiscalSchema = z.object({
+    logradouro: requiredText('Logradouro', 3),
+    numero: requiredText('Número', 1),
+    complemento: nullableText,
+    bairro: requiredText('Bairro', 2),
+    cidade: requiredText('Cidade', 2),
+    uf: z
+        .string()
+        .trim()
+        .length(2, 'Selecione a UF.')
+        .transform((value) => value.toUpperCase()),
+    cep: z
+        .string()
+        .trim()
+        .min(8, 'Informe um CEP válido.')
+        .max(9, 'CEP deve ter no máximo 9 caracteres.'),
+    codigoMunicipioIbge: nullableText
+});
 export const criarFilialSchema = z.object({ empresaId: requiredGuid('Empresa'), nome: requiredText('Nome da filial', 2), documento: documentoEmpresa, inscricaoEstadual: nullableText, inscricaoMunicipal: nullableText });
 export const atualizarFilialSchema = z.object({ nome: requiredText('Nome da filial', 2), inscricaoEstadual: nullableText, inscricaoMunicipal: nullableText });
 export const criarSetorSchema = z.object({ empresaId: requiredGuid('Empresa'), filialId: optionalGuid, nome: requiredText('Nome do setor', 2), descricao: nullableText });

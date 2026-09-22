@@ -12,11 +12,28 @@ import {
     criarSetorSchema
 } from '@/features/administracao/schemas/administracaoSchemas';
 import { AdministracaoResourceKey } from '@/features/administracao/hooks/useAdministracaoResources';
-import { regimeTributarioOptions } from '@/features/administracao/components/administracaoLabels';
+import { contribuinteIpiPatchOptions, crtOptions, regimeTributarioOptions } from '@/features/administracao/components/administracaoLabels';
 
 export type AdministracaoFieldKind = 'text' | 'textarea' | 'number' | 'guid' | 'documento' | 'select' | 'checkbox';
 export type AdministracaoFieldOption = { label: string; value: number | string };
-export type AdministracaoFieldConfig = { name: string; label: string; kind: AdministracaoFieldKind; required?: boolean; helperText?: string; createOnly?: boolean; updateOnly?: boolean; disabledOnUpdate?: boolean; col?: string; options?: AdministracaoFieldOption[] };
+export type AdministracaoFieldConfig = {
+    name: string;
+    label: string;
+    kind: AdministracaoFieldKind;
+    required?: boolean;
+    helperText?: string;
+    createOnly?: boolean;
+    updateOnly?: boolean;
+    disabledOnUpdate?: boolean;
+    col?: string;
+    options?: AdministracaoFieldOption[];
+    /**
+     * Campo que não pertence ao schema Zod de request (ex.: `contribuinteIpiPatch`, sentinel de UI):
+     * `AdministracaoFormDialog` o repassa direto do estado do formulário para `onSubmit`, sem passar
+     * pelo `schema.safeParse` — que o descartaria por não estar declarado no objeto do schema.
+     */
+    passthrough?: boolean;
+};
 export type AdministracaoColumnConfig = { field: string; header: string; type?: 'text' | 'number' | 'status' | 'datetime' | 'document' };
 export type AdministracaoPageConfig = {
     resourceKey: AdministracaoResourceKey;
@@ -61,7 +78,9 @@ export const administracaoPageConfigs: Record<AdministracaoResourceKey, Administ
             { name: 'inscricaoEstadual', label: 'Inscrição estadual', kind: 'text', col: 'col-12 md:col-4' },
             { name: 'inscricaoMunicipal', label: 'Inscrição municipal', kind: 'text', col: 'col-12 md:col-4' },
             { name: 'regimeTributario', label: 'Regime tributário', kind: 'select', required: true, options: regimeTributarioOptions, helperText: 'Enviado em toda gravação da empresa; o backend não mantém o regime anterior quando o campo falta.', col: 'col-12 md:col-6' },
-            { name: 'contribuinteIpi', label: 'Contribuinte de IPI', kind: 'checkbox', createOnly: true, helperText: 'Informado apenas na criação da empresa.', col: 'col-12 md:col-6' }
+            { name: 'crt', label: 'CRT (Código de Regime Tributário)', kind: 'select', options: crtOptions, helperText: 'Usado na nota fiscal. Opcional; editar outro campo não altera o CRT já gravado.', col: 'col-12 md:col-6' },
+            { name: 'contribuinteIpi', label: 'Contribuinte de IPI', kind: 'checkbox', createOnly: true, helperText: 'Informado apenas na criação da empresa.', col: 'col-12 md:col-6' },
+            { name: 'contribuinteIpiPatch', label: 'Contribuinte de IPI', kind: 'select', updateOnly: true, passthrough: true, options: contribuinteIpiPatchOptions, helperText: 'Só é enviado ao backend quando alterado aqui; em "Manter valor atual" o indicador gravado não muda.', col: 'col-12 md:col-6' }
         ]
     },
     filiais: {

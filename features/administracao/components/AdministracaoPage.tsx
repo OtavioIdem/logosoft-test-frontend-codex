@@ -21,10 +21,11 @@ import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { AdministracaoFormDialog } from '@/features/administracao/components/AdministracaoFormDialog';
+import { EnderecoFiscalFormSection } from '@/features/administracao/components/EnderecoFiscalFormSection';
 import { administracaoPageConfigs, AdministracaoColumnConfig } from '@/features/administracao/components/administracaoPageConfig';
 import { AdministracaoResourceKey, useAdministracaoResource } from '@/features/administracao/hooks/useAdministracaoResources';
 import { useEmpresasOptions, useTodasFiliaisOptions, useTodosSetoresOptions } from '@/features/administracao/hooks/useEmpresaFilialOptions';
-import { AdministracaoFormValues, AdministracaoListQuery } from '@/features/administracao/types/administracao.types';
+import { AdministracaoFormValues, AdministracaoListQuery, EnderecoFiscalResponse } from '@/features/administracao/types/administracao.types';
 import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { formatDocumento } from '@/lib/formatters/display';
@@ -192,6 +193,21 @@ export const AdministracaoPage = ({ resourceKey }: { resourceKey: AdministracaoR
         </div>
     );
 
+    // O bloco de endereço fiscal grava por endpoint próprio (PUT/DELETE .../endereco-fiscal), fora
+    // do saveMutation genérico — só existe em edição (o PUT exige o id do registro já criado) e só
+    // para Empresa/Filial, que são os dois recursos com EnderecoFiscal no contrato.
+    const enderecoFiscalContent =
+        (resourceKey === 'empresas' || resourceKey === 'filiais') && selectedRecord?.id
+            ? (
+                <EnderecoFiscalFormSection
+                    resourceKey={resourceKey}
+                    registroId={String(selectedRecord.id)}
+                    enderecoFiscal={(selectedRecord.enderecoFiscal ?? null) as EnderecoFiscalResponse | null}
+                    disabled={!hasPermission('ADMINISTRACAO_GERENCIAR')}
+                />
+            )
+            : null;
+
     return (
         <>
             <PageHeader title={config.title} description={config.description} actions={headerActions} />
@@ -230,7 +246,7 @@ export const AdministracaoPage = ({ resourceKey }: { resourceKey: AdministracaoR
             <div className="mt-3">
                 <AuditInfoPanel audit={{ motivo: 'Administração v9.6.3 exibe status, criação e bloqueia edição/inativação para registros não ativos quando o backend retorna status diferente de Ativo.' }} />
             </div>
-            <AdministracaoFormDialog visible={formVisible} loading={saveMutation.isPending} title={selectedRecord ? config.updateTitle : config.createTitle} fields={config.fields} schema={selectedRecord ? config.updateSchema : config.createSchema} record={selectedRecord} onHide={() => setFormVisible(false)} onSubmit={save} />
+            <AdministracaoFormDialog visible={formVisible} loading={saveMutation.isPending} title={selectedRecord ? config.updateTitle : config.createTitle} fields={config.fields} schema={selectedRecord ? config.updateSchema : config.createSchema} record={selectedRecord} onHide={() => setFormVisible(false)} onSubmit={save} extraContent={enderecoFiscalContent} />
             <ReasonDialog visible={Boolean(reasonRecord)} title="Motivo da inativação" confirmLabel="Inativar" loading={inativarMutation.isPending} onHide={() => setReasonRecord(null)} onConfirm={inativar} />
         </>
     );
