@@ -1,7 +1,7 @@
 {
     "name": "logosoft-frontend",
-    "version": "1.11.0-a.8.b58",
-    "logosoftVersion": "1.11.0a8b58",
+    "version": "1.11.0-a.8.b64.c1",
+    "logosoftVersion": "1.11.0a8b64.c1",
     "private": true,
     "scripts": {
         "postinstall": "patch-package --error-on-fail",
@@ -26,7 +26,7 @@
         "test:e2e:fiscal:backend": "playwright test --config=playwright.backend-e2e.config.ts",
         "validate:fiscal:production": "node scripts/validate-fiscal-production.mjs",
         "validate:guid-references": "node scripts/validate-guid-references.mjs",
-        "ci:gates": "npm run validate:source && npm run validate:skills && npm run validate:mocks-isolation && npm run validate:backend-controlled && npm run validate:controlled-seeds && npm run validate:integrated-runbook && npm run validate:backend-seed-reset && npm run validate:assisted-e2e && npm run validate:integrated-e2e && npm run validate:operational-contracts && npm run validate:backend-contract-map && npm run validate:backend-permissions && npm run validate:guard-permission-map && npm run validate:guid-references && npm run validate:fiscal:production && npm run typecheck && npm run lint && npm run test:unit && npm run build && npx playwright install chromium && npm run test:e2e && npm run test:contract:fiscal && npm run test:contract:operational && npm run test:e2e:fiscal:backend",
+        "ci:gates": "npm run validate:source && npm run validate:skills && npm run validate:mocks-isolation && npm run validate:backend-controlled && npm run validate:controlled-seeds && npm run validate:integrated-runbook && npm run validate:backend-seed-reset && npm run validate:assisted-e2e && npm run validate:integrated-e2e && npm run validate:operational-contracts && npm run validate:backend-contract-map && npm run validate:backend-permissions && npm run validate:guard-permission-map && npm run validate:guid-references && npm run validate:fiscal:production && npm run validate:contract-fields && npm run validate:contract-request-fields && npm run typecheck && npm run lint && npm run test:unit && npm run build && npx playwright install chromium && npm run test:e2e && npm run test:contract:fiscal && npm run test:contract:operational && npm run test:e2e:fiscal:backend",
         "validate:skills": "node scripts/validate-skills.mjs",
         "validate:mocks-isolation": "node scripts/validate-mocks-isolation.mjs",
         "validate:backend-controlled": "node scripts/validate-backend-controlled.mjs",

@@ -28,7 +28,7 @@ jobs:
       NEXT_PUBLIC_API_URL: http://localhost:8080
       NEXT_PUBLIC_APP_NAME: logosoft
       NEXT_PUBLIC_APP_ENV: test
-      NEXT_PUBLIC_APP_VERSION: 1.11.0a8b58
+      NEXT_PUBLIC_APP_VERSION: 1.11.0a8b64.c1
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -85,6 +85,12 @@ jobs:
 
       - name: Validar prontidão fiscal de produção
         run: npm run validate:fiscal:production
+
+      - name: Validar campos de contrato (response)
+        run: npm run validate:contract-fields
+
+      - name: Validar campos de contrato (request)
+        run: npm run validate:contract-request-fields
 
       - name: Typecheck
         run: npm run typecheck

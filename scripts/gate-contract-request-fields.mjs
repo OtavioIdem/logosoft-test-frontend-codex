@@ -5,11 +5,11 @@
  * campos que o record C# do backend não declara, e que não omitem campos
  * obrigatórios (não-anuláveis) que o backend espera.
  *
- * Fatia: v1.11.0a8b58.c3 — contratos de request sem par
- * Escopo: seis records em cinco módulos
+ * Fatia: v1.11.0a8b58.c3 (Bloco B, C) — contratos de request sem par
+ * Escopo: oito records em cinco módulos
  *   - produtos: AtualizarDadosFiscaisProdutoRequest, VincularProdutoFornecedorRequest
  *   - estoque: TransferirEstoqueRequest
- *   - administracao: CriarEmpresaRequest, AtualizarEmpresaRequest
+ *   - administracao: CriarEmpresaRequest, AtualizarEmpresaRequest, DefinirEnderecoFiscalRequest
  *   - seguranca: CriarUsuarioRequest
  *   - rh: AdmitirColaboradorRequest
  *
@@ -37,7 +37,8 @@ const SCHEMA_TO_REQUEST_MAP = {
   },
   administracao: {
     criarEmpresaSchema: 'CriarEmpresaRequest',
-    atualizarEmpresaSchema: 'AtualizarEmpresaRequest'
+    atualizarEmpresaSchema: 'AtualizarEmpresaRequest',
+    definirEnderecoFiscalSchema: 'DefinirEnderecoFiscalRequest'
   },
   seguranca: {
     criarUsuarioSegurancaSchema: 'CriarUsuarioRequest'
@@ -66,6 +67,7 @@ function loadRequestContractFromDocument(contractPath) {
     'TransferirEstoqueRequest',
     'CriarEmpresaRequest',
     'AtualizarEmpresaRequest',
+    'DefinirEnderecoFiscalRequest',
     'CriarUsuarioRequest',
     'AdmitirColaboradorRequest'
   ];
@@ -201,15 +203,18 @@ function extractZodSchemaFields(fileContent, schemaName) {
 
 /**
  * Compara campos de request do schema Zod contra o contrato C#.
- * Retorna array de divergências com severidade (DESCARTE, DEFAULT_SILENCIOSO, LACUNA).
+ * Retorna { divergences, missingSchemas } onde:
+ *   - divergences: array de divergências com severidade (DESCARTE, DEFAULT_SILENCIOSO, LACUNA)
+ *   - missingSchemas: array de schemas mapeados mas não encontrados (falha dura)
  */
 function validateRequestModule(moduleName, fileContent, backendContracts) {
   const divergences = [];
+  const missingSchemas = [];
   const schemasMap = SCHEMA_TO_REQUEST_MAP[moduleName];
 
   if (!schemasMap) {
     console.warn(`⚠️  Módulo ${moduleName} não configurado no gate.`);
-    return divergences;
+    return { divergences, missingSchemas };
   }
 
   for (const [schemaName, recordName] of Object.entries(schemasMap)) {
@@ -217,12 +222,14 @@ function validateRequestModule(moduleName, fileContent, backendContracts) {
     const contractRecord = backendContracts[recordName];
 
     if (!schemaFields) {
-      console.warn(`⚠️  Schema ${moduleName}/${schemaName} não encontrado no TS.`);
+      // Schema foi mapeado mas não encontrado — falha dura
+      missingSchemas.push({ moduleName, schemaName, recordName, type: 'SCHEMA_NOT_FOUND' });
       continue;
     }
 
     if (!contractRecord) {
-      console.warn(`⚠️  Record ${recordName} não encontrado no contrato.`);
+      // Record foi mapeado mas não existe no contrato — falha dura
+      missingSchemas.push({ moduleName, schemaName, recordName, type: 'RECORD_NOT_FOUND' });
       continue;
     }
 
@@ -275,7 +282,7 @@ function validateRequestModule(moduleName, fileContent, backendContracts) {
     }
   }
 
-  return divergences;
+  return { divergences, missingSchemas };
 }
 
 /**
@@ -369,7 +376,17 @@ const LACUNA_DESTINO = {
 function main() {
   const modules = ['produtos', 'estoque', 'administracao', 'seguranca', 'rh'];
   const allDivergences = [];
+  const allMissingSchemas = [];
+  const ignoredRecords = new Set();
   const allowlist = loadAllowlist();
+
+  // Lê recortes que devem ser ignorados (para sondagem histórica contra revisões antigas)
+  // Formato: GATE_RECORTES_IGNORADOS="RecorteA,RecorteB"
+  const ignoredEnv = process.env.GATE_RECORTES_IGNORADOS || '';
+  if (ignoredEnv) {
+    const ignored = ignoredEnv.split(',').map(s => s.trim()).filter(s => s.length > 0);
+    ignored.forEach(r => ignoredRecords.add(r));
+  }
 
   // Carrega contrato
   const contractPath = path.join(ROOT, 'docs', 'BACKEND-ESTADO-ATUAL-E-CONTRATO.md');
@@ -392,8 +409,39 @@ function main() {
     }
 
     const content = fs.readFileSync(schemaFile, 'utf8');
-    const divergences = validateRequestModule(moduleName, content, BACKEND_CONTRACTS);
-    allDivergences.push(...divergences);
+    const result = validateRequestModule(moduleName, content, BACKEND_CONTRACTS);
+    allDivergences.push(...result.divergences);
+    allMissingSchemas.push(...result.missingSchemas);
+  }
+
+  // Filtra missing schemas: mantém apenas os que NÃO estão em ignoredRecords
+  const criticalMissing = allMissingSchemas.filter(m => !ignoredRecords.has(m.recordName));
+  const ignoredMissing = allMissingSchemas.filter(m => ignoredRecords.has(m.recordName));
+
+  // Imprime quais foram ignorados (transparência)
+  if (ignoredMissing.length > 0) {
+    console.log(`ℹ️  Recortes ignorados por GATE_RECORTES_IGNORADOS (${ignoredMissing.length}):`);
+    for (const missing of ignoredMissing) {
+      console.log(`   ⊘  ${missing.recordName} (para sondagem histórica)`);
+    }
+    console.log('');
+  }
+
+  // Verifica se há schemas mapeados mas não encontrados (falha dura)
+  // Excluindo aqueles deliberadamente ignorados para sondagem histórica
+  if (criticalMissing.length > 0) {
+    console.error('❌ FALHA ESTRUTURAL — schemas mapeados mas não encontrados:');
+    console.error('');
+    for (const missing of criticalMissing) {
+      if (missing.type === 'SCHEMA_NOT_FOUND') {
+        console.error(`   ❌ ${missing.moduleName}/${missing.schemaName} → mapeado a ${missing.recordName} mas não existe no arquivo TS`);
+      } else {
+        console.error(`   ❌ ${missing.recordName} → mapeado mas não encontrado no contrato (docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md)`);
+      }
+    }
+    console.error('');
+    console.error(`📊 ${criticalMissing.length} schema(s) estruturalmente quebrado(s).`);
+    process.exit(1);
   }
 
   // Filtra

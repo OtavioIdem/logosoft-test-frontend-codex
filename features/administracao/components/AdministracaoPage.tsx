@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
@@ -21,10 +21,11 @@ import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { AdministracaoFormDialog } from '@/features/administracao/components/AdministracaoFormDialog';
+import { EnderecoFiscalFormSection, EnderecoFiscalFormSectionHandle } from '@/features/administracao/components/EnderecoFiscalFormSection';
 import { administracaoPageConfigs, AdministracaoColumnConfig } from '@/features/administracao/components/administracaoPageConfig';
 import { AdministracaoResourceKey, useAdministracaoResource } from '@/features/administracao/hooks/useAdministracaoResources';
 import { useEmpresasOptions, useTodasFiliaisOptions, useTodosSetoresOptions } from '@/features/administracao/hooks/useEmpresaFilialOptions';
-import { AdministracaoFormValues, AdministracaoListQuery } from '@/features/administracao/types/administracao.types';
+import { AdministracaoFormValues, AdministracaoListQuery, EnderecoFiscalResponse } from '@/features/administracao/types/administracao.types';
 import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { formatDocumento } from '@/lib/formatters/display';
@@ -96,6 +97,11 @@ export const AdministracaoPage = ({ resourceKey }: { resourceKey: AdministracaoR
     const [formVisible, setFormVisible] = useState(false);
     const [selectedRecord, setSelectedRecord] = useState<Record<string, unknown> | null>(null);
     const [reasonRecord, setReasonRecord] = useState<Record<string, unknown> | null>(null);
+    // Ref imperativa do bloco de endereço fiscal (Empresa/Filial): o rodapé do diálogo grava por um
+    // endpoint diferente do saveMutation genérico, e sem isto o "Salvar" principal descartava em
+    // silêncio o que o operador tivesse editado no bloco (C7, v1.11.0a8b64 — achado em revisão do PR #26). `null` quando o bloco
+    // não está montado (registro novo, ou recurso sem endereço fiscal).
+    const enderecoFiscalRef = useRef<EnderecoFiscalFormSectionHandle>(null);
     const { listQuery, saveMutation, inativarMutation, blocked, blockedMessage } = useAdministracaoResource(resourceKey, alignedFilters);
 
     useEffect(() => {
@@ -146,9 +152,34 @@ export const AdministracaoPage = ({ resourceKey }: { resourceKey: AdministracaoR
         const isCreate = !values.id;
         const empresaCriada = typeof values.empresaId === 'string' ? values.empresaId : null;
         const filialCriada = typeof values.filialId === 'string' ? values.filialId : null;
+
+        // O bloco de endereço fiscal mantém estado local próprio e só persiste pelo botão interno
+        // "Salvar endereço fiscal" — sem isto, o "Salvar" do rodapé (que grava Empresa/Filial pelo
+        // saveMutation genérico) fechava o diálogo e descartava em silêncio o que o operador tivesse
+        // editado no bloco (C7, v1.11.0a8b64 — achado em revisão do PR #26). Valida o endereço ANTES de gravar qualquer coisa: se
+        // for inválido, nada é gravado (nem o cadastro) e o diálogo permanece aberto com os erros já
+        // pintados no bloco.
+        const enderecoRef = enderecoFiscalRef.current;
+        const enderecoSujo = Boolean(enderecoRef?.estaSujo());
+        if (enderecoSujo && enderecoRef && !enderecoRef.validar()) {
+            return;
+        }
+
         await runWithToast(
             async () => {
                 await saveMutation.mutateAsync({ id: values.id, values });
+
+                if (enderecoSujo && enderecoRef) {
+                    // O cadastro (Empresa/Filial) já gravou neste ponto. Se o PUT do endereço falhar
+                    // agora, não é um erro comum de "salvar" — é um estado parcial que precisa ficar
+                    // explícito, sem fechar o diálogo, em vez de silencioso (único caso parcial que
+                    // sobra deste fluxo).
+                    await enderecoRef.salvar().catch((error: unknown) => {
+                        const detalhe = error instanceof Error && error.message ? error.message : undefined;
+                        throw new Error(`Cadastro gravado, mas não foi possível salvar o endereço fiscal${detalhe ? `: ${detalhe}` : '.'} Corrija e tente salvar novamente.`, { cause: error });
+                    });
+                }
+
                 setFormVisible(false);
                 setSelectedRecord(null);
                 // Listas com filtro por empresa escondem o registro recém-criado quando nenhuma empresa está
@@ -192,6 +223,22 @@ export const AdministracaoPage = ({ resourceKey }: { resourceKey: AdministracaoR
         </div>
     );
 
+    // O bloco de endereço fiscal grava por endpoint próprio (PUT/DELETE .../endereco-fiscal), fora
+    // do saveMutation genérico — só existe em edição (o PUT exige o id do registro já criado) e só
+    // para Empresa/Filial, que são os dois recursos com EnderecoFiscal no contrato.
+    const enderecoFiscalContent =
+        (resourceKey === 'empresas' || resourceKey === 'filiais') && selectedRecord?.id
+            ? (
+                <EnderecoFiscalFormSection
+                    ref={enderecoFiscalRef}
+                    resourceKey={resourceKey}
+                    registroId={String(selectedRecord.id)}
+                    enderecoFiscal={(selectedRecord.enderecoFiscal ?? null) as EnderecoFiscalResponse | null}
+                    disabled={!hasPermission('ADMINISTRACAO_GERENCIAR')}
+                />
+            )
+            : null;
+
     return (
         <>
             <PageHeader title={config.title} description={config.description} actions={headerActions} />
@@ -230,7 +277,7 @@ export const AdministracaoPage = ({ resourceKey }: { resourceKey: AdministracaoR
             <div className="mt-3">
                 <AuditInfoPanel audit={{ motivo: 'Administração v9.6.3 exibe status, criação e bloqueia edição/inativação para registros não ativos quando o backend retorna status diferente de Ativo.' }} />
             </div>
-            <AdministracaoFormDialog visible={formVisible} loading={saveMutation.isPending} title={selectedRecord ? config.updateTitle : config.createTitle} fields={config.fields} schema={selectedRecord ? config.updateSchema : config.createSchema} record={selectedRecord} onHide={() => setFormVisible(false)} onSubmit={save} />
+            <AdministracaoFormDialog visible={formVisible} loading={saveMutation.isPending} title={selectedRecord ? config.updateTitle : config.createTitle} fields={config.fields} schema={selectedRecord ? config.updateSchema : config.createSchema} record={selectedRecord} onHide={() => setFormVisible(false)} onSubmit={save} extraContent={enderecoFiscalContent} />
             <ReasonDialog visible={Boolean(reasonRecord)} title="Motivo da inativação" confirmLabel="Inativar" loading={inativarMutation.isPending} onHide={() => setReasonRecord(null)} onConfirm={inativar} />
         </>
     );

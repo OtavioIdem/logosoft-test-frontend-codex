@@ -16,10 +16,14 @@ import {
     CriarEmpresaRequest,
     CriarFilialRequest,
     CriarSetorRequest,
+    DefinirEnderecoFiscalRequest,
     EmpresaResponse,
     FilialResponse,
     InativarAdministracaoRequest,
-    SetorResponse
+    MunicipioCadastro,
+    MunicipioCadastroQuery,
+    SetorResponse,
+    UfCadastro
 } from '@/features/administracao/types/administracao.types';
 import {
     atualizarCargoSchema,
@@ -32,9 +36,10 @@ import {
     criarEmpresaSchema,
     criarFilialSchema,
     criarSetorSchema,
+    definirEnderecoFiscalSchema,
     motivoAdministracaoSchema
 } from '@/features/administracao/schemas/administracaoSchemas';
-import type { ApiError, Guid } from '@/types/erp';
+import type { ApiError, Guid, PagedResult } from '@/types/erp';
 
 export class AdministracaoApiError extends Error {
     readonly apiError: ApiError;
@@ -59,6 +64,7 @@ const runAdministracaoRequest = async <T>(request: () => Promise<T>) => {
 const parseSchema = <T>(schema: { parse: (value: unknown) => T }, values: unknown): T => sanitizePayload(schema.parse(values)) as T;
 const parseMotivo = (motivo: string): InativarAdministracaoRequest => parseSchema(motivoAdministracaoSchema, { motivo });
 const params = (query?: AdministracaoListQuery) => cleanQueryParams({ empresaId: query?.empresaId, filialId: query?.filialId, termo: query?.termo });
+const toRecord = (value: unknown): Record<string, unknown> => (typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {});
 
 export const buildCriarEmpresaPayload = (values: unknown): CriarEmpresaRequest => parseSchema(criarEmpresaSchema, values);
 export const buildAtualizarEmpresaPayload = (values: unknown): AtualizarEmpresaRequest => parseSchema(atualizarEmpresaSchema, values);
@@ -70,6 +76,23 @@ export const buildCriarCargoPayload = (values: unknown): CriarCargoRequest => pa
 export const buildAtualizarCargoPayload = (values: unknown): AtualizarCargoRequest => parseSchema(atualizarCargoSchema, values);
 export const buildCriarCentroCustoPayload = (values: unknown): CriarCentroCustoRequest => parseSchema(criarCentroCustoSchema, values);
 export const buildAtualizarCentroCustoPayload = (values: unknown): AtualizarCentroCustoRequest => parseSchema(atualizarCentroCustoSchema, values);
+export const buildDefinirEnderecoFiscalPayload = (values: unknown): DefinirEnderecoFiscalRequest => parseSchema(definirEnderecoFiscalSchema, values);
+
+/**
+ * `AtualizarEmpresaRequest.contribuinteIpi` é `bool?` e `null` significa "mantém o valor atual"
+ * (contrato `:2332`). Por isso o campo não mora em `atualizarEmpresaSchema` (ficaria sempre presente
+ * e sempre `false`/`true`, reintroduzindo o `DEFAULT_SILENCIOSO` que a c3 fechou em
+ * `regimeTributario`): a chave só entra no payload quando `administracaoPageConfig.ts` manda o
+ * sentinel `'sim'`/`'nao'` do campo `contribuinteIpiPatch` — `''` (não tocado) não gera chave nenhuma.
+ */
+const contribuinteIpiPatchFrom = (values: unknown): { contribuinteIpi: boolean } | Record<string, never> => {
+    const raw = toRecord(values).contribuinteIpiPatch;
+    if (raw === 'sim') return { contribuinteIpi: true };
+    if (raw === 'nao') return { contribuinteIpi: false };
+    return {};
+};
+
+const enderecoFiscalBasePath = (resourceKey: 'empresas' | 'filiais', id: string) => `/api/administracao/${resourceKey}/${id}/endereco-fiscal`;
 
 export const administracaoApi = {
     async listarEmpresas() {
@@ -86,7 +109,7 @@ export const administracaoApi = {
         });
     },
     async atualizarEmpresa(id: string, values: unknown) {
-        const payload = buildAtualizarEmpresaPayload(values);
+        const payload = { ...buildAtualizarEmpresaPayload(values), ...contribuinteIpiPatchFrom(values) };
         return runAdministracaoRequest(async () => {
             const response = await httpClient.put<EmpresaResponse>(`/api/administracao/empresas/${id}`, payload);
             return response.data;
@@ -203,6 +226,37 @@ export const administracaoApi = {
         const payload = parseMotivo(motivo);
         return runAdministracaoRequest(async () => {
             await httpClient.post<void>(`/api/administracao/centros-custo/${id}/inativar`, payload);
+        });
+    },
+    // `DefinirEnderecoFiscal` é o mesmo endpoint (`PUT .../{id}/endereco-fiscal`) em EmpresasController
+    // e FiliaisController — só o recurso na rota muda (docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md:896-910).
+    async definirEnderecoFiscal(resourceKey: 'empresas' | 'filiais', id: string, values: unknown) {
+        const payload = buildDefinirEnderecoFiscalPayload(values);
+        return runAdministracaoRequest(async () => {
+            const response = await httpClient.put<EmpresaResponse | FilialResponse>(enderecoFiscalBasePath(resourceKey, id), payload);
+            return response.data;
+        });
+    },
+    // Ação própria — nunca `codigoMunicipioIbge: null` no PUT acima (armadilha 3 do plano v1.11.0a8b64).
+    async removerMunicipioEnderecoFiscal(resourceKey: 'empresas' | 'filiais', id: string) {
+        return runAdministracaoRequest(async () => {
+            await httpClient.delete<void>(`${enderecoFiscalBasePath(resourceKey, id)}/municipio`);
+        });
+    },
+    // Cadastro global, sem escopo de empresa/filial (docs/arquitetura/debate/04-inventario-cadastros-fiscais.md:150).
+    // Sem paginação no contrato — não confundir com o de município, que pagina.
+    async listarUfsFiscais(termo?: string | null) {
+        return runAdministracaoRequest(async () => {
+            const response = await httpClient.get<UfCadastro[]>('/api/fiscal/cadastros/uf', { params: cleanQueryParams({ termo, ativo: true }) });
+            return response.data;
+        });
+    },
+    async listarMunicipiosFiscais(query: MunicipioCadastroQuery) {
+        return runAdministracaoRequest(async () => {
+            const response = await httpClient.get<PagedResult<MunicipioCadastro>>('/api/fiscal/cadastros/municipios', {
+                params: cleanQueryParams({ ufSigla: query.ufSigla, termo: query.termo, codigoIbge: query.codigoIbge, ativo: true, pagina: query.pagina ?? 1, tamanhoPagina: query.tamanhoPagina ?? 20 })
+            });
+            return response.data;
         });
     }
 };

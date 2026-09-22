@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { ZodError, ZodType } from 'zod';
 import { Button } from 'primereact/button';
 import { Checkbox } from 'primereact/checkbox';
@@ -27,6 +27,12 @@ type AdministracaoFormDialogProps = {
     record?: Record<string, unknown> | null;
     onHide: () => void;
     onSubmit: (values: AdministracaoFormValues) => Promise<void>;
+    /**
+     * Conteúdo extra abaixo da grade de campos genéricos — ex.: o bloco de endereço fiscal de
+     * Empresa/Filial, que grava por endpoint próprio (`PUT .../endereco-fiscal`), fora do
+     * `schema`/`onSubmit` deste diálogo. Só faz sentido com `record` (edição).
+     */
+    extraContent?: ReactNode;
 };
 
 type FieldErrors = Record<string, string | undefined>;
@@ -68,7 +74,7 @@ const fieldErrorMap = (error: ZodError<unknown>): FieldErrors => {
     }, {});
 };
 
-export const AdministracaoFormDialog = ({ visible, loading, title, fields, schema, record, onHide, onSubmit }: AdministracaoFormDialogProps) => {
+export const AdministracaoFormDialog = ({ visible, loading, title, fields, schema, record, onHide, onSubmit, extraContent }: AdministracaoFormDialogProps) => {
     const activeFields = useMemo(() => fields.filter((field) => (record ? !field.createOnly : !field.updateOnly)), [fields, record]);
     const [values, setValues] = useState<AdministracaoFormValues>(() => buildInitialValues(fields, record));
     const [errors, setErrors] = useState<FieldErrors>({});
@@ -93,7 +99,18 @@ export const AdministracaoFormDialog = ({ visible, loading, title, fields, schem
         }
 
         const parsedData = parsed.data as Record<string, unknown>;
-        await onSubmit(record?.id ? { ...parsedData, id: record.id } : parsedData);
+        // Campos `passthrough` (ex.: `contribuinteIpiPatch`) não pertencem ao schema Zod — o
+        // safeParse os descarta por design. Eles voltam aqui, direto do estado do formulário, para
+        // quem monta o payload HTTP decidir se e como usá-los (administracaoApi.ts).
+        const passthroughData = fields.filter((field) => field.passthrough).reduce<Record<string, unknown>>((acc, field) => {
+            acc[field.name] = values[field.name];
+            return acc;
+        }, {});
+        const submission: AdministracaoFormValues = { ...parsedData, ...passthroughData };
+        if (record?.id) {
+            submission.id = String(record.id);
+        }
+        await onSubmit(submission);
     };
 
     const footer = (
@@ -158,6 +175,7 @@ export const AdministracaoFormDialog = ({ visible, loading, title, fields, schem
                     </div>
                 ))}
             </div>
+            {extraContent}
         </Dialog>
     );
 };

@@ -1,3 +1,111 @@
+# v1.11.0a8b64.c1
+
+## Os dois gates de contrato existiam desde a c3 e nunca rodaram em CI
+
+`validate:contract-fields` e `validate:contract-request-fields` existem desde a `v1.11.0a8b58.c3`, cada um com
+prova durável própria (`tests/unit/gateContractFields.test.ts`, `tests/unit/gateContractRequestFields.test.ts`),
+e nenhum dos dois jamais esteve em `ci:gates` nem no workflow. Medido: `ci:gates`, antes desta fatia, não
+continha `npm run validate:contract-fields` nem `npm run validate:contract-request-fields` — só a prova durável
+deles rodava, de carona no `test:unit`, contra árvores montadas em espelho, nunca o script de fato como parte do
+pipeline de produção. Isto muda: os dois entram em `ci:gates` e no job `frontend-gates` do workflow, na mesma
+posição relativa dos demais `validate:*` (depois de `validate:fiscal:production`, antes de `typecheck`), e
+`scripts/validate-ci-gates.mjs` passa a cobrar os dois nominalmente — usando o mecanismo que já existia
+(`requiredCiGatesFragments`/`requiredWorkflowFragments`), sem verificação nova. Os dois já passam verdes na
+árvore corrente: ligar não reprova nada hoje. Plano em `docs/fatias/v1.11.0a8b64.c1-gates-orfaos.md`.
+
+**Risco da fatia: `MEDIUM`** — difere do precedente `CRITICAL` da `v1.11.0a8b57.c1`, onde o gate cego tinha
+divergência real na árvore corrente; aqui os dois gates já passam limpos, e ligar não reprova ninguém hoje.
+**Risco de acesso: `NENHUM`** — nenhuma permissão, rota, menu ou guard muda.
+
+### O achado que expôs o buraco
+
+A prova durável de `validate:contract-request-fields` estava vermelha desde a `b63`, sem que ninguém notasse, e
+é isso que levou a investigar por que os dois gates nunca reprovaram nada em CI. Medido com `git worktree add`
+sobre `4e589f7` (commit da b63): `node scripts/gate-contract-request-fields.mjs`, executado diretamente naquela
+árvore, lista 10 "Campos anuláveis sem destino na UI", e `AdmitirColaboradorRequest.pessoaId` está ausente da
+saída inteira (nem crítico, nem lacuna). O arquivo de teste daquele mesmo commit esperava 11 LACUNA, nomeando
+`AdmitirColaboradorRequest.pessoaId` entre elas — a asserção teria falhado se `test:unit` tivesse corrido contra
+aquele estado. **A b63 foi commitada com `test:unit` vermelho.** Isso é falha de processo, e **continua sem
+correção nesta fatia** — o que esta fatia corrige é só a ausência dos dois gates em CI. A própria `b64` já havia
+registrado este achado no seu `CHANGELOG.md` ("Achado à parte, medido nesta sessão") e reparado a prova (Bloco C
+da b64): na árvore de hoje, os dois gates de contrato somam 77 testes passando
+(`npx vitest run tests/unit/gateContractFields.test.ts tests/unit/gateContractRequestFields.test.ts`).
+
+### Testes e QA
+
+**Rodado nesta sessão**:
+
+- `npm run validate:contract-fields` — exit 0, "Nenhuma divergência detectada.".
+- `npm run validate:contract-request-fields` — exit 0, 8 LACUNA (mesmas de antes desta fatia).
+- `npm run validate:ci` — exit 0, antes e depois do ritual de versão.
+- `npm run validate:backend-permissions`, `npm run validate:guard-permission-map`,
+  `npm run validate:backend-contract-map` — exit 0.
+- `npx vitest run tests/unit/gateContractFields.test.ts tests/unit/gateContractRequestFields.test.ts` — 77
+  passam, sem alteração desta fatia.
+- `npx vitest run tests/unit/gateCiGatesContractSteps.test.ts` (novo): 6 passam — inclui a prova vermelha
+  nominal (remover o step de cada gate no workflow derruba `validate:ci` com o fragmento nomeado na mensagem;
+  restaurado, volta a passar).
+
+**Não rodado**: `typecheck`, `lint`, `test:unit` completo, `build` e os gates de E2E/contrato opt-in — fora do
+recorte desta fatia (nenhum arquivo de código de feature, schema ou tipo muda). **Sem QA aprovado** — o QA não
+rodou nesta sessão.
+
+# v1.11.0a8b64
+
+## Empresa e Filial: CRT, `contribuinteIpi` sob demanda no PUT, e endereço fiscal compartilhado (D56)
+
+Entrega o que o anexo de melhorias apontava em Empresa e Filial: o CRT no criar e no atualizar, o
+indicador de IPI deixando de ser resetado em silêncio a cada PUT, e o bloco de endereço fiscal —
+até aqui nunca consumido pelo frontend — pelo mesmo componente nas duas telas, gravando por
+endpoint próprio. O gate de contratos de request cresce para cobrir `DefinirEnderecoFiscalRequest`
+e passa a falhar duro quando um schema mapeado não é encontrado, em vez de só avisar. Plano em
+`docs/fatias/v1.11.0a8b64-f4-empresa-filial-fiscal.md`.
+
+**Risco da fatia: `HIGH`** (muda tipo e campo contra o contrato, e cria um bloco de endereço
+herdado por duas telas). **Risco de acesso: `NENHUM`** — a fatia não remove acesso de ninguém.
+
+### Seção operacional — leia antes do deploy
+
+1. **Empresas e filiais cadastradas antes desta versão não têm endereço fiscal, e a nota fiscal vai
+   exigi-lo.** Isso é trabalho de cadastro para a operação assumir, não defeito desta versão.
+2. **`Crt?` é anulável e não tem zero** (1 Simples Nacional, 2 Simples Nacional com excesso de
+   sublimite, 3 Regime normal). Quando o operador não informa, a tela grava `null` explícito.
+3. **`contribuinteIpi` no PUT só é enviado quando o operador mexe no campo.** É `bool?`, onde
+   `null` significa "mantém o valor atual"; editar outro dado da empresa não altera mais o
+   indicador de IPI.
+4. **O endereço fiscal de Empresa e Filial usa o mesmo bloco compartilhado**, gravando por
+   endpoint próprio (`PUT .../endereco-fiscal`). O município tem ação própria de remoção
+   (`DELETE .../endereco-fiscal/municipio`) — nunca se apaga mandando o campo nulo no PUT.
+5. **Editar o endereço fiscal de um registro que já tem município vinculado exige a permissão
+   `FISCAL_CADASTROS_CONSULTAR`**, porque o município precisa ser resolvido no catálogo antes de o
+   endereço poder ser regravado. Sem ela, o bloco avisa em vez de falhar em silêncio.
+6. **Remover o vínculo do município é ação deliberada** e deixa o endereço incompleto até um novo
+   município ser selecionado e salvo.
+7. **O gate de contratos de request agora cobre `DefinirEnderecoFiscalRequest`** e ganha falha
+   dura quando um schema mapeado não é encontrado; antes disso era só aviso, e um recorte podia
+   sair do universo em silêncio.
+
+### Testes e QA
+
+**Rodado nesta sessão** (verificação estática; sem credencial de backend disponível):
+
+- Testes unitários e de payload do módulo administração: `npx vitest run tests/unit/administracaoPayload.test.ts tests/unit/administracaoFiliaisTransport.test.ts tests/unit/administracaoReferenceUx.test.ts` — 11 passam.
+- Prova durável do gate de contratos de request: `npx vitest run tests/unit/gateContractRequestFields.test.ts` — 46 passam.
+- `npm run validate:contract-request-fields` — verde, 0 divergências críticas.
+- `tsc --noEmit` — limpo.
+
+**Pendente**, e é trabalho de QA que ainda não rodou: AC-4 (reabrir a empresa com o município
+resolvido) e AC-7 (o CRT grava, e editar outro campo não o altera) precisam se confirmar **no
+banco** — `erp.empresas."Crt"`, `EnderecoFiscal_*`, `UpdatedAt` —, não por leitura de tela. Nesta
+sessão não há credencial de backend nem verificação em tela ou em banco: não houve QA aprovado.
+
+**Achado à parte, medido nesta sessão**: a prova durável do gate de contratos de request já
+estava vermelha antes desta fatia — a `b63` preencheu `AdmitirColaboradorRequest.pessoaId` e
+commitou sem atualizar a lista esperada do teste. Medido com `git worktree` sobre `4e589f7`: o
+gate imprime 10 lacunas e `AdmitirColaboradorRequest.pessoaId` está ausente delas, enquanto a
+prova esperava 11. Esta fatia reparou a prova (Bloco C). Registrado como fato medido; a decisão
+sobre o que fazer com o achado fica pendente, com o usuário.
+
 # v1.11.0a8b58
 
 ## Séries fiscais: cadastro, vigência, numeração e uso na emissão (F3)
