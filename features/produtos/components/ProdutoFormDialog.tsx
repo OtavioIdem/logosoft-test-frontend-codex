@@ -59,6 +59,9 @@ const buildInitialValues = (record?: ProdutoResponse | null): ProdutoFormValues 
               cestCodigo: record.cest,
               origemMercadoriaCodigo: record.origemMercadoriaCodigo,
               tipoItemFiscal: record.tipoItemFiscal === null || record.tipoItemFiscal === undefined ? null : Number(record.tipoItemFiscal),
+              // Sem controle de UI (b65 edita) — só trafega para o PATCH não descartar a classificação
+              // já gravada. `0` é `MercadoriaParaRevenda`, checagem tem de ser explícita.
+              tipoItemSped: record.tipoItemSped === null || record.tipoItemSped === undefined ? null : Number(record.tipoItemSped),
               unidadeMedidaTributavelId: record.unidadeMedidaTributavelId,
               codigoFiscalExterno: record.codigoFiscalExterno,
               observacao: record.observacao
@@ -82,7 +85,11 @@ const buildInitialValues = (record?: ProdutoResponse | null): ProdutoFormValues 
               ncmCodigo: null,
               cestCodigo: null,
               origemMercadoriaCodigo: null,
-              tipoItemFiscal: TipoItemFiscal.Mercadoria,
+              // Sem classificação fiscal por padrão: ninguém escolheu "Mercadoria" — mandar isso como
+              // se fosse decisão do operador é o DEFAULT_SILENCIOSO que faz o PATCH virar 400 quando
+              // o bloco deveria ficar em branco.
+              tipoItemFiscal: null,
+              tipoItemSped: null,
               unidadeMedidaTributavelId: null,
               codigoFiscalExterno: null,
               observacao: null

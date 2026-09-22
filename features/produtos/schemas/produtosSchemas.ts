@@ -13,6 +13,9 @@ const nullableText = z.union([z.string(), z.null(), z.undefined()]).transform((v
 });
 const money = (label: string) => z.coerce.number({ invalid_type_error: `${label} deve ser numérico.` }).min(0, `${label} não pode ser negativo.`);
 const integer = (label: string) => z.coerce.number({ invalid_type_error: `${label} deve ser numérico.` }).int(`${label} deve ser inteiro.`).min(0, `${label} não pode ser negativo.`);
+// Preserva `0` explicitamente — enums como TipoItemSped começam em zero (MercadoriaParaRevenda = 0),
+// então `value ?? null` (não `value || null`) é obrigatório para não apagar a classificação mais comum.
+const optionalNumber = z.union([z.number(), z.null(), z.undefined()]).transform((value) => value ?? null);
 
 export const motivoSchema = z.object({ motivo: textRequired('Informe o motivo.') });
 
@@ -99,6 +102,8 @@ export const atualizarDadosFiscaisProdutoSchema = z.object({
     cestCodigo: nullableText,
     origemMercadoriaCodigo: nullableText,
     tipoItemFiscal: z.union([z.nativeEnum(TipoItemFiscal), z.null(), z.undefined()]).transform((value) => value ?? null),
+    // Só trafega (round-trip do response) — sem controle de UI. Editável é escopo da b65.
+    tipoItemSped: optionalNumber,
     unidadeMedidaTributavelId: optionalGuid,
     codigoFiscalExterno: nullableText
 });

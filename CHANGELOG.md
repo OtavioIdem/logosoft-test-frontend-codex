@@ -1,3 +1,47 @@
+# v1.11.0a8b64.c2
+
+## O PATCH de dados fiscais de Produto volta a passar nos dois caminhos da tela
+
+`PATCH /api/produtos/{id}/dados-fiscais` falhava com 400 nos dois caminhos da tela de Produtos. O
+backend só aceita o bloco fiscal inteiramente em branco (dez campos nulos) ou com `tipoItemSped`
+preenchido; o frontend mandava seis dos dez e nunca o `tipoItemSped`. Na criação havia ainda um
+`tipoItemFiscal: Mercadoria` como padrão silencioso, que tirava o bloco do estado "em branco". Em
+ambos os casos o cadastro já tinha gravado quando o PATCH falhava, e a mensagem dizia "Não foi
+possível salvar o produto" — negando o que de fato tinha acontecido. Plano em
+`docs/fatias/v1.11.0a8b64.c2-produto-fiscal-em-branco.md`.
+
+**Risco da fatia: `HIGH`** (contrato de request que o backend recusa, num fluxo de cadastro usado
+por qualquer operador com a permissão fiscal). **Risco de acesso: `NENHUM`**.
+
+O padrão silencioso saiu; `tipoItemSped` passa a trafegar (lido do response e devolvido no
+request, sem campo na tela); o PATCH só dispara quando o bloco não está em branco; e a mensagem de
+erro passa a reconhecer a gravação parcial. Medido no banco do ambiente de desenvolvimento:
+`erp.produtos` tem 3 linhas e zero com `TipoItemSped` — coerente com o defeito, já que nenhum
+produto poderia ter sido classificado enquanto a chamada falhava. Três linhas não provam nada
+sobre produção.
+
+### Seção operacional — leia antes do deploy
+
+1. **Classificar um produto fiscalmente pela tela continua indisponível.** O backend exige
+   `tipoItemSped` assim que qualquer campo fiscal é preenchido, e o campo só chega na `b65`. Quem
+   preencher NCM, CEST, origem ou tipo fiscal vai receber erro — agora com mensagem honesta,
+   dizendo que o produto foi gravado e os dados fiscais não. Antes desta versão, toda criação de
+   produto falhava, mesmo sem tocar em nada fiscal.
+2. **Produtos sem classificação fiscal salvam normalmente**, na criação e na edição, e o bloco
+   fiscal de um produto já classificado sobrevive a uma edição que não toca nele.
+
+### Testes e QA
+
+**O QA rodou e aprovou.** Verificado: `validate:source`, `tsc --noEmit`, `next lint --dir
+features/produtos`, `validate:contract-request-fields` (7 lacunas, era 8), `npm run build`, e 60
+testes verdes em três arquivos (9 de payload, 46 do gate, 5 de componente). O teste de componente
+teve prova vermelha: com o defeito reintroduzido, os casos AC-2 e AC-2b falham e os outros três
+seguem verdes.
+
+**Lacuna conhecida, não bloqueadora, destinada à `b65`**: nenhum teste pega a volta do
+`tipoItemFiscal: Mercadoria` como padrão de criação, porque isso mora no `buildInitialValues` do
+diálogo, que os testes de fluxo stubam e os de payload não exercitam.
+
 # v1.11.0a8b64.c1
 
 ## Os dois gates de contrato existiam desde a c3 e nunca rodaram em CI
