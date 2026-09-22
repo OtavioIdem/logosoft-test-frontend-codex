@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { ZodError } from 'zod';
+import { ForwardedRef, forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react';
+import { z, ZodError } from 'zod';
 import { Button } from 'primereact/button';
 import { Message } from 'primereact/message';
 import { EnderecoFiscalCampoErros, EnderecoFiscalCampos, EnderecoFiscalSection } from '@/features/administracao/components/EnderecoFiscalSection';
@@ -17,6 +17,23 @@ type EnderecoFiscalFormSectionProps = {
     registroId: string;
     enderecoFiscal?: EnderecoFiscalResponse | null;
     disabled?: boolean;
+};
+
+type DefinirEnderecoFiscalData = z.infer<typeof definirEnderecoFiscalSchema>;
+
+/**
+ * Contrato para quem monta este bloco dentro de um diálogo com botão "Salvar" próprio (C7, v1.11.0a8b64 —
+ * achado em revisão do PR #26): o rodapé do diálogo grava Empresa/Filial por outro endpoint e, sem isto, fechava
+ * por cima de alterações de endereço nunca persistidas. `estaSujo` compara o estado corrente com o
+ * que veio de `enderecoFiscal` (inclusive o município — via `municipioAlteradoPeloUsuario`, não por
+ * recalcular o código IBGE, que pode ainda não ter resolvido). `validar` roda o mesmo guard e o
+ * mesmo `safeParse` do botão interno "Salvar endereço fiscal" e pinta os campos. `salvar` reaproveita
+ * esse guard e grava pelo endpoint próprio; quem chama decide o que fazer com o sucesso/erro.
+ */
+export type EnderecoFiscalFormSectionHandle = {
+    estaSujo: () => boolean;
+    validar: () => boolean;
+    salvar: () => Promise<boolean>;
 };
 
 const camposVazios: EnderecoFiscalCampos = { logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '', cep: '' };
@@ -73,7 +90,7 @@ const fieldErrorMapEnderecoFiscal = (error: ZodError<unknown>): EnderecoFiscalCa
  * (string do request) e grava pelos dois endpoints próprios de endereço fiscal — nunca pelo
  * `saveMutation` genérico de Empresa/Filial.
  */
-export const EnderecoFiscalFormSection = ({ resourceKey, registroId, enderecoFiscal, disabled }: EnderecoFiscalFormSectionProps) => {
+const EnderecoFiscalFormSectionBase = ({ resourceKey, registroId, enderecoFiscal, disabled }: EnderecoFiscalFormSectionProps, ref: ForwardedRef<EnderecoFiscalFormSectionHandle>) => {
     const runWithToast = useMutationWithToast();
     const { definirMutation, removerMunicipioMutation } = useEnderecoFiscal(resourceKey);
 
@@ -155,14 +172,26 @@ export const EnderecoFiscalFormSection = ({ resourceKey, registroId, enderecoFis
         });
     };
 
-    const salvar = async () => {
+    // Compara o estado corrente com o que veio de `enderecoFiscal`. O município entra pelo mesmo sinal
+    // que já separa "o operador mexeu" de "a resolução ainda não chegou" (C1) — recalcular o código
+    // IBGE de origem para comparar exigiria a mesma resolução assíncrona que o guard de `validarInterno`
+    // trata, e duplicaria a lógica em vez de reaproveitá-la.
+    const estaSujo = () => {
+        const baseline = toCampos(enderecoFiscal);
+        const camposMudaram = (Object.keys(baseline) as (keyof EnderecoFiscalCampos)[]).some((campo) => campos[campo] !== baseline[campo]);
+        return camposMudaram || municipioAlteradoPeloUsuario;
+    };
+
+    // Único caminho de validação — usado pelo botão interno "Salvar endereço fiscal" e pelo `salvar()`
+    // exposto por ref. Não duplicar este guard em outro lugar (C1–C6, v1.11.0a8b64 Bloco C).
+    const validarInterno = (): { valido: true; data: DefinirEnderecoFiscalData } | { valido: false } => {
         // Nunca `codigoMunicipioIbge: null` no PUT para desfazer um vínculo já gravado — isso é
         // suposição sobre semântica que o backend não declarou. A remoção é o DELETE próprio,
         // acionado pelo botão de lixeira (armadilha 3 do plano v1.11.0a8b64).
         if (municipioVinculado && !municipioValue) {
             if (municipioAlteradoPeloUsuario) {
                 setErrors({ codigoMunicipioIbge: 'Remova o vínculo do município pelo botão antes de salvar sem município, ou selecione outro.' });
-                return;
+                return { valido: false };
             }
 
             // A UF mudou desde que o vínculo foi gravado (ou desde que a resolução começou a buscar) —
@@ -172,7 +201,7 @@ export const EnderecoFiscalFormSection = ({ resourceKey, registroId, enderecoFis
             // chegou" em que isso vale.
             if (!resolucaoNaUfAtual) {
                 setErrors({ codigoMunicipioIbge: 'A UF mudou: o município vinculado pertencia à UF anterior e não se aplica mais. Selecione um município da UF atual, ou remova o vínculo pelo botão antes de salvar.' });
-                return;
+                return { valido: false };
             }
 
             // O campo ainda está `null` porque a resolução do município já vinculado
@@ -181,30 +210,54 @@ export const EnderecoFiscalFormSection = ({ resourceKey, registroId, enderecoFis
             // DELETE de verdade (C1, v1.11.0a8b64 Bloco C).
             if (!municipioResolvido.permitido) {
                 setErrors({ codigoMunicipioIbge: 'Não foi possível confirmar o município já vinculado a este endereço: falta a permissão FISCAL_CADASTROS_CONSULTAR para editar um endereço que já tem município.' });
-                return;
+                return { valido: false };
             }
 
             if (municipioResolvido.status === 'pendente') {
                 setErrors({ codigoMunicipioIbge: 'O vínculo do município ainda está sendo carregado. Aguarde e tente salvar novamente.' });
-                return;
+                return { valido: false };
             }
 
             setErrors({ codigoMunicipioIbge: 'Não foi possível confirmar o município já vinculado a este endereço. Tente novamente mais tarde.' });
-            return;
+            return { valido: false };
         }
 
         const parsed = definirEnderecoFiscalSchema.safeParse({ ...campos, codigoMunicipioIbge: municipioValue });
         if (!parsed.success) {
             setErrors(fieldErrorMapEnderecoFiscal(parsed.error));
-            return;
+            return { valido: false };
         }
 
         setErrors({});
-        await runWithToast(() => definirMutation.mutateAsync({ id: registroId, values: parsed.data }), {
+        return { valido: true, data: parsed.data };
+    };
+
+    const validar = () => validarInterno().valido;
+
+    const gravar = (data: DefinirEnderecoFiscalData) => definirMutation.mutateAsync({ id: registroId, values: data });
+
+    const handleSalvarClick = async () => {
+        const resultado = validarInterno();
+        if (!resultado.valido) return;
+        await runWithToast(() => gravar(resultado.data), {
             success: { summary: 'Endereço fiscal gravado' },
             error: { summary: 'Erro ao gravar endereço fiscal' }
         });
     };
+
+    // Exposto para quem monta este bloco dentro de um diálogo com botão "Salvar" próprio (C7, v1.11.0a8b64 —
+    // achado em revisão do PR #26). Reaproveita `validarInterno`/`gravar` — sem toast aqui: quem chama decide o que
+    // fazer com o erro (ex.: distinguir "cadastro gravou, endereço não" de uma falha comum).
+    useImperativeHandle(ref, () => ({
+        estaSujo,
+        validar,
+        salvar: async () => {
+            const resultado = validarInterno();
+            if (!resultado.valido) return false;
+            await gravar(resultado.data);
+            return true;
+        }
+    }));
 
     const removerMunicipio = async () => {
         await runWithToast(
@@ -241,8 +294,11 @@ export const EnderecoFiscalFormSection = ({ resourceKey, registroId, enderecoFis
             />
             {!ufCatalogo.permitido ? <Message className="w-full mb-3" severity="warn" text="Consulta de cadastros fiscais indisponível: seu usuário não possui FISCAL_CADASTROS_CONSULTAR." /> : null}
             <div className="flex justify-content-end">
-                <Button type="button" label="Salvar endereço fiscal" icon="pi pi-save" outlined loading={definirMutation.isPending} disabled={disabled} onClick={salvar} />
+                <Button type="button" label="Salvar endereço fiscal" icon="pi pi-save" outlined loading={definirMutation.isPending} disabled={disabled} onClick={handleSalvarClick} />
             </div>
         </div>
     );
 };
+
+export const EnderecoFiscalFormSection = forwardRef(EnderecoFiscalFormSectionBase);
+EnderecoFiscalFormSection.displayName = 'EnderecoFiscalFormSection';
