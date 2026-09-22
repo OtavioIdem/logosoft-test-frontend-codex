@@ -6,7 +6,7 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(join(root, path), 'utf8');
 
 describe('estoque avançado B41', () => {
-    it('expõe páginas reais de transferência e bloqueio no menu e nos guards de rota', () => {
+    it('expõe transferência no menu, e mantém bloqueio só na rota e no guard', () => {
         const transferenciaPage = read('app/(main)/estoque/transferencias/page.tsx');
         const bloqueiosPage = read('app/(main)/estoque/bloqueios/page.tsx');
         const menu = read('layout/AppMenu.tsx');
@@ -17,7 +17,12 @@ describe('estoque avançado B41', () => {
         expect(bloqueiosPage).toContain("redirect('/estoque/avancado')");
         expect(bloqueiosPage).not.toContain('BloqueiosEstoquePage');
         expect(menu).toContain('/estoque/transferencias');
-        expect(menu).toContain('/estoque/bloqueios');
+        // A b62 (6d42c62) tirou "Bloqueios" do menu porque a página só redireciona para
+        // /estoque/avancado — item que levava a lugar nenhum. A rota e o guard continuam existindo
+        // de propósito (quem tem o link direto continua protegido), então as duas asserções abaixo
+        // seguem valendo; só a oferta no menu saiu. Esta prova ficou desatualizada na b62 e derrubou
+        // `test:unit` da b62 à b64.
+        expect(menu).not.toContain('/estoque/bloqueios');
         expect(routePermissions).toContain('^\\/estoque\\/transferencias');
         expect(routePermissions).toContain('^\\/estoque\\/bloqueios');
         expect(routePermissions).toContain('ESTOQUE_MOVIMENTAR');
