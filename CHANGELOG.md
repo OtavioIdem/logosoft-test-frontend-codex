@@ -1,3 +1,55 @@
+# v1.11.0a8b64.c1
+
+## Os dois gates de contrato existiam desde a c3 e nunca rodaram em CI
+
+`validate:contract-fields` e `validate:contract-request-fields` existem desde a `v1.11.0a8b58.c3`, cada um com
+prova durável própria (`tests/unit/gateContractFields.test.ts`, `tests/unit/gateContractRequestFields.test.ts`),
+e nenhum dos dois jamais esteve em `ci:gates` nem no workflow. Medido: `ci:gates`, antes desta fatia, não
+continha `npm run validate:contract-fields` nem `npm run validate:contract-request-fields` — só a prova durável
+deles rodava, de carona no `test:unit`, contra árvores montadas em espelho, nunca o script de fato como parte do
+pipeline de produção. Isto muda: os dois entram em `ci:gates` e no job `frontend-gates` do workflow, na mesma
+posição relativa dos demais `validate:*` (depois de `validate:fiscal:production`, antes de `typecheck`), e
+`scripts/validate-ci-gates.mjs` passa a cobrar os dois nominalmente — usando o mecanismo que já existia
+(`requiredCiGatesFragments`/`requiredWorkflowFragments`), sem verificação nova. Os dois já passam verdes na
+árvore corrente: ligar não reprova nada hoje. Plano em `docs/fatias/v1.11.0a8b64.c1-gates-orfaos.md`.
+
+**Risco da fatia: `MEDIUM`** — difere do precedente `CRITICAL` da `v1.11.0a8b57.c1`, onde o gate cego tinha
+divergência real na árvore corrente; aqui os dois gates já passam limpos, e ligar não reprova ninguém hoje.
+**Risco de acesso: `NENHUM`** — nenhuma permissão, rota, menu ou guard muda.
+
+### O achado que expôs o buraco
+
+A prova durável de `validate:contract-request-fields` estava vermelha desde a `b63`, sem que ninguém notasse, e
+é isso que levou a investigar por que os dois gates nunca reprovaram nada em CI. Medido com `git worktree add`
+sobre `4e589f7` (commit da b63): `node scripts/gate-contract-request-fields.mjs`, executado diretamente naquela
+árvore, lista 10 "Campos anuláveis sem destino na UI", e `AdmitirColaboradorRequest.pessoaId` está ausente da
+saída inteira (nem crítico, nem lacuna). O arquivo de teste daquele mesmo commit esperava 11 LACUNA, nomeando
+`AdmitirColaboradorRequest.pessoaId` entre elas — a asserção teria falhado se `test:unit` tivesse corrido contra
+aquele estado. **A b63 foi commitada com `test:unit` vermelho.** Isso é falha de processo, e **continua sem
+correção nesta fatia** — o que esta fatia corrige é só a ausência dos dois gates em CI. A própria `b64` já havia
+registrado este achado no seu `CHANGELOG.md` ("Achado à parte, medido nesta sessão") e reparado a prova (Bloco C
+da b64): na árvore de hoje, os dois gates de contrato somam 77 testes passando
+(`npx vitest run tests/unit/gateContractFields.test.ts tests/unit/gateContractRequestFields.test.ts`).
+
+### Testes e QA
+
+**Rodado nesta sessão**:
+
+- `npm run validate:contract-fields` — exit 0, "Nenhuma divergência detectada.".
+- `npm run validate:contract-request-fields` — exit 0, 8 LACUNA (mesmas de antes desta fatia).
+- `npm run validate:ci` — exit 0, antes e depois do ritual de versão.
+- `npm run validate:backend-permissions`, `npm run validate:guard-permission-map`,
+  `npm run validate:backend-contract-map` — exit 0.
+- `npx vitest run tests/unit/gateContractFields.test.ts tests/unit/gateContractRequestFields.test.ts` — 77
+  passam, sem alteração desta fatia.
+- `npx vitest run tests/unit/gateCiGatesContractSteps.test.ts` (novo): 6 passam — inclui a prova vermelha
+  nominal (remover o step de cada gate no workflow derruba `validate:ci` com o fragmento nomeado na mensagem;
+  restaurado, volta a passar).
+
+**Não rodado**: `typecheck`, `lint`, `test:unit` completo, `build` e os gates de E2E/contrato opt-in — fora do
+recorte desta fatia (nenhum arquivo de código de feature, schema ou tipo muda). **Sem QA aprovado** — o QA não
+rodou nesta sessão.
+
 # v1.11.0a8b64
 
 ## Empresa e Filial: CRT, `contribuinteIpi` sob demanda no PUT, e endereço fiscal compartilhado (D56)
