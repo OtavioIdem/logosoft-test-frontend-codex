@@ -60,12 +60,19 @@ Três regras vieram de defeito medido nesta esteira, não de preferência:
 | `b62` | Header e navegação sem prometer o que não existe | nada |
 | `b63` | Pessoa vinculada na admissão do colaborador — **reduzida pela D57** | nada |
 | `b64` | Empresa, filial e endereço fiscal completos | `b60`–`b61` |
-| `b65` | Produto, cliente e fornecedor utilizáveis pelos fluxos seguintes | `b64` |
-| `b66` | Estoque transacional e auditável | `b65`, B-3 |
-| `b67` | Venda, preço e aprovação até a liberação | `b65`–`b66`, B-5 |
-| `b68` | Compra e financeiro com origem e reversão explícitas | B-4 |
-| `b69` | Faturamento completo e corrigível | `b59`–`b68`, B-6 |
+| `b65` | Produto: campos fiscais — **reduzida pela D58** | `b64` |
+| `b66` | Cliente (configuração comercial) e Fornecedor (configuração de compra, homologação) — **D62–D67** | `b65` |
+| `b67` | Classificações de Pessoa: cadastro e seletor no Cliente — **D65** | `b66` |
+| `b68` | Estoque transacional e auditável | `b65`, B-3 |
+| `b69` | Venda, preço e aprovação até a liberação | `b65`–`b68`, B-5 |
+| `b70` | Compra e financeiro com origem e reversão explícitas | B-4, B-12 |
+| `b71` | Faturamento completo e corrigível | `b59`–`b70`, B-6 |
 | — | PDV com leitura de código de barras | **bloqueado**: B-7 |
+
+**Reindexação da D67 (2026-09-23)**: Cliente/Fornecedor e Classificações de Pessoa entram antes do
+Estoque, pela ordem da D56 (cadastro antes de transação). Estoque, Venda, Compra e Faturamento
+andaram duas posições (`b66`–`b69` → `b68`–`b71`). Nenhum plano de fatia nem entrada de CHANGELOG
+citava os números antigos — medido pela posição de escopo da rodada 08.
 
 ### `b62` — Header e navegação
 
@@ -117,11 +124,36 @@ ver "Fora de escopo, com gatilho" abaixo, sem número reservado.
 - Dois seletores de "unidade tributável" com rótulos distintos, nunca fundidos (D60).
 - Guarda de `FISCAL_CADASTROS_CONSULTAR` escopada ao campo novo, não à aba inteira (D61).
 - **Não entra**: `PUT /api/clientes/{id}/configuracao-comercial`, configuração de compra e
-  homologação/revogação de fornecedor — sem inventário, viram item "Depois" (ver seção abaixo).
+  homologação/revogação de fornecedor — foram para a `b66` depois do inventário da rodada 08.
 - Código de cliente e fornecedor **continua manual**: não existe geração atômica,
   e incrementar no frontend cria duplicidade por concorrência (mantido do plano original).
 
-### `b66` — Estoque
+### `b66` — Cliente e Fornecedor — **D62–D67**
+
+Rodada `08-cliente-fornecedor` (`docs/arquitetura/debate/08-*-cliente-fornecedor.md`).
+
+- Aba "Comercial" no `ClienteFormDialog` e aba "Compra" no `FornecedorFormDialog`, gravando pelo
+  `PUT` de configuração depois do cadastro base, sob um único Salvar (D62).
+- O bloco de configuração é substituído inteiro pelo backend — `null` apaga. Formulário parte do
+  registro gravado e reenvia o bloco todo; schema com `.nullable()`, booleano obrigatório (D62).
+- Homologar (confirmação) e revogar homologação (motivo) como ações de linha, coluna "Homologado"
+  na listagem de Fornecedores (D63).
+- Tabela de preço e condição de pagamento: guarda de permissão por campo, rótulo neutro quando o
+  nome não pode ser resolvido, um aviso por aba (D66).
+- `classificacaoId` só trafega (lido e reenviado); o seletor vem na `b67` (D65).
+- Gate de contratos de request passa a cobrir `ConfigurarComercialClienteRequest` e
+  `ConfigurarCompraFornecedorRequest` (D67).
+- **Não entra**: `GET .../situacao-compra` (D64 — o pedido de compra não recusa fornecedor não
+  homologado; a tela afirmaria uma regra que não existe; gatilho B-12).
+
+### `b67` — Classificações de Pessoa — **D65**
+
+- Cadastro de Classificações de Pessoa (código, nome, descrição, inativar) sobre o CRUD que o
+  backend já tem (`ClassificacoesPessoaController`, `CLASSIFICACOES_PESSOA_GERENCIAR`). Rota, item
+  de menu e guarda novos: o inventário da fatia precisa conferir a permissão de consulta.
+- Seletor de `classificacaoId` no Cliente, alimentado por esse catálogo.
+
+### `b68` — Estoque (era `b66`, D67)
 
 - Entrada, Saída e Histórico em abas sobre as rotas que já existem. São operações
   distintas, com payload, permissão e confirmação próprios — abas são organização
@@ -130,7 +162,7 @@ ver "Fora de escopo, com gatilho" abaixo, sem número reservado.
 - Origem do ajuste como dropdown **só com catálogo publicado** (B-3). Hardcode no
   frontend apenas disfarça texto livre.
 
-### `b67` — Venda, preço e aprovação
+### `b69` — Venda, preço e aprovação (era `b67`, D67)
 
 - Diagnóstico autenticado de Tabelas de preço **antes** de qualquer outra coisa.
   Ver `v1.11.0a8b58.c4`.
@@ -140,7 +172,7 @@ ver "Fora de escopo, com gatilho" abaixo, sem número reservado.
   "copiar pedido" (sem endpoint atômico, a cópia no browser reaproveita preço e
   tributação vencidos).
 
-### `b68` — Compra e financeiro
+### `b70` — Compra e financeiro (era `b68`, D67)
 
 - Origem do título visível: manual, venda, compra ou nota.
 - Caminhos de compra explicados pela origem — pedido direto, solicitação
@@ -148,7 +180,7 @@ ver "Fora de escopo, com gatilho" abaixo, sem número reservado.
   obrigatoriedade na tela é opinião, e a regra precisa vir do backend (B-4).
 - Lançamento manual preservado.
 
-### `b69` — Faturamento
+### `b71` — Faturamento (era `b69`, D67)
 
 - `naturezaOperacaoId` (depende da `b59`), `correlationId` gerado e somente
   leitura.
@@ -171,8 +203,8 @@ ver "Fora de escopo, com gatilho" abaixo, sem número reservado.
 | Obrigar solicitação/cotação antes da compra | o backend permite pedido direto | regra no backend, por empresa/filial (B-4) |
 | Editar perfil e preferências | Auth só expõe login, me, refresh, logout | endpoint de perfil |
 | Simulador, regras fiscais, exceções, observabilidade, inutilizações | já implementados; o anexo diz "não consegui usar" | revisão de estados, permissão e dados mínimos — não é código novo |
-| Cliente — `PUT /api/clientes/{id}/configuracao-comercial` | sem inventário; D58 tira de `b65` | inventário do `inventariante-contrato-tela` sobre Cliente |
-| Fornecedor — configuração de compra, homologar/revogar homologação | sem inventário; D58 tira de `b65` | inventário do `inventariante-contrato-tela` sobre Fornecedor |
+| Situação de compra do fornecedor (`GET .../situacao-compra`) | o pedido de compra não recusa fornecedor não homologado; a tela afirmaria uma regra inexistente (D64) | resposta a B-12 |
+| Tela do parâmetro `COMPRAS_BLOQUEIA_FORNECEDOR_NAO_HOMOLOGADO` | nenhuma tela administra parâmetros de sistema hoje | resposta a B-12, ou onda própria de parâmetros |
 
 ## As perguntas que destravam a onda
 
@@ -183,15 +215,16 @@ alavancagem e andam em paralelo com a `c3` e a `b59`.
 | --- | --- | --- |
 | B-1 | Precedência entre grupo direto, cargo de acesso e acesso pessoal. Existe negação explícita ou só união? | `b63` |
 | B-2 | Haverá vínculo persistente Colaborador↔Usuário e convite/senha temporária por e-mail? | `b63` |
-| B-3 | Quais valores válidos para `origemModulo`? Haverá catálogo? | `b66` |
-| B-4 | Qual evento gera título de venda/compra, e qual a política idempotente de estorno após baixa? Pedido direto continua permitido? | `b68` |
-| B-5 | Existe ação de reprovar pedido? Qual o padrão de `reservarEstoque` na aprovação rápida? | `b67` |
-| B-6 | Como o faturamento obtém o certificado sem expor `certificateThumbprint`? | `b69` |
+| B-3 | Quais valores válidos para `origemModulo`? Haverá catálogo? | `b68` (era `b66`) |
+| B-4 | Qual evento gera título de venda/compra, e qual a política idempotente de estorno após baixa? Pedido direto continua permitido? | `b70` (era `b68`) |
+| B-5 | Existe ação de reprovar pedido? Qual o padrão de `reservarEstoque` na aprovação rápida? | `b69` (era `b67`) |
+| B-6 | Como o faturamento obtém o certificado sem expor `certificateThumbprint`? | `b71` (era `b69`) |
 | B-7 | Haverá busca exata de produto por código de barras? | PDV |
 | B-8 | **O OpenAPI vai publicar schema de resposta?** Sem isso o Swagger não tipa leitura, e nenhum gate prova o lado da resposta. | toda a onda |
 | B-9 | **Cargo de acesso vai passar a governar acesso?** Hoje o guard lê só `UsuarioGrupoAcesso`; `UsuarioCargoAcesso` é ignorado por ele. Unificar as cadeias, ou declarar que cargo é outra coisa? | tela de cargos (D57) |
 | B-10 | O 400 de `CadastrosFiscaisErrors.UnidadeMedidaTributavelObrigatoria` (R6 — `unidadeTributavelSigla` diverge da unidade comercial sem `unidadeMedidaTributavelId` informado) tem corpo de erro mapeável a um campo específico, ou é validação de domínio genérica sem `field`? | `b65` (aviso inline vs. toast pós-submit) |
 | B-11 | Existe ou está prevista rota de atualização do vínculo `ProdutoFornecedor` (editar `descricaoFornecedor`/`codigoFornecedor` depois de criado)? Hoje só existe criação, recusada se o vínculo já existe. | `b65` (caminho de correção do vínculo de fornecedor, hoje sem solução possível na UI) |
+| B-12 | A recusa de pedido de compra para fornecedor não homologado (parâmetro `COMPRAS_BLOQUEIA_FORNECEDOR_NAO_HOMOLOGADO`) vai para dentro da criação do pedido, ou `situacao-compra` é deliberadamente só consultivo? Hoje nenhum use case de Pedido de Compra lê `Homologado`. | `situacao-compra` (D64) e `b70` |
 
 ## Correções fora da sequência funcional
 

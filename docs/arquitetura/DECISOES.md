@@ -1797,3 +1797,136 @@ Quem arbitrou: orquestrador, por convergência 4/4 no padrão geral, com o refin
 pelos demais.
 Impacto: `features/produtos/components/ProdutoFormDialog.tsx`, novo hook em
 `features/produtos/hooks/`.
+
+### D62 — configuração comercial (Cliente) e de compra (Fornecedor) entram como aba nos diálogos existentes, com o bloco inteiro sempre reenviado
+
+Data: 2026-09-23.
+Rodada: `08-cliente-fornecedor` — inventário em
+`docs/arquitetura/debate/08-inventario-cliente-fornecedor.md` e as quatro posições em
+`docs/arquitetura/debate/08-{operacao,plataforma,escopo,design}-cliente-fornecedor.md`.
+Decisão: `ClienteFormDialog` e `FornecedorFormDialog` ganham `TabView` com uma aba nova
+("Comercial" / "Compra"). Um único Salvar grava o cadastro base e, em seguida, o `PUT` de
+configuração — a mesma orquestração em produção em `ProdutosPage.tsx` (cadastro + dados fiscais).
+Na **edição**, o bloco de configuração vai sempre inteiro; na **criação**, só vai se algum campo
+do bloco fugir do padrão (tudo nulo e `permiteVendaAPrazo = false`), para não gerar chamada inútil.
+Falha do `PUT` de configuração depois do cadastro gravado diz isso com todas as letras ("Cliente
+salvo, mas a configuração comercial não foi gravada") — a lição da `v1.11.0a8b64.c2`.
+Trava estrutural, não disciplinar (`arquiteto-plataforma-frontend`, §0 da posição): os dois `PUT`
+substituem o bloco inteiro e `null` apaga o vínculo (§2 do inventário); pior, `sanitizePayload`
+(`lib/http/requestUtils.ts`) remove chave `undefined`, e um `bool` ausente no JSON vira `false` no
+record C#, sem 400. Por isso: `buildInitialValues` parte sempre do registro gravado com os cinco/três
+campos; o schema usa `.nullable()` (nunca `.optional()`) nos Ids e no número, e o booleano é
+obrigatório; um teste por schema prova que `parse({})` falha e que o bloco todo-nulo passa.
+Por quê: operação e design convergiram na aba (2 a 1) com precedente pago em `ProdutoFormDialog` e
+`PessoaFormDialog`; a posição de escopo (diálogo próprio por ação de linha) protegia contra o
+mesmo risco de apagar campo que a trava estrutural acima fecha por outro caminho, sem criar uma
+terceira superfície para o mesmo cadastro.
+Alternativas descartadas:
+- Diálogo próprio aberto por ação de linha (`arquiteto-escopo-entrega`): isola o `PUT`, mas separa
+  do cadastro um dado que o operador preenche na mesma rotina de dar entrada no cliente — e o risco
+  que motivava a separação é coberto pela trava estrutural.
+- Salvar campo a campo: viola o contrato — o endpoint não faz merge.
+Risco de acesso: `NENHUM` — as duas ações exigem `CLIENTES_GERENCIAR`/`FORNECEDORES_GERENCIAR`,
+que já guardam o diálogo.
+Reversível: sim. Gatilho de revisita: a configuração passar a ser feita por papel ou momento
+diferente do cadastro na operação real (pendência P4 da posição de operação).
+Quem arbitrou: orquestrador, pela regra de convergência.
+Impacto: `features/clientes/**`, `features/fornecedores/**`.
+
+### D63 — homologar e revogar homologação como ações de linha assimétricas, com o estado visível na listagem
+
+Data: 2026-09-23. Rodada: `08-cliente-fornecedor`.
+Decisão: `FornecedoresPage` ganha duas ações de linha mutuamente exclusivas por `homologado`, no
+padrão de bloquear/desbloquear crédito de `ClientesPage`, e uma coluna `Tag` "Homologado". As duas
+confirmações são **assimétricas** (`arquiteto-design-system`): revogar usa `ReasonDialog` (motivo
+obrigatório no backend, máx. 500); homologar usa `ConfirmDialog` — o `POST` não tem corpo, e pedir
+um motivo que o backend não grava seria fingir registro. A invalidação reaproveita o `invalidate()`
+de prefixo `['fornecedores']` que `useFornecedorMutations` já tem, sem query key nova.
+Por quê: unanimidade (4/4) nas ações de linha; o refinamento de assimetria é do design, sem
+discordância dos demais.
+Risco de acesso: `NENHUM`. Reversível: sim.
+Quem arbitrou: orquestrador, por convergência 4/4.
+
+### D64 — `situacao-compra` não entra: a tela diria "não pode receber pedido" de um fornecedor para o qual o pedido é aceito
+
+Data: 2026-09-23. Rodada: `08-cliente-fornecedor`.
+Decisão: `GET /api/fornecedores/{id}/situacao-compra` fica fora. O estado `homologado` já fica
+visível pela D63.
+Por quê: a rodada empatou 2 a 2 (operação e design dentro, como leitura informativa; plataforma e
+escopo fora), e o desempate é por evidência, não por voto. A evidência veio da própria posição de
+operação: nenhum use case de Pedido de Compra lê `Homologado` (`grep` no backend), e
+`PedidoCompraFormDialog` aceita qualquer fornecedor. O endpoint devolveria
+`podeReceberPedidoCompra = false` para um fornecedor que o sistema, na prática, aceita no pedido —
+uma tela que afirma uma restrição que não existe. É a mesma honestidade exigida do painel de
+Integrações (T6 do plano v1.23). O argumento de plataforma (sem endpoint em lote, coluna viraria
+N+1) reforça, mas não é o motivo.
+Alternativas descartadas:
+- Painel de leitura com o `motivo` do backend (`arquiteto-design-system`): o texto vem pronto, mas
+  descreve uma regra que só existe quando o parâmetro `COMPRAS_BLOQUEIA_FORNECEDOR_NAO_HOMOLOGADO`
+  está ligado — e mesmo então o pedido não é recusado.
+Risco de acesso: `NENHUM`. Reversível: sim.
+Gatilho de revisita: o backend responder a pergunta **B-12** (a recusa por parâmetro vai para
+dentro da criação do pedido de compra?) — aí o endpoint passa a descrever uma regra real e entra
+junto com a mudança de `PedidoCompraFormDialog`, provavelmente na versão de Compra.
+Quem arbitrou: orquestrador, desempate por evidência.
+
+### D65 — `classificacaoId` só trafega nesta versão; o seletor entra junto com o cadastro de Classificações de Pessoa, na versão seguinte
+
+Data: 2026-09-23. Rodada: `08-cliente-fornecedor`.
+Decisão: na versão de Cliente/Fornecedor, `classificacaoId` é lido do registro e reenviado sem
+alteração no `PUT` (obrigatório pela D62 — omitir apaga). Sem controle de UI. O seletor entra na
+versão imediatamente seguinte, junto com a tela de cadastro de Classificações de Pessoa.
+Por quê: empate 2 a 2 (plataforma e design: seletor já; escopo e operação: não agora), desempatado
+pela evidência que só a posição de operação trouxe e que corrige o inventário:
+`ClassificacoesPessoaController.cs` tem CRUD completo (criar, atualizar, inativar, sob
+`CLASSIFICACOES_PESSOA_GERENCIAR`, já no union), não só leitura. O cadastro é, portanto, barato e
+de forma conhecida (código/nome/descrição/inativar, já paga em Tabelas de Preço e Condições de
+Pagamento) — o que tira o motivo para entregar um seletor sem via de popular o catálogo na UI, que
+foi a objeção da operação. O seletor e o cadastro que o alimenta entram juntos.
+Alternativas descartadas:
+- Seletor já, sem cadastro (`plataforma`, `design`): capacidade pela metade — o operador escolhe de
+  uma lista que só se preenche por API.
+- Omitir `classificacaoId` do payload: apaga a classificação gravada a cada Salvar (D62).
+Risco de acesso: `NENHUM`. Reversível: sim.
+Quem arbitrou: orquestrador, desempate por evidência.
+
+### D66 — permissão dos catálogos por campo, com rótulo neutro quando o valor gravado não pode ser resolvido, e um aviso só por aba
+
+Data: 2026-09-23. Rodada: `08-cliente-fornecedor`.
+Decisão: tabela de preço (`TABELAS_PRECO_CONSULTAR`) e condição de pagamento
+(`FINANCEIRO_CONSULTAR`) — dois seletores em Cliente, um em Fornecedor — ficam `disabled`
+individualmente quando falta a permissão do catálogo, **nunca a aba inteira** (D61: os outros
+campos continuam editáveis, `accessRisk` segue `NENHUM`). Dois ajustes à D61, cada um com a
+evidência que o justifica:
+- **Rótulo neutro** (`arquiteto-operacao-erp`): na D61 o valor gravado era uma sigla legível; aqui
+  são Guids opacos, e sem a permissão não há como resolver o nome. O campo mostra "Configurado —
+  sem permissão para ver o nome", nunca o Guid cru, e o valor continua indo no `PUT` (D62).
+- **Um aviso por aba** (`arquiteto-design-system`): com até dois campos bloqueados na mesma aba,
+  um `Message` por campo vira ruído. Um só `Message` lista as permissões que faltam.
+Por quê: a guarda por campo foi unânime (4/4); os dois ajustes vieram de fatos que a D61 não tinha.
+Risco de acesso: `NENHUM`. Reversível: sim.
+Quem arbitrou: orquestrador.
+
+### D67 — Cliente e Fornecedor numa versão só (`b66`), Classificações de Pessoa na `b67`; a cauda da onda anda duas posições
+
+Data: 2026-09-23. Rodada: `08-cliente-fornecedor`.
+Decisão: `v1.11.0a8b66` entrega Cliente e Fornecedor juntos (D62–D66) e estende o gate de
+contratos de request (`scripts/gate-contract-request-fields.mjs`) aos dois records de configuração
+— o documento-fonte já tem as assinaturas prontas (posição de plataforma, §7.1). `v1.11.0a8b67`
+entrega o cadastro de Classificações de Pessoa e o seletor de `classificacaoId` (D65). A cauda do
+plano da onda anda duas posições: Estoque `b68`, Venda `b69`, Compra e financeiro `b70`,
+Faturamento `b71`.
+Por quê: uma versão só venceu 3 a 1; o argumento de plataforma para dividir (o risco de N+1 de
+`situacao-compra` seguraria Cliente) caiu com a D64. Pôr os cadastros antes do Estoque segue o
+princípio da D56 — ordem por fluxo vertical, cadastro antes de transação — e a posição de escopo
+mediu o custo de reindexar: 13 menções em prosa no plano da onda, zero em `docs/fatias/`, zero no
+`CHANGELOG.md`. O Estoque, além disso, tem um item preso na pergunta B-3.
+Alternativas descartadas:
+- Duas versões (`arquiteto-plataforma-frontend`): o motivo foi removido pela D64.
+- Anexar ao fim da onda: deixaria Venda e Compra serem construídas sobre cadastros incompletos —
+  o inverso da D56.
+Risco de acesso: `NENHUM` nesta decisão.
+Reversível: sim (ordem). Gatilho de revisita: resposta a B-3 que destrave o Estoque inteiro e
+torne urgente antecipá-lo.
+Quem arbitrou: orquestrador, pela regra de convergência.
+Impacto: `docs/PLANO-FRONTEND-ONDA-OPERACAO.md` (sequência reindexada, `b66` e `b67` novas, B-12).
