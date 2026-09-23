@@ -6,6 +6,7 @@ import { ClienteFormValues, ClienteListQuery } from '@/features/clientes/types/c
 
 type SavePayload = { id?: string; values: ClienteFormValues };
 type ReasonPayload = { id: string; motivo: string };
+type ConfigurarComercialPayload = { id: string; values: unknown };
 
 export const clientesQueryKey = (query?: ClienteListQuery) => ['clientes', query] as const;
 
@@ -27,6 +28,7 @@ export const useClienteMutations = (query: ClienteListQuery = {}) => {
     const bloquearMutation = useMutation({ mutationFn: ({ id, motivo }: ReasonPayload) => clientesApi.bloquearCredito(id, motivo), onSuccess: invalidate });
     const desbloquearMutation = useMutation({ mutationFn: ({ id, motivo }: ReasonPayload) => clientesApi.desbloquearCredito(id, motivo), onSuccess: invalidate });
     const inativarMutation = useMutation({ mutationFn: ({ id, motivo }: ReasonPayload) => clientesApi.inativar(id, motivo), onSuccess: invalidate });
+    const configurarComercialMutation = useMutation({ mutationFn: ({ id, values }: ConfigurarComercialPayload) => clientesApi.configurarComercial(id, values), onSuccess: invalidate });
 
-    return { saveMutation, bloquearMutation, desbloquearMutation, inativarMutation, queryKey: clientesQueryKey(query) };
+    return { saveMutation, bloquearMutation, desbloquearMutation, inativarMutation, configurarComercialMutation, queryKey: clientesQueryKey(query) };
 };

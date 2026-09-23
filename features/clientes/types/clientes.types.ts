@@ -16,6 +16,11 @@ export type ClienteResponse = {
     creditoBloqueado: boolean;
     motivoBloqueioCredito: string | null;
     observacao: string | null;
+    tabelaPrecoPadraoId: Guid | null;
+    condicaoPagamentoPadraoId: Guid | null;
+    classificacaoId: Guid | null;
+    diaVencimentoPreferencial: number | null;
+    permiteVendaAPrazo: boolean;
     status: EntityStatus;
 };
 
@@ -37,4 +42,15 @@ export type ClienteMotivoRequest = {
     motivo: string;
 };
 
-export type ClienteFormValues = Partial<CriarClienteRequest & AtualizarClienteRequest> & { id?: Guid };
+// PUT /api/clientes/{id}/configuracao-comercial substitui o bloco inteiro (D62): os três Ids e o
+// número são `Guid?`/`int?` no C# (sempre anuláveis, nunca ausentes) e `permiteVendaAPrazo` é `bool`
+// não anulável — omitir qualquer chave apaga o vínculo gravado ou vira `false` sem erro no backend.
+export type ConfigurarComercialClienteRequest = {
+    tabelaPrecoPadraoId: Guid | null;
+    condicaoPagamentoPadraoId: Guid | null;
+    classificacaoId: Guid | null;
+    diaVencimentoPreferencial: number | null;
+    permiteVendaAPrazo: boolean;
+};
+
+export type ClienteFormValues = Partial<CriarClienteRequest & AtualizarClienteRequest & ConfigurarComercialClienteRequest> & { id?: Guid };

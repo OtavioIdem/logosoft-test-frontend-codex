@@ -1,8 +1,8 @@
 import { httpClient } from '@/lib/http/httpClient';
 import { mapApiError } from '@/lib/http/apiError';
 import { cleanQueryParams, sanitizePayload } from '@/lib/http/requestUtils';
-import { atualizarClienteSchema, clienteMotivoSchema, criarClienteSchema } from '@/features/clientes/schemas/clientesSchemas';
-import { AtualizarClienteRequest, ClienteListQuery, ClienteMotivoRequest, ClienteResponse, CriarClienteRequest } from '@/features/clientes/types/clientes.types';
+import { atualizarClienteSchema, clienteMotivoSchema, configurarComercialClienteSchema, criarClienteSchema } from '@/features/clientes/schemas/clientesSchemas';
+import { AtualizarClienteRequest, ClienteListQuery, ClienteMotivoRequest, ClienteResponse, ConfigurarComercialClienteRequest, CriarClienteRequest } from '@/features/clientes/types/clientes.types';
 
 const runClienteRequest = async <T>(request: () => Promise<T>) => {
     try {
@@ -19,6 +19,7 @@ const params = (query?: ClienteListQuery) => cleanQueryParams({ empresaId: query
 export const buildCriarClientePayload = (values: unknown): CriarClienteRequest => parseSchema(criarClienteSchema, values);
 export const buildAtualizarClientePayload = (values: unknown): AtualizarClienteRequest => parseSchema(atualizarClienteSchema, values);
 export const buildClienteMotivoPayload = (motivo: string): ClienteMotivoRequest => parseSchema(clienteMotivoSchema, { motivo });
+export const buildConfigurarComercialClientePayload = (values: unknown): ConfigurarComercialClienteRequest => parseSchema(configurarComercialClienteSchema, values);
 
 export const clientesApi = {
     async listar(query?: ClienteListQuery) {
@@ -57,6 +58,12 @@ export const clientesApi = {
         const payload = buildClienteMotivoPayload(motivo);
         return runClienteRequest(async () => {
             await httpClient.post<void>(`/api/clientes/${id}/inativar`, payload);
+        });
+    },
+    async configurarComercial(id: string, values: unknown) {
+        const payload = buildConfigurarComercialClientePayload(values);
+        return runClienteRequest(async () => {
+            await httpClient.put<void>(`/api/clientes/${id}/configuracao-comercial`, payload);
         });
     }
 };

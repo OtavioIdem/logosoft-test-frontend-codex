@@ -1,3 +1,72 @@
+# v1.11.0a8b66
+
+## Cliente ganha aba Comercial, Fornecedor ganha aba Compra e homologação pela listagem
+
+Quem cadastra cliente passa a definir tabela de preço, condição de pagamento, dia de vencimento
+preferencial e venda a prazo no mesmo diálogo; quem cadastra fornecedor define condição de
+pagamento, prazo médio de entrega e categoria de fornecimento, e passa a homologar ou revogar a
+homologação direto na listagem. Rodada de arquitetura em
+`docs/arquitetura/debate/08-{operacao,plataforma,escopo,design}-cliente-fornecedor.md`, inventário
+em `docs/arquitetura/debate/08-inventario-cliente-fornecedor.md`, decisões travadas D62–D67
+(`docs/arquitetura/DECISOES.md`), plano em `docs/fatias/v1.11.0a8b66-cliente-fornecedor.md`.
+
+**Risco da fatia: `HIGH`** (os dois `PUT` de configuração substituem o bloco inteiro — `null` apaga
+vínculo, chave ausente some do JSON e vira `false`/`null` no record C# sem erro — mesmo formato de
+defeito que a `v1.11.0a8b64.c2` corrigiu para dados fiscais de Produto). **Risco de acesso:
+`NENHUM`** — nenhuma permissão nova entra no catálogo; a guarda dos dois seletores de catálogo
+(`TABELAS_PRECO_CONSULTAR`, `FINANCEIRO_CONSULTAR`) é por campo, nunca pela aba inteira (D66), e
+quem já editava os demais campos da aba continua editando; ninguém perde o que já tinha.
+
+### Seção operacional — leia antes do deploy
+
+1. **Cliente ganha a aba "Comercial"** (tabela de preço, condição de pagamento, dia de vencimento
+   preferencial, venda a prazo) e **Fornecedor ganha a aba "Compra"** (condição de pagamento, prazo
+   médio de entrega, categoria de fornecimento), no mesmo `TabView` já pago em `ProdutoFormDialog`.
+   Um único Salvar grava o cadastro base e, em seguida, o `PUT` de configuração do bloco inteiro —
+   sempre na edição; na criação, só quando algum campo da aba foge do padrão em branco (D62).
+2. **Se o cadastro grava e a configuração falha, a tela diz exatamente isso**: "Cliente salvo, mas a
+   configuração comercial não foi gravada" / "Fornecedor salvo, mas a configuração de compra não foi
+   gravada" — nunca a mensagem genérica de erro ao salvar, porque o cadastro já foi gravado quando
+   o segundo `PUT` falha.
+3. **`FornecedoresPage` ganha duas ações de linha assimétricas e uma coluna "Homologado"**: homologar
+   usa `ConfirmDialog` sem motivo (o `POST` não tem corpo e o backend não grava motivo); revogar usa
+   `ReasonDialog` com motivo obrigatório (D63). As duas ficam desabilitadas para fornecedor inativo.
+4. **Quem tem `CLIENTES_GERENCIAR` sem `TABELAS_PRECO_CONSULTAR`/`FINANCEIRO_CONSULTAR` vê o seletor
+   correspondente desabilitado**, com "Configurado — sem permissão para ver o nome" quando já existe
+   um valor gravado — nunca o Guid cru. O valor não é apagado ao salvar: o formulário reenvia o que
+   já estava gravado mesmo sem conseguir mostrar o rótulo (D66). Um único `Message` por aba lista as
+   permissões de catálogo que faltam, em vez de um aviso por campo.
+5. **A classificação do cliente (`classificacaoId`) é preservada a cada Salvar, mas ainda não tem
+   campo na tela.** É lida do registro gravado e reenviada sem alteração no `PUT` — omiti-la apagaria
+   a classificação de todo cliente editado (D62). O seletor entra na `b67`, junto com o cadastro de
+   Classificações de Pessoa (D65).
+6. **`situacao-compra` do fornecedor não entrou.** O backend aceita pedido de compra de fornecedor
+   não homologado hoje; uma coluna ou aviso "não pode receber pedido" afirmaria uma restrição que não
+   existe (D64). Fica em aberto pela pergunta **B-12** ao backend.
+7. **A cauda da onda anda duas posições (D67)**: Estoque `b68`, Venda `b69`, Compra e financeiro
+   `b70`, Faturamento `b71`.
+
+### Testes e QA
+
+Gate de contratos de request (`node scripts/gate-contract-request-fields.mjs`): exit 0, 0
+`DESCARTE`, 0 `DEFAULT_SILENCIOSO`, 3 `LACUNA` (as mesmas da `b65`), agora cobrindo
+`ConfigurarComercialClienteRequest` e `ConfigurarCompraFornecedorRequest`. Prova durável
+`tests/unit/gateContractRequestFields.test.ts`: 53/53, com a prova histórica contra `9fcda80`
+acusando os 15 críticos, e o AC-13 ficando vermelho (3 casos) quando o gate deixa de cobrir os dois
+records. Schemas: `tests/unit/clientesSchemas.test.ts` 16 e `tests/unit/fornecedoresSchemas.test.ts`
+23 — 39/39 (`parse({})` falha, bloco todo-nulo passa). Componente:
+`tests/components/ClientesPageAC2AC4.test.tsx` 7/7 e
+`tests/components/FornecedoresPageAC7AC10.test.tsx` 10/10; 10 defeitos plantados um a um numa
+worktree descartável, 10 acusados. E2E mockado `tests/e2e/b66-cliente-fornecedor.spec.ts`: 5/5 em
+duas execuções, servidor isolado na 3411 com identidade conferida.
+
+Fato de processo, em linguagem honesta: a primeira tentativa de testes alterou o parser do gate e
+passou a descartar todo campo `email:` (exit 1 com duas divergências falsas); a segunda reescreveu o
+parser e o deixou cego para os defeitos históricos; a correção foi voltar o parser ao da `b65` e
+ajustar a forma dos dois schemas novos, que o parser lia errado.
+
+**O QA rodou e aprovou, sem ressalva.** Conferiu por conta própria validate:source, typecheck, lint, validate:ci, build, validate:backend-permissions, validate:guard-permission-map, validate:backend-contract-map, o gate de contratos de request (exit 0, 0/0/3) e os 109 testes do recorte (5 arquivos, `npx vitest run`); e verificou no código, campo a campo, que nenhum campo dos dois blocos de configuração pode ficar fora do PUT.
+
 # v1.11.0a8b65
 
 ## Classificação fiscal do produto ganha tela: SPED, unidade tributável oficial, EX-TIPI e benefício fiscal

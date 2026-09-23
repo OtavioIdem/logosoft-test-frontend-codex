@@ -20,6 +20,8 @@ import { tmpdir } from 'os';
  *
  * Os 15 críticos (8 + 7) compõem a prova vermelha de 9fcda80 (Sonda A). Os 8 LACUNA permanecem para a Sonda B.
  * As Sondas D e E comprovam que o novo recorte DefinirEnderecoFiscalRequest é detectado em ambas direções.
+ * AC-13 (v1.11.0a8b66): ConfigurarComercialClienteRequest e ConfigurarCompraFornecedorRequest entram no
+ * universo; campo removido do schema no espelho é acusado pelo nome (DEFAULT_SILENCIOSO ou LACUNA).
  */
 
 const raizDoProjeto = process.cwd();
@@ -126,7 +128,9 @@ function montarEspelho(refSchemas: string, stripNewMapping?: boolean): string {
     'features/estoque/schemas',
     'features/administracao/schemas',
     'features/seguranca/schemas',
-    'features/rh/schemas'
+    'features/rh/schemas',
+    'features/clientes/schemas',
+    'features/fornecedores/schemas'
   ];
   for (const dir of dirs) {
     const fullPath = path.join(espelho, dir);
@@ -162,7 +166,7 @@ function montarEspelho(refSchemas: string, stripNewMapping?: boolean): string {
   writeFileSync(contratoDest, readFileSync(contratoSource, 'utf8'));
 
   // Copia schemas (da árvore especificada)
-  const modulos = ['produtos', 'estoque', 'administracao', 'seguranca', 'rh'];
+  const modulos = ['produtos', 'estoque', 'administracao', 'seguranca', 'rh', 'clientes', 'fornecedores'];
   for (const modulo of modulos) {
     let conteudo: string;
 
@@ -263,6 +267,28 @@ function injetarCampoFantasma(conteudo: string, nomeSchema: string): string {
   throw new Error(`Não conseguiu encontrar fechamento de ${nomeSchema}`);
 }
 
+/**
+ * Remove a linha `campo: ...` de dentro do bloco `export const <schema> = z.object({ ... });`
+ * de um arquivo de schema do espelho. Lança se a linha não existir, para que a sonda nunca
+ * fique verde por não ter removido nada.
+ */
+function removerCampoDoSchemaNoEspelho(espelho: string, modulo: string, nomeSchema: string, campo: string): void {
+  const arquivo = path.join(espelho, 'features', modulo, 'schemas', `${modulo}Schemas.ts`);
+  const conteudo = readFileSync(arquivo, 'utf8');
+  const inicio = conteudo.indexOf(`export const ${nomeSchema} = z.object({`);
+  if (inicio < 0) {
+    throw new Error(`Schema ${nomeSchema} não encontrado em ${modulo}Schemas.ts`);
+  }
+  const fim = conteudo.indexOf('});', inicio);
+  const bloco = conteudo.substring(inicio, fim);
+  const linhaDoCampo = new RegExp(`\\r?\\n[ \\t]*${campo}\\s*:[^\\r\\n]*`);
+  if (!linhaDoCampo.test(bloco)) {
+    throw new Error(`Campo ${campo} não encontrado em ${nomeSchema}`);
+  }
+  const blocoSemCampo = bloco.replace(linhaDoCampo, '');
+  writeFileSync(arquivo, conteudo.substring(0, inicio) + blocoSemCampo + conteudo.substring(fim));
+}
+
 describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', () => {
   let espelhoAntigo = '';
   let espelhoHoje = '';
@@ -270,6 +296,9 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
   let espelhoDefinirEnderecoFiscalComFantasma = '';
   let espelhoDefinirEnderecoFiscalSemObrigatorio = '';
   let espelhoComMapeamentoFake = '';
+  let espelhoClienteSemObrigatorio = '';
+  let espelhoClienteSemAnulavel = '';
+  let espelhoFornecedorSemAnulavel = '';
 
   let resultadoAntigo: Awaited<ReturnType<typeof executarGate>>;
   let resultadoHoje: Awaited<ReturnType<typeof executarGate>>;
@@ -277,12 +306,18 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
   let resultadoDefinirEnderecoFiscalComFantasma: Awaited<ReturnType<typeof executarGate>>;
   let resultadoDefinirEnderecoFiscalSemObrigatorio: Awaited<ReturnType<typeof executarGate>>;
   let resultadoMapeamentoFake: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoClienteSemObrigatorio: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoClienteSemAnulavel: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoFornecedorSemAnulavel: Awaited<ReturnType<typeof executarGate>>;
 
   beforeAll(() => {
     // Sonda A: árvore de 9fcda80 (contém os 15 defeitos)
     // Passa GATE_RECORTES_IGNORADOS para ignorar recortes posteriores à revisão testada
     espelhoAntigo = montarEspelho(REF_ANTIGA_C1, true);
-    resultadoAntigo = executarGate(espelhoAntigo, { GATE_RECORTES_IGNORADOS: 'DefinirEnderecoFiscalRequest' });
+    // ConfigurarComercialClienteRequest e ConfigurarCompraFornecedorRequest (b66) não existiam em 9fcda80.
+    resultadoAntigo = executarGate(espelhoAntigo, {
+      GATE_RECORTES_IGNORADOS: 'DefinirEnderecoFiscalRequest,ConfigurarComercialClienteRequest,ConfigurarCompraFornecedorRequest'
+    });
 
     // Sonda B: árvore de hoje (sem os 15 defeitos)
     espelhoHoje = montarEspelho('HEAD-WORKING');
@@ -324,11 +359,26 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
     );
     writeFileSync(arquivoGateFake, gateContentFake);
     resultadoMapeamentoFake = executarGate(espelhoComMapeamentoFake);
+
+    // AC-13 (b66): árvore de hoje sem `permiteVendaAPrazo` (bool obrigatório) → DEFAULT_SILENCIOSO
+    espelhoClienteSemObrigatorio = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoClienteSemObrigatorio, 'clientes', 'configurarComercialClienteSchema', 'permiteVendaAPrazo');
+    resultadoClienteSemObrigatorio = executarGate(espelhoClienteSemObrigatorio);
+
+    // AC-13 (b66): árvore de hoje sem `classificacaoId` (Guid? anulável) → LACUNA nominal
+    espelhoClienteSemAnulavel = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoClienteSemAnulavel, 'clientes', 'configurarComercialClienteSchema', 'classificacaoId');
+    resultadoClienteSemAnulavel = executarGate(espelhoClienteSemAnulavel);
+
+    // AC-13 (b66): árvore de hoje sem `categoriaFornecimento` (string? anulável) → LACUNA nominal
+    espelhoFornecedorSemAnulavel = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoFornecedorSemAnulavel, 'fornecedores', 'configurarCompraFornecedorSchema', 'categoriaFornecimento');
+    resultadoFornecedorSemAnulavel = executarGate(espelhoFornecedorSemAnulavel);
   }, 120_000);
 
   afterAll(() => {
     // Limpa espelhos
-    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoDefinirEnderecoFiscalComFantasma, espelhoDefinirEnderecoFiscalSemObrigatorio, espelhoComMapeamentoFake]) {
+    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoDefinirEnderecoFiscalComFantasma, espelhoDefinirEnderecoFiscalSemObrigatorio, espelhoComMapeamentoFake, espelhoClienteSemObrigatorio, espelhoClienteSemAnulavel, espelhoFornecedorSemAnulavel]) {
       if (espelho && existsSync(espelho)) {
         try {
           rmSync(espelho, { recursive: true });
@@ -594,6 +644,60 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
       }
 
       expect(entradasOrfas).toHaveLength(0);
+    });
+  });
+
+  describe('AC-13: v1.11.0a8b66 — ConfigurarComercialClienteRequest e ConfigurarCompraFornecedorRequest no universo', () => {
+    /** Trecho da saída entre o cabeçalho da categoria e o próximo cabeçalho (ou o fim). */
+    function secao(saida: string, cabecalho: 'DESCARTE' | 'DEFAULT_SILENCIOSO' | 'LACUNA'): string {
+      const linhas = saida.split('\n');
+      const inicio = linhas.findIndex((l) =>
+        cabecalho === 'LACUNA' ? /anuláveis sem destino/.test(l) : l.includes(`${cabecalho} —`)
+      );
+      if (inicio < 0) return '';
+      const resto = linhas.slice(inicio + 1);
+      const fim = resto.findIndex((l) => /^(❌|📋|📊|✅)/.test(l.trim()) && !/^❌\s+\w+\.\w+/.test(l.trim()));
+      return (fim < 0 ? resto : resto.slice(0, fim)).join('\n');
+    }
+
+    it('o gate mapeia os dois records novos (schema → record)', () => {
+      const gate = readFileSync(path.join(raizDoProjeto, 'scripts', 'gate-contract-request-fields.mjs'), 'utf8');
+      expect(gate).toMatch(/configurarComercialClienteSchema:\s*'ConfigurarComercialClienteRequest'/);
+      expect(gate).toMatch(/configurarCompraFornecedorSchema:\s*'ConfigurarCompraFornecedorRequest'/);
+    });
+
+    it('Sonda B: resolve os dois records sem falha estrutural nem recorte ignorado', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).not.toContain('FALHA ESTRUTURAL');
+      expect(saida).not.toContain('Recortes ignorados');
+      expect(saida).not.toMatch(/ConfigurarComercialClienteRequest\.|ConfigurarCompraFornecedorRequest\./);
+    });
+
+    it('Sonda B: imprime exatamente 3 LACUNA', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).toMatch(/anuláveis sem destino na UI \(3\)/);
+    });
+
+    it('sem permiteVendaAPrazo: sai 1 e acusa DEFAULT_SILENCIOSO ConfigurarComercialClienteRequest.permiteVendaAPrazo', () => {
+      const saida = resultadoClienteSemObrigatorio.stdout + resultadoClienteSemObrigatorio.stderr;
+      expect(resultadoClienteSemObrigatorio.exitCode).toBe(1);
+      expect(resultadoClienteSemObrigatorio.nomesDivergencias.has('ConfigurarComercialClienteRequest.permiteVendaAPrazo')).toBe(true);
+      expect(secao(saida, 'DEFAULT_SILENCIOSO')).toContain('ConfigurarComercialClienteRequest.permiteVendaAPrazo');
+      expect(secao(saida, 'DESCARTE')).not.toContain('ConfigurarComercialClienteRequest');
+    });
+
+    it('sem classificacaoId: acusa LACUNA ConfigurarComercialClienteRequest.classificacaoId (4 LACUNA)', () => {
+      const saida = resultadoClienteSemAnulavel.stdout + resultadoClienteSemAnulavel.stderr;
+      expect(secao(saida, 'LACUNA')).toContain('ConfigurarComercialClienteRequest.classificacaoId');
+      expect(saida).toMatch(/anuláveis sem destino na UI \(4\)/);
+      expect(resultadoClienteSemAnulavel.nomesDivergencias.size).toBe(0);
+    });
+
+    it('sem categoriaFornecimento: acusa LACUNA ConfigurarCompraFornecedorRequest.categoriaFornecimento (4 LACUNA)', () => {
+      const saida = resultadoFornecedorSemAnulavel.stdout + resultadoFornecedorSemAnulavel.stderr;
+      expect(secao(saida, 'LACUNA')).toContain('ConfigurarCompraFornecedorRequest.categoriaFornecimento');
+      expect(saida).toMatch(/anuláveis sem destino na UI \(4\)/);
+      expect(resultadoFornecedorSemAnulavel.nomesDivergencias.size).toBe(0);
     });
   });
 });

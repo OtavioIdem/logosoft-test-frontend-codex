@@ -19,10 +19,11 @@ import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
 import { ClienteFormDialog } from '@/features/clientes/components/ClienteFormDialog';
 import { useClienteMutations, useClientes } from '@/features/clientes/hooks/useClientesResources';
-import { ClienteFormValues, ClienteListQuery, ClienteResponse } from '@/features/clientes/types/clientes.types';
+import { ClienteFormValues, ClienteListQuery, ClienteResponse, ConfigurarComercialClienteRequest } from '@/features/clientes/types/clientes.types';
 import { usePessoas } from '@/features/pessoas/hooks/usePessoasResources';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { useMutationWithToast } from '@/hooks/useMutationWithToast';
+import { useAppToast } from '@/hooks/useAppToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { EntityStatus } from '@/types/erp';
 import { formatMoney } from '@/lib/formatters/money';
@@ -34,10 +35,28 @@ const filterLocal = (records: ClienteResponse[], term: string) => {
     return records.filter((record) => Object.values(record).some((value) => String(value ?? '').toLowerCase().includes(normalized)));
 };
 
+const isFilled = (value: unknown) => (typeof value === 'string' ? value.trim().length > 0 : value !== null && value !== undefined);
+
+// PUT .../configuracao-comercial substitui o bloco inteiro (D62): o disparo na criação só ocorre se
+// algum campo fugir do padrão em branco, para não gerar uma chamada inútil; na edição o bloco vai
+// sempre. `?? null`/`?? false` são o segundo cinto de segurança (o primeiro é `buildInitialValues`
+// no diálogo) contra a chave ausente virar apagamento silencioso no backend.
+const configuracaoComercialEstaEmBranco = (values: ClienteFormValues) =>
+    !isFilled(values.tabelaPrecoPadraoId) && !isFilled(values.condicaoPagamentoPadraoId) && !isFilled(values.classificacaoId) && !isFilled(values.diaVencimentoPreferencial) && !values.permiteVendaAPrazo;
+
+const buildConfiguracaoComercialValues = (values: ClienteFormValues): ConfigurarComercialClienteRequest => ({
+    tabelaPrecoPadraoId: values.tabelaPrecoPadraoId ?? null,
+    condicaoPagamentoPadraoId: values.condicaoPagamentoPadraoId ?? null,
+    classificacaoId: values.classificacaoId ?? null,
+    diaVencimentoPreferencial: values.diaVencimentoPreferencial ?? null,
+    permiteVendaAPrazo: values.permiteVendaAPrazo ?? false
+});
+
 type ClienteReasonAction = 'bloquear' | 'desbloquear' | 'inativar';
 
 export const ClientesPage = () => {
     const runWithToast = useMutationWithToast();
+    const toast = useAppToast();
     const { hasPermission } = usePermissions();
     const [filters, setFilters] = useState<ClienteListQuery>({});
     const [localSearch, setLocalSearch] = useState('');
@@ -48,7 +67,7 @@ export const ClientesPage = () => {
     const [reasonState, setReasonState] = useState<{ record: ClienteResponse; action: ClienteReasonAction } | null>(null);
     const listQuery = useClientes(filters);
     const pessoasQuery = usePessoas({ empresaId: filters.empresaId, filialId: filters.filialId });
-    const { saveMutation, bloquearMutation, desbloquearMutation, inativarMutation } = useClienteMutations(filters);
+    const { saveMutation, bloquearMutation, desbloquearMutation, inativarMutation, configurarComercialMutation } = useClienteMutations(filters);
 
     const records = useMemo(() => filterLocal(listQuery.data ?? [], localSearch), [listQuery.data, localSearch]);
     const visibleRecords = useMemo(() => records.slice(first, first + rows), [records, first, rows]);
@@ -64,14 +83,33 @@ export const ClientesPage = () => {
     };
 
     const save = async (values: ClienteFormValues) => {
-        await runWithToast(
-            async () => {
-                await saveMutation.mutateAsync({ id: values.id, values });
-                setFormVisible(false);
-                setSelected(null);
-            },
-            { success: { summary: 'Cliente salvo', detail: 'Cadastro de cliente gravado com sucesso.' }, error: { summary: 'Erro ao salvar cliente', detail: 'Não foi possível salvar o cliente.' }, rethrow: true }
-        );
+        // Cadastro e configuração comercial são chamadas separadas no backend (PUT que substitui o
+        // bloco inteiro). Se o cadastro gravar e só a configuração falhar, o cliente já existe — a
+        // mensagem de erro não pode dizer "não foi possível salvar o cliente" (nega o que aconteceu),
+        // mesmo padrão já em produção em `ProdutosPage.tsx` para preço/custo e dados fiscais.
+        const saved = await runWithToast(() => saveMutation.mutateAsync({ id: values.id, values }), {
+            error: { summary: 'Erro ao salvar cliente', detail: 'Não foi possível salvar o cliente.' },
+            rethrow: true
+        });
+        if (!saved) return;
+
+        const clienteId = saved.id;
+        const isEdicao = Boolean(values.id);
+        const disparaConfiguracaoComercial = isEdicao || !configuracaoComercialEstaEmBranco(values);
+
+        if (disparaConfiguracaoComercial) {
+            try {
+                await configurarComercialMutation.mutateAsync({ id: clienteId, values: buildConfiguracaoComercialValues(values) });
+            } catch (error) {
+                const apiError = mapApiError(error);
+                toast.error('Cliente salvo, mas a configuração comercial não foi gravada', `O cadastro do cliente foi gravado. ${apiError.message}`);
+                throw error;
+            }
+        }
+
+        toast.success('Cliente salvo', 'Cadastro de cliente gravado com sucesso.');
+        setFormVisible(false);
+        setSelected(null);
     };
 
     const runReasonAction = async (motivo: string) => {
@@ -98,6 +136,7 @@ export const ClientesPage = () => {
     const reasonTitle = reasonState?.action === 'bloquear' ? 'Motivo do bloqueio de crédito' : reasonState?.action === 'desbloquear' ? 'Motivo do desbloqueio de crédito' : 'Motivo da inativação';
     const reasonLabel = reasonState?.action === 'bloquear' ? 'Bloquear' : reasonState?.action === 'desbloquear' ? 'Desbloquear' : 'Inativar';
     const reasonLoading = bloquearMutation.isPending || desbloquearMutation.isPending || inativarMutation.isPending;
+    const formLoading = saveMutation.isPending || configurarComercialMutation.isPending;
 
     return (
         <>
@@ -115,7 +154,7 @@ export const ClientesPage = () => {
                 </DataTableServer>
                 {!listQuery.isLoading && records.length === 0 ? <EmptyState title="Nenhum cliente" description="Crie um cadastro ou ajuste os filtros." /> : null}
             </Card>
-            <ClienteFormDialog visible={formVisible} record={selected} pessoas={pessoasQuery.data ?? []} loading={saveMutation.isPending} onHide={() => setFormVisible(false)} onSubmit={save} />
+            <ClienteFormDialog visible={formVisible} record={selected} pessoas={pessoasQuery.data ?? []} loading={formLoading} onHide={() => setFormVisible(false)} onSubmit={save} />
             <ReasonDialog visible={Boolean(reasonState)} title={reasonTitle} confirmLabel={reasonLabel} loading={reasonLoading} onHide={() => setReasonState(null)} onConfirm={runReasonAction} />
         </>
     );

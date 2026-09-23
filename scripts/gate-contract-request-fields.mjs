@@ -12,6 +12,8 @@
  *   - administracao: CriarEmpresaRequest, AtualizarEmpresaRequest, DefinirEnderecoFiscalRequest
  *   - seguranca: CriarUsuarioRequest
  *   - rh: AdmitirColaboradorRequest
+ *   - clientes: ConfigurarComercialClienteRequest (v1.11.0a8b66, AC-13)
+ *   - fornecedores: ConfigurarCompraFornecedorRequest (v1.11.0a8b66, AC-13)
  *
  * Modo de falha: asserção nominal por campo, jamais por total.
  * Prova vermelha: contra a árvore de hoje deve acusar 29 campos específicos em três categorias.
@@ -45,6 +47,12 @@ const SCHEMA_TO_REQUEST_MAP = {
   },
   rh: {
     admitirColaboradorSchema: 'AdmitirColaboradorRequest'
+  },
+  clientes: {
+    configurarComercialClienteSchema: 'ConfigurarComercialClienteRequest'
+  },
+  fornecedores: {
+    configurarCompraFornecedorSchema: 'ConfigurarCompraFornecedorRequest'
   }
 };
 
@@ -69,7 +77,9 @@ function loadRequestContractFromDocument(contractPath) {
     'AtualizarEmpresaRequest',
     'DefinirEnderecoFiscalRequest',
     'CriarUsuarioRequest',
-    'AdmitirColaboradorRequest'
+    'AdmitirColaboradorRequest',
+    'ConfigurarComercialClienteRequest',
+    'ConfigurarCompraFornecedorRequest'
   ];
 
   for (const recordName of recordNames) {
@@ -364,7 +374,7 @@ const LACUNA_DESTINO = {
  * Ponto de entrada.
  */
 function main() {
-  const modules = ['produtos', 'estoque', 'administracao', 'seguranca', 'rh'];
+  const modules = ['produtos', 'estoque', 'administracao', 'seguranca', 'rh', 'clientes', 'fornecedores'];
   const allDivergences = [];
   const allMissingSchemas = [];
   const ignoredRecords = new Set();

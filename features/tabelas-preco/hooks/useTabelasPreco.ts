@@ -12,8 +12,11 @@ const invalidateTabelasPreco = (queryClient: ReturnType<typeof useQueryClient>) 
     queryClient.invalidateQueries({ queryKey: ['tabelas-preco'] });
 };
 
-export const useTabelasPreco = (query?: TabelaPrecoListQuery) =>
-    useQuery({ queryKey: tabelasPrecoQueryKey(query), queryFn: () => tabelasPrecoApi.listar(query), staleTime: 30_000 });
+// `enabled` (padrão `true`, compatível com as chamadas existentes) permite a quem consome como
+// catálogo de seleção (ex.: configuração comercial de Cliente) condicionar a busca à permissão
+// TABELAS_PRECO_CONSULTAR e à empresa selecionada, sem duplicar o client de API (D66).
+export const useTabelasPreco = (query?: TabelaPrecoListQuery, enabled = true) =>
+    useQuery({ queryKey: tabelasPrecoQueryKey(query), queryFn: () => tabelasPrecoApi.listar(query), enabled, staleTime: 30_000 });
 
 export const useTabelaPrecoDetalhe = (id?: string | null) =>
     useQuery({ queryKey: tabelaPrecoDetalheQueryKey(id), queryFn: () => tabelasPrecoApi.obter(id as string), enabled: Boolean(id), staleTime: 30_000 });

@@ -55,14 +55,18 @@ export const useFormasPagamentoOptions = (empresaId?: string | null, mode: 'rece
     return { ...query, options };
 };
 
-export const useCondicoesPagamento = (empresaId?: string | null) =>
+// `enabled` (padrão `true`, compatível com as chamadas existentes) permite condicionar a busca à
+// permissão FINANCEIRO_CONSULTAR quando o catálogo é usado como seletor guardado por campo (D66),
+// sem duplicar o client de API.
+export const useCondicoesPagamento = (empresaId?: string | null, enabled = true) =>
     useQuery({
         queryKey: condicoesPagamentoQueryKey(empresaId),
-        queryFn: () => financeiroApi.listarCondicoesPagamento({ empresaId })
+        queryFn: () => financeiroApi.listarCondicoesPagamento({ empresaId }),
+        enabled
     });
 
-export const useCondicoesPagamentoOptions = (empresaId?: string | null) => {
-    const query = useCondicoesPagamento(empresaId);
+export const useCondicoesPagamentoOptions = (empresaId?: string | null, enabled = true) => {
+    const query = useCondicoesPagamento(empresaId, enabled);
     const options = useMemo<SelectOption<string>[]>(() => (query.data ?? []).map((condicao) => ({ label: condicaoLabel(condicao), value: condicao.id })), [query.data]);
     return { ...query, options };
 };
