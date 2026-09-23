@@ -9,6 +9,7 @@ import {
     buildProdutoMotivoPayload,
     buildVincularFornecedorProdutoPayload
 } from '@/features/produtos/api/produtosApi';
+import { comSiglaSelecionada } from '@/features/produtos/components/ProdutoFormDialog';
 
 const empresaId = '11111111-1111-1111-1111-111111111111';
 const unidadeMedidaId = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
@@ -66,14 +67,17 @@ describe('payloads de Produtos / Catálogo', () => {
             origemMercadoriaCodigo: '0',
             tipoItemFiscal: TipoItemFiscal.Mercadoria,
             tipoItemSped: null,
+            unidadeTributavelSigla: null,
             unidadeMedidaTributavelId: unidadeMedidaId,
+            exTipi: null,
+            codigoBeneficioFiscalPadrao: null,
             codigoFiscalExterno: null
         });
     });
 
     it('monta código de barras e vínculo com fornecedor conforme contrato', () => {
         expect(buildAdicionarCodigoBarrasProdutoPayload({ codigo: '7891234567895', descricao: '', principal: true })).toEqual({ codigo: '7891234567895', descricao: null, principal: true });
-        expect(buildVincularFornecedorProdutoPayload({ fornecedorId, codigoFornecedor: 'SUP-001', principal: true })).toEqual({ fornecedorId, codigoFornecedor: 'SUP-001', principal: true });
+        expect(buildVincularFornecedorProdutoPayload({ fornecedorId, codigoFornecedor: 'SUP-001', principal: true })).toEqual({ fornecedorId, codigoFornecedor: 'SUP-001', descricaoFornecedor: null, principal: true });
     });
 
     it('rejeita vínculo de fornecedor sem fornecedor operacional válido', () => {
@@ -141,7 +145,10 @@ describe('payloads de Produtos / Catálogo', () => {
             origemMercadoriaCodigo: null,
             tipoItemFiscal: null,
             tipoItemSped: null,
+            unidadeTributavelSigla: null,
             unidadeMedidaTributavelId: null,
+            exTipi: null,
+            codigoBeneficioFiscalPadrao: null,
             codigoFiscalExterno: null
         });
 
@@ -151,8 +158,163 @@ describe('payloads de Produtos / Catálogo', () => {
             origemMercadoriaCodigo: null,
             tipoItemFiscal: null,
             tipoItemSped: null,
+            unidadeTributavelSigla: null,
             unidadeMedidaTributavelId: null,
+            exTipi: null,
+            codigoBeneficioFiscalPadrao: null,
             codigoFiscalExterno: null
         });
+    });
+
+    // AC-2: unidadeTributavelSigla é string (sigla), não um ID
+    it('AC-2: editar dados fiscais com sigla de unidade tributável envia a sigla como string', () => {
+        const payload = buildAtualizarDadosFiscaisProdutoPayload({
+            ncmCodigo: '84713012',
+            cestCodigo: '01048100',
+            origemMercadoriaCodigo: '0',
+            tipoItemFiscal: TipoItemFiscal.Mercadoria,
+            tipoItemSped: 0,
+            unidadeTributavelSigla: 'KG',
+            unidadeMedidaTributavelId: unidadeMedidaId,
+            exTipi: '',
+            codigoBeneficioFiscalPadrao: '',
+            codigoFiscalExterno: ''
+        });
+
+        // Verifica que unidadeTributavelSigla é enviado como string, não como Id
+        expect(payload.unidadeTributavelSigla).toBe('KG');
+        expect(typeof payload.unidadeTributavelSigla).toBe('string');
+    });
+
+    // AC-5: exTipi é campo opcional enviado quando preenchido
+    it('AC-5: editar dados fiscais com EX-TIPI envia o valor e omite quando vazio', () => {
+        const payloadComExTipi = buildAtualizarDadosFiscaisProdutoPayload({
+            ncmCodigo: '84713012',
+            cestCodigo: '01048100',
+            origemMercadoriaCodigo: '0',
+            tipoItemFiscal: TipoItemFiscal.Mercadoria,
+            tipoItemSped: 0,
+            unidadeTributavelSigla: 'KG',
+            unidadeMedidaTributavelId: unidadeMedidaId,
+            exTipi: '001',
+            codigoBeneficioFiscalPadrao: '',
+            codigoFiscalExterno: ''
+        });
+
+        expect(payloadComExTipi.exTipi).toBe('001');
+
+        const payloadSemExTipi = buildAtualizarDadosFiscaisProdutoPayload({
+            ncmCodigo: '84713012',
+            cestCodigo: '01048100',
+            origemMercadoriaCodigo: '0',
+            tipoItemFiscal: TipoItemFiscal.Mercadoria,
+            tipoItemSped: 0,
+            unidadeTributavelSigla: 'KG',
+            unidadeMedidaTributavelId: unidadeMedidaId,
+            exTipi: '',
+            codigoBeneficioFiscalPadrao: '',
+            codigoFiscalExterno: ''
+        });
+
+        expect(payloadSemExTipi.exTipi).toBeNull();
+    });
+
+    // AC-6: codigoBeneficioFiscalPadrao é campo opcional enviado quando preenchido
+    it('AC-6: editar dados fiscais com benefício fiscal envia o valor e omite quando vazio', () => {
+        const payloadComBeneficio = buildAtualizarDadosFiscaisProdutoPayload({
+            ncmCodigo: '84713012',
+            cestCodigo: '01048100',
+            origemMercadoriaCodigo: '0',
+            tipoItemFiscal: TipoItemFiscal.Mercadoria,
+            tipoItemSped: 0,
+            unidadeTributavelSigla: 'KG',
+            unidadeMedidaTributavelId: unidadeMedidaId,
+            exTipi: '',
+            codigoBeneficioFiscalPadrao: '0750100',
+            codigoFiscalExterno: ''
+        });
+
+        expect(payloadComBeneficio.codigoBeneficioFiscalPadrao).toBe('0750100');
+
+        const payloadSemBeneficio = buildAtualizarDadosFiscaisProdutoPayload({
+            ncmCodigo: '84713012',
+            cestCodigo: '01048100',
+            origemMercadoriaCodigo: '0',
+            tipoItemFiscal: TipoItemFiscal.Mercadoria,
+            tipoItemSped: 0,
+            unidadeTributavelSigla: 'KG',
+            unidadeMedidaTributavelId: unidadeMedidaId,
+            exTipi: '',
+            codigoBeneficioFiscalPadrao: '',
+            codigoFiscalExterno: ''
+        });
+
+        expect(payloadSemBeneficio.codigoBeneficioFiscalPadrao).toBeNull();
+    });
+
+    // AC-6: descricaoFornecedor em vínculo de fornecedor
+    it('AC-6: vincular fornecedor com descrição envia o valor e omite quando vazio', () => {
+        const payloadComDescricao = buildVincularFornecedorProdutoPayload({
+            fornecedorId,
+            codigoFornecedor: 'SUP-001',
+            descricaoFornecedor: 'Fornecedor de alta qualidade',
+            principal: true
+        });
+
+        expect(payloadComDescricao.descricaoFornecedor).toBe('Fornecedor de alta qualidade');
+
+        const payloadSemDescricao = buildVincularFornecedorProdutoPayload({
+            fornecedorId,
+            codigoFornecedor: 'SUP-001',
+            descricaoFornecedor: '',
+            principal: true
+        });
+
+        expect(payloadSemDescricao.descricaoFornecedor).toBeNull();
+    });
+});
+
+describe('comSiglaSelecionada — AC-7 — sintética de unidade tributável', () => {
+    // AC-7: sigla já presente nas opções não deve ser duplicada
+    it('sigla já presente nas opções não duplica', () => {
+        const options = [
+            { label: 'Quilograma', value: 'KG' },
+            { label: 'Unidade', value: 'UN' }
+        ];
+
+        const resultado = comSiglaSelecionada(options, 'UN');
+
+        expect(resultado).toEqual(options);
+        expect(resultado.length).toBe(2);
+    });
+
+    // AC-7: sigla ausente das opções é anteposta como sintética
+    it('sigla ausente das opções antepõe opção sintética com label = sigla', () => {
+        const options = [
+            { label: 'Quilograma', value: 'KG' },
+            { label: 'Unidade', value: 'UN' }
+        ];
+
+        const resultado = comSiglaSelecionada(options, 'TON');
+
+        expect(resultado.length).toBe(3);
+        expect(resultado[0]).toEqual({ label: 'TON', value: 'TON' });
+        expect(resultado.slice(1)).toEqual(options);
+    });
+
+    // AC-7: sigla nulo ou vazio retorna opções originais sem alteração
+    it('sigla nulo retorna opções originais sem alteração', () => {
+        const options = [
+            { label: 'Quilograma', value: 'KG' },
+            { label: 'Unidade', value: 'UN' }
+        ];
+
+        const resultadoNulo = comSiglaSelecionada(options, null);
+        const resultadoVazio = comSiglaSelecionada(options, undefined);
+
+        expect(resultadoNulo).toEqual(options);
+        expect(resultadoVazio).toEqual(options);
+        expect(resultadoNulo).toBe(options); // mesmo objeto
+        expect(resultadoVazio).toBe(options); // mesmo objeto
     });
 });

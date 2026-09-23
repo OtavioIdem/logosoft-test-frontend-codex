@@ -35,8 +35,11 @@ import {
     ProdutoListQuery,
     ProdutoResponse,
     UnidadeMedidaResponse,
+    UnidadeTributavelCadastro,
+    UnidadeTributavelCadastroQuery,
     VincularFornecedorProdutoRequest
 } from '@/features/produtos/types/produtos.types';
+import type { PagedResult } from '@/types/erp';
 
 type Schema<T> = { parse: (value: unknown) => T };
 
@@ -149,6 +152,20 @@ export const marcasApi = {
         const payload = buildProdutoMotivoPayload(motivo);
         return runProdutoRequest(async () => {
             await httpClient.post<void>(`/api/produtos/marcas/${id}/inativar`, payload);
+        });
+    }
+};
+
+// Cadastro global (Mód.04), sem escopo de empresa/filial (D60) — mesmo padrão de
+// `administracaoApi.listarUfsFiscais`/`listarMunicipiosFiscais` (b64): o módulo consumidor chama
+// `CadastrosFiscaisController` direto, sem indireção por um "features/fiscal" compartilhado.
+export const unidadesTributaveisApi = {
+    async listar(query?: UnidadeTributavelCadastroQuery) {
+        return runProdutoRequest(async () => {
+            const response = await httpClient.get<PagedResult<UnidadeTributavelCadastro>>('/api/fiscal/cadastros/unidades-tributaveis', {
+                params: cleanQueryParams({ termo: query?.termo, sigla: query?.sigla, ativo: query?.ativo ?? true, pagina: query?.pagina ?? 1, tamanhoPagina: query?.tamanhoPagina ?? 20 })
+            });
+            return response.data;
         });
     }
 };

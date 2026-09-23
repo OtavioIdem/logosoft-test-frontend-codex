@@ -1,7 +1,7 @@
 {
     "name": "logosoft-frontend",
-    "version": "1.11.0-a.8.b64.c2",
-    "logosoftVersion": "1.11.0a8b64.c2",
+    "version": "1.11.0-a.8.b65",
+    "logosoftVersion": "1.11.0a8b65",
     "private": true,
     "scripts": {
         "postinstall": "patch-package --error-on-fail",

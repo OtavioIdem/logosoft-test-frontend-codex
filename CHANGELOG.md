@@ -1,3 +1,62 @@
+# v1.11.0a8b65
+
+## Classificação fiscal do produto ganha tela: SPED, unidade tributável oficial, EX-TIPI e benefício fiscal
+
+A `v1.11.0a8b64.c2` já tinha destravado o PATCH de dados fiscais de Produto; faltava dar à tela os
+campos que o backend já aceitava e devolvia sem nenhum input correspondente. Esta versão fecha os
+cinco campos do recorte original registrado em `docs/fatias/v1.11.0a8b58.c3-contratos-de-request.md`:
+`tipoItemSped` ganha `Dropdown` de edição (12 rótulos do Registro 0200 da EFD — antes só trafegava,
+sem controle de UI), `unidadeTributavelSigla` ganha autocomplete contra o catálogo oficial global
+(`GET /api/fiscal/cadastros/unidades-tributaveis`, primeiro consumo desse endpoint em `features/`),
+`exTipi` e `codigoBeneficioFiscalPadrao` ganham campo de texto, e `descricaoFornecedor` ganha campo
+no diálogo de vínculo de fornecedor. Rodada de arquitetura em `docs/arquitetura/debate/07-*-produtos-fiscais.md`,
+decisões travadas em D58–D61 (`docs/arquitetura/DECISOES.md`), plano em
+`docs/fatias/v1.11.0a8b65-produtos-fiscais.md`.
+
+**Risco da fatia: `HIGH`** (contrato de request muda tipo/campo, e o novo campo de catálogo entra sob
+guarda de uma segunda permissão). **Risco de acesso: `NENHUM`** — a guarda de
+`FISCAL_CADASTROS_CONSULTAR` (D61) é escopada só ao campo novo `unidadeTributavelSigla`, não à aba
+inteira: quem tem `PRODUTOS_DADOS_FISCAIS_GERENCIAR` sem a segunda permissão continua editando os
+outros nove campos fiscais normalmente, e não perde nada que tinha antes desta versão.
+
+### Seção operacional — leia antes do deploy
+
+1. **Classificar um produto para o SPED pela tela passa a ser possível pela primeira vez.** Antes
+   desta versão, `tipoItemSped` só trafegava no PATCH (lido do registro, reenviado sem alteração) —
+   nenhum produto podia ganhar ou trocar de classificação SPED pela UI, só por carga direta em banco.
+2. **Resolver a unidade tributável oficial (`uTrib` da NF-e) exige `FISCAL_CADASTROS_CONSULTAR`
+   além de `PRODUTOS_DADOS_FISCAIS_GERENCIAR`.** Sem a segunda permissão, o campo fica desabilitado
+   com aviso explícito ("Consulta de cadastros fiscais indisponível: seu usuário não possui
+   FISCAL_CADASTROS_CONSULTAR."), mesmo padrão já usado no endereço fiscal de Empresa/Filial (`b64`).
+   Um valor já gravado continua visível mesmo sem a permissão de busca.
+3. **O campo hoje rotulado só "Unidade tributável" virou dois campos com rótulos distintos**:
+   "Unidade tributável (medida interna)" (o que já existia, catálogo interno Mód.03, sem mudança de
+   comportamento) e "Unidade tributável (sigla oficial)" (novo, catálogo global Mód.04). Quem
+   preenchia o campo antigo não precisa reconferir nada — só o rótulo mudou.
+4. **Cliente e Fornecedor (configuração comercial, homologação) não entraram nesta versão** (D58) —
+   o rótulo "Produto, cliente, fornecedor" do plano de onda descrevia um escopo maior do que o
+   inventário sustentava; ficam para fatia própria, sem número reservado.
+
+### Testes e QA
+
+**O QA rodou e aprovou**, depois de um bloqueio inicial só pelo ritual de versão (corrigido nesta
+mesma versão). Verificado: `validate:source`, `typecheck`, `lint`, `validate:contract-request-fields`
+(`LACUNA` caiu de 7 para 3 — `TransferirEstoqueRequest.origemId`, `.documento`,
+`AtualizarEmpresaRequest.contribuinteIpi`, nenhum dos três desta fatia), e 69 testes verdes em três
+arquivos (16 de payload — incluindo `tipoItemSped = 0` como caso nominal e a opção sintética que
+evita mostrar vazio um valor de sigla já gravado —, 47 do gate de contrato, 6 de componente,
+incluindo a mensagem de erro do PATCH nomeando o campo em vez do toast genérico). O gate estrutural
+novo (asserção contra entrada órfã em `LACUNA_DESTINO`) provou vermelho contra a árvore da `c2`
+(11 entradas órfãs acusadas, worktree sobre `00e8316`) antes de fechar verde na árvore de hoje.
+
+**Lacuna conhecida, não bloqueadora, registrada no plano (`GAP-E2E-b65`)**: o comportamento visual
+do guard escopado (campo desabilitado + aviso quando falta `FISCAL_CADASTROS_CONSULTAR`, e os
+rótulos/campos visíveis na aba) não tem teste automatizado — nem componente (sem precedente de
+render de `TabView`/`SearchSelect` em `jsdom` neste repositório) nem E2E. Mesma lacuna existe desde
+a `b64` para o caso irmão idêntico (`EnderecoFiscalFormSection`). A decisão de negócio por trás do
+guard (payload, permissão de disparo do PATCH, mapeamento de erro) está coberta; o que falta é só a
+confirmação visual em navegador.
+
 # v1.11.0a8b64.c2
 
 ## O PATCH de dados fiscais de Produto volta a passar nos dois caminhos da tela

@@ -94,19 +94,16 @@ const LACUNA_TODOS_9FCDA80 = [
 ] as const;
 
 /**
- * Os 7 LACUNA que permanecem na árvore de hoje (após Bloco B e b64).
+ * Os 3 LACUNA que permanecem na árvore de hoje (após Bloco B, b65 e b64).
  * Foram removidos (preenchidos nos schemas):
  *   - ncmCodigo, cestCodigo, unidadeMedidaTributavelId (Bloco B)
- *   - tipoItemSped (Bloco B)
+ *   - tipoItemSped, unidadeTributavelSigla, exTipi, codigoBeneficioFiscalPadrao (b65)
+ *   - descricaoFornecedor (b65)
  *   - CriarEmpresaRequest.crt, AtualizarEmpresaRequest.crt (b64)
  *   - AdmitirColaboradorRequest.pessoaId (b63)
  * DefinirEnderecoFiscalRequest não gera LACUNA porque seus 2 campos anuláveis foram adicionados ao schema na b64.
  */
 const LACUNA_ESPERADOS_HOJE = [
-  'AtualizarDadosFiscaisProdutoRequest.unidadeTributavelSigla',
-  'AtualizarDadosFiscaisProdutoRequest.exTipi',
-  'AtualizarDadosFiscaisProdutoRequest.codigoBeneficioFiscalPadrao',
-  'VincularProdutoFornecedorRequest.descricaoFornecedor',
   'TransferirEstoqueRequest.origemId',
   'TransferirEstoqueRequest.documento',
   'AtualizarEmpresaRequest.contribuinteIpi'
@@ -380,15 +377,19 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
       }
     });
 
-    it('imprime 7 LACUNA com destino', () => {
-      // Verifica que a saída contém "7" e "anuláveis sem destino"
-      // (3 preenchidos no Bloco B = ncmCodigo, cestCodigo, unidadeMedidaTributavelId)
-      // (1 preenchido no Bloco B = tipoItemSped)
-      // (3 no Bloco b64 = CriarEmpresaRequest.crt, AtualizarEmpresaRequest.crt)
-      // (1 no Bloco b63 = AdmitirColaboradorRequest.pessoaId)
-      // (2 de DefinirEnderecoFiscalRequest adicionados à b64)
+    it('imprime 3 LACUNA com destino (após b65 preencher os campos novos)', () => {
+      // Verifica que a saída contém "3" e "anuláveis sem destino"
+      // Foram preenchidos:
+      //   - ncmCodigo, cestCodigo, unidadeMedidaTributavelId (Bloco B)
+      //   - tipoItemSped, unidadeTributavelSigla, exTipi, codigoBeneficioFiscalPadrao, descricaoFornecedor (b65)
+      //   - CriarEmpresaRequest.crt, AtualizarEmpresaRequest.crt (b64)
+      //   - AdmitirColaboradorRequest.pessoaId (b63)
+      // Restam apenas 3:
+      //   - TransferirEstoqueRequest.origemId → b66
+      //   - TransferirEstoqueRequest.documento → b66
+      //   - AtualizarEmpresaRequest.contribuinteIpi → b64
       const saida = resultadoHoje.stdout + resultadoHoje.stderr;
-      expect(saida).toContain('7');
+      expect(saida).toContain('3');
       expect(saida).toContain('anuláveis sem destino');
       expect(saida).toMatch(/→/); // Destino deve estar presente
     });
@@ -402,22 +403,42 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
     });
 
     // Itens que foram removidos da lista de LACUNA (adicionados aos schemas)
-    it('não imprime LACUNA: AtualizarDadosFiscaisProdutoRequest.tipoItemSped (adicionado no schema)', () => {
+    it('não imprime LACUNA: AtualizarDadosFiscaisProdutoRequest.tipoItemSped (adicionado na b65)', () => {
       const saida = resultadoHoje.stdout + resultadoHoje.stderr;
       expect(saida).not.toContain('AtualizarDadosFiscaisProdutoRequest.tipoItemSped');
     });
 
-    it('não imprime LACUNA: CriarEmpresaRequest.crt (adicionado no schema)', () => {
+    it('não imprime LACUNA: AtualizarDadosFiscaisProdutoRequest.unidadeTributavelSigla (adicionado na b65)', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).not.toContain('AtualizarDadosFiscaisProdutoRequest.unidadeTributavelSigla');
+    });
+
+    it('não imprime LACUNA: AtualizarDadosFiscaisProdutoRequest.exTipi (adicionado na b65)', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).not.toContain('AtualizarDadosFiscaisProdutoRequest.exTipi');
+    });
+
+    it('não imprime LACUNA: AtualizarDadosFiscaisProdutoRequest.codigoBeneficioFiscalPadrao (adicionado na b65)', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).not.toContain('AtualizarDadosFiscaisProdutoRequest.codigoBeneficioFiscalPadrao');
+    });
+
+    it('não imprime LACUNA: VincularProdutoFornecedorRequest.descricaoFornecedor (adicionado na b65)', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).not.toContain('VincularProdutoFornecedorRequest.descricaoFornecedor');
+    });
+
+    it('não imprime LACUNA: CriarEmpresaRequest.crt (adicionado na b64)', () => {
       const saida = resultadoHoje.stdout + resultadoHoje.stderr;
       expect(saida).not.toContain('CriarEmpresaRequest.crt');
     });
 
-    it('não imprime LACUNA: AtualizarEmpresaRequest.crt (adicionado no schema)', () => {
+    it('não imprime LACUNA: AtualizarEmpresaRequest.crt (adicionado na b64)', () => {
       const saida = resultadoHoje.stdout + resultadoHoje.stderr;
       expect(saida).not.toContain('AtualizarEmpresaRequest.crt');
     });
 
-    it('não imprime LACUNA: AdmitirColaboradorRequest.pessoaId (adicionado no schema)', () => {
+    it('não imprime LACUNA: AdmitirColaboradorRequest.pessoaId (adicionado na b63)', () => {
       const saida = resultadoHoje.stdout + resultadoHoje.stderr;
       expect(saida).not.toContain('AdmitirColaboradorRequest.pessoaId');
     });
@@ -509,6 +530,70 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
       for (const nome of CRITICOS_ESPERADOS_EM_9FCDA80) {
         expect(resultadoMapeamentoFake.nomesDivergencias.has(nome)).toBe(false);
       }
+    });
+  });
+
+  describe('AC-11: LACUNA_DESTINO sem entradas órfãs', () => {
+    /**
+     * Valida que LACUNA_DESTINO não contém entradas para campos que já saíram de
+     * LACUNA_ESPERADOS_HOJE. Prova vermelha: comentário da entrada órfã de tipoItemSped
+     * em 00e8316 (v1.11.0a8b64.c2) avisa que "mantê-los aqui é a entrada órfã".
+     * Mantê-los após a fatia b65 preenchê-los é o defeito que esta asserção detecta.
+     */
+
+    function extrairLacunaDestinoDoArquivo(conteudo: string): Set<string> {
+      // Procura pelo objeto LACUNA_DESTINO
+      const match = conteudo.match(/const\s+LACUNA_DESTINO\s*=\s*\{([\s\S]*?)\};/);
+      if (!match) {
+        throw new Error('LACUNA_DESTINO não encontrado no arquivo');
+      }
+
+      const lagunasEncontradas = new Set<string>();
+      const bloco = match[1];
+
+      // Extrai cada entrada: 'Chave.campo': 'destino'
+      const linhas = bloco.split('\n');
+      for (const linha of linhas) {
+        // Ignora comentários e linhas vazias
+        const trimmed = linha.trim();
+        if (trimmed.startsWith('//') || trimmed === '') continue;
+
+        // Padrão: 'FullyQualifiedFieldName': 'destino',
+        const fieldMatch = trimmed.match(/^'([^']+)':/);
+        if (fieldMatch) {
+          lagunasEncontradas.add(fieldMatch[1]);
+        }
+      }
+
+      return lagunasEncontradas;
+    }
+
+    it('LACUNA_DESTINO não contém entradas que já foram removidas de LACUNA_ESPERADOS_HOJE', () => {
+      const gateFilePath = path.join(raizDoProjeto, 'scripts', 'gate-contract-request-fields.mjs');
+      const gateContent = readFileSync(gateFilePath, 'utf8');
+      const lagunasDestino = extrairLacunaDestinoDoArquivo(gateContent);
+
+      // LACUNA_ESPERADOS_HOJE = os campos que ainda são anuláveis sem cobertura de schema
+      const lagunasEsperados = new Set(LACUNA_ESPERADOS_HOJE);
+
+      // Valida que toda entrada de LACUNA_DESTINO está em LACUNA_ESPERADOS_HOJE
+      const entradasOrfas = Array.from(lagunasDestino).filter(
+        campo => !lagunasEsperados.has(campo as any)
+      );
+
+      if (entradasOrfas.length > 0) {
+        const detalhe = entradasOrfas
+          .map(campo => `${campo} (foi removido de LACUNA_ESPERADOS_HOJE)`)
+          .join('\n   ');
+        throw new Error(
+          `LACUNA_DESTINO contém ${entradasOrfas.length} entrada(s) órfã(s):\n   ${detalhe}\n\n` +
+          `Isso ocorre quando um campo é adicionado ao schema e sai de LACUNA_ESPERADOS_HOJE, ` +
+          `mas sua entrada em LACUNA_DESTINO não é removida. Remova as chaves correspondentes ` +
+          `de scripts/gate-contract-request-fields.mjs:LACUNA_DESTINO.`
+        );
+      }
+
+      expect(entradasOrfas).toHaveLength(0);
     });
   });
 });

@@ -354,20 +354,10 @@ function filterAllowlisted(divergences, allowlist) {
  * Indica em qual bloco cada campo será preenchido.
  */
 const LACUNA_DESTINO = {
-  'AtualizarDadosFiscaisProdutoRequest.ncmCodigo': 'b58.c3 · Bloco B',
-  'AtualizarDadosFiscaisProdutoRequest.cestCodigo': 'b58.c3 · Bloco B',
-  'AtualizarDadosFiscaisProdutoRequest.unidadeMedidaTributavelId': 'b58.c3 · Bloco B',
-  'AtualizarDadosFiscaisProdutoRequest.unidadeTributavelSigla': 'b65',
-  'AtualizarDadosFiscaisProdutoRequest.exTipi': 'b65',
-  'AtualizarDadosFiscaisProdutoRequest.codigoBeneficioFiscalPadrao': 'b65',
-  'AtualizarDadosFiscaisProdutoRequest.tipoItemSped': 'b65',
-  'VincularProdutoFornecedorRequest.descricaoFornecedor': 'b65',
+  // Campos LACUNA que ainda não têm cobertura de UI (próximas fatias)
   'TransferirEstoqueRequest.origemId': 'b66',
   'TransferirEstoqueRequest.documento': 'b66',
-  'CriarEmpresaRequest.crt': 'b64',
-  'AtualizarEmpresaRequest.crt': 'b64',
-  'AtualizarEmpresaRequest.contribuinteIpi': 'b64',
-  'AdmitirColaboradorRequest.pessoaId': 'b63'
+  'AtualizarEmpresaRequest.contribuinteIpi': 'b64'
 };
 
 /**

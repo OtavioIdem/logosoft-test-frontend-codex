@@ -62,7 +62,10 @@ const dadosFiscaisEstaoEmBranco = (values: ProdutoFormValues) =>
     !isFilled(values.cestCodigo) &&
     !isFilled(values.origemMercadoriaCodigo) &&
     !isFilled(values.tipoItemFiscal) &&
+    !isFilled(values.unidadeTributavelSigla) &&
     !isFilled(values.unidadeMedidaTributavelId) &&
+    !isFilled(values.exTipi) &&
+    !isFilled(values.codigoBeneficioFiscalPadrao) &&
     !isFilled(values.codigoFiscalExterno) &&
     !isFilled(values.tipoItemSped);
 
@@ -71,12 +74,25 @@ const buildDadosFiscaisPatchValues = (values: ProdutoFormValues): AtualizarDados
     cestCodigo: values.cestCodigo ?? null,
     origemMercadoriaCodigo: values.origemMercadoriaCodigo ?? null,
     tipoItemFiscal: values.tipoItemFiscal ?? null,
-    // Só trafega — o operador não edita `tipoItemSped` nesta tela (b65). Vem do registro lido em
-    // `buildInitialValues` só para não ser apagado quando o backend recusa o bloco parcial.
+    // `0` é `MercadoriaParaRevenda` — checagem sempre `?? null`, nunca `|| null` (D59).
     tipoItemSped: values.tipoItemSped ?? null,
+    unidadeTributavelSigla: values.unidadeTributavelSigla ?? null,
     unidadeMedidaTributavelId: values.unidadeMedidaTributavelId ?? null,
+    exTipi: values.exTipi ?? null,
+    codigoBeneficioFiscalPadrao: values.codigoBeneficioFiscalPadrao ?? null,
     codigoFiscalExterno: values.codigoFiscalExterno ?? null
 });
+
+// Códigos de validação do bloco fiscal (`CadastrosFiscaisErrors.cs`) que nomeiam um dos dez campos do
+// PATCH — usados só para prefixar o campo no toast; a regra em si continua sendo do backend (AC-12).
+const CAMPO_ERRO_DADOS_FISCAIS: Record<string, string> = {
+    FISCAL_CADASTROS_TIPO_ITEM_SPED_OBRIGATORIO: 'Tipo do item no SPED',
+    FISCAL_CADASTROS_UNIDADE_TRIBUTAVEL_NAO_ENCONTRADA: 'Unidade tributável (sigla oficial)',
+    FISCAL_CADASTROS_UNIDADE_MEDIDA_TRIBUTAVEL_OBRIGATORIA: 'Unidade tributável (medida interna)',
+    FISCAL_CADASTROS_NCM_OBRIGATORIO: 'NCM',
+    FISCAL_CADASTROS_ORIGEM_OBRIGATORIA: 'Origem',
+    FISCAL_CADASTROS_CEST_OBRIGATORIO_PARA_NCM: 'CEST'
+};
 
 export const ProdutosPage = () => {
     const runWithToast = useMutationWithToast();
@@ -136,7 +152,9 @@ export const ProdutosPage = () => {
                 await dadosFiscaisMutation.mutateAsync({ id: produtoId, values: buildDadosFiscaisPatchValues(values) });
             } catch (error) {
                 const apiError = mapApiError(error);
-                toast.error('Produto salvo, mas os dados fiscais não foram gravados', `O cadastro do produto foi gravado. ${apiError.message}`);
+                const campo = apiError.code ? CAMPO_ERRO_DADOS_FISCAIS[apiError.code] : undefined;
+                const detalhe = campo ? `${campo}: ${apiError.message}` : apiError.message;
+                toast.error('Produto salvo, mas os dados fiscais não foram gravados', `O cadastro do produto foi gravado. ${detalhe}`);
                 throw error;
             }
         }

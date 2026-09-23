@@ -33,6 +33,24 @@ export enum TipoItemFiscal {
     Outro = 99
 }
 
+// Classificação do item no Registro 0200 da EFD (SPED Fiscal) — 12 valores fixos do backend
+// (`TipoItemSped.cs`), começa em 0 e tem um 99 solto; não é catálogo, é tabela fechada (D59,
+// v1.11.0a8b65). Trafega como número no wire (sem JsonStringEnumConverter no backend).
+export enum TipoItemSped {
+    MercadoriaParaRevenda = 0,
+    MateriaPrima = 1,
+    Embalagem = 2,
+    ProdutoEmProcesso = 3,
+    ProdutoAcabado = 4,
+    Subproduto = 5,
+    ProdutoIntermediario = 6,
+    MaterialDeUsoEConsumo = 7,
+    AtivoImobilizado = 8,
+    Servicos = 9,
+    OutrosInsumos = 10,
+    Outras = 99
+}
+
 export enum TipoMovimentoEstoque {
     Entrada = 1,
     Saida = 2,

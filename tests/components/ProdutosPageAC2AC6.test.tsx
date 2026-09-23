@@ -198,4 +198,30 @@ describe('ProdutosPage — v1.11.0a8b64.c2 — quando o PATCH de dados fiscais �
         expect(chamadasDeErro).not.toContain('Erro ao salvar produto');
         expect(toastMock.success).not.toHaveBeenCalled();
     });
+
+    it('AC-12: erro com código FISCAL_CADASTROS_TIPO_ITEM_SPED_OBRIGATORIO nomeia o campo no toast', async () => {
+        // Simula erro Axios com code que será extraído por mapApiError
+        const erroComCode = {
+            response: {
+                status: 400,
+                data: {
+                    code: 'FISCAL_CADASTROS_TIPO_ITEM_SPED_OBRIGATORIO',
+                    message: 'Tipo do item SPED é obrigatório para este produto.'
+                }
+            },
+            isAxiosError: true,
+            config: {},
+            code: 'ERR_BAD_REQUEST'
+        };
+
+        api.atualizarDadosFiscais.mockRejectedValue(erroComCode);
+
+        await abrirEsubmeter(valoresSemFiscal({ ncmCodigo: '84713012' }));
+
+        expect(api.criar).toHaveBeenCalledTimes(1);
+        const chamadaDeErro = toastMock.error.mock.calls.find((args) => String(args[1]).includes('Tipo do item no SPED'));
+        expect(chamadaDeErro).toBeDefined();
+        expect(String(chamadaDeErro?.[1])).toContain('Tipo do item no SPED');
+        expect(toastMock.success).not.toHaveBeenCalled();
+    });
 });
