@@ -104,14 +104,22 @@ Criação de usuário que já atribui grupo continua fora, dependendo de **B-1**
 - `contribuinteIpi` no atualizar — `bool?`, onde `null` significa "mantém".
 - Endereço fiscal de empresa e de filial.
 
-### `b65` — Produto, cliente, fornecedor
+### `b65` — Produto (fiscal) — **reduzida pela D58**
 
-- Campos fiscais restantes do produto: `tipoItemSped`, `unidadeTributavelSigla`,
-  `exTipi`, `codigoBeneficioFiscalPadrao`, `descricaoFornecedor`.
-- Cliente: `PUT /api/clientes/{id}/configuracao-comercial`.
-- Fornecedor: configuração de compra, homologar e revogar homologação.
+Rodada de arquitetura `07-produtos-fiscais` (`docs/arquitetura/debate/07-*-produtos-fiscais.md`,
+inventário em `docs/fatias/v1.11.0a8b65-inventario.md`) fechou o recorte real, menor do que este
+documento previa: Cliente e Fornecedor **saem** de `b65` por falta de inventário próprio (D58) —
+ver "Fora de escopo, com gatilho" abaixo, sem número reservado.
+
+- Campos fiscais restantes do produto: `unidadeTributavelSigla`, `exTipi`,
+  `codigoBeneficioFiscalPadrao`, `descricaoFornecedor` — e `tipoItemSped` como controle de edição
+  novo (D59; a `v1.11.0a8b64.c2` já tinha feito o campo trafegar, só faltava o input).
+- Dois seletores de "unidade tributável" com rótulos distintos, nunca fundidos (D60).
+- Guarda de `FISCAL_CADASTROS_CONSULTAR` escopada ao campo novo, não à aba inteira (D61).
+- **Não entra**: `PUT /api/clientes/{id}/configuracao-comercial`, configuração de compra e
+  homologação/revogação de fornecedor — sem inventário, viram item "Depois" (ver seção abaixo).
 - Código de cliente e fornecedor **continua manual**: não existe geração atômica,
-  e incrementar no frontend cria duplicidade por concorrência.
+  e incrementar no frontend cria duplicidade por concorrência (mantido do plano original).
 
 ### `b66` — Estoque
 
@@ -163,6 +171,8 @@ Criação de usuário que já atribui grupo continua fora, dependendo de **B-1**
 | Obrigar solicitação/cotação antes da compra | o backend permite pedido direto | regra no backend, por empresa/filial (B-4) |
 | Editar perfil e preferências | Auth só expõe login, me, refresh, logout | endpoint de perfil |
 | Simulador, regras fiscais, exceções, observabilidade, inutilizações | já implementados; o anexo diz "não consegui usar" | revisão de estados, permissão e dados mínimos — não é código novo |
+| Cliente — `PUT /api/clientes/{id}/configuracao-comercial` | sem inventário; D58 tira de `b65` | inventário do `inventariante-contrato-tela` sobre Cliente |
+| Fornecedor — configuração de compra, homologar/revogar homologação | sem inventário; D58 tira de `b65` | inventário do `inventariante-contrato-tela` sobre Fornecedor |
 
 ## As perguntas que destravam a onda
 
@@ -180,6 +190,8 @@ alavancagem e andam em paralelo com a `c3` e a `b59`.
 | B-7 | Haverá busca exata de produto por código de barras? | PDV |
 | B-8 | **O OpenAPI vai publicar schema de resposta?** Sem isso o Swagger não tipa leitura, e nenhum gate prova o lado da resposta. | toda a onda |
 | B-9 | **Cargo de acesso vai passar a governar acesso?** Hoje o guard lê só `UsuarioGrupoAcesso`; `UsuarioCargoAcesso` é ignorado por ele. Unificar as cadeias, ou declarar que cargo é outra coisa? | tela de cargos (D57) |
+| B-10 | O 400 de `CadastrosFiscaisErrors.UnidadeMedidaTributavelObrigatoria` (R6 — `unidadeTributavelSigla` diverge da unidade comercial sem `unidadeMedidaTributavelId` informado) tem corpo de erro mapeável a um campo específico, ou é validação de domínio genérica sem `field`? | `b65` (aviso inline vs. toast pós-submit) |
+| B-11 | Existe ou está prevista rota de atualização do vínculo `ProdutoFornecedor` (editar `descricaoFornecedor`/`codigoFornecedor` depois de criado)? Hoje só existe criação, recusada se o vínculo já existe. | `b65` (caminho de correção do vínculo de fornecedor, hoje sem solução possível na UI) |
 
 ## Correções fora da sequência funcional
 
