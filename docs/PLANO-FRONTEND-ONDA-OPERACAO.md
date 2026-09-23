@@ -146,12 +146,17 @@ Rodada `08-cliente-fornecedor` (`docs/arquitetura/debate/08-*-cliente-fornecedor
 - **Não entra**: `GET .../situacao-compra` (D64 — o pedido de compra não recusa fornecedor não
   homologado; a tela afirmaria uma regra que não existe; gatilho B-12).
 
-### `b67` — Classificações de Pessoa — **D65**
+### `b67` — Classificações de Pessoa — **D65, D68–D70**
 
-- Cadastro de Classificações de Pessoa (código, nome, descrição, inativar) sobre o CRUD que o
-  backend já tem (`ClassificacoesPessoaController`, `CLASSIFICACOES_PESSOA_GERENCIAR`). Rota, item
-  de menu e guarda novos: o inventário da fatia precisa conferir a permissão de consulta.
-- Seletor de `classificacaoId` no Cliente, alimentado por esse catálogo.
+Inventário em `docs/arquitetura/debate/09-inventario-classificacoes-pessoa.md`.
+
+- Cadastro de Classificações de Pessoa (código imutável, nome, descrição, inativar com motivo)
+  sobre o CRUD do backend, em `features/pessoas/`, rota `/pessoas/classificacoes` com regra
+  própria que exige `PESSOAS_CONSULTAR`, item no grupo Cadastros; gravar exige
+  `CLASSIFICACOES_PESSOA_GERENCIAR` (D68).
+- Sem reativar no backend: inativa fica visível e travada, e a inativação avisa antes (D69, B-13).
+- Seletor de `classificacaoId` no Cliente, por empresa, com a guarda por campo da D66 e a inativa
+  gravada marcada "(inativa)" (D70).
 
 ### `b68` — Estoque (era `b66`, D67)
 
@@ -225,6 +230,7 @@ alavancagem e andam em paralelo com a `c3` e a `b59`.
 | B-10 | O 400 de `CadastrosFiscaisErrors.UnidadeMedidaTributavelObrigatoria` (R6 — `unidadeTributavelSigla` diverge da unidade comercial sem `unidadeMedidaTributavelId` informado) tem corpo de erro mapeável a um campo específico, ou é validação de domínio genérica sem `field`? | `b65` (aviso inline vs. toast pós-submit) |
 | B-11 | Existe ou está prevista rota de atualização do vínculo `ProdutoFornecedor` (editar `descricaoFornecedor`/`codigoFornecedor` depois de criado)? Hoje só existe criação, recusada se o vínculo já existe. | `b65` (caminho de correção do vínculo de fornecedor, hoje sem solução possível na UI) |
 | B-12 | A recusa de pedido de compra para fornecedor não homologado (parâmetro `COMPRAS_BLOQUEIA_FORNECEDOR_NAO_HOMOLOGADO`) vai para dentro da criação do pedido, ou `situacao-compra` é deliberadamente só consultivo? Hoje nenhum use case de Pedido de Compra lê `Homologado`. | `situacao-compra` (D64) e `b70` |
+| B-13 | Vai existir reativação de Classificação de Pessoa? Hoje `AuditableEntity.Reativar` existe no domínio, nenhum use case a expõe, e `Atualizar` recusa registro inativo — uma classificação inativada por engano fica travada. | `b67` (D69) |
 
 ## Correções fora da sequência funcional
 

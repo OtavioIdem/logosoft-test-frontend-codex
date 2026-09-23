@@ -1930,3 +1930,70 @@ Reversível: sim (ordem). Gatilho de revisita: resposta a B-3 que destrave o Est
 torne urgente antecipá-lo.
 Quem arbitrou: orquestrador, pela regra de convergência.
 Impacto: `docs/PLANO-FRONTEND-ONDA-OPERACAO.md` (sequência reindexada, `b66` e `b67` novas, B-12).
+
+### D68 — Classificações de Pessoa: código em `features/pessoas/`, rota própria que exige consulta, item no grupo Cadastros
+
+Data: 2026-09-23.
+Rodada: inventário `docs/arquitetura/debate/09-inventario-classificacoes-pessoa.md`. Sem quarteto:
+a forma já estava decidida na D65 e o molde é o cadastro simples de Condições de Pagamento, já em
+produção. As pendências abertas pelo inventário são arbitradas aqui.
+Decisão:
+- **Módulo**: o código fica em `features/pessoas/` (api, hooks, schemas, types, components), não
+  num módulo novo. O controller é `api/pessoas/classificacoes`, o precedente de cadastro simples
+  (Condições de Pagamento) mora dentro do módulo dono (`features/financeiro/`), e o critério C1 de
+  `validate:guard-permission-map` exige o literal da permissão no módulo que faz a chamada HTTP.
+- **Rota**: `app/(main)/pessoas/classificacoes`, com regra própria em
+  `lib/security/routePermissions.ts` **antes** da regra genérica de `/pessoas`, e
+  `anyOf: ['PESSOAS_CONSULTAR']`.
+- **Menu**: item "Classificações de pessoa" no grupo "Cadastros", com
+  `anyPermissions: ['PESSOAS_CONSULTAR']`. O item pai já contém essa permissão.
+- **Dentro da tela**: criar, editar e inativar exigem `CLASSIFICACOES_PESSOA_GERENCIAR`
+  (`PermissionGuard mode="disable"` e `DataTableActions` com `permission`), como no molde.
+Por quê — e onde se afasta do molde: em Condições de Pagamento, a rota e o menu aceitam
+`CONDICOES_PAGAMENTO_GERENCIAR` sozinha. Aqui o `GET /api/pessoas/classificacoes` exige
+`PESSOAS_CONSULTAR` (`ClassificacoesPessoaController.cs:22-28`); quem tivesse só
+`CLASSIFICACOES_PESSOA_GERENCIAR` abriria uma tela cuja listagem volta 403 — `accessRisk: ILUSAO`
+por construção. Exigir consulta na rota e no menu faz a tela abrir só para quem consegue vê-la.
+Ninguém perde nada: essa tela não existe hoje, e hoje ninguém alcança nenhuma tela com
+`CLASSIFICACOES_PESSOA_GERENCIAR` (inventário §3).
+Alternativas descartadas:
+- Estender a regra genérica de `/pessoas` com `CLASSIFICACOES_PESSOA_GERENCIAR` (molde Produtos):
+  abriria a tela principal de Pessoas para quem só gerencia classificações — outra ilusão.
+- `features/classificacoes-pessoa/` próprio (molde Tabelas de Preço): o molde mais rico
+  (paginação de servidor, ativar) não se aplica a um catálogo que não pagina nem reativa.
+Risco de acesso: `NENHUM` — só abre acesso a uma tela que não existia.
+Reversível: sim. Gatilho de revisita: o backend passar a listar com `CLASSIFICACOES_PESSOA_GERENCIAR`.
+Achado registrado, fora do recorte: o molde de Condições de Pagamento tem a mesma forma de ilusão
+(rota e menu aceitam gerenciar sem consultar, e o `GET` exige `FINANCEIRO_CONSULTAR`). Não é
+corrigido aqui — corrigir guard tira acesso de alguém e pede classificação própria em `accessRisk`.
+Quem arbitrou: orquestrador.
+
+### D69 — sem endpoint de reativar: inativa fica visível, sem ações, e a inativação avisa que não se desfaz pela tela
+
+Data: 2026-09-23. Rodada: inventário 09.
+Decisão: a listagem mostra ativas e inativas (o backend não filtra por status), com a `Tag` de
+status; editar e inativar ficam desabilitados para inativa — o backend recusa `Atualizar` em
+registro inativo (`ClassificacaoPessoa.cs:33-36`). O `ReasonDialog` de inativação diz, antes de
+confirmar, que a classificação não pode ser reativada nem editada pela aplicação depois.
+Por quê: o controller não expõe reativação (`AuditableEntity.Reativar` existe no domínio, nenhum use
+case a chama). Prometer desfazer seria mentir; esconder a consequência deixaria o operador descobrir
+depois de inativar por engano.
+Risco de acesso: `NENHUM`. Reversível: sim.
+Gatilho de revisita: resposta à pergunta **B-13** (reativar Classificação de Pessoa).
+Quem arbitrou: orquestrador.
+
+### D70 — seletor de `classificacaoId` no Cliente: catálogo por empresa, guarda por campo da D66, inativa gravada continua visível
+
+Data: 2026-09-23. Rodada: inventário 09, sobre D65 e D66.
+Decisão: a aba "Comercial" do `ClienteFormDialog` ganha o seletor de classificação, alimentado por um
+hook em `features/pessoas/hooks/` com query key por `empresaId` (o `GET` exige `empresaId`),
+escrevendo no mesmo `classificacaoId` que já trafega desde a `b66`. Sem `PESSOAS_CONSULTAR`, vale a
+D66: campo desabilitado, rótulo neutro para o valor gravado, a permissão faltante entra no aviso
+único da aba, e o valor segue no `PUT`. As opções são as classificações **ativas**; se o valor
+gravado for de uma classificação inativa, ele aparece como opção marcada "(inativa)", para não sumir
+do campo nem ser apagado ao salvar.
+Por quê: a D65 exigia o cadastro antes do seletor — agora existe. O caso "gravada e depois inativada"
+é real pela D69 e, sem a opção marcada, o campo apareceria vazio, que é o defeito de opção sintética
+já corrigido duas vezes no repositório (D60).
+Risco de acesso: `NENHUM`. Reversível: sim.
+Quem arbitrou: orquestrador.
