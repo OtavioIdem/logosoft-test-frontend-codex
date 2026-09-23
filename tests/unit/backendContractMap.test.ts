@@ -38,7 +38,8 @@ describe('backend contract map', () => {
 
         const requestType = types.match(/VincularFornecedorProdutoRequest\s*=\s*{[\s\S]*?};/)?.[0] ?? '';
         expect(requestType).toContain('codigoFornecedor: string');
-        expect(requestType).not.toContain('descricaoFornecedor');
+        // C# record declara string? DescricaoFornecedor; B37 protege codigoFornecedor
+        expect(requestType).toContain('descricaoFornecedor?: string | null');
     });
 
     it('normaliza placeholders, constraints e query string para comparar METHOD + path', () => {
