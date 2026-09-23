@@ -1,3 +1,61 @@
+# v1.11.0a8b67
+
+## Cadastro de Classificações de Pessoa ganha tela própria, e o Cliente ganha o seletor
+
+Quem cadastra pessoas passa a manter a tabela de classificações da empresa (criar, renomear,
+descrever, inativar) numa tela própria em Cadastros, e a escolher a classificação do cliente na aba
+"Comercial" em vez de ela só ser preservada, como ficou registrado na `b66`. Inventário em
+`docs/arquitetura/debate/09-inventario-classificacoes-pessoa.md`, decisões travadas D65 (seletor
+entra junto com o cadastro) e D68–D70 (`docs/arquitetura/DECISOES.md`), plano em
+`docs/fatias/v1.11.0a8b67-classificacoes-pessoa.md`.
+
+**Risco da fatia: `HIGH`** (item de menu novo cujo pai, regra de rota ou guarda não contam a mesma
+história abre a tela para quem não deveria, ou some o grupo inteiro de quem tem direito; e o `PUT`
+de edição substitui nome e descrição do registro — descrição omitida apaga, mesmo formato de defeito
+já visto em Produto e em Cliente/Fornecedor). **Risco de acesso: `NENHUM`** — a tela não existia
+antes desta versão, então nenhum grupo perde o que já tinha; ela só abre acesso novo.
+
+### Seção operacional — leia antes do deploy
+
+1. **Tela nova "Classificações de pessoa" em Cadastros** (`/pessoas/classificacoes`): listar, criar,
+   editar e inativar com motivo. O código não muda depois de criado.
+2. **Para quem administra grupos**: a tela abre com `PESSOAS_CONSULTAR`; criar, editar e inativar
+   exigem `CLASSIFICACOES_PESSOA_GERENCIAR`. Quem tiver só `CLASSIFICACOES_PESSOA_GERENCIAR` **não vê
+   a tela**, porque o backend exige consulta para listar (D68). Grupos que devem manter
+   classificações precisam das duas permissões. Nenhum grupo perde acesso: essa tela não existia.
+3. **A inativação não pode ser desfeita pela aplicação**: o backend não tem reativar, e o diálogo
+   avisa antes de confirmar (D69; pergunta **B-13** ao backend).
+4. **A aba "Comercial" do Cliente ganha o seletor "Classificação"** (só ativas; uma classificação
+   gravada que foi inativada continua aparecendo, marcada "(inativa)", e é preservada ao salvar). Sem
+   `PESSOAS_CONSULTAR`, o campo fica desabilitado com o rótulo neutro, e o valor gravado é mantido
+   (D66, D70).
+5. **O `ReasonDialog` compartilhado ganhou um aviso opcional (`warning`)**, usado pelo diálogo de
+   inativação desta tela para o texto da D69. Os usos existentes não mudam.
+
+### Testes e QA
+
+Gate de contratos de request: exit 0, 0 `DESCARTE`, 0 `DEFAULT_SILENCIOSO`, 3 `LACUNA`, agora
+cobrindo os três records de Classificação de Pessoa, com o parser intacto. Prova durável
+`tests/unit/gateContractRequestFields.test.ts` 57/57: a prova histórica contra `9fcda80` acusa os 15
+críticos; com `descricao` removida, `LACUNA` nominal; com `motivo` removido, `DEFAULT_SILENCIOSO`
+nominal. Menu: 84 itens (era 83), com o item novo nomeado nas duas provas estruturais do menu.
+Recorte estrutural: 38 arquivos que leem o menu, a regra de rota e os módulos tocados, com 37
+verdes. O vermelho, `tests/unit/estoqueB41Structure.test.ts`, já está corrigido na `main` pelo
+commit `e645097` (PR #26), que esta cadeia de branches não tem; o CI da PR roda sobre o merge com a
+`main`. `validate:guard-permission-map` com 501 chamadas e o teto de 9 inalterado;
+`validate:backend-contract-map` com 477 rotas compatíveis; `validate:backend-permissions` verde.
+Schemas 22/22, página 15/15, seletor no Cliente 7/7 (44 no total). E2E mockado
+`tests/e2e/b67-classificacoes-pessoa.spec.ts`: 5/5 em duas execuções no servidor isolado da porta
+3411.
+
+Fato de processo, em linguagem honesta: a spec precisou de quatro correções até fechar, e nenhuma
+das falhas era defeito de tela — o bloqueio de rota é do `RoutePermissionGate`; o disabled do
+Dropdown do PrimeReact se lê por `data-p-disabled`; o texto visível não está no `<option>` oculto; e
+um erro de tipo no `toContainText`. A quarta correção passou do limite de três do nó e foi
+autorizada pelo usuário.
+
+**O QA rodou e aprovou.** O primeiro veredito foi BLOQUEADO por nove erros de tipagem nos dois testes de componente novos (`payload` como `unknown`, enum `TipoPessoa` e `creditoBloqueado`), corrigidos sem mudar nenhuma asserção. No segundo, conferiu por conta própria typecheck, lint, build (com a rota `/pessoas/classificacoes` no output), validate:source, validate:ci, os três gates de permissão e contrato, o gate de contratos de request (exit 0, 0/0/3) e os testes do recorte; e verificou no código que união, catálogo, regra de rota, menu, bloqueio da página e guardas de gravação contam a mesma história da D68.
+
 # v1.11.0a8b66
 
 ## Cliente ganha aba Comercial, Fornecedor ganha aba Compra e homologação pela listagem

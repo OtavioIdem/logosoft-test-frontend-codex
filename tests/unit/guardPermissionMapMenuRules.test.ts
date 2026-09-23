@@ -473,7 +473,8 @@ export const MenuFixtureFRulePrecedence = () => {
       // Número total deve refletir a contagem
       expect(result.hierarchy.length).toBeGreaterThan(0);
       // b62: -1 "Bloqueios" removido — o item apontava para /estoque/bloqueios que só faz redirect('/estoque/avancado')
-      expect(itemsWithTo).toBe(83);
+      // b67: +1 "Classificações de pessoa" adicionado (D68) em Cadastros > /pessoas/classificacoes
+      expect(itemsWithTo).toBe(84);
     });
 
     it('D46: nenhum item ou grupo do AppMenu.tsx atual declara mais de uma forma de permissão', () => {

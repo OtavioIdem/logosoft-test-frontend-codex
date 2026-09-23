@@ -11,17 +11,21 @@ import { tmpdir } from 'os';
  * campos que o record C# do backend não declara, e que não omitem campos obrigatórios (não-anuláveis)
  * que o backend espera.
  *
- * Este teste automatiza essa prova com cinco sondas:
+ * Este teste automatiza essa prova com múltiplas sondas:
  *   - Sonda A: árvore de 9fcda80 (contém os 15 defeitos) — deve acusar 8 DESCARTE + 7 DEFAULT_SILENCIOSO
  *   - Sonda B: árvore de hoje (sem os 15) — deve sair 0, imprimindo 8 LACUNA
  *   - Sonda C: injeta um campo fake em recorte antigo — deve acusar e sair 1
  *   - Sonda D: injeita um campo fake em DefinirEnderecoFiscalRequest (DESCARTE) — deve acusar e sair 1
  *   - Sonda E: remove um campo obrigatório de DefinirEnderecoFiscalRequest (DEFAULT_SILENCIOSO) — deve acusar e sair 1
+ *   - Sonda G: remove descricao anulável de criarClassificacaoPessoaSchema (LACUNA) — AC-11
+ *   - Sonda H: remove motivo obrigatório de inativarClassificacaoPessoaSchema (DEFAULT_SILENCIOSO) — AC-11
  *
  * Os 15 críticos (8 + 7) compõem a prova vermelha de 9fcda80 (Sonda A). Os 8 LACUNA permanecem para a Sonda B.
  * As Sondas D e E comprovam que o novo recorte DefinirEnderecoFiscalRequest é detectado em ambas direções.
  * AC-13 (v1.11.0a8b66): ConfigurarComercialClienteRequest e ConfigurarCompraFornecedorRequest entram no
  * universo; campo removido do schema no espelho é acusado pelo nome (DEFAULT_SILENCIOSO ou LACUNA).
+ * AC-11 (v1.11.0a8b67): CriarClassificacaoPessoaRequest, AtualizarClassificacaoPessoaRequest,
+ * InativarClassificacaoPessoaRequest entram no universo com prova vermelha nominal (Sondas G e H).
  */
 
 const raizDoProjeto = process.cwd();
@@ -130,7 +134,8 @@ function montarEspelho(refSchemas: string, stripNewMapping?: boolean): string {
     'features/seguranca/schemas',
     'features/rh/schemas',
     'features/clientes/schemas',
-    'features/fornecedores/schemas'
+    'features/fornecedores/schemas',
+    'features/pessoas/schemas'
   ];
   for (const dir of dirs) {
     const fullPath = path.join(espelho, dir);
@@ -166,7 +171,7 @@ function montarEspelho(refSchemas: string, stripNewMapping?: boolean): string {
   writeFileSync(contratoDest, readFileSync(contratoSource, 'utf8'));
 
   // Copia schemas (da árvore especificada)
-  const modulos = ['produtos', 'estoque', 'administracao', 'seguranca', 'rh', 'clientes', 'fornecedores'];
+  const modulos = ['produtos', 'estoque', 'administracao', 'seguranca', 'rh', 'clientes', 'fornecedores', 'pessoas'];
   for (const modulo of modulos) {
     let conteudo: string;
 
@@ -299,6 +304,8 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
   let espelhoClienteSemObrigatorio = '';
   let espelhoClienteSemAnulavel = '';
   let espelhoFornecedorSemAnulavel = '';
+  let espelhoClassificacaoPessoaSemAnulavel = '';
+  let espelhoClassificacaoPessoaSemObrigatorio = '';
 
   let resultadoAntigo: Awaited<ReturnType<typeof executarGate>>;
   let resultadoHoje: Awaited<ReturnType<typeof executarGate>>;
@@ -309,14 +316,17 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
   let resultadoClienteSemObrigatorio: Awaited<ReturnType<typeof executarGate>>;
   let resultadoClienteSemAnulavel: Awaited<ReturnType<typeof executarGate>>;
   let resultadoFornecedorSemAnulavel: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoClassificacaoPessoaSemAnulavel: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoClassificacaoPessoaSemObrigatorio: Awaited<ReturnType<typeof executarGate>>;
 
   beforeAll(() => {
     // Sonda A: árvore de 9fcda80 (contém os 15 defeitos)
     // Passa GATE_RECORTES_IGNORADOS para ignorar recortes posteriores à revisão testada
     espelhoAntigo = montarEspelho(REF_ANTIGA_C1, true);
-    // ConfigurarComercialClienteRequest e ConfigurarCompraFornecedorRequest (b66) não existiam em 9fcda80.
+    // DefinirEnderecoFiscalRequest (b64), ConfigurarComercialClienteRequest e ConfigurarCompraFornecedorRequest (b66),
+    // CriarClassificacaoPessoaRequest, AtualizarClassificacaoPessoaRequest, InativarClassificacaoPessoaRequest (b67) não existiam em 9fcda80.
     resultadoAntigo = executarGate(espelhoAntigo, {
-      GATE_RECORTES_IGNORADOS: 'DefinirEnderecoFiscalRequest,ConfigurarComercialClienteRequest,ConfigurarCompraFornecedorRequest'
+      GATE_RECORTES_IGNORADOS: 'DefinirEnderecoFiscalRequest,ConfigurarComercialClienteRequest,ConfigurarCompraFornecedorRequest,CriarClassificacaoPessoaRequest,AtualizarClassificacaoPessoaRequest,InativarClassificacaoPessoaRequest'
     });
 
     // Sonda B: árvore de hoje (sem os 15 defeitos)
@@ -374,11 +384,21 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
     espelhoFornecedorSemAnulavel = montarEspelho('HEAD-WORKING');
     removerCampoDoSchemaNoEspelho(espelhoFornecedorSemAnulavel, 'fornecedores', 'configurarCompraFornecedorSchema', 'categoriaFornecimento');
     resultadoFornecedorSemAnulavel = executarGate(espelhoFornecedorSemAnulavel);
+
+    // AC-11 (b67): árvore de hoje sem `descricao` (string? anulável) → LACUNA nominal de criarClassificacaoPessoaSchema
+    espelhoClassificacaoPessoaSemAnulavel = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoClassificacaoPessoaSemAnulavel, 'pessoas', 'criarClassificacaoPessoaSchema', 'descricao');
+    resultadoClassificacaoPessoaSemAnulavel = executarGate(espelhoClassificacaoPessoaSemAnulavel);
+
+    // AC-11 (b67): árvore de hoje sem `motivo` (string obrigatório) → DEFAULT_SILENCIOSO nominal de inativarClassificacaoPessoaSchema
+    espelhoClassificacaoPessoaSemObrigatorio = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoClassificacaoPessoaSemObrigatorio, 'pessoas', 'inativarClassificacaoPessoaSchema', 'motivo');
+    resultadoClassificacaoPessoaSemObrigatorio = executarGate(espelhoClassificacaoPessoaSemObrigatorio);
   }, 120_000);
 
   afterAll(() => {
     // Limpa espelhos
-    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoDefinirEnderecoFiscalComFantasma, espelhoDefinirEnderecoFiscalSemObrigatorio, espelhoComMapeamentoFake, espelhoClienteSemObrigatorio, espelhoClienteSemAnulavel, espelhoFornecedorSemAnulavel]) {
+    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoDefinirEnderecoFiscalComFantasma, espelhoDefinirEnderecoFiscalSemObrigatorio, espelhoComMapeamentoFake, espelhoClienteSemObrigatorio, espelhoClienteSemAnulavel, espelhoFornecedorSemAnulavel, espelhoClassificacaoPessoaSemAnulavel, espelhoClassificacaoPessoaSemObrigatorio]) {
       if (espelho && existsSync(espelho)) {
         try {
           rmSync(espelho, { recursive: true });
@@ -698,6 +718,47 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
       expect(secao(saida, 'LACUNA')).toContain('ConfigurarCompraFornecedorRequest.categoriaFornecimento');
       expect(saida).toMatch(/anuláveis sem destino na UI \(4\)/);
       expect(resultadoFornecedorSemAnulavel.nomesDivergencias.size).toBe(0);
+    });
+  });
+
+  describe('AC-11: v1.11.0a8b67 — CriarClassificacaoPessoaRequest, AtualizarClassificacaoPessoaRequest, InativarClassificacaoPessoaRequest no universo', () => {
+    /** Trecho da saída entre o cabeçalho da categoria e o próximo cabeçalho (ou o fim). */
+    function secao(saida: string, cabecalho: 'DESCARTE' | 'DEFAULT_SILENCIOSO' | 'LACUNA'): string {
+      const linhas = saida.split('\n');
+      const inicio = linhas.findIndex((l) =>
+        cabecalho === 'LACUNA' ? /anuláveis sem destino/.test(l) : l.includes(`${cabecalho} —`)
+      );
+      if (inicio < 0) return '';
+      const resto = linhas.slice(inicio + 1);
+      const fim = resto.findIndex((l) => /^(❌|📋|📊|✅)/.test(l.trim()) && !/^❌\s+\w+\.\w+/.test(l.trim()));
+      return (fim < 0 ? resto : resto.slice(0, fim)).join('\n');
+    }
+
+    it('o gate mapeia os três records novos (schema → record)', () => {
+      const gate = readFileSync(path.join(raizDoProjeto, 'scripts', 'gate-contract-request-fields.mjs'), 'utf8');
+      expect(gate).toMatch(/criarClassificacaoPessoaSchema:\s*'CriarClassificacaoPessoaRequest'/);
+      expect(gate).toMatch(/atualizarClassificacaoPessoaSchema:\s*'AtualizarClassificacaoPessoaRequest'/);
+      expect(gate).toMatch(/inativarClassificacaoPessoaSchema:\s*'InativarClassificacaoPessoaRequest'/);
+    });
+
+    it('Sonda B: resolve os três records sem falha estrutural', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).not.toContain('FALHA ESTRUTURAL');
+      expect(saida).not.toMatch(/CriarClassificacaoPessoaRequest\.|AtualizarClassificacaoPessoaRequest\.|InativarClassificacaoPessoaRequest\./);
+    });
+
+    it('Sonda G: sem descricao anulável em criarClassificacaoPessoaSchema — acusa LACUNA (4 LACUNA)', () => {
+      const saida = resultadoClassificacaoPessoaSemAnulavel.stdout + resultadoClassificacaoPessoaSemAnulavel.stderr;
+      expect(secao(saida, 'LACUNA')).toContain('CriarClassificacaoPessoaRequest.descricao');
+      expect(saida).toMatch(/anuláveis sem destino na UI \(4\)/);
+      expect(resultadoClassificacaoPessoaSemAnulavel.nomesDivergencias.size).toBe(0);
+    });
+
+    it('Sonda H: sem motivo obrigatório em inativarClassificacaoPessoaSchema — acusa DEFAULT_SILENCIOSO', () => {
+      const saida = resultadoClassificacaoPessoaSemObrigatorio.stdout + resultadoClassificacaoPessoaSemObrigatorio.stderr;
+      expect(resultadoClassificacaoPessoaSemObrigatorio.exitCode).toBe(1);
+      expect(resultadoClassificacaoPessoaSemObrigatorio.nomesDivergencias.has('InativarClassificacaoPessoaRequest.motivo')).toBe(true);
+      expect(secao(saida, 'DEFAULT_SILENCIOSO')).toContain('InativarClassificacaoPessoaRequest.motivo');
     });
   });
 });

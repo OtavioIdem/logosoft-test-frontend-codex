@@ -53,6 +53,11 @@ const SCHEMA_TO_REQUEST_MAP = {
   },
   fornecedores: {
     configurarCompraFornecedorSchema: 'ConfigurarCompraFornecedorRequest'
+  },
+  pessoas: {
+    criarClassificacaoPessoaSchema: 'CriarClassificacaoPessoaRequest',
+    atualizarClassificacaoPessoaSchema: 'AtualizarClassificacaoPessoaRequest',
+    inativarClassificacaoPessoaSchema: 'InativarClassificacaoPessoaRequest'
   }
 };
 
@@ -79,7 +84,10 @@ function loadRequestContractFromDocument(contractPath) {
     'CriarUsuarioRequest',
     'AdmitirColaboradorRequest',
     'ConfigurarComercialClienteRequest',
-    'ConfigurarCompraFornecedorRequest'
+    'ConfigurarCompraFornecedorRequest',
+    'CriarClassificacaoPessoaRequest',
+    'AtualizarClassificacaoPessoaRequest',
+    'InativarClassificacaoPessoaRequest'
   ];
 
   for (const recordName of recordNames) {
@@ -374,7 +382,7 @@ const LACUNA_DESTINO = {
  * Ponto de entrada.
  */
 function main() {
-  const modules = ['produtos', 'estoque', 'administracao', 'seguranca', 'rh', 'clientes', 'fornecedores'];
+  const modules = ['produtos', 'estoque', 'administracao', 'seguranca', 'rh', 'clientes', 'fornecedores', 'pessoas'];
   const allDivergences = [];
   const allMissingSchemas = [];
   const ignoredRecords = new Set();

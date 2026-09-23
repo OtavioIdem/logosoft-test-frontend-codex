@@ -11,6 +11,7 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/seguranca\/grupos-acesso(?:\/.*)?$/, anyOf: ['SEGURANCA_GRUPOS_ACESSO_CONSULTAR', 'SEGURANCA_GRUPOS_ACESSO_GERENCIAR'], description: 'Grupos de acesso' },
     { pattern: /^\/administracao\/deploy(?:\/.*)?$/, anyOf: ['DEPLOY_CONSULTAR', 'DEPLOY_GERENCIAR'], description: 'Deploy / Ambiente' },
     { pattern: /^\/administracao(?:\/.*)?$/, anyOf: ['ADMINISTRACAO_CONSULTAR', 'ADMINISTRACAO_GERENCIAR'], description: 'Administração' },
+    { pattern: /^\/pessoas\/classificacoes(?:\/.*)?$/, anyOf: ['PESSOAS_CONSULTAR'], description: 'Classificações de pessoa' },
     { pattern: /^\/pessoas(?:\/.*)?$/, anyOf: ['PESSOAS_CONSULTAR', 'PESSOAS_GERENCIAR'], description: 'Pessoas' },
     { pattern: /^\/clientes(?:\/.*)?$/, anyOf: ['CLIENTES_CONSULTAR', 'CLIENTES_GERENCIAR'], description: 'Clientes' },
     { pattern: /^\/fornecedores(?:\/.*)?$/, anyOf: ['FORNECEDORES_CONSULTAR', 'FORNECEDORES_GERENCIAR'], description: 'Fornecedores' },
