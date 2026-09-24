@@ -175,12 +175,13 @@ describe('Gate de menu (C2 e C3) — prova histórica da b53', () => {
   });
 
   describe('Contagem de itens do menu', () => {
-    it('parser enumera 83 itens na árvore atual', () => {
+    it('parser enumera 84 itens na árvore atual', () => {
       // b58: +1 "Séries fiscais" (84). b62: −1 "Bloqueios" (`/estoque/bloqueios`,
       // ESTOQUE_MOVIMENTAR), removido em 6d42c62 por levar a rota inexistente — a contagem caiu
       // para 83 e esta prova não foi atualizada junto, então `test:unit` ficou vermelho da b62 em
       // diante e assim foi commitado pela b62, b63 e b64. Corrigido aqui.
-      expect(hierarchyCountAtuais).toBe(83);
+      // b67: +1 "Classificações de pessoa" (D68) em Cadastros > /pessoas/classificacoes — contagem sobe para 84.
+      expect(hierarchyCountAtuais).toBe(84);
     });
   });
 });

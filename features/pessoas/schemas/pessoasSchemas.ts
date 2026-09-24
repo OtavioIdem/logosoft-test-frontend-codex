@@ -52,3 +52,34 @@ export const atualizarPessoaSchema = z.object({
 });
 
 export const inativarPessoaSchema = z.object({ motivo: z.string().trim().min(5, 'Informe um motivo com pelo menos 5 caracteres.') });
+
+const classificacaoPessoaCodigoSchema = z
+    .string()
+    .trim()
+    .min(1, 'Informe o código.')
+    .max(40, 'Código deve ter no máximo 40 caracteres.')
+    .refine((value) => !/\s/.test(value), 'Código não pode conter espaço.');
+const classificacaoPessoaNomeSchema = z.string().trim().min(1, 'Informe o nome.').max(120, 'Nome deve ter no máximo 120 caracteres.');
+const classificacaoPessoaDescricaoSchema = z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().trim().max(300, 'Descrição deve ter no máximo 300 caracteres.').optional()
+);
+const classificacaoPessoaMotivoSchema = z.string().trim().min(1, 'Informe o motivo.').max(500, 'Motivo deve ter no máximo 500 caracteres.');
+
+export const criarClassificacaoPessoaSchema = z.object({
+    empresaId: guid,
+    codigo: classificacaoPessoaCodigoSchema,
+    nome: classificacaoPessoaNomeSchema,
+    descricao: classificacaoPessoaDescricaoSchema
+});
+
+export const atualizarClassificacaoPessoaSchema = z.object({
+    empresaId: guid,
+    nome: classificacaoPessoaNomeSchema,
+    descricao: classificacaoPessoaDescricaoSchema
+});
+
+export const inativarClassificacaoPessoaSchema = z.object({
+    empresaId: guid,
+    motivo: classificacaoPessoaMotivoSchema
+});

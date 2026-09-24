@@ -75,6 +75,7 @@ const AppMenu = () => {
                     { label: 'Pessoas', icon: 'pi pi-fw pi-address-book', to: '/pessoas', anyPermissions: ['PESSOAS_CONSULTAR', 'PESSOAS_GERENCIAR'] },
                     { label: 'Clientes', icon: 'pi pi-fw pi-user-plus', to: '/clientes', anyPermissions: ['CLIENTES_CONSULTAR', 'CLIENTES_GERENCIAR'] },
                     { label: 'Fornecedores', icon: 'pi pi-fw pi-truck', to: '/fornecedores', anyPermissions: ['FORNECEDORES_CONSULTAR', 'FORNECEDORES_GERENCIAR'] },
+                    { label: 'Classificações de pessoa', icon: 'pi pi-fw pi-tag', to: '/pessoas/classificacoes', anyPermissions: ['PESSOAS_CONSULTAR'] },
                     { label: 'Produtos', icon: 'pi pi-fw pi-box', to: '/produtos', anyPermissions: ['PRODUTOS_CONSULTAR', 'PRODUTOS_GERENCIAR'] },
                     { label: 'Categorias', icon: 'pi pi-fw pi-tags', to: '/produtos/categorias', anyPermissions: ['PRODUTOS_CONSULTAR', 'CATEGORIAS_PRODUTO_GERENCIAR'] },
                     { label: 'Unidades de medida', icon: 'pi pi-fw pi-sort-numeric-up', to: '/produtos/unidades-medida', anyPermissions: ['PRODUTOS_CONSULTAR', 'UNIDADES_MEDIDA_GERENCIAR'] },

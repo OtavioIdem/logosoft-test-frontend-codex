@@ -19,11 +19,12 @@ import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { atualizarClienteSchema, criarClienteSchema } from '@/features/clientes/schemas/clientesSchemas';
 import { ClienteFormValues, ClienteResponse } from '@/features/clientes/types/clientes.types';
 import { fieldErrorMap, FieldErrors, numberValue, textValue } from '@/features/pessoas/components/formUtils';
+import { useClassificacoesPessoa } from '@/features/pessoas/hooks/useClassificacoesPessoa';
 import { PessoaResponse } from '@/features/pessoas/types/pessoas.types';
 import { useCondicoesPagamentoOptions } from '@/features/financeiro/hooks/useFinanceiroResources';
 import { useTabelasPreco } from '@/features/tabelas-preco/hooks/useTabelasPreco';
 import { buildPrivacySafeEntityLabel } from '@/lib/formatters/privacy';
-import { SelectOption } from '@/types/erp';
+import { EntityStatus, SelectOption } from '@/types/erp';
 
 const CATALOGO_SEM_PERMISSAO_LABEL = 'Configurado — sem permissão para ver o nome';
 
@@ -86,14 +87,33 @@ export const ClienteFormDialog = ({ visible, loading, record, pessoas, onHide, o
     const catalogoEmpresaId = record?.empresaId ?? (textValue(values.empresaId) || null);
     const tabelaPrecoPermitido = hasPermission('TABELAS_PRECO_CONSULTAR');
     const condicaoPagamentoPermitido = hasPermission('FINANCEIRO_CONSULTAR');
+    const pessoasPermitido = hasPermission('PESSOAS_CONSULTAR');
     const tabelasPrecoQuery = useTabelasPreco({ empresaId: catalogoEmpresaId }, visible && tabelaPrecoPermitido && Boolean(catalogoEmpresaId));
     const condicoesPagamentoQuery = useCondicoesPagamentoOptions(catalogoEmpresaId, visible && condicaoPagamentoPermitido && Boolean(catalogoEmpresaId));
+    const classificacoesQuery = useClassificacoesPessoa(catalogoEmpresaId, visible && pessoasPermitido && Boolean(catalogoEmpresaId));
 
     const tabelaPrecoOptions = useMemo<SelectOption<string>[]>(() => (tabelasPrecoQuery.data?.items ?? []).map((tabela) => ({ label: tabela.nome, value: tabela.id })), [tabelasPrecoQuery.data]);
     const tabelaPrecoOptionsComGravado = useMemo(() => comValorGravadoNeutro(tabelaPrecoOptions, textValue(values.tabelaPrecoPadraoId) || null, tabelaPrecoPermitido), [tabelaPrecoOptions, values.tabelaPrecoPadraoId, tabelaPrecoPermitido]);
     const condicaoPagamentoOptionsComGravado = useMemo(() => comValorGravadoNeutro(condicoesPagamentoQuery.options, textValue(values.condicaoPagamentoPadraoId) || null, condicaoPagamentoPermitido), [condicoesPagamentoQuery.options, values.condicaoPagamentoPadraoId, condicaoPagamentoPermitido]);
 
-    const permissoesFaltantes = [!tabelaPrecoPermitido ? 'TABELAS_PRECO_CONSULTAR' : null, !condicaoPagamentoPermitido ? 'FINANCEIRO_CONSULTAR' : null].filter((permissao): permissao is string => Boolean(permissao));
+    // D70: só as classificações ativas entram na lista; se o valor gravado for de uma inativa, uma
+    // opção extra marcada "(inativa)" preserva o rótulo em vez de sumir do campo (o defeito de opção
+    // sintética da D60). Distinto do rótulo neutro genérico da D66/`comValorGravadoNeutro`, que cobre
+    // a falta de permissão do catálogo, não o status do registro.
+    const classificacaoAtivasOptions = useMemo<SelectOption<string>[]>(
+        () => (classificacoesQuery.data ?? []).filter((item) => item.status === EntityStatus.Ativo).map((item) => ({ label: `${item.codigo} • ${item.nome}`, value: item.id })),
+        [classificacoesQuery.data]
+    );
+    const classificacaoOptions = useMemo<SelectOption<string>[]>(() => {
+        const valorAtual = textValue(values.classificacaoId) || null;
+        if (!valorAtual || classificacaoAtivasOptions.some((option) => option.value === valorAtual)) return classificacaoAtivasOptions;
+        const gravada = (classificacoesQuery.data ?? []).find((item) => item.id === valorAtual);
+        if (!gravada) return classificacaoAtivasOptions;
+        return [{ label: `${gravada.codigo} • ${gravada.nome} (inativa)`, value: gravada.id }, ...classificacaoAtivasOptions];
+    }, [classificacaoAtivasOptions, classificacoesQuery.data, values.classificacaoId]);
+    const classificacaoOptionsComGravado = useMemo(() => comValorGravadoNeutro(classificacaoOptions, textValue(values.classificacaoId) || null, pessoasPermitido), [classificacaoOptions, values.classificacaoId, pessoasPermitido]);
+
+    const permissoesFaltantes = [!tabelaPrecoPermitido ? 'TABELAS_PRECO_CONSULTAR' : null, !condicaoPagamentoPermitido ? 'FINANCEIRO_CONSULTAR' : null, !pessoasPermitido ? 'PESSOAS_CONSULTAR' : null].filter((permissao): permissao is string => Boolean(permissao));
 
     const update = (name: keyof ClienteFormValues, value: unknown) => {
         setValues((current) => ({ ...current, [name]: value }));
@@ -167,6 +187,10 @@ export const ClienteFormDialog = ({ visible, loading, record, pessoas, onHide, o
                         <div className="field col-12 md:col-6">
                             <label htmlFor="condicaoPagamentoPadraoId" className="font-medium">Condição de pagamento padrão</label>
                             <EntitySelect id="condicaoPagamentoPadraoId" entityName="condição de pagamento" value={textValue(values.condicaoPagamentoPadraoId) || null} options={condicaoPagamentoOptionsComGravado} disabled={!condicaoPagamentoPermitido} loading={condicoesPagamentoQuery.isFetching} onChange={(value) => update('condicaoPagamentoPadraoId', value)} />
+                        </div>
+                        <div className="field col-12 md:col-4">
+                            <label htmlFor="classificacaoId" className="font-medium">Classificação</label>
+                            <EntitySelect id="classificacaoId" entityName="classificação" value={textValue(values.classificacaoId) || null} options={classificacaoOptionsComGravado} disabled={!pessoasPermitido} loading={classificacoesQuery.isFetching} onChange={(value) => update('classificacaoId', value)} />
                         </div>
                         <div className="field col-12 md:col-4">
                             <label htmlFor="diaVencimentoPreferencial" className="font-medium">Dia de vencimento preferencial</label>
