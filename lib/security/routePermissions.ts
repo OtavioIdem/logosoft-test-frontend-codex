@@ -25,6 +25,13 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/estoque\/inventarios(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'ESTOQUE_INVENTARIO_GERENCIAR'], description: 'Inventários de estoque' },
     { pattern: /^\/estoque\/avancado(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'ESTOQUE_INVENTARIO_GERENCIAR', 'ESTOQUE_AJUSTAR', 'ESTOQUE_BLOQUEIO_GERENCIAR'], description: 'Estoque avançado' },
     { pattern: /^\/estoque\/locais(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'LOCAIS_ESTOQUE_GERENCIAR'], description: 'Locais de estoque' },
+    // Regras próprias (D76): os componentes de Saldos e do Histórico de Movimentos já recusam quem
+    // não tem ESTOQUE_CONSULTAR (`SaldosEstoquePage`/`HistoricoMovimentosTab`), então o catch-all de
+    // `/estoque` abaixo só dava a ilusão de acesso a quem tinha ESTOQUE_MOVIMENTAR/RESERVAR/
+    // INVENTARIO_GERENCIAR — a página sempre bloqueava depois. Quem só tem ESTOQUE_MOVIMENTAR
+    // continua entrando por `/estoque/entradas` e `/estoque/saidas`, que não mudam.
+    { pattern: /^\/estoque\/saldos(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR'], description: 'Saldos de estoque' },
+    { pattern: /^\/estoque\/movimentos(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR'], description: 'Movimentos de estoque (Entrada/Saída/Histórico, aba inicial Histórico)' },
     { pattern: /^\/estoque(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'ESTOQUE_MOVIMENTAR', 'ESTOQUE_RESERVAR', 'ESTOQUE_INVENTARIO_GERENCIAR'], description: 'Estoque' },
     { pattern: /^\/tabelas-preco(?:\/.*)?$/, anyOf: ['TABELAS_PRECO_CONSULTAR', 'TABELAS_PRECO_GERENCIAR'], description: 'Tabelas de preço' },
     { pattern: /^\/vendas(?:\/.*)?$/, anyOf: ['VENDAS_CONSULTAR', 'VENDAS_GERENCIAR', 'VENDAS_APROVAR', 'VENDAS_CANCELAR', 'VENDAS_FATURAR'], description: 'Vendas' },

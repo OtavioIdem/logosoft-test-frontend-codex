@@ -79,7 +79,12 @@ export const BloqueiosEstoqueTab = () => {
                 <Card title="Liberar / cancelar bloqueio">
                     <Message className="w-full mb-3" severity="info" text="Ponto de liberação dos bloqueios criados por Qualidade (reprovação) e Alimentar (recall). Informe o ID do bloqueio e o motivo." />
                     <FormGrid>
-                        <div className="field col-12"><label htmlFor="blId" className="font-medium">ID do bloqueio *</label><InputText id="blId" value={bloqueioId} className={classNames({ 'p-invalid': errors.bloqueioId })} onChange={(event) => { setBloqueioId(event.target.value); setErrors((c) => ({ ...c, bloqueioId: '' })); }} /><FieldError message={errors.bloqueioId} /></div>
+                        <div className="field col-12">
+                            <label htmlFor="blId" className="font-medium">ID do bloqueio *</label>
+                            <InputText id="blId" value={bloqueioId} className={classNames({ 'p-invalid': errors.bloqueioId })} onChange={(event) => { setBloqueioId(event.target.value); setErrors((c) => ({ ...c, bloqueioId: '' })); }} />
+                            <small className="block text-color-secondary mt-1">Cole aqui o identificador do bloqueio informado por quem o registrou. Não há hoje uma lista de bloqueios ativos para consultar (o backend não expõe listagem).</small>
+                            <FieldError message={errors.bloqueioId} />
+                        </div>
                         <div className="field col-12"><label htmlFor="blMotivoAcao" className="font-medium">Motivo *</label><InputText id="blMotivoAcao" value={motivoAcao} className={classNames({ 'p-invalid': errors.motivoAcao })} onChange={(event) => { setMotivoAcao(event.target.value); setErrors((c) => ({ ...c, motivoAcao: '' })); }} /><FieldError message={errors.motivoAcao} /></div>
                         <div className="col-12 flex justify-content-end gap-2">
                             <PermissionGuard permission="ESTOQUE_BLOQUEIO_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Cancelar bloqueio" icon="pi pi-ban" severity="danger" outlined loading={cancelarMutation.isPending} disabled={disabled} onClick={() => acao('cancelar')} />}</PermissionGuard>

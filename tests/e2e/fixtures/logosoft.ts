@@ -708,7 +708,7 @@ export const mockApiRoutes = async (page: Page) => {
         if (path.includes('/api/fornecedores')) return route.fulfill(json(fornecedores));
         if (path.includes('/api/estoque/locais')) return route.fulfill(json(locais));
         if (path.includes('/api/estoque/saldos')) return route.fulfill(json([{ id: 'saldo-1', empresaId, filialId, produtoId, localEstoqueId: localId, quantidadeAtual: 10, quantidadeReservada: 2, quantidadeDisponivel: 8 }]));
-        if (path.includes('/api/estoque/movimentos')) return route.fulfill(json([{ id: 'mov-1', produtoId, localEstoqueId: localId, tipoMovimento: 1, quantidade: 10, origemModulo: 'E2E', documento: 'DOC-E2E', criadoEm: '2026-05-08T12:00:00.000Z' }]));
+        if (path.includes('/api/estoque/movimentos')) return route.fulfill(json([{ id: 'mov-1', produtoId, localEstoqueId: localId, tipo: 1, quantidade: 10, origemModulo: 'E2E', documento: 'DOC-E2E', dataMovimento: '2026-05-08T12:00:00.000Z' }]));
         if (path.includes('/api/estoque/reservas')) return route.fulfill(json([{ id: 'res-1', produtoId, localEstoqueId: localId, quantidade: 1, origemModulo: 'Venda', statusReserva: 1 }]));
         if (path.includes('/api/estoque/inventarios')) return route.fulfill(json([{ id: 'inv-1', codigo: 'INV-001', localEstoqueId: localId, descricao: 'Inventário E2E', statusInventario: 1, itens: [] }]));
         if (path.includes('/api/vendas/pedidos/')) return route.fulfill(json(pedidoVenda));

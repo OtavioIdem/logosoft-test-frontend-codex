@@ -13,26 +13,30 @@ export const movimentoEstoqueLabel = (tipo?: number | string | null): string => 
         [TipoMovimentoEstoque.AjusteSaida]: 'Ajuste de saída',
         [TipoMovimentoEstoque.Reserva]: 'Reserva',
         [TipoMovimentoEstoque.BaixaReserva]: 'Baixa de reserva',
-        [TipoMovimentoEstoque.CancelamentoReserva]: 'Cancelamento de reserva'
+        [TipoMovimentoEstoque.CancelamentoReserva]: 'Cancelamento de reserva',
+        [TipoMovimentoEstoque.TransferenciaSaida]: 'Transferência — saída',
+        [TipoMovimentoEstoque.TransferenciaEntrada]: 'Transferência — entrada',
+        [TipoMovimentoEstoque.EstornoBaixaReserva]: 'Estorno de baixa de reserva'
     };
     return labels[Number(tipo)] ?? String(tipo ?? '-');
 };
 
 export const movimentoEstoqueSeverity = (tipo?: number | string | null): TagSeverity => {
     const value = Number(tipo);
-    if ([TipoMovimentoEstoque.Entrada, TipoMovimentoEstoque.AjusteEntrada, TipoMovimentoEstoque.CancelamentoReserva].includes(value)) return 'success';
-    if ([TipoMovimentoEstoque.Saida, TipoMovimentoEstoque.AjusteSaida, TipoMovimentoEstoque.BaixaReserva].includes(value)) return 'danger';
+    if ([TipoMovimentoEstoque.Entrada, TipoMovimentoEstoque.AjusteEntrada, TipoMovimentoEstoque.CancelamentoReserva, TipoMovimentoEstoque.TransferenciaEntrada, TipoMovimentoEstoque.EstornoBaixaReserva].includes(value)) return 'success';
+    if ([TipoMovimentoEstoque.Saida, TipoMovimentoEstoque.AjusteSaida, TipoMovimentoEstoque.BaixaReserva, TipoMovimentoEstoque.TransferenciaSaida].includes(value)) return 'danger';
     if (value === TipoMovimentoEstoque.Reserva) return 'warning';
     return 'info';
 };
 
 export const movimentoImpactoLabel = (tipo?: number | string | null): string => {
     const value = Number(tipo);
-    if ([TipoMovimentoEstoque.Entrada, TipoMovimentoEstoque.AjusteEntrada].includes(value)) return 'Aumenta saldo físico';
-    if ([TipoMovimentoEstoque.Saida, TipoMovimentoEstoque.AjusteSaida].includes(value)) return 'Reduz saldo físico';
+    if ([TipoMovimentoEstoque.Entrada, TipoMovimentoEstoque.AjusteEntrada, TipoMovimentoEstoque.TransferenciaEntrada].includes(value)) return 'Aumenta saldo físico';
+    if ([TipoMovimentoEstoque.Saida, TipoMovimentoEstoque.AjusteSaida, TipoMovimentoEstoque.TransferenciaSaida].includes(value)) return 'Reduz saldo físico';
     if (value === TipoMovimentoEstoque.Reserva) return 'Compromete saldo disponível';
     if (value === TipoMovimentoEstoque.BaixaReserva) return 'Baixa reserva e estoque';
     if (value === TipoMovimentoEstoque.CancelamentoReserva) return 'Libera saldo reservado';
+    if (value === TipoMovimentoEstoque.EstornoBaixaReserva) return 'Restabelece reserva e saldo (fluxo fiscal)';
     return 'Impacto controlado pelo backend';
 };
 
@@ -88,9 +92,9 @@ export const calcularResumoSaldos = (records: EstoqueSaldoResponse[]) => ({
 
 export const calcularResumoMovimentos = (records: MovimentoEstoqueResponse[]) => ({
     totalMovimentos: records.length,
-    entradas: records.filter((record) => [TipoMovimentoEstoque.Entrada, TipoMovimentoEstoque.AjusteEntrada].includes(Number(record.tipoMovimento))).length,
-    saidas: records.filter((record) => [TipoMovimentoEstoque.Saida, TipoMovimentoEstoque.AjusteSaida, TipoMovimentoEstoque.BaixaReserva].includes(Number(record.tipoMovimento))).length,
-    reservas: records.filter((record) => [TipoMovimentoEstoque.Reserva, TipoMovimentoEstoque.CancelamentoReserva].includes(Number(record.tipoMovimento))).length,
+    entradas: records.filter((record) => [TipoMovimentoEstoque.Entrada, TipoMovimentoEstoque.AjusteEntrada].includes(Number(record.tipo))).length,
+    saidas: records.filter((record) => [TipoMovimentoEstoque.Saida, TipoMovimentoEstoque.AjusteSaida, TipoMovimentoEstoque.BaixaReserva].includes(Number(record.tipo))).length,
+    reservas: records.filter((record) => [TipoMovimentoEstoque.Reserva, TipoMovimentoEstoque.CancelamentoReserva].includes(Number(record.tipo))).length,
     quantidadeMovimentada: records.reduce((total, record) => total + Math.abs(numberOrZero(record.quantidade)), 0)
 });
 

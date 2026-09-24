@@ -45,6 +45,9 @@ export type TransferenciaEstoqueRequest = {
     produtoId: Guid;
     quantidade: number;
     origemModulo: string;
+    // `origemId` existe no backend (`TransferirEstoqueRequest.OrigemId`) mas não vira campo: é um
+    // correlacionador gerado pelo backend quando omitido, sem catálogo nem entidade validável (D73).
+    documento?: string | null;
     motivo: string;
 };
 

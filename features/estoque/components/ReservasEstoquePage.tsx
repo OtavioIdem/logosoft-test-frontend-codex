@@ -28,7 +28,7 @@ const canOperate = (record: ReservaEstoqueResponse) => Number(record.statusReser
 
 export const ReservasEstoquePage = () => {
     const runWithToast = useMutationWithToast();
-    const { hasPermission } = usePermissions();
+    const { hasAnyPermission } = usePermissions();
     const [filters, setFilters] = useState<EstoqueListQuery>({});
     const [localSearch, setLocalSearch] = useState('');
     const [first, setFirst] = useState(0);
@@ -46,7 +46,10 @@ export const ReservasEstoquePage = () => {
     const localLabelMap = useMemo(() => new Map((locaisQuery.data ?? []).map((local) => [local.id, `${local.codigo} • ${local.nome}`])), [locaisQuery.data]);
     const resumo = useMemo(() => calcularResumoReservas(records), [records]);
 
-    if (!hasPermission('ESTOQUE_RESERVAR')) return <UnauthorizedState description="Reservas exigem ESTOQUE_RESERVAR." />;
+    // D76: a leitura passa a aceitar ESTOQUE_CONSULTAR (a rota já aceitava e a página exigia
+    // ESTOQUE_RESERVAR, mais restritiva que o backend); as ações continuam sob ESTOQUE_RESERVAR via
+    // `PermissionGuard`/`DataTableActions` abaixo.
+    if (!hasAnyPermission(['ESTOQUE_CONSULTAR', 'ESTOQUE_RESERVAR'])) return <UnauthorizedState description="Reservas exigem ESTOQUE_CONSULTAR ou ESTOQUE_RESERVAR." />;
     const updateFilter = (name: keyof EstoqueListQuery, value: string | null) => { setFirst(0); setFilters((current) => ({ ...current, [name]: value || null })); };
 
     const criar = async (values: ReservaEstoqueFormValues) => {

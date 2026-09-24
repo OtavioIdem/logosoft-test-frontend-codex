@@ -1,3 +1,114 @@
+# v1.11.0a8b68
+
+## Estoque: Histórico volta a mostrar Tipo e Data, Entrada/Saída/Histórico ganham abas, Transferência registra documento e as rotas de saldos e movimentos passam a exigir consulta
+
+Quem consulta o histórico de estoque volta a ver o tipo e a data de cada movimento, inclusive
+transferências e estornos de reserva; os atalhos de menu de Entrada, Saída e Histórico continuam os
+mesmos, mas agora abrem lado a lado em abas de um único componente; a Transferência passa a
+registrar o documento; e cada tela do módulo abre só para quem de fato consegue usá-la. Rodada de
+arquitetura em `docs/arquitetura/debate/10-{operacao,plataforma,escopo,design}-estoque.md`,
+inventário em `docs/arquitetura/debate/10-inventario-estoque.md`, decisões travadas D71–D76
+(`docs/arquitetura/DECISOES.md`), plano em `docs/fatias/v1.11.0a8b68-estoque.md`.
+
+**Risco da fatia: `HIGH`** (a tela lia dois campos do histórico de movimentos com nomes que o
+backend não serializa, escondido do compilador por tipo opcional — mesma classe de defeito de P1/P5
+do plano v1.23; e o gate de campos de response ganha o record pela primeira vez, com prova vermelha
+de que não pegava esse defeito antes). **Risco de acesso: `ILUSAO`** — as duas rotas novas só
+antecipam um bloqueio que os componentes já aplicavam; nenhuma sessão que hoje conclui uma operação
+deixa de concluir.
+
+### Seção operacional — leia antes do deploy
+
+1. **Histórico de movimentos corrigido (D71).** A tela lia os campos de tipo e data do movimento com
+   os nomes `tipoMovimento` e `criadoEm`, mas o backend serializa `tipo` e `dataMovimento`; como os
+   dois campos estavam declarados opcionais em `types/erp.ts`, o compilador não acusava a
+   divergência. Na prática, a coluna Tipo e a coluna Data do Histórico apareciam vazias e os
+   contadores do resumo (quantidade por tipo de movimento) ficavam zerados, mesmo com movimentos
+   gravados. Isso foi medido no código dos dois lados (o record C# do backend e a leitura da tela) e
+   confirmado pelo gate de campos de response rodado contra a árvore da versão anterior
+   (`v1.11.0a8b67`, commit `eabe03c`), que acusa `MovimentoEstoque.tipoMovimento` e
+   `MovimentoEstoque.criadoEm` pelo nome — não por uma resposta HTTP real, já que não há backend
+   rodando nesta fatia. Transferências e estornos de reserva (tipos de domínio 8, 9 e 10) passam a
+   ter rótulo próprio no Histórico, onde antes apareciam sem tipo reconhecido.
+2. **Entrada, Saída e Histórico em abas (D72).** Os três atalhos de menu e as três rotas
+   (`/estoque/entradas`, `/estoque/saidas`, `/estoque/movimentos`) continuam exatamente os mesmos;
+   cada um agora abre o mesmo componente numa aba inicial diferente, no padrão de `TabView` já usado
+   em cinco módulos do sistema. O estoque avançado (ajuste, bloqueio, inventário) não muda.
+3. **Transferência registra o documento (D73).** O campo `documento`, que Entrada, Saída e Ajuste já
+   tinham, passa a existir também na Transferência. `origemId` continua fora da tela: é um
+   correlacionador que o próprio backend gera quando omitido, sem catálogo nem entidade validável —
+   não vira campo digitável.
+4. **Origem do ajuste segue como texto livre (D74).** Não existe catálogo de origem de movimento
+   manual no backend; a `b68` deixa de depender da pergunta B-3, e o ajuste continua com texto livre
+   orientado, sem lista fixa no frontend.
+5. **Histórico com filtro de período (30 dias por padrão) e a coluna Motivo.** Os filtros seguem o
+   que o endpoint aceita (filial, produto, local, início, fim); ao remover o período, a tela avisa.
+   Não há paginação de servidor, porque o endpoint não tem `page`/`pageSize` (D75).
+6. **Para quem administra grupos (D76, `ILUSAO`).** `/estoque/saldos` e `/estoque/movimentos` passam
+   a exigir `ESTOQUE_CONSULTAR` já na regra de rota, antes do catch-all de `/estoque`. Nenhuma
+   operação que hoje conclui deixa de concluir: quem tinha só `ESTOQUE_MOVIMENTAR`,
+   `ESTOQUE_RESERVAR` ou `ESTOQUE_INVENTARIO_GERENCIAR` já era recusado pelas próprias telas
+   (`SaldosEstoquePage.tsx` e a aba Histórico), que sempre exigiram `ESTOQUE_CONSULTAR` por dentro; a
+   regra de rota só antecipa esse mesmo bloqueio para antes da tela carregar. Essa pessoa continua
+   registrando entradas e saídas normalmente em `/estoque/entradas` e `/estoque/saidas`. E Reservas
+   passa a abrir também para quem tem só `ESTOQUE_CONSULTAR`, em modo leitura — as ações de reservar
+   continuam exigindo `ESTOQUE_RESERVAR`.
+7. **Bloqueios continuam sem busca por vínculo.** O backend não tem endpoint de listagem de
+   bloqueios de estoque, então não há como oferecer um seletor real; a aba ganhou um texto de apoio
+   explicando a ausência, no lugar de fingir uma busca que não existe (pergunta **B-14**).
+8. **Perguntas ao backend, sem resposta nesta fatia:** **B-14** (listagem de bloqueios de estoque) e
+   **B-15** (o estoque avançado — ajuste, bloqueio, inventário — não atualiza o saldo `EstoqueSaldo`
+   que Compras e Vendas integram; os dois sistemas continuam sendo dois livros-razão que não se
+   reconciliam).
+
+### Testes e QA
+
+Build de produção completo; `lint` verde; `validate:guard-permission-map` com 501 chamadas e o teto
+de 9 inalterado; `validate:backend-contract-map` com 477 rotas; `validate:backend-permissions`
+verde.
+
+**Gate de campos de response (`scripts/gate-contract-fields.mjs`) passa a cobrir
+`MovimentoEstoqueResponse`, e a primeira entrega dele não provava nada.** Na primeira tentativa o
+gate lia os tipos só de `features/estoque/types/estoque.types.ts`, onde `MovimentoEstoque` é apenas
+importado de `@/types/erp`; ao não encontrar a declaração ali, ele avisava e pulava o tipo em vez de
+falhar — "nenhuma divergência" saiu sem medir o record de verdade. A correção faz o gate falhar
+quando um tipo mapeado não é encontrado e busca a declaração em `types/erp.ts`. Prova vermelha real:
+rodado em worktree sobre a árvore da `b67` (commit `eabe03c`), o gate acusa
+`MovimentoEstoque.tipoMovimento` e `MovimentoEstoque.criadoEm` pelo nome. A prova durável tem 35/35.
+Quatro exceções nominais novas entraram na allowlist do gate (`MovimentoEstoque.codigo`, `.status`,
+`.auditoria`, `.historicoStatus`, herdadas de `BaseOperationalRecord`) — ficam registradas para o QA
+julgar se algum desses campos é lido em tela.
+
+Gate de contratos de request: exit 0; `LACUNA` cai de 3 para 2 (`TransferirEstoqueRequest.origemId`
+passa a ter destino declarado "não exposto — D73"; a outra `LACUNA` remanescente é
+`AtualizarEmpresaRequest.contribuinteIpi`, de fatia anterior).
+
+A spec de contrato ao vivo (`tests/contract/operational-backend.contract.spec.ts`) e a fixture E2E
+(`tests/e2e/fixtures/logosoft.ts`) passaram a exigir os nomes do record (`tipo`, `dataMovimento`).
+Antes, a spec checava o campo como opcional e passava mesmo com ele ausente na resposta — não
+provava o contrato, só espelhava o sintoma.
+
+Unitários 14/14; componente 14/14; E2E mockado 11/11, em duas execuções no servidor isolado.
+
+Recorte estrutural: 29 de 30 arquivos verdes. `guardPermissionMap.test.ts` falhou uma vez por um
+arquivo temporário ausente, com dois agentes rodando testes em paralelo na mesma máquina — não é
+defeito desta fatia, e o QA roda de novo isolado. `estoqueB41Structure.test.ts` já está corrigido na
+`main` (commit `e645097`), fora desta cadeia de branches.
+
+Fato de processo, em linguagem honesta: o nó de testes precisou de quatro tentativas até fechar; a
+quarta foi autorizada pelo usuário. Nenhuma das falhas de E2E era defeito de tela: o AC-9 esperava o
+botão "Nova reserva" oculto quando a sessão não tem `ESTOQUE_RESERVAR`, mas a tela o mostra
+desabilitado (o padrão já usado no resto do app); e o mesmo caso procurava uma coluna que a tabela do
+Histórico não tem.
+
+**O QA rodou e aprovou, sem ressalva.** Conferiu por conta própria typecheck, lint, build,
+validate:source, validate:ci, os três gates de permissão e contrato e os dois gates de campos
+(response: exit 0, medindo `MovimentoEstoque`; request: exit 0, 2 LACUNA), e o recorte de testes.
+Rodou `guardPermissionMap.test.ts` sozinho, duas vezes, verde nas duas: a falha anterior era
+concorrência entre agentes. Verificou no código que as quatro exceções novas do gate de campos não
+são lidas por nenhuma tela de estoque, e que a condição de `ILUSAO` da D76 vale: as telas já
+recusavam sem `ESTOQUE_CONSULTAR` antes desta versão.
+
 # v1.11.0a8b67
 
 ## Cadastro de Classificações de Pessoa ganha tela própria, e o Cliente ganha o seletor

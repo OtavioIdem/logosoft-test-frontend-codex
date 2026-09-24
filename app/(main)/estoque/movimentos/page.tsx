@@ -1,5 +1,5 @@
-import { MovimentosEstoquePage } from '@/features/estoque/components/MovimentosEstoquePage';
+import { EstoqueMovimentosPage } from '@/features/estoque/components/EstoqueMovimentosPage';
 
 export default function Page() {
-    return <MovimentosEstoquePage />;
+    return <EstoqueMovimentosPage initialTab="historico" />;
 }
