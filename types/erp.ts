@@ -58,7 +58,11 @@ export enum TipoMovimentoEstoque {
     AjusteSaida = 4,
     Reserva = 5,
     BaixaReserva = 6,
-    CancelamentoReserva = 7
+    CancelamentoReserva = 7,
+    // Confirmados em `Erp.Domain/Estoque/TipoMovimentoEstoque.cs:12-20` (D71, v1.11.0a8b68).
+    TransferenciaSaida = 8,
+    TransferenciaEntrada = 9,
+    EstornoBaixaReserva = 10
 }
 
 export enum StatusReservaEstoque {
@@ -448,7 +452,10 @@ export type CodigoBarrasProduto = { id?: Guid; codigo: string; descricao?: strin
 export type ProdutoFornecedor = { id?: Guid; fornecedorId: Guid; codigoFornecedor?: string | null; descricaoFornecedor?: string | null; principal: boolean };
 
 export type EstoqueSaldo = BaseOperationalRecord & { produtoId: Guid; localEstoqueId: Guid; quantidadeAtual: number; quantidadeReservada: number; quantidadeDisponivel: number };
-export type MovimentoEstoque = BaseOperationalRecord & { produtoId: Guid; localEstoqueId: Guid; tipoMovimento?: TipoMovimentoEstoque | number; quantidade: number; origemModulo?: string; origemId?: Guid | null; documento?: string | null; motivo?: string | null; criadoEm?: IsoDateTime };
+// `tipo`/`dataMovimento` são os nomes que `MovimentoEstoqueResponse` (C#) serializa — não anuláveis
+// no record, portanto não opcionais aqui (D71, v1.11.0a8b68; o nome antigo `tipoMovimento`/`criadoEm`
+// nunca existiu na resposta, era o defeito que este tipo escondia do compilador).
+export type MovimentoEstoque = BaseOperationalRecord & { produtoId: Guid; localEstoqueId: Guid; tipo: TipoMovimentoEstoque; quantidade: number; origemModulo?: string; origemId?: Guid | null; documento?: string | null; motivo?: string | null; dataMovimento: IsoDateTime };
 export type LocalEstoque = BaseOperationalRecord & { codigo: string; nome: string; descricao?: string | null };
 export type ReservaEstoque = BaseOperationalRecord & { produtoId: Guid; localEstoqueId: Guid; quantidade: number; origemModulo: string; origemId?: Guid | null; observacao?: string | null; statusReserva?: StatusReservaEstoque | number };
 export type Inventario = BaseOperationalRecord & { codigo: string; localEstoqueId: Guid; descricao?: string | null; statusInventario?: StatusInventario | number; itens?: ItemInventario[] };

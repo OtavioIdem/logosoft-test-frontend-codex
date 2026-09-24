@@ -373,8 +373,7 @@ function filterAllowlisted(divergences, allowlist) {
  */
 const LACUNA_DESTINO = {
   // Campos LACUNA que ainda não têm cobertura de UI (próximas fatias)
-  'TransferirEstoqueRequest.origemId': 'b66',
-  'TransferirEstoqueRequest.documento': 'b66',
+  'TransferirEstoqueRequest.origemId': 'D73',
   'AtualizarEmpresaRequest.contribuinteIpi': 'b64'
 };
 

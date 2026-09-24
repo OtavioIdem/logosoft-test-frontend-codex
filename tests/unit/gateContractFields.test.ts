@@ -81,7 +81,7 @@ function montarEspelho(refTypos: string): string {
   const useWorkingDir = refTypos === 'HEAD-WORKING';
 
   // Estrutura mínima
-  const dirs = ['scripts', 'docs/backend-v1.23', 'features/bancos/types', 'features/contabil/types', 'features/patrimonio/types'];
+  const dirs = ['scripts', 'docs/backend-v1.23', 'features/bancos/types', 'features/contabil/types', 'features/patrimonio/types', 'features/estoque/types', 'types'];
   for (const dir of dirs) {
     const fullPath = path.join(espelho, dir);
     if (!existsSync(fullPath)) {
@@ -94,11 +94,12 @@ function montarEspelho(refTypos: string): string {
   const gateDest = path.join(espelho, 'scripts', 'gate-contract-fields.mjs');
   writeFileSync(gateDest, readFileSync(gateSource, 'utf8'));
 
-  // Cria allowlist vazio com teto = 0
+  // Copia allowlist da árvore atual
+  const allowlistSource = path.join(raizDoProjeto, 'scripts', 'gate-contract-fields.allowlist.json');
   const allowlistDest = path.join(espelho, 'scripts', 'gate-contract-fields.allowlist.json');
   writeFileSync(
     allowlistDest,
-    JSON.stringify({ description: 'Espelho para prova', exceptions: [], teto: 0 }, null, 2)
+    readFileSync(allowlistSource, 'utf8')
   );
 
   // Copia contrato da árvore atual
@@ -107,7 +108,7 @@ function montarEspelho(refTypos: string): string {
   writeFileSync(contratoDest, readFileSync(contratoSource, 'utf8'));
 
   // Extrai tipos de refTypos (a árvore a validar)
-  const tipos = ['bancos', 'contabil', 'patrimonio'];
+  const tipos = ['bancos', 'contabil', 'patrimonio', 'estoque'];
   for (const modulo of tipos) {
     let conteudo: string;
 
@@ -130,6 +131,24 @@ function montarEspelho(refTypos: string): string {
     const dest = path.join(espelho, 'features', modulo, 'types', `${modulo}.types.ts`);
     writeFileSync(dest, conteudo);
   }
+
+  // Copia types/erp.ts para tipos globais
+  let tiposGlobais: string;
+  if (useWorkingDir) {
+    const source = path.join(raizDoProjeto, 'types', 'erp.ts');
+    tiposGlobais = readFileSync(source, 'utf8');
+  } else {
+    const output = spawnSync('git', ['show', `${refTypos}:types/erp.ts`], {
+      cwd: raizDoProjeto,
+      encoding: 'utf8'
+    });
+    if (output.status !== 0) {
+      throw new Error(`Falha ao extrair types/erp.ts de ${refTypos}: ${output.stderr}`);
+    }
+    tiposGlobais = output.stdout;
+  }
+  const destGlobais = path.join(espelho, 'types', 'erp.ts');
+  writeFileSync(destGlobais, tiposGlobais);
 
   return espelho;
 }
@@ -212,14 +231,16 @@ function injetarCampoFantasma(conteudo: string, nomeTipo: string): string {
   throw new Error(`Não conseguiu encontrar fechamento de ${nomeTipo}`);
 }
 
-describe('Gate de campos em response — prova durável (F1.4.c2, D19)', () => {
+describe('Gate de campos em response — prova durável (F1.4.c2, D19, b68 D71)', () => {
   let espelhoAntigo = '';
   let espelhoHoje = '';
   let espelhoComFantasma = '';
+  let espelhoEabe03c = '';
 
   let resultadoAntigo: Awaited<ReturnType<typeof executarGate>>;
   let resultadoHoje: Awaited<ReturnType<typeof executarGate>>;
   let resultadoFantasma: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoEabe03c: Awaited<ReturnType<typeof executarGate>>;
 
   beforeAll(() => {
     // Sonda A: tipos de 2c50771
@@ -245,10 +266,14 @@ describe('Gate de campos em response — prova durável (F1.4.c2, D19)', () => {
     conteudo = injetarCampoFantasma(conteudo, 'BemPatrimonialResponse');
     writeFileSync(arquivoPatrimonio, conteudo);
     resultadoFantasma = executarGate(espelhoComFantasma, 'Sonda C (HEAD-WORKING + fantasma)');
-  }, 120_000);
+
+    // Sonda D: tipos de eabe03c (b67) — prova vermelha do MovimentoEstoque com nomes antigos
+    espelhoEabe03c = montarEspelho('eabe03c');
+    resultadoEabe03c = executarGate(espelhoEabe03c, 'Sonda D (eabe03c b67)');
+  }, 180_000);
 
   afterAll(() => {
-    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma]) {
+    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoEabe03c]) {
       if (!espelho || !existsSync(espelho)) continue;
       try {
         rmSync(espelho, { recursive: true, force: true });
@@ -297,6 +322,26 @@ describe('Gate de campos em response — prova durável (F1.4.c2, D19)', () => {
     it('não acusa nenhum dos 24 campos históricos (árvore é limpa)', () => {
       for (const nomeCampo of CAMPOS_ESPERADOS_EM_2C50771) {
         expect(Array.from(resultadoFantasma.nomesDivergencias)).not.toContain(nomeCampo);
+      }
+    });
+  });
+
+  describe('Sonda D — árvore eabe03c (b67) com MovimentoEstoque de nomes antigos (prova vermelha)', () => {
+    it('deve sair com código de erro 1', () => {
+      expect(resultadoEabe03c.exitCode).toBe(1);
+    });
+
+    it('acusa MovimentoEstoque.tipoMovimento (campo antigo, não existe no backend)', () => {
+      expect(Array.from(resultadoEabe03c.nomesDivergencias)).toContain('MovimentoEstoque.tipoMovimento');
+    });
+
+    it('acusa MovimentoEstoque.criadoEm (campo antigo, não existe no backend)', () => {
+      expect(Array.from(resultadoEabe03c.nomesDivergencias)).toContain('MovimentoEstoque.criadoEm');
+    });
+
+    it('não acusa nenhum dos 24 campos históricos (árvore é de estoque, não patrimônio/bancos)', () => {
+      for (const nomeCampo of CAMPOS_ESPERADOS_EM_2C50771) {
+        expect(Array.from(resultadoEabe03c.nomesDivergencias)).not.toContain(nomeCampo);
       }
     });
   });

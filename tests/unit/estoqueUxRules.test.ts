@@ -40,8 +40,8 @@ describe('estoque UX rules', () => {
         expect(movimentoImpactoLabel(TipoMovimentoEstoque.Entrada)).toBe('Aumenta saldo físico');
         expect(movimentoImpactoLabel(TipoMovimentoEstoque.Reserva)).toBe('Compromete saldo disponível');
         expect(calcularResumoMovimentos([
-            { ...saldoBase, tipoMovimento: TipoMovimentoEstoque.Entrada, quantidade: 10 } as MovimentoEstoqueResponse,
-            { ...saldoBase, tipoMovimento: TipoMovimentoEstoque.BaixaReserva, quantidade: 2 } as MovimentoEstoqueResponse
+            { ...saldoBase, tipo: TipoMovimentoEstoque.Entrada, quantidade: 10, dataMovimento: '2024-09-24T10:00:00Z' } as MovimentoEstoqueResponse,
+            { ...saldoBase, tipo: TipoMovimentoEstoque.BaixaReserva, quantidade: 2, dataMovimento: '2024-09-24T11:00:00Z' } as MovimentoEstoqueResponse
         ])).toMatchObject({ totalMovimentos: 2, entradas: 1, saidas: 1, quantidadeMovimentada: 12 });
     });
 

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
+import { InputText } from 'primereact/inputtext';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { PageHeader } from '@/components/common/PageHeader';
 import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
@@ -30,6 +31,7 @@ const initialValues: TransferenciaEstoqueFormValues = {
     localEstoqueDestinoId: '',
     produtoId: '',
     quantidade: 0,
+    documento: null,
     motivo: ''
 };
 
@@ -77,6 +79,7 @@ export const TransferenciaEstoquePage = () => {
                     <div className="field col-12 md:col-6"><label htmlFor="localEstoqueDestinoId" className="font-medium">Local destino *</label><EntitySelect id="localEstoqueDestinoId" entityName="local de destino" value={textValue(values.localEstoqueDestinoId) || null} options={localOptions(locaisQuery.data ?? [])} loading={locaisQuery.isFetching} onChange={(value) => update('localEstoqueDestinoId', value ?? '')} /><FieldError message={errors.localEstoqueDestinoId} /></div>
                     <div className="field col-12 md:col-8"><label htmlFor="produtoId" className="font-medium">Produto *</label><EntitySelect id="produtoId" entityName="produto" value={textValue(values.produtoId) || null} options={produtoOptions(produtosQuery.data ?? [])} loading={produtosQuery.isFetching} onChange={(value) => update('produtoId', value ?? '')} /><FieldError message={errors.produtoId} /></div>
                     <div className="field col-12 md:col-4"><label htmlFor="quantidadeTransferencia" className="font-medium">Quantidade *</label><QuantityInput id="quantidadeTransferencia" value={Number(values.quantidade ?? 0)} onChange={(value) => update('quantidade', value ?? 0)} /><FieldError message={errors.quantidade} /></div>
+                    <div className="field col-12 md:col-4"><label htmlFor="documentoTransferencia" className="font-medium">Documento</label><InputText id="documentoTransferencia" value={textValue(values.documento)} onChange={(event) => update('documento', event.target.value)} /><FieldError message={errors.documento} /></div>
                     <div className="field col-12"><label htmlFor="motivoTransferencia" className="font-medium">Motivo *</label><InputTextarea id="motivoTransferencia" value={textValue(values.motivo)} rows={3} autoResize onChange={(event) => update('motivo', event.target.value)} /><FieldError message={errors.motivo} /></div>
                     <div className="col-12 flex justify-content-end"><Button label="Registrar transferência" icon="pi pi-send" loading={transferenciaMutation.isPending} onClick={submit} /></div>
                 </FormGrid>

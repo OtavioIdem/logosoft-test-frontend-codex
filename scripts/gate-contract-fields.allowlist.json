@@ -1,7 +1,12 @@
 {
-  "description": "Registro de exceção: campo declarado no TS que não existe no C#, drenado na fatia v1.11.0a8b54.c2 por D18",
-  "scopeFatia": "v1.11.0a8b54.c2 — prova durável do gate de campo",
-  "exceptions": [],
-  "teto": 0,
-  "note": "Prova: 24 nomes contra 2c50771 (17 próprios + 7 herdados por interseção), complemento de D19."
+  "description": "Registro de exceção: campo declarado no TS que não existe no C#, drenado na fatia v1.11.0a8b54.c2 por D18 + b68 D71",
+  "scopeFatia": "v1.11.0a8b54.c2 — prova durável do gate de campo; v1.11.0a8b68 — MovimentoEstoque ganha validação",
+  "exceptions": [
+    { "module": "estoque", "type": "MovimentoEstoque", "field": "codigo", "reason": "BaseOperationalRecord: backend não serializa para MovimentoEstoqueResponse" },
+    { "module": "estoque", "type": "MovimentoEstoque", "field": "status", "reason": "BaseOperationalRecord: backend não serializa para MovimentoEstoqueResponse" },
+    { "module": "estoque", "type": "MovimentoEstoque", "field": "auditoria", "reason": "BaseOperationalRecord: backend não serializa para MovimentoEstoqueResponse" },
+    { "module": "estoque", "type": "MovimentoEstoque", "field": "historicoStatus", "reason": "BaseOperationalRecord: backend não serializa para MovimentoEstoqueResponse" }
+  ],
+  "teto": 4,
+  "note": "Prova: 24 nomes contra 2c50771 (17 próprios + 7 herdados por interseção), complemento de D19. Estoque: MovimentoEstoque herda BaseOperationalRecord, mas backend não envia esses campos."
 }

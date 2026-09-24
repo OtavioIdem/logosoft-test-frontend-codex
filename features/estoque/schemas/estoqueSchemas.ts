@@ -58,6 +58,7 @@ export const transferenciaEstoqueSchema = z.object({
     produtoId: requiredGuid('Produto'),
     quantidade,
     origemModulo: requiredText('Origem', 2).default('ESTOQUE'),
+    documento: nullableText,
     motivo
 }).refine((values) => values.localEstoqueOrigemId !== values.localEstoqueDestinoId || values.filialOrigemId !== values.filialDestinoId, { path: ['localEstoqueDestinoId'], message: 'Destino deve ser diferente da origem.' });
 

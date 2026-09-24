@@ -127,10 +127,11 @@ const assertMovimentoEstoque = (value: unknown, label: string) => {
     requireOptionalString(movimento, 'empresaId', label);
     requireString(movimento, 'produtoId', label);
     requireString(movimento, 'localEstoqueId', label);
-    requireOptionalNumber(movimento, 'tipoMovimento', label);
+    requireNumber(movimento, 'tipo', label);  // D71: tipo deve estar sempre presente (não-anulável)
     requireNumber(movimento, 'quantidade', label);
     requireOptionalString(movimento, 'origemModulo', label);
     requireOptionalString(movimento, 'origemId', label);
+    requireString(movimento, 'dataMovimento', label);  // D71: dataMovimento deve estar sempre presente (não-anulável)
     assertNoSensitiveObject(movimento, label);
 };
 

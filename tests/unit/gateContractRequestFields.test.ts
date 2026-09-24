@@ -100,18 +100,18 @@ const LACUNA_TODOS_9FCDA80 = [
 ] as const;
 
 /**
- * Os 3 LACUNA que permanecem na árvore de hoje (após Bloco B, b65 e b64).
+ * Os 2 LACUNA que permanecem na árvore de hoje (após Bloco B, b65 e b64).
  * Foram removidos (preenchidos nos schemas):
  *   - ncmCodigo, cestCodigo, unidadeMedidaTributavelId (Bloco B)
  *   - tipoItemSped, unidadeTributavelSigla, exTipi, codigoBeneficioFiscalPadrao (b65)
  *   - descricaoFornecedor (b65)
  *   - CriarEmpresaRequest.crt, AtualizarEmpresaRequest.crt (b64)
  *   - AdmitirColaboradorRequest.pessoaId (b63)
+ *   - TransferirEstoqueRequest.documento (b68, D73 — schema preenchido)
  * DefinirEnderecoFiscalRequest não gera LACUNA porque seus 2 campos anuláveis foram adicionados ao schema na b64.
  */
 const LACUNA_ESPERADOS_HOJE = [
   'TransferirEstoqueRequest.origemId',
-  'TransferirEstoqueRequest.documento',
   'AtualizarEmpresaRequest.contribuinteIpi'
 ] as const;
 
@@ -447,19 +447,19 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
       }
     });
 
-    it('imprime 3 LACUNA com destino (após b65 preencher os campos novos)', () => {
-      // Verifica que a saída contém "3" e "anuláveis sem destino"
+    it('imprime 2 LACUNA com destino (após b65 preencher os campos novos e b68 preencher documento)', () => {
+      // Verifica que a saída contém "2" e "anuláveis sem destino"
       // Foram preenchidos:
       //   - ncmCodigo, cestCodigo, unidadeMedidaTributavelId (Bloco B)
       //   - tipoItemSped, unidadeTributavelSigla, exTipi, codigoBeneficioFiscalPadrao, descricaoFornecedor (b65)
       //   - CriarEmpresaRequest.crt, AtualizarEmpresaRequest.crt (b64)
       //   - AdmitirColaboradorRequest.pessoaId (b63)
-      // Restam apenas 3:
-      //   - TransferirEstoqueRequest.origemId → b66
-      //   - TransferirEstoqueRequest.documento → b66
+      //   - TransferirEstoqueRequest.documento (b68, D73 — schema preenchido)
+      // Restam apenas 2:
+      //   - TransferirEstoqueRequest.origemId → D73
       //   - AtualizarEmpresaRequest.contribuinteIpi → b64
       const saida = resultadoHoje.stdout + resultadoHoje.stderr;
-      expect(saida).toContain('3');
+      expect(saida).toContain('2');
       expect(saida).toContain('anuláveis sem destino');
       expect(saida).toMatch(/→/); // Destino deve estar presente
     });
@@ -693,9 +693,9 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
       expect(saida).not.toMatch(/ConfigurarComercialClienteRequest\.|ConfigurarCompraFornecedorRequest\./);
     });
 
-    it('Sonda B: imprime exatamente 3 LACUNA', () => {
+    it('Sonda B: imprime exatamente 2 LACUNA', () => {
       const saida = resultadoHoje.stdout + resultadoHoje.stderr;
-      expect(saida).toMatch(/anuláveis sem destino na UI \(3\)/);
+      expect(saida).toMatch(/anuláveis sem destino na UI \(2\)/);
     });
 
     it('sem permiteVendaAPrazo: sai 1 e acusa DEFAULT_SILENCIOSO ConfigurarComercialClienteRequest.permiteVendaAPrazo', () => {
@@ -706,17 +706,17 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
       expect(secao(saida, 'DESCARTE')).not.toContain('ConfigurarComercialClienteRequest');
     });
 
-    it('sem classificacaoId: acusa LACUNA ConfigurarComercialClienteRequest.classificacaoId (4 LACUNA)', () => {
+    it('sem classificacaoId: acusa LACUNA ConfigurarComercialClienteRequest.classificacaoId (3 LACUNA)', () => {
       const saida = resultadoClienteSemAnulavel.stdout + resultadoClienteSemAnulavel.stderr;
       expect(secao(saida, 'LACUNA')).toContain('ConfigurarComercialClienteRequest.classificacaoId');
-      expect(saida).toMatch(/anuláveis sem destino na UI \(4\)/);
+      expect(saida).toMatch(/anuláveis sem destino na UI \(3\)/);
       expect(resultadoClienteSemAnulavel.nomesDivergencias.size).toBe(0);
     });
 
-    it('sem categoriaFornecimento: acusa LACUNA ConfigurarCompraFornecedorRequest.categoriaFornecimento (4 LACUNA)', () => {
+    it('sem categoriaFornecimento: acusa LACUNA ConfigurarCompraFornecedorRequest.categoriaFornecimento (3 LACUNA)', () => {
       const saida = resultadoFornecedorSemAnulavel.stdout + resultadoFornecedorSemAnulavel.stderr;
       expect(secao(saida, 'LACUNA')).toContain('ConfigurarCompraFornecedorRequest.categoriaFornecimento');
-      expect(saida).toMatch(/anuláveis sem destino na UI \(4\)/);
+      expect(saida).toMatch(/anuláveis sem destino na UI \(3\)/);
       expect(resultadoFornecedorSemAnulavel.nomesDivergencias.size).toBe(0);
     });
   });
@@ -747,10 +747,10 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
       expect(saida).not.toMatch(/CriarClassificacaoPessoaRequest\.|AtualizarClassificacaoPessoaRequest\.|InativarClassificacaoPessoaRequest\./);
     });
 
-    it('Sonda G: sem descricao anulável em criarClassificacaoPessoaSchema — acusa LACUNA (4 LACUNA)', () => {
+    it('Sonda G: sem descricao anulável em criarClassificacaoPessoaSchema — acusa LACUNA (3 LACUNA)', () => {
       const saida = resultadoClassificacaoPessoaSemAnulavel.stdout + resultadoClassificacaoPessoaSemAnulavel.stderr;
       expect(secao(saida, 'LACUNA')).toContain('CriarClassificacaoPessoaRequest.descricao');
-      expect(saida).toMatch(/anuláveis sem destino na UI \(4\)/);
+      expect(saida).toMatch(/anuláveis sem destino na UI \(3\)/);
       expect(resultadoClassificacaoPessoaSemAnulavel.nomesDivergencias.size).toBe(0);
     });
 

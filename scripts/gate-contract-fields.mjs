@@ -40,6 +40,9 @@ const BACKEND_TYPE_MAP = {
   patrimonio: {
     DepreciacaoResultadoResponse: 'ProcessarDepreciacaoPeriodoResponse',  // Nome diferente no contrato
     BemPatrimonialResponse: 'BemPatrimonialResponse'
+  },
+  estoque: {
+    MovimentoEstoque: 'MovimentoEstoqueResponse'  // D71, v1.11.0a8b68: nomes de campo tipo/dataMovimento
   }
 };
 
@@ -337,6 +340,56 @@ function validateModule(moduleName, fileContent, backendContracts) {
 }
 
 /**
+ * Valida módulo com fallback para tipos importados.
+ * Se o tipo não for encontrado no arquivo de módulo, tenta em types/erp.ts.
+ * Se mesmo assim não encontrar, registra como tipo faltante (falha dura).
+ */
+function validateModuleWithFallback(moduleName, fileContent, globalTypesContent, backendContracts) {
+  const divergences = [];
+  const missingTypes = [];
+  const contracts = backendContracts[moduleName];
+
+  if (!contracts) {
+    return { divergences, missingTypes };
+  }
+
+  for (const [tsTypeName, expectedBackendFields] of Object.entries(contracts)) {
+    // Tenta resolver no arquivo do módulo primeiro
+    let tsFields = resolveTypeFields(moduleName, tsTypeName, fileContent);
+
+    // Se não encontrar no módulo, tenta em types/erp.ts
+    if (tsFields.length === 0 && globalTypesContent) {
+      tsFields = resolveTypeFields('', tsTypeName, globalTypesContent);
+    }
+
+    if (tsFields.length === 0) {
+      // Falha dura: tipo mapeado não foi encontrado em nenhum lugar
+      missingTypes.push({
+        module: moduleName,
+        type: tsTypeName,
+        csharpRecord: expectedBackendFields[0] ? expectedBackendFields[0].split('.')[0] : 'Unknown',
+        file: `features/${moduleName}/types/${moduleName}.types.ts (ou types/erp.ts)`
+      });
+      continue;
+    }
+
+    // Compara cada campo do TS com o contrato
+    for (const field of tsFields) {
+      if (!expectedBackendFields.includes(field)) {
+        divergences.push({
+          module: moduleName,
+          type: tsTypeName,
+          field,
+          reason: `Campo não existe em ${tsTypeName} do backend`
+        });
+      }
+    }
+  }
+
+  return { divergences, missingTypes };
+}
+
+/**
  * Carrega o arquivo de exceções (allowlist) se existir.
  */
 function loadAllowlist() {
@@ -429,16 +482,24 @@ function filterAllowlisted(divergences, allowlist) {
 }
 
 /**
- * Ponto de entrada: valida os três módulos e emite relatório.
+ * Ponto de entrada: valida os quatro módulos e emite relatório.
  */
 function main() {
-  const modules = ['bancos', 'contabil', 'patrimonio'];
+  const modules = ['bancos', 'contabil', 'patrimonio', 'estoque'];
   const allDivergences = [];
+  const allMissingTypes = [];
   const allowlist = loadAllowlist();
 
   // Carrega contrato do documento
   const contractPath = path.join(ROOT, 'docs', 'backend-v1.23', 'CONTRATO-API-v1.23.md');
   const BACKEND_CONTRACTS = buildBackendContracts(contractPath);
+
+  // Carrega tipos global (types/erp.ts) para resolução de tipos importados
+  const globalTypesPath = path.join(ROOT, 'types', 'erp.ts');
+  let globalTypesContent = '';
+  if (fs.existsSync(globalTypesPath)) {
+    globalTypesContent = fs.readFileSync(globalTypesPath, 'utf8');
+  }
 
   // Valida teto de exceções (chama process.exit(1) internamente se houver erro)
   validateExceptionsCeiling(allowlist);
@@ -458,8 +519,21 @@ function main() {
     }
 
     const content = fs.readFileSync(typesFile, 'utf8');
-    const divergences = validateModule(moduleName, content, BACKEND_CONTRACTS);
-    allDivergences.push(...divergences);
+    const result = validateModuleWithFallback(moduleName, content, globalTypesContent, BACKEND_CONTRACTS);
+    allDivergences.push(...result.divergences);
+    allMissingTypes.push(...result.missingTypes);
+  }
+
+  // Valida tipos mapeados mas não encontrados (falha dura)
+  if (allMissingTypes.length > 0) {
+    console.error('❌ FALHA ESTRUTURAL — tipos mapeados não encontrados:');
+    console.error('');
+    for (const missing of allMissingTypes) {
+      console.error(`   ❌ ${missing.module}/${missing.type} — mapeado a ${missing.csharpRecord}, não encontrado em ${missing.file}`);
+    }
+    console.error('');
+    console.error(`📊 ${allMissingTypes.length} tipo(s) estruturalmente quebrado(s).`);
+    process.exit(1);
   }
 
   // Filtra divergências permitidas
