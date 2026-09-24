@@ -1997,3 +1997,114 @@ Por quê: a D65 exigia o cadastro antes do seletor — agora existe. O caso "gra
 já corrigido duas vezes no repositório (D60).
 Risco de acesso: `NENHUM`. Reversível: sim.
 Quem arbitrou: orquestrador.
+
+### D71 — o defeito de leitura de Movimentos entra na `b68` como primeiro bloco, provado pelo gate de campos de response, sem `.cN` separado nem espera por HTTP
+
+Data: 2026-09-24.
+Rodada: `10-estoque` — inventário em `docs/arquitetura/debate/10-inventario-estoque.md`, posições em
+`docs/arquitetura/debate/10-{operacao,plataforma,escopo,design}-estoque.md`.
+Decisão: a correção da leitura de `MovimentoEstoqueResponse` (a tela lê `tipoMovimento`/`criadoEm`; o
+record C# serializa `tipo`/`dataMovimento`) e a completude de `TipoMovimentoEstoque` (valores 8, 9 e
+10 do domínio) são o **Bloco A** da `v1.11.0a8b68`, antes das abas. Três providências juntas:
+- `MovimentoEstoqueResponse` entra em `BACKEND_TYPE_MAP` de `scripts/gate-contract-fields.mjs`, que já
+  sabe ler o bloco do record em `docs/backend-v1.23/CONTRATO-API-v1.23.md`. É a prova vermelha: o gate
+  acusa `tipoMovimento`/`criadoEm` na árvore de hoje e fica limpo depois da correção — sem backend
+  rodando.
+- Os campos do tipo deixam de ser opcionais onde o record não é anulável (`types/erp.ts` declarava
+  `tipoMovimento?`/`criadoEm?`, o que escondia a divergência do compilador).
+- A prova de contrato ao vivo (`tests/contract/operational-backend.contract.spec.ts`, que checava o
+  campo com `requireOptionalNumber` e passava com o campo ausente) e a fixture E2E
+  (`tests/e2e/fixtures/logosoft.ts`, que espelhava o sintoma, não o contrato) passam a exigir os nomes
+  do record.
+Por quê: três posições contra uma. A objeção da operação (isolar em `.c1` para não misturar prova de
+defeito com reorganização de tela) é atendida pela ordem de blocos e pelo gate próprio. O desempate
+veio das duas evidências que só apareceram no debate: a prova disponível não pegaria o defeito nem
+rodando (escopo), e o gate que pega já existe (plataforma). Esperar por HTTP real seria esperar por
+uma medição que nada no repositório faria.
+Alternativas descartadas: `.c1` antes da `b68` (operação) — a severidade não é a da `c2`, pois a
+gravação funciona e só a leitura de consulta erra, e a aba Histórico nasce do mesmo componente;
+esperar confirmação HTTP — Docker só sob pedido, e a prova ao vivo existente não provaria nada.
+Risco de acesso: `NENHUM`. Reversível: sim.
+Gatilho de revisita: evidência de um mecanismo de serialização diferente do lido no C#.
+Quem arbitrou: orquestrador, pela convergência.
+
+### D72 — Entrada, Saída e Histórico: um componente com abas sobre o estoque básico, três rotas e três itens de menu preservados
+
+Data: 2026-09-24. Rodada: `10-estoque`.
+Decisão: o sistema **básico** (`features/estoque/**`) é a base — por unanimidade, com a evidência de
+plataforma: `EstoqueSaldo`, o saldo que Compras e Vendas integram, só é tocado pelo repositório do
+básico; ajuste, bloqueio e inventário do sistema avançado não o alteram. Entrada, Saída e Histórico
+viram um componente de página com `PageHeader` e `TabView` de três abas, no padrão já usado por cinco
+módulos (`EstoqueAvancadoPage`, `FinanceiroAvancadoPage`, `PortariaPage`, `AusenciasPage`,
+`BeneficiosPage`). As três rotas (`/estoque/entradas`, `/estoque/saidas`, `/estoque/movimentos`) e os
+três itens de menu continuam; cada rota abre o componente numa aba inicial diferente (técnica do
+`MovimentoOperacionalPage({ kind })`). Cada aba mantém payload, permissão e confirmação próprios:
+guarda por aba, e o bloqueio de Histórico mora dentro da aba, sem bloquear a página. Ajuste e
+Transferência ficam fora do `TabView`. O sistema avançado não é tocado.
+Por quê: base por unanimidade; forma do design sem objeção — e colapsar numa rota só cobraria um
+clique a mais numa das operações mais frequentes do módulo.
+Alternativas descartadas: rota única com abas (clique extra permanente); consolidar os dois sistemas
+agora (dois livros-razão que não se reconciliam é questão de backend e de produto — pergunta **B-15**
+— e rodada própria antes de Venda/Compra integrarem saldo).
+Risco de acesso: `NENHUM` — as rotas e seus guards de entrada não mudam por esta decisão.
+Reversível: sim. Quem arbitrou: orquestrador.
+
+### D73 — transferência ganha `documento`; `origemId` não vira campo
+
+Data: 2026-09-24. Rodada: `10-estoque`.
+Decisão: `documento` entra na Transferência como `InputText` opcional, o mesmo campo que Entrada,
+Saída e Ajuste já têm. `origemId` não é exposto nem enviado: é um correlacionador que o backend gera
+quando omitido (`TransferirEstoqueUseCase.cs:103`), sem catálogo nem entidade validável. No gate de
+contratos de request, `TransferirEstoqueRequest.documento` sai de LACUNA; `.origemId` permanece como
+LACUNA com destino declarado "não exposto — D73", no lugar do destino morto `b66`.
+Por quê: três posições contra uma (escopo queria texto livre também para `origemId`). Nenhuma posição
+achou uso legítimo de um operador digitar um Guid de correlação; a diretriz de UX proíbe vínculo por id
+digitado.
+Risco de acesso: `NENHUM`. Reversível: sim — expor depois é aditivo.
+Quem arbitrou: orquestrador.
+
+### D74 — origem do ajuste: nenhum dropdown; a `b68` deixa de depender da B-3
+
+Data: 2026-09-24. Rodada: `10-estoque`.
+Decisão: o ajuste básico mantém `origemModulo` como texto livre, com texto de orientação; o ajuste
+avançado não muda (a origem é fixada pelo domínio e nem existe no request). Nenhuma lista fixa no
+frontend. O array hardcoded de `ReservaEstoqueDialogs.tsx` é antipadrão em produção, não precedente.
+Por quê: unanimidade. O plano condicionava o dropdown a "catálogo publicado", e não existe catálogo em
+lugar nenhum do C#.
+Risco de acesso: `NENHUM`. Reversível: sim — trocar texto livre por catálogo é aditivo.
+Gatilho de revisita: o backend responder B-3 com catálogo ou enum de origem para movimento manual.
+Quem arbitrou: orquestrador.
+
+### D75 — Histórico: filtros do backend, período padrão, sem paginação de servidor
+
+Data: 2026-09-24. Rodada: `10-estoque`.
+Decisão: a aba Histórico usa os filtros que `GET /api/estoque/movimentos` aceita (filial, produto,
+local, início, fim); `EstoqueFilterBar` ganha um prop opcional de período, sem afetar os outros
+consumidores. Período padrão de 30 dias, com aviso quando o filtro de período for removido. Paginação
+visual sobre a lista, porque o endpoint não tem `page`/`pageSize`. Coluna Motivo entra; as quatro
+colunas de saldo antes e depois ficam fora da tabela, por densidade.
+Por quê: unanimidade em não paginar sem contrato; o multiplicador de escrita (duas linhas por
+transferência) torna a janela de período a mitigação real de volume.
+Risco de acesso: `NENHUM`. Reversível: sim.
+Gatilho de revisita: o backend expor paginação no endpoint.
+Quem arbitrou: orquestrador.
+
+### D76 — regras de rota próprias para saldos e movimentos; Reservas passa a aceitar consulta; GUID digitado em bloqueios fica fora
+
+Data: 2026-09-24. Rodada: `10-estoque`.
+Decisão:
+- `lib/security/routePermissions.ts` ganha regras próprias para `/estoque/saldos` e
+  `/estoque/movimentos` com `anyOf: ['ESTOQUE_CONSULTAR']`, antes do catch-all de `/estoque`.
+  `accessRisk: ILUSAO` — **condição verificável**: vale só se os componentes dessas telas já recusam
+  quem não tem `ESTOQUE_CONSULTAR`. Hoje o catch-all deixa entrar quem tem só `ESTOQUE_MOVIMENTAR`,
+  `ESTOQUE_RESERVAR` ou `ESTOQUE_INVENTARIO_GERENCIAR`. Se algum componente hoje mostrar dado real a
+  essa pessoa, a correção passa a ser `CAPACIDADE` e volta ao usuário antes do release.
+- `ReservasEstoquePage` passa a aceitar `ESTOQUE_CONSULTAR` para leitura (a rota já aceitava e a página
+  exigia `ESTOQUE_RESERVAR`); ações continuam sob `ESTOQUE_RESERVAR`. `accessRisk: NENHUM`.
+- O GUID digitado em Bloqueios fica fora: o backend não lista bloqueios, então não há correção só de
+  frontend. Entra um texto de apoio explicando a ausência de busca, sem fingir seletor. Pergunta
+  **B-14**.
+Por quê: unanimidade nas rotas e nos bloqueios; Reservas proposta por operação e escopo, sem objeção.
+Achado registrado, fora do recorte: `scripts/validate-guid-references.mjs` não enxerga o campo
+`id="blId"` de `BloqueiosEstoqueTab.tsx` (posição de plataforma).
+Reversível: sim. Quem arbitrou: orquestrador.

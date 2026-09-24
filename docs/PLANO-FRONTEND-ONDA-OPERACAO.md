@@ -63,7 +63,7 @@ Três regras vieram de defeito medido nesta esteira, não de preferência:
 | `b65` | Produto: campos fiscais — **reduzida pela D58** | `b64` |
 | `b66` | Cliente (configuração comercial) e Fornecedor (configuração de compra, homologação) — **D62–D67** | `b65` |
 | `b67` | Classificações de Pessoa: cadastro e seletor no Cliente — **D65** | `b66` |
-| `b68` | Estoque transacional e auditável | `b65`, B-3 |
+| `b68` | Estoque transacional e auditável — **D71–D76** | `b65` (a B-3 deixou de ser dependência, D74) |
 | `b69` | Venda, preço e aprovação até a liberação | `b65`–`b68`, B-5 |
 | `b70` | Compra e financeiro com origem e reversão explícitas | B-4, B-12 |
 | `b71` | Faturamento completo e corrigível | `b59`–`b70`, B-6 |
@@ -158,7 +158,21 @@ Inventário em `docs/arquitetura/debate/09-inventario-classificacoes-pessoa.md`.
 - Seletor de `classificacaoId` no Cliente, por empresa, com a guarda por campo da D66 e a inativa
   gravada marcada "(inativa)" (D70).
 
-### `b68` — Estoque (era `b66`, D67)
+### `b68` — Estoque (era `b66`, D67) — **redesenhada pela rodada 10, D71–D76**
+
+Rodada `10-estoque` (`docs/arquitetura/debate/10-*-estoque.md`). O que vale é o resumo abaixo; a
+lista original fica para rastro.
+
+- Bloco A: a leitura de Movimentos usa os nomes que o backend serializa (`tipo`, `dataMovimento`) e o
+  enum ganha 8, 9 e 10, provados pelo gate de campos de response (D71).
+- Entrada, Saída e Histórico em abas sobre o estoque básico, com três rotas e três itens de menu (D72).
+- `documento` na transferência; `origemId` não vira campo (D73).
+- **Sem** dropdown de origem do ajuste; a versão não depende mais da B-3 (D74).
+- Histórico com filtros e período padrão, sem paginação de servidor (D75).
+- Regras de rota próprias para saldos e movimentos; Reservas aceita consulta; GUID de bloqueio fora
+  (D76, B-14).
+
+Lista original do plano:
 
 - Entrada, Saída e Histórico em abas sobre as rotas que já existem. São operações
   distintas, com payload, permissão e confirmação próprios — abas são organização
@@ -230,6 +244,8 @@ alavancagem e andam em paralelo com a `c3` e a `b59`.
 | B-10 | O 400 de `CadastrosFiscaisErrors.UnidadeMedidaTributavelObrigatoria` (R6 — `unidadeTributavelSigla` diverge da unidade comercial sem `unidadeMedidaTributavelId` informado) tem corpo de erro mapeável a um campo específico, ou é validação de domínio genérica sem `field`? | `b65` (aviso inline vs. toast pós-submit) |
 | B-11 | Existe ou está prevista rota de atualização do vínculo `ProdutoFornecedor` (editar `descricaoFornecedor`/`codigoFornecedor` depois de criado)? Hoje só existe criação, recusada se o vínculo já existe. | `b65` (caminho de correção do vínculo de fornecedor, hoje sem solução possível na UI) |
 | B-12 | A recusa de pedido de compra para fornecedor não homologado (parâmetro `COMPRAS_BLOQUEIA_FORNECEDOR_NAO_HOMOLOGADO`) vai para dentro da criação do pedido, ou `situacao-compra` é deliberadamente só consultivo? Hoje nenhum use case de Pedido de Compra lê `Homologado`. | `situacao-compra` (D64) e `b70` |
+| B-14 | Vai existir `GET` de listagem de bloqueios de estoque? Hoje a tela pede o GUID do bloqueio digitado, e não há como listá-los. | `b68` (D76) |
+| B-15 | O sistema de estoque avançado (ajuste, bloqueio, inventário) deveria atualizar `EstoqueSaldo`? Hoje só o básico o toca, e o saldo que Compras e Vendas integram não reflete as operações do avançado — dois livros-razão que não se reconciliam. | antes de `b69`/`b70` (D72) |
 | B-13 | Vai existir reativação de Classificação de Pessoa? Hoje `AuditableEntity.Reativar` existe no domínio, nenhum use case a expõe, e `Atualizar` recusa registro inativo — uma classificação inativada por engano fica travada. | `b67` (D69) |
 
 ## Correções fora da sequência funcional
