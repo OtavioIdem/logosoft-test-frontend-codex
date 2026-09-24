@@ -32,8 +32,10 @@ test.describe('Navegação Estoque — AC-8 e AC-9', () => {
     // Navegar para /estoque/entradas (rota que existe e ESTOQUE_MOVIMENTAR sozinha a abre)
     await page.goto('/estoque/entradas');
 
-    // Verificar que a página de entradas carregou
-    await expect(page.locator('h1.layout-topbar-title-text')).toHaveText(/Entrada de estoque/i);
+    // Verificar que a página de Movimentos carregou com aba Entrada ativa (D72: um componente com abas)
+    await expect(page.locator('h1.layout-topbar-title-text')).toHaveText(/Movimentos de estoque/i);
+    const entradaTab = page.getByRole('tab', { name: /^Entrada$/i });
+    await expect(entradaTab).toHaveAttribute('aria-selected', 'true');
 
     // Menu está presente na página
     const menu = page.locator('ul.layout-menu');
