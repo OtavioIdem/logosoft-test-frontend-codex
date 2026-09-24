@@ -20,6 +20,8 @@ import { tmpdir } from 'os';
  *
  * Os 15 críticos (8 + 7) compõem a prova vermelha de 9fcda80 (Sonda A). Os 8 LACUNA permanecem para a Sonda B.
  * As Sondas D e E comprovam que o novo recorte DefinirEnderecoFiscalRequest é detectado em ambas direções.
+ * AC-13 (v1.11.0a8b66): ConfigurarComercialClienteRequest e ConfigurarCompraFornecedorRequest entram no
+ * universo; campo removido do schema no espelho é acusado pelo nome (DEFAULT_SILENCIOSO ou LACUNA).
  */
 
 const raizDoProjeto = process.cwd();
@@ -94,19 +96,16 @@ const LACUNA_TODOS_9FCDA80 = [
 ] as const;
 
 /**
- * Os 8 LACUNA que permanecem na árvore de hoje (após Bloco B e b64).
+ * Os 3 LACUNA que permanecem na árvore de hoje (após Bloco B, b65 e b64).
  * Foram removidos (preenchidos nos schemas):
  *   - ncmCodigo, cestCodigo, unidadeMedidaTributavelId (Bloco B)
+ *   - tipoItemSped, unidadeTributavelSigla, exTipi, codigoBeneficioFiscalPadrao (b65)
+ *   - descricaoFornecedor (b65)
  *   - CriarEmpresaRequest.crt, AtualizarEmpresaRequest.crt (b64)
  *   - AdmitirColaboradorRequest.pessoaId (b63)
  * DefinirEnderecoFiscalRequest não gera LACUNA porque seus 2 campos anuláveis foram adicionados ao schema na b64.
  */
 const LACUNA_ESPERADOS_HOJE = [
-  'AtualizarDadosFiscaisProdutoRequest.unidadeTributavelSigla',
-  'AtualizarDadosFiscaisProdutoRequest.exTipi',
-  'AtualizarDadosFiscaisProdutoRequest.codigoBeneficioFiscalPadrao',
-  'AtualizarDadosFiscaisProdutoRequest.tipoItemSped',
-  'VincularProdutoFornecedorRequest.descricaoFornecedor',
   'TransferirEstoqueRequest.origemId',
   'TransferirEstoqueRequest.documento',
   'AtualizarEmpresaRequest.contribuinteIpi'
@@ -129,7 +128,9 @@ function montarEspelho(refSchemas: string, stripNewMapping?: boolean): string {
     'features/estoque/schemas',
     'features/administracao/schemas',
     'features/seguranca/schemas',
-    'features/rh/schemas'
+    'features/rh/schemas',
+    'features/clientes/schemas',
+    'features/fornecedores/schemas'
   ];
   for (const dir of dirs) {
     const fullPath = path.join(espelho, dir);
@@ -165,7 +166,7 @@ function montarEspelho(refSchemas: string, stripNewMapping?: boolean): string {
   writeFileSync(contratoDest, readFileSync(contratoSource, 'utf8'));
 
   // Copia schemas (da árvore especificada)
-  const modulos = ['produtos', 'estoque', 'administracao', 'seguranca', 'rh'];
+  const modulos = ['produtos', 'estoque', 'administracao', 'seguranca', 'rh', 'clientes', 'fornecedores'];
   for (const modulo of modulos) {
     let conteudo: string;
 
@@ -266,6 +267,28 @@ function injetarCampoFantasma(conteudo: string, nomeSchema: string): string {
   throw new Error(`Não conseguiu encontrar fechamento de ${nomeSchema}`);
 }
 
+/**
+ * Remove a linha `campo: ...` de dentro do bloco `export const <schema> = z.object({ ... });`
+ * de um arquivo de schema do espelho. Lança se a linha não existir, para que a sonda nunca
+ * fique verde por não ter removido nada.
+ */
+function removerCampoDoSchemaNoEspelho(espelho: string, modulo: string, nomeSchema: string, campo: string): void {
+  const arquivo = path.join(espelho, 'features', modulo, 'schemas', `${modulo}Schemas.ts`);
+  const conteudo = readFileSync(arquivo, 'utf8');
+  const inicio = conteudo.indexOf(`export const ${nomeSchema} = z.object({`);
+  if (inicio < 0) {
+    throw new Error(`Schema ${nomeSchema} não encontrado em ${modulo}Schemas.ts`);
+  }
+  const fim = conteudo.indexOf('});', inicio);
+  const bloco = conteudo.substring(inicio, fim);
+  const linhaDoCampo = new RegExp(`\\r?\\n[ \\t]*${campo}\\s*:[^\\r\\n]*`);
+  if (!linhaDoCampo.test(bloco)) {
+    throw new Error(`Campo ${campo} não encontrado em ${nomeSchema}`);
+  }
+  const blocoSemCampo = bloco.replace(linhaDoCampo, '');
+  writeFileSync(arquivo, conteudo.substring(0, inicio) + blocoSemCampo + conteudo.substring(fim));
+}
+
 describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', () => {
   let espelhoAntigo = '';
   let espelhoHoje = '';
@@ -273,6 +296,9 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
   let espelhoDefinirEnderecoFiscalComFantasma = '';
   let espelhoDefinirEnderecoFiscalSemObrigatorio = '';
   let espelhoComMapeamentoFake = '';
+  let espelhoClienteSemObrigatorio = '';
+  let espelhoClienteSemAnulavel = '';
+  let espelhoFornecedorSemAnulavel = '';
 
   let resultadoAntigo: Awaited<ReturnType<typeof executarGate>>;
   let resultadoHoje: Awaited<ReturnType<typeof executarGate>>;
@@ -280,12 +306,18 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
   let resultadoDefinirEnderecoFiscalComFantasma: Awaited<ReturnType<typeof executarGate>>;
   let resultadoDefinirEnderecoFiscalSemObrigatorio: Awaited<ReturnType<typeof executarGate>>;
   let resultadoMapeamentoFake: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoClienteSemObrigatorio: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoClienteSemAnulavel: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoFornecedorSemAnulavel: Awaited<ReturnType<typeof executarGate>>;
 
   beforeAll(() => {
     // Sonda A: árvore de 9fcda80 (contém os 15 defeitos)
     // Passa GATE_RECORTES_IGNORADOS para ignorar recortes posteriores à revisão testada
     espelhoAntigo = montarEspelho(REF_ANTIGA_C1, true);
-    resultadoAntigo = executarGate(espelhoAntigo, { GATE_RECORTES_IGNORADOS: 'DefinirEnderecoFiscalRequest' });
+    // ConfigurarComercialClienteRequest e ConfigurarCompraFornecedorRequest (b66) não existiam em 9fcda80.
+    resultadoAntigo = executarGate(espelhoAntigo, {
+      GATE_RECORTES_IGNORADOS: 'DefinirEnderecoFiscalRequest,ConfigurarComercialClienteRequest,ConfigurarCompraFornecedorRequest'
+    });
 
     // Sonda B: árvore de hoje (sem os 15 defeitos)
     espelhoHoje = montarEspelho('HEAD-WORKING');
@@ -327,11 +359,26 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
     );
     writeFileSync(arquivoGateFake, gateContentFake);
     resultadoMapeamentoFake = executarGate(espelhoComMapeamentoFake);
+
+    // AC-13 (b66): árvore de hoje sem `permiteVendaAPrazo` (bool obrigatório) → DEFAULT_SILENCIOSO
+    espelhoClienteSemObrigatorio = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoClienteSemObrigatorio, 'clientes', 'configurarComercialClienteSchema', 'permiteVendaAPrazo');
+    resultadoClienteSemObrigatorio = executarGate(espelhoClienteSemObrigatorio);
+
+    // AC-13 (b66): árvore de hoje sem `classificacaoId` (Guid? anulável) → LACUNA nominal
+    espelhoClienteSemAnulavel = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoClienteSemAnulavel, 'clientes', 'configurarComercialClienteSchema', 'classificacaoId');
+    resultadoClienteSemAnulavel = executarGate(espelhoClienteSemAnulavel);
+
+    // AC-13 (b66): árvore de hoje sem `categoriaFornecimento` (string? anulável) → LACUNA nominal
+    espelhoFornecedorSemAnulavel = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoFornecedorSemAnulavel, 'fornecedores', 'configurarCompraFornecedorSchema', 'categoriaFornecimento');
+    resultadoFornecedorSemAnulavel = executarGate(espelhoFornecedorSemAnulavel);
   }, 120_000);
 
   afterAll(() => {
     // Limpa espelhos
-    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoDefinirEnderecoFiscalComFantasma, espelhoDefinirEnderecoFiscalSemObrigatorio, espelhoComMapeamentoFake]) {
+    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoDefinirEnderecoFiscalComFantasma, espelhoDefinirEnderecoFiscalSemObrigatorio, espelhoComMapeamentoFake, espelhoClienteSemObrigatorio, espelhoClienteSemAnulavel, espelhoFornecedorSemAnulavel]) {
       if (espelho && existsSync(espelho)) {
         try {
           rmSync(espelho, { recursive: true });
@@ -380,11 +427,19 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
       }
     });
 
-    it('imprime 8 LACUNA com destino', () => {
-      // Verifica que a saída contém "8" e "anuláveis sem destino"
-      // (3 preenchidos no Bloco B, 3 no Bloco b64, 2 de DefinirEnderecoFiscalRequest adicionados à b64)
+    it('imprime 3 LACUNA com destino (após b65 preencher os campos novos)', () => {
+      // Verifica que a saída contém "3" e "anuláveis sem destino"
+      // Foram preenchidos:
+      //   - ncmCodigo, cestCodigo, unidadeMedidaTributavelId (Bloco B)
+      //   - tipoItemSped, unidadeTributavelSigla, exTipi, codigoBeneficioFiscalPadrao, descricaoFornecedor (b65)
+      //   - CriarEmpresaRequest.crt, AtualizarEmpresaRequest.crt (b64)
+      //   - AdmitirColaboradorRequest.pessoaId (b63)
+      // Restam apenas 3:
+      //   - TransferirEstoqueRequest.origemId → b66
+      //   - TransferirEstoqueRequest.documento → b66
+      //   - AtualizarEmpresaRequest.contribuinteIpi → b64
       const saida = resultadoHoje.stdout + resultadoHoje.stderr;
-      expect(saida).toContain('8');
+      expect(saida).toContain('3');
       expect(saida).toContain('anuláveis sem destino');
       expect(saida).toMatch(/→/); // Destino deve estar presente
     });
@@ -398,17 +453,42 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
     });
 
     // Itens que foram removidos da lista de LACUNA (adicionados aos schemas)
-    it('não imprime LACUNA: CriarEmpresaRequest.crt (adicionado no schema)', () => {
+    it('não imprime LACUNA: AtualizarDadosFiscaisProdutoRequest.tipoItemSped (adicionado na b65)', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).not.toContain('AtualizarDadosFiscaisProdutoRequest.tipoItemSped');
+    });
+
+    it('não imprime LACUNA: AtualizarDadosFiscaisProdutoRequest.unidadeTributavelSigla (adicionado na b65)', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).not.toContain('AtualizarDadosFiscaisProdutoRequest.unidadeTributavelSigla');
+    });
+
+    it('não imprime LACUNA: AtualizarDadosFiscaisProdutoRequest.exTipi (adicionado na b65)', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).not.toContain('AtualizarDadosFiscaisProdutoRequest.exTipi');
+    });
+
+    it('não imprime LACUNA: AtualizarDadosFiscaisProdutoRequest.codigoBeneficioFiscalPadrao (adicionado na b65)', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).not.toContain('AtualizarDadosFiscaisProdutoRequest.codigoBeneficioFiscalPadrao');
+    });
+
+    it('não imprime LACUNA: VincularProdutoFornecedorRequest.descricaoFornecedor (adicionado na b65)', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).not.toContain('VincularProdutoFornecedorRequest.descricaoFornecedor');
+    });
+
+    it('não imprime LACUNA: CriarEmpresaRequest.crt (adicionado na b64)', () => {
       const saida = resultadoHoje.stdout + resultadoHoje.stderr;
       expect(saida).not.toContain('CriarEmpresaRequest.crt');
     });
 
-    it('não imprime LACUNA: AtualizarEmpresaRequest.crt (adicionado no schema)', () => {
+    it('não imprime LACUNA: AtualizarEmpresaRequest.crt (adicionado na b64)', () => {
       const saida = resultadoHoje.stdout + resultadoHoje.stderr;
       expect(saida).not.toContain('AtualizarEmpresaRequest.crt');
     });
 
-    it('não imprime LACUNA: AdmitirColaboradorRequest.pessoaId (adicionado no schema)', () => {
+    it('não imprime LACUNA: AdmitirColaboradorRequest.pessoaId (adicionado na b63)', () => {
       const saida = resultadoHoje.stdout + resultadoHoje.stderr;
       expect(saida).not.toContain('AdmitirColaboradorRequest.pessoaId');
     });
@@ -500,6 +580,124 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
       for (const nome of CRITICOS_ESPERADOS_EM_9FCDA80) {
         expect(resultadoMapeamentoFake.nomesDivergencias.has(nome)).toBe(false);
       }
+    });
+  });
+
+  describe('AC-11: LACUNA_DESTINO sem entradas órfãs', () => {
+    /**
+     * Valida que LACUNA_DESTINO não contém entradas para campos que já saíram de
+     * LACUNA_ESPERADOS_HOJE. Prova vermelha: comentário da entrada órfã de tipoItemSped
+     * em 00e8316 (v1.11.0a8b64.c2) avisa que "mantê-los aqui é a entrada órfã".
+     * Mantê-los após a fatia b65 preenchê-los é o defeito que esta asserção detecta.
+     */
+
+    function extrairLacunaDestinoDoArquivo(conteudo: string): Set<string> {
+      // Procura pelo objeto LACUNA_DESTINO
+      const match = conteudo.match(/const\s+LACUNA_DESTINO\s*=\s*\{([\s\S]*?)\};/);
+      if (!match) {
+        throw new Error('LACUNA_DESTINO não encontrado no arquivo');
+      }
+
+      const lagunasEncontradas = new Set<string>();
+      const bloco = match[1];
+
+      // Extrai cada entrada: 'Chave.campo': 'destino'
+      const linhas = bloco.split('\n');
+      for (const linha of linhas) {
+        // Ignora comentários e linhas vazias
+        const trimmed = linha.trim();
+        if (trimmed.startsWith('//') || trimmed === '') continue;
+
+        // Padrão: 'FullyQualifiedFieldName': 'destino',
+        const fieldMatch = trimmed.match(/^'([^']+)':/);
+        if (fieldMatch) {
+          lagunasEncontradas.add(fieldMatch[1]);
+        }
+      }
+
+      return lagunasEncontradas;
+    }
+
+    it('LACUNA_DESTINO não contém entradas que já foram removidas de LACUNA_ESPERADOS_HOJE', () => {
+      const gateFilePath = path.join(raizDoProjeto, 'scripts', 'gate-contract-request-fields.mjs');
+      const gateContent = readFileSync(gateFilePath, 'utf8');
+      const lagunasDestino = extrairLacunaDestinoDoArquivo(gateContent);
+
+      // LACUNA_ESPERADOS_HOJE = os campos que ainda são anuláveis sem cobertura de schema
+      const lagunasEsperados = new Set(LACUNA_ESPERADOS_HOJE);
+
+      // Valida que toda entrada de LACUNA_DESTINO está em LACUNA_ESPERADOS_HOJE
+      const entradasOrfas = Array.from(lagunasDestino).filter(
+        campo => !lagunasEsperados.has(campo as any)
+      );
+
+      if (entradasOrfas.length > 0) {
+        const detalhe = entradasOrfas
+          .map(campo => `${campo} (foi removido de LACUNA_ESPERADOS_HOJE)`)
+          .join('\n   ');
+        throw new Error(
+          `LACUNA_DESTINO contém ${entradasOrfas.length} entrada(s) órfã(s):\n   ${detalhe}\n\n` +
+          `Isso ocorre quando um campo é adicionado ao schema e sai de LACUNA_ESPERADOS_HOJE, ` +
+          `mas sua entrada em LACUNA_DESTINO não é removida. Remova as chaves correspondentes ` +
+          `de scripts/gate-contract-request-fields.mjs:LACUNA_DESTINO.`
+        );
+      }
+
+      expect(entradasOrfas).toHaveLength(0);
+    });
+  });
+
+  describe('AC-13: v1.11.0a8b66 — ConfigurarComercialClienteRequest e ConfigurarCompraFornecedorRequest no universo', () => {
+    /** Trecho da saída entre o cabeçalho da categoria e o próximo cabeçalho (ou o fim). */
+    function secao(saida: string, cabecalho: 'DESCARTE' | 'DEFAULT_SILENCIOSO' | 'LACUNA'): string {
+      const linhas = saida.split('\n');
+      const inicio = linhas.findIndex((l) =>
+        cabecalho === 'LACUNA' ? /anuláveis sem destino/.test(l) : l.includes(`${cabecalho} —`)
+      );
+      if (inicio < 0) return '';
+      const resto = linhas.slice(inicio + 1);
+      const fim = resto.findIndex((l) => /^(❌|📋|📊|✅)/.test(l.trim()) && !/^❌\s+\w+\.\w+/.test(l.trim()));
+      return (fim < 0 ? resto : resto.slice(0, fim)).join('\n');
+    }
+
+    it('o gate mapeia os dois records novos (schema → record)', () => {
+      const gate = readFileSync(path.join(raizDoProjeto, 'scripts', 'gate-contract-request-fields.mjs'), 'utf8');
+      expect(gate).toMatch(/configurarComercialClienteSchema:\s*'ConfigurarComercialClienteRequest'/);
+      expect(gate).toMatch(/configurarCompraFornecedorSchema:\s*'ConfigurarCompraFornecedorRequest'/);
+    });
+
+    it('Sonda B: resolve os dois records sem falha estrutural nem recorte ignorado', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).not.toContain('FALHA ESTRUTURAL');
+      expect(saida).not.toContain('Recortes ignorados');
+      expect(saida).not.toMatch(/ConfigurarComercialClienteRequest\.|ConfigurarCompraFornecedorRequest\./);
+    });
+
+    it('Sonda B: imprime exatamente 3 LACUNA', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).toMatch(/anuláveis sem destino na UI \(3\)/);
+    });
+
+    it('sem permiteVendaAPrazo: sai 1 e acusa DEFAULT_SILENCIOSO ConfigurarComercialClienteRequest.permiteVendaAPrazo', () => {
+      const saida = resultadoClienteSemObrigatorio.stdout + resultadoClienteSemObrigatorio.stderr;
+      expect(resultadoClienteSemObrigatorio.exitCode).toBe(1);
+      expect(resultadoClienteSemObrigatorio.nomesDivergencias.has('ConfigurarComercialClienteRequest.permiteVendaAPrazo')).toBe(true);
+      expect(secao(saida, 'DEFAULT_SILENCIOSO')).toContain('ConfigurarComercialClienteRequest.permiteVendaAPrazo');
+      expect(secao(saida, 'DESCARTE')).not.toContain('ConfigurarComercialClienteRequest');
+    });
+
+    it('sem classificacaoId: acusa LACUNA ConfigurarComercialClienteRequest.classificacaoId (4 LACUNA)', () => {
+      const saida = resultadoClienteSemAnulavel.stdout + resultadoClienteSemAnulavel.stderr;
+      expect(secao(saida, 'LACUNA')).toContain('ConfigurarComercialClienteRequest.classificacaoId');
+      expect(saida).toMatch(/anuláveis sem destino na UI \(4\)/);
+      expect(resultadoClienteSemAnulavel.nomesDivergencias.size).toBe(0);
+    });
+
+    it('sem categoriaFornecimento: acusa LACUNA ConfigurarCompraFornecedorRequest.categoriaFornecimento (4 LACUNA)', () => {
+      const saida = resultadoFornecedorSemAnulavel.stdout + resultadoFornecedorSemAnulavel.stderr;
+      expect(secao(saida, 'LACUNA')).toContain('ConfigurarCompraFornecedorRequest.categoriaFornecimento');
+      expect(saida).toMatch(/anuláveis sem destino na UI \(4\)/);
+      expect(resultadoFornecedorSemAnulavel.nomesDivergencias.size).toBe(0);
     });
   });
 });

@@ -1644,3 +1644,289 @@ Quem arbitrou: orquestrador, com a escolha confirmada pelo usuário entre quatro
 alternativas apresentadas.
 Impacto: `docs/fatias/v1.11.0a8b63-f4-pessoa-na-admissao.md` (renomeada),
 `docs/PLANO-FRONTEND-ONDA-OPERACAO.md` (B-9 acrescentada). Nenhum código.
+
+### D58 — `v1.11.0a8b65` entrega só o recorte fiscal de Produto; Cliente e Fornecedor saem, sem número reservado
+
+Data: 2026-09-23.
+Rodada: `07-produtos-fiscais` — quarteto completo em
+`docs/arquitetura/debate/07-{operacao,plataforma,escopo,design}-produtos-fiscais.md`,
+inventário em `docs/fatias/v1.11.0a8b65-inventario.md`. Convergência 4/4: os quatro
+arquitetos, cada um sem ver a posição dos outros, chegaram à mesma posição.
+Decisão: `b65` entrega só os campos fiscais de Produto que já têm inventário escrito
+(`unidadeTributavelSigla`, `exTipi`, `codigoBeneficioFiscalPadrao`, `descricaoFornecedor`, e
+`tipoItemSped` — ver D59). `PUT /api/clientes/{id}/configuracao-comercial` e a configuração de
+compra/homologação de fornecedor **não entram nesta versão** e não recebem número — ficam
+"depois", não "fora": entram assim que existir inventário próprio do
+`inventariante-contrato-tela` sobre Cliente e sobre Fornecedor.
+Por quê: nenhum dos quatro documentos desta rodada encontrou dependência de dado, payload,
+permissão ou cache entre o recorte de Produto e Cliente/Fornecedor — são unidades de entrega
+independentes empacotadas sob o mesmo rótulo de calendário
+(`docs/PLANO-FRONTEND-ONDA-OPERACAO.md:107`, "Produto, cliente, fornecedor", escrito antes de
+qualquer inventário existir para os três). Implementar Cliente/Fornecedor sem inventário seria o
+anti-padrão que a própria D55 já bloqueou para outro caso: decidir anulabilidade e forma de
+payload no fio da implementação, em vez de a partir de prova escrita.
+Alternativas descartadas:
+- Entrar com os três no mesmo `bNN`: pago pela `arquiteto-plataforma-frontend` e pela
+  `arquiteto-escopo-entrega` como "esperar o inventário de duas peças que não têm nada pronto
+  para entregar a terceira que já tem" — o `gateContractRequestFields` já sabe contar de 7 para 3
+  hoje; empacotar atrasa isso sem necessidade.
+- Reservar `b65b`/renumerar `b66`–`b69` desde já para acomodar Cliente/Fornecedor: nenhum dos
+  quatro tinha base para decidir a numeração sem o inventário — decidir o número antes do
+  conteúdo é o mesmo erro que a D56 já puniu (roteiro só na conversa, `b62`–`b69` citando destino
+  que nenhum arquivo definia).
+Risco de acesso: `NENHUM` — nenhuma tela ou permissão de Cliente/Fornecedor é tocada, criada ou
+removida.
+Reversível: sim. Gatilho de revisita: (1) inventário de Cliente e de Fornecedor ficar pronto; (2)
+evidência concreta — não encontrada nesta rodada — de que `b67` (venda, preço, aprovação) trava
+sem `configuracao-comercial` do cliente, o que tornaria o corte um bloqueio disfarçado em vez de
+um adiamento seguro (pergunta registrada por `arquiteto-operacao-erp`, P1 do debate).
+Quem arbitrou: orquestrador, por convergência 4/4 sem discordância real (a `arquiteto-escopo-entrega`
+registrou discordância preventiva contra a `arquiteto-operacao-erp`, mas a posição entregue por
+esta última foi a mesma — só Produto).
+Impacto: `docs/PLANO-FRONTEND-ONDA-OPERACAO.md` (§`b65` reescrita), `docs/fatias/v1.11.0a8b65-produtos-fiscais.md` (plano novo).
+
+### D59 — `tipoItemSped` ganha controle de edição em `v1.11.0a8b65`
+
+Data: 2026-09-23.
+Rodada: `07-produtos-fiscais`, mesmos documentos de D58.
+Decisão: a `b65` inclui um `Dropdown` para `tipoItemSped` (12 valores fixos do Registro 0200 da
+EFD, `0`–`10` e `99`), além dos quatro campos de texto/autocomplete já previstos. O campo entra
+em `types/erp.ts` (enum, hoje ausente) e em `produtosLabels.ts` (mapa de rótulo).
+Por quê: a `v1.11.0a8b64.c2` já fez `tipoItemSped` trafegar (lê do registro, participa do cálculo
+de "bloco em branco", vai no payload do PATCH — `ProdutosPage.tsx:60-79`), mas deixou o campo sem
+input na tela, registrado em comentário de código (`ProdutosPage.tsx:74`: "Só trafega — o
+operador não edita `tipoItemSped` nesta tela (b65)"). Sem esta decisão, **nenhum produto no
+sistema ganha classificação SPED pela UI** — a única via seria carga direta em banco, que não é
+caminho de produção. Os quatro arquitetos da rodada convergiram nisto de forma independente
+(operação, plataforma, escopo e design citaram o mesmo achado sem se verem).
+Alternativas descartadas:
+- Manter só round-trip (não editável), como a `.c2` deixou implicitamente: descartada porque
+  fecha permanentemente uma capacidade que o recorte original do `b58.c3`
+  (`docs/fatias/v1.11.0a8b58.c3-contratos-de-request.md:316-320`) já previa para a `b65` — não é
+  redução de escopo, é reabertura de uma lacuna que a fatia inteira existe para fechar.
+Risco de acesso: `NENHUM` — não mexe em permissão; usa a mesma `PRODUTOS_DADOS_FISCAIS_GERENCIAR`
+que já guarda a aba inteira.
+Reversível: sim. Gatilho de revisita: se surgir evidência de que a classificação SPED é decidida
+deliberadamente fora do cadastro de produto (não encontrada nesta rodada).
+Quem arbitrou: orquestrador, por convergência 4/4.
+Impacto: `types/erp.ts`, `features/produtos/components/produtosLabels.ts` (ou equivalente),
+`ProdutoFormDialog.tsx`.
+
+### D60 — dois seletores de "unidade tributável" com rótulos distintos; `unidadeTributavelSigla` por autocomplete, `value` sempre a sigla
+
+Data: 2026-09-23.
+Rodada: `07-produtos-fiscais`, mesmos documentos de D58.
+Decisão: o campo hoje rotulado "Unidade tributável" (`unidadeMedidaTributavelId`, catálogo
+interno Mód.03) e o novo `unidadeTributavelSigla` (catálogo oficial global Mód.04) coexistem na
+mesma grade da aba "Dados fiscais", sem redesenho de layout, com rótulos que nunca repetem o
+mesmo texto sozinho — proposta de referência da `arquiteto-design-system`: **"Unidade tributável
+(medida interna)"** e **"Unidade tributável (sigla oficial)"**. `unidadeTributavelSigla` é
+`SearchSelect` assíncrono (nunca `Dropdown` fechado nem texto livre), resolvido contra
+`GET /api/fiscal/cadastros/unidades-tributaveis`, reaproveitando o **comportamento** já pago duas
+vezes no repositório (`CadastroFiscalSelects.tsx` — NCM/CFOP; `useEnderecoFiscalCatalogos.ts` +
+`EnderecoFiscalFormSection.tsx` — UF/Município): mesmo debounce, mesma técnica de opção sintética
+(`comSelecionado`, para não mostrar vazio um valor já gravado que a página de busca corrente não
+contém), mesmo texto de aviso de permissão ausente. O `value` do campo é a **sigla** (`string`),
+nunca um Id — o backend resolve `UnidadeTributavelOficialId` no servidor a partir da sigla
+enviada e nunca aceita Id como input (`ProdutoDadosFiscaisResolver.cs:129`).
+Onde o hook/cliente de API mora: `features/produtos/` — não `features/tributacao` nem
+`features/fiscal` — seguindo o precedente já em produção de `administracaoApi.ts`, que consome
+`CadastrosFiscaisController` direto do módulo que primeiro precisou, sem indireção por um
+"features/fiscal" compartilhado que hoje serve um consumidor só. A reprodução de comportamento
+(texto, `comSelecionado`) é exigência de template; o arquivo/local exato é decisão de execução do
+`dev-senior-react`.
+Por quê: os dois campos são dados diferentes (Mód.03 interno vs. Mód.04 global), com regra de
+obrigação cruzada (R6: sigla divergente da unidade comercial torna `unidadeMedidaTributavelId`
+obrigatório) — fundir num único seletor esconderia que são duas fontes, não uma. Convergência 4/4
+em manter dois rótulos distintos; a `arquiteto-plataforma-frontend` travou a forma do dado (sigla,
+não Id) citando o precedente exato de `useUfCatalogo`; a `arquiteto-design-system` identificou que
+esta fatia é o **terceiro** consumidor do padrão de catálogo fiscal com permissão condicional —
+"regra de três casos": 1 é caso, 2 é coincidência, 3 é padrão — e que implementar sem a opção
+sintética reintroduziria, pela terceira vez, o bug já corrigido duas vezes ("campo mostra vazio um
+valor gravado quando a busca não traz aquela página").
+Alternativas descartadas:
+- Seletor único fundido com sub-hint: descartada — esconde que são dois dados com regra de
+  obrigação cruzada (R6), custo maior que uma linha extra de formulário.
+- `EntitySelect`/`Dropdown` fechado para `unidadeTributavelSigla`: descartada — viola
+  `docs/DIRETRIZES_UX_REFERENCIAS.md` (regra 8, "não criar lista fixa para dados mestres que vêm
+  do backend"); o catálogo é paginado e muda por manutenção do Mód.04.
+- Componente compartilhado novo (`AsyncCatalogSelect<T>` genérico): descartada nesta fatia —
+  gold-plating antes do terceiro caso provar a forma exata; a consolidação de
+  `CadastroFiscalSelects.tsx`/`useEnderecoFiscalCatalogos.ts` num só formato fica registrada como
+  dívida (não decidida agora) para quando um quarto consumidor aparecer.
+Risco de acesso: `NENHUM`.
+Reversível: sim — é `value` de um select e dois rótulos; trocar depois é barato e contido.
+Quem arbitrou: orquestrador, por convergência 4/4, com o detalhe de forma do `value` fixado pela
+`arquiteto-plataforma-frontend` sem discordância dos demais.
+Impacto: `features/produtos/components/ProdutoFormDialog.tsx`, novo hook em
+`features/produtos/hooks/`, `features/produtos/schemas/produtosSchemas.ts`.
+
+### D61 — guarda de `FISCAL_CADASTROS_CONSULTAR` escopada ao campo `unidadeTributavelSigla`, não à aba fiscal inteira
+
+Data: 2026-09-23.
+Rodada: `07-produtos-fiscais`, mesmos documentos de D58.
+Decisão: replica o padrão já pago na `b64` (`useEnderecoFiscalCatalogos.ts`,
+`EnderecoFiscalFormSection.tsx:212,295`) — campo `disabled` + `emptyMessage` padrão quando falta
+`FISCAL_CADASTROS_CONSULTAR`, mais um `Message severity="warn"` na aba com o mesmo texto ("Consulta
+de cadastros fiscais indisponível: seu usuário não possui FISCAL_CADASTROS_CONSULTAR.") — mas
+**escopado ao campo `unidadeTributavelSigla`**, não à `PermissionGuard` da aba inteira. Um valor
+já gravado no produto continua visível (via opção sintética a partir do próprio valor corrente),
+mesmo sem a permissão de busca.
+Por quê: a aba "Dados fiscais" é guardada hoje só por `PRODUTOS_DADOS_FISCAIS_GERENCIAR`, que já
+cobre nove outros campos (NCM, CEST, origem, tipo fiscal, `tipoItemSped`, EX-TIPI, código de
+benefício, unidade tributável interna, código fiscal externo, vínculo de fornecedor) que **não**
+dependem do catálogo oficial. Aplicar `enabled: permitido` à aba inteira — o padrão que
+`useEnderecoFiscalCatalogos.ts` usa no caso da `b64`, onde faz sentido porque lá o objeto inteiro
+depende do catálogo — tiraria dos nove campos a edição de quem tem `PRODUTOS_DADOS_FISCAIS_GERENCIAR`
+mas não `FISCAL_CADASTROS_CONSULTAR`, reclassificando `accessRisk` de `NENHUM` para `CAPACIDADE`
+sem ninguém ter decidido isso. Escopar ao campo mantém `accessRisk: NENHUM` (ninguém perde nada
+que tem hoje; a tela nem tem `unidadeTributavelSigla` hoje) e evita, ao mesmo tempo, a
+`ILUSAO` de um autocomplete que nunca resolve nada sem explicação.
+Alternativas descartadas:
+- Guard na aba inteira (copiar `useEnderecoFiscalCatalogos.ts` literalmente): descartada — muda
+  `accessRisk` sem decisão explícita, tirando capacidade real de quem só não tem a segunda
+  permissão.
+- Sem guard nenhum, campo sempre habilitado: descartada — vira `accessRisk: ILUSAO` (autocomplete
+  que nunca resolve, sem dizer por quê).
+Risco de acesso: `NENHUM`.
+Reversível: sim. Gatilho de revisita: pergunta P3 do debate de operação — se, na prática,
+`PRODUTOS_DADOS_FISCAIS_GERENCIAR` e `FISCAL_CADASTROS_CONSULTAR` nunca andam juntas no
+provisionamento real de perfil, isto merece revisão de processo, não de tela.
+Quem arbitrou: orquestrador, por convergência 4/4 no padrão geral, com o refinamento de escopo
+(campo, não aba) proposto pela `arquiteto-plataforma-frontend` e confirmado sem discordância
+pelos demais.
+Impacto: `features/produtos/components/ProdutoFormDialog.tsx`, novo hook em
+`features/produtos/hooks/`.
+
+### D62 — configuração comercial (Cliente) e de compra (Fornecedor) entram como aba nos diálogos existentes, com o bloco inteiro sempre reenviado
+
+Data: 2026-09-23.
+Rodada: `08-cliente-fornecedor` — inventário em
+`docs/arquitetura/debate/08-inventario-cliente-fornecedor.md` e as quatro posições em
+`docs/arquitetura/debate/08-{operacao,plataforma,escopo,design}-cliente-fornecedor.md`.
+Decisão: `ClienteFormDialog` e `FornecedorFormDialog` ganham `TabView` com uma aba nova
+("Comercial" / "Compra"). Um único Salvar grava o cadastro base e, em seguida, o `PUT` de
+configuração — a mesma orquestração em produção em `ProdutosPage.tsx` (cadastro + dados fiscais).
+Na **edição**, o bloco de configuração vai sempre inteiro; na **criação**, só vai se algum campo
+do bloco fugir do padrão (tudo nulo e `permiteVendaAPrazo = false`), para não gerar chamada inútil.
+Falha do `PUT` de configuração depois do cadastro gravado diz isso com todas as letras ("Cliente
+salvo, mas a configuração comercial não foi gravada") — a lição da `v1.11.0a8b64.c2`.
+Trava estrutural, não disciplinar (`arquiteto-plataforma-frontend`, §0 da posição): os dois `PUT`
+substituem o bloco inteiro e `null` apaga o vínculo (§2 do inventário); pior, `sanitizePayload`
+(`lib/http/requestUtils.ts`) remove chave `undefined`, e um `bool` ausente no JSON vira `false` no
+record C#, sem 400. Por isso: `buildInitialValues` parte sempre do registro gravado com os cinco/três
+campos; o schema usa `.nullable()` (nunca `.optional()`) nos Ids e no número, e o booleano é
+obrigatório; um teste por schema prova que `parse({})` falha e que o bloco todo-nulo passa.
+Por quê: operação e design convergiram na aba (2 a 1) com precedente pago em `ProdutoFormDialog` e
+`PessoaFormDialog`; a posição de escopo (diálogo próprio por ação de linha) protegia contra o
+mesmo risco de apagar campo que a trava estrutural acima fecha por outro caminho, sem criar uma
+terceira superfície para o mesmo cadastro.
+Alternativas descartadas:
+- Diálogo próprio aberto por ação de linha (`arquiteto-escopo-entrega`): isola o `PUT`, mas separa
+  do cadastro um dado que o operador preenche na mesma rotina de dar entrada no cliente — e o risco
+  que motivava a separação é coberto pela trava estrutural.
+- Salvar campo a campo: viola o contrato — o endpoint não faz merge.
+Risco de acesso: `NENHUM` — as duas ações exigem `CLIENTES_GERENCIAR`/`FORNECEDORES_GERENCIAR`,
+que já guardam o diálogo.
+Reversível: sim. Gatilho de revisita: a configuração passar a ser feita por papel ou momento
+diferente do cadastro na operação real (pendência P4 da posição de operação).
+Quem arbitrou: orquestrador, pela regra de convergência.
+Impacto: `features/clientes/**`, `features/fornecedores/**`.
+
+### D63 — homologar e revogar homologação como ações de linha assimétricas, com o estado visível na listagem
+
+Data: 2026-09-23. Rodada: `08-cliente-fornecedor`.
+Decisão: `FornecedoresPage` ganha duas ações de linha mutuamente exclusivas por `homologado`, no
+padrão de bloquear/desbloquear crédito de `ClientesPage`, e uma coluna `Tag` "Homologado". As duas
+confirmações são **assimétricas** (`arquiteto-design-system`): revogar usa `ReasonDialog` (motivo
+obrigatório no backend, máx. 500); homologar usa `ConfirmDialog` — o `POST` não tem corpo, e pedir
+um motivo que o backend não grava seria fingir registro. A invalidação reaproveita o `invalidate()`
+de prefixo `['fornecedores']` que `useFornecedorMutations` já tem, sem query key nova.
+Por quê: unanimidade (4/4) nas ações de linha; o refinamento de assimetria é do design, sem
+discordância dos demais.
+Risco de acesso: `NENHUM`. Reversível: sim.
+Quem arbitrou: orquestrador, por convergência 4/4.
+
+### D64 — `situacao-compra` não entra: a tela diria "não pode receber pedido" de um fornecedor para o qual o pedido é aceito
+
+Data: 2026-09-23. Rodada: `08-cliente-fornecedor`.
+Decisão: `GET /api/fornecedores/{id}/situacao-compra` fica fora. O estado `homologado` já fica
+visível pela D63.
+Por quê: a rodada empatou 2 a 2 (operação e design dentro, como leitura informativa; plataforma e
+escopo fora), e o desempate é por evidência, não por voto. A evidência veio da própria posição de
+operação: nenhum use case de Pedido de Compra lê `Homologado` (`grep` no backend), e
+`PedidoCompraFormDialog` aceita qualquer fornecedor. O endpoint devolveria
+`podeReceberPedidoCompra = false` para um fornecedor que o sistema, na prática, aceita no pedido —
+uma tela que afirma uma restrição que não existe. É a mesma honestidade exigida do painel de
+Integrações (T6 do plano v1.23). O argumento de plataforma (sem endpoint em lote, coluna viraria
+N+1) reforça, mas não é o motivo.
+Alternativas descartadas:
+- Painel de leitura com o `motivo` do backend (`arquiteto-design-system`): o texto vem pronto, mas
+  descreve uma regra que só existe quando o parâmetro `COMPRAS_BLOQUEIA_FORNECEDOR_NAO_HOMOLOGADO`
+  está ligado — e mesmo então o pedido não é recusado.
+Risco de acesso: `NENHUM`. Reversível: sim.
+Gatilho de revisita: o backend responder a pergunta **B-12** (a recusa por parâmetro vai para
+dentro da criação do pedido de compra?) — aí o endpoint passa a descrever uma regra real e entra
+junto com a mudança de `PedidoCompraFormDialog`, provavelmente na versão de Compra.
+Quem arbitrou: orquestrador, desempate por evidência.
+
+### D65 — `classificacaoId` só trafega nesta versão; o seletor entra junto com o cadastro de Classificações de Pessoa, na versão seguinte
+
+Data: 2026-09-23. Rodada: `08-cliente-fornecedor`.
+Decisão: na versão de Cliente/Fornecedor, `classificacaoId` é lido do registro e reenviado sem
+alteração no `PUT` (obrigatório pela D62 — omitir apaga). Sem controle de UI. O seletor entra na
+versão imediatamente seguinte, junto com a tela de cadastro de Classificações de Pessoa.
+Por quê: empate 2 a 2 (plataforma e design: seletor já; escopo e operação: não agora), desempatado
+pela evidência que só a posição de operação trouxe e que corrige o inventário:
+`ClassificacoesPessoaController.cs` tem CRUD completo (criar, atualizar, inativar, sob
+`CLASSIFICACOES_PESSOA_GERENCIAR`, já no union), não só leitura. O cadastro é, portanto, barato e
+de forma conhecida (código/nome/descrição/inativar, já paga em Tabelas de Preço e Condições de
+Pagamento) — o que tira o motivo para entregar um seletor sem via de popular o catálogo na UI, que
+foi a objeção da operação. O seletor e o cadastro que o alimenta entram juntos.
+Alternativas descartadas:
+- Seletor já, sem cadastro (`plataforma`, `design`): capacidade pela metade — o operador escolhe de
+  uma lista que só se preenche por API.
+- Omitir `classificacaoId` do payload: apaga a classificação gravada a cada Salvar (D62).
+Risco de acesso: `NENHUM`. Reversível: sim.
+Quem arbitrou: orquestrador, desempate por evidência.
+
+### D66 — permissão dos catálogos por campo, com rótulo neutro quando o valor gravado não pode ser resolvido, e um aviso só por aba
+
+Data: 2026-09-23. Rodada: `08-cliente-fornecedor`.
+Decisão: tabela de preço (`TABELAS_PRECO_CONSULTAR`) e condição de pagamento
+(`FINANCEIRO_CONSULTAR`) — dois seletores em Cliente, um em Fornecedor — ficam `disabled`
+individualmente quando falta a permissão do catálogo, **nunca a aba inteira** (D61: os outros
+campos continuam editáveis, `accessRisk` segue `NENHUM`). Dois ajustes à D61, cada um com a
+evidência que o justifica:
+- **Rótulo neutro** (`arquiteto-operacao-erp`): na D61 o valor gravado era uma sigla legível; aqui
+  são Guids opacos, e sem a permissão não há como resolver o nome. O campo mostra "Configurado —
+  sem permissão para ver o nome", nunca o Guid cru, e o valor continua indo no `PUT` (D62).
+- **Um aviso por aba** (`arquiteto-design-system`): com até dois campos bloqueados na mesma aba,
+  um `Message` por campo vira ruído. Um só `Message` lista as permissões que faltam.
+Por quê: a guarda por campo foi unânime (4/4); os dois ajustes vieram de fatos que a D61 não tinha.
+Risco de acesso: `NENHUM`. Reversível: sim.
+Quem arbitrou: orquestrador.
+
+### D67 — Cliente e Fornecedor numa versão só (`b66`), Classificações de Pessoa na `b67`; a cauda da onda anda duas posições
+
+Data: 2026-09-23. Rodada: `08-cliente-fornecedor`.
+Decisão: `v1.11.0a8b66` entrega Cliente e Fornecedor juntos (D62–D66) e estende o gate de
+contratos de request (`scripts/gate-contract-request-fields.mjs`) aos dois records de configuração
+— o documento-fonte já tem as assinaturas prontas (posição de plataforma, §7.1). `v1.11.0a8b67`
+entrega o cadastro de Classificações de Pessoa e o seletor de `classificacaoId` (D65). A cauda do
+plano da onda anda duas posições: Estoque `b68`, Venda `b69`, Compra e financeiro `b70`,
+Faturamento `b71`.
+Por quê: uma versão só venceu 3 a 1; o argumento de plataforma para dividir (o risco de N+1 de
+`situacao-compra` seguraria Cliente) caiu com a D64. Pôr os cadastros antes do Estoque segue o
+princípio da D56 — ordem por fluxo vertical, cadastro antes de transação — e a posição de escopo
+mediu o custo de reindexar: 13 menções em prosa no plano da onda, zero em `docs/fatias/`, zero no
+`CHANGELOG.md`. O Estoque, além disso, tem um item preso na pergunta B-3.
+Alternativas descartadas:
+- Duas versões (`arquiteto-plataforma-frontend`): o motivo foi removido pela D64.
+- Anexar ao fim da onda: deixaria Venda e Compra serem construídas sobre cadastros incompletos —
+  o inverso da D56.
+Risco de acesso: `NENHUM` nesta decisão.
+Reversível: sim (ordem). Gatilho de revisita: resposta a B-3 que destrave o Estoque inteiro e
+torne urgente antecipá-lo.
+Quem arbitrou: orquestrador, pela regra de convergência.
+Impacto: `docs/PLANO-FRONTEND-ONDA-OPERACAO.md` (sequência reindexada, `b66` e `b67` novas, B-12).

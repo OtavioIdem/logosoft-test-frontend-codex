@@ -1,3 +1,175 @@
+# v1.11.0a8b66
+
+## Cliente ganha aba Comercial, Fornecedor ganha aba Compra e homologação pela listagem
+
+Quem cadastra cliente passa a definir tabela de preço, condição de pagamento, dia de vencimento
+preferencial e venda a prazo no mesmo diálogo; quem cadastra fornecedor define condição de
+pagamento, prazo médio de entrega e categoria de fornecimento, e passa a homologar ou revogar a
+homologação direto na listagem. Rodada de arquitetura em
+`docs/arquitetura/debate/08-{operacao,plataforma,escopo,design}-cliente-fornecedor.md`, inventário
+em `docs/arquitetura/debate/08-inventario-cliente-fornecedor.md`, decisões travadas D62–D67
+(`docs/arquitetura/DECISOES.md`), plano em `docs/fatias/v1.11.0a8b66-cliente-fornecedor.md`.
+
+**Risco da fatia: `HIGH`** (os dois `PUT` de configuração substituem o bloco inteiro — `null` apaga
+vínculo, chave ausente some do JSON e vira `false`/`null` no record C# sem erro — mesmo formato de
+defeito que a `v1.11.0a8b64.c2` corrigiu para dados fiscais de Produto). **Risco de acesso:
+`NENHUM`** — nenhuma permissão nova entra no catálogo; a guarda dos dois seletores de catálogo
+(`TABELAS_PRECO_CONSULTAR`, `FINANCEIRO_CONSULTAR`) é por campo, nunca pela aba inteira (D66), e
+quem já editava os demais campos da aba continua editando; ninguém perde o que já tinha.
+
+### Seção operacional — leia antes do deploy
+
+1. **Cliente ganha a aba "Comercial"** (tabela de preço, condição de pagamento, dia de vencimento
+   preferencial, venda a prazo) e **Fornecedor ganha a aba "Compra"** (condição de pagamento, prazo
+   médio de entrega, categoria de fornecimento), no mesmo `TabView` já pago em `ProdutoFormDialog`.
+   Um único Salvar grava o cadastro base e, em seguida, o `PUT` de configuração do bloco inteiro —
+   sempre na edição; na criação, só quando algum campo da aba foge do padrão em branco (D62).
+2. **Se o cadastro grava e a configuração falha, a tela diz exatamente isso**: "Cliente salvo, mas a
+   configuração comercial não foi gravada" / "Fornecedor salvo, mas a configuração de compra não foi
+   gravada" — nunca a mensagem genérica de erro ao salvar, porque o cadastro já foi gravado quando
+   o segundo `PUT` falha.
+3. **`FornecedoresPage` ganha duas ações de linha assimétricas e uma coluna "Homologado"**: homologar
+   usa `ConfirmDialog` sem motivo (o `POST` não tem corpo e o backend não grava motivo); revogar usa
+   `ReasonDialog` com motivo obrigatório (D63). As duas ficam desabilitadas para fornecedor inativo.
+4. **Quem tem `CLIENTES_GERENCIAR` sem `TABELAS_PRECO_CONSULTAR`/`FINANCEIRO_CONSULTAR` vê o seletor
+   correspondente desabilitado**, com "Configurado — sem permissão para ver o nome" quando já existe
+   um valor gravado — nunca o Guid cru. O valor não é apagado ao salvar: o formulário reenvia o que
+   já estava gravado mesmo sem conseguir mostrar o rótulo (D66). Um único `Message` por aba lista as
+   permissões de catálogo que faltam, em vez de um aviso por campo.
+5. **A classificação do cliente (`classificacaoId`) é preservada a cada Salvar, mas ainda não tem
+   campo na tela.** É lida do registro gravado e reenviada sem alteração no `PUT` — omiti-la apagaria
+   a classificação de todo cliente editado (D62). O seletor entra na `b67`, junto com o cadastro de
+   Classificações de Pessoa (D65).
+6. **`situacao-compra` do fornecedor não entrou.** O backend aceita pedido de compra de fornecedor
+   não homologado hoje; uma coluna ou aviso "não pode receber pedido" afirmaria uma restrição que não
+   existe (D64). Fica em aberto pela pergunta **B-12** ao backend.
+7. **A cauda da onda anda duas posições (D67)**: Estoque `b68`, Venda `b69`, Compra e financeiro
+   `b70`, Faturamento `b71`.
+
+### Testes e QA
+
+Gate de contratos de request (`node scripts/gate-contract-request-fields.mjs`): exit 0, 0
+`DESCARTE`, 0 `DEFAULT_SILENCIOSO`, 3 `LACUNA` (as mesmas da `b65`), agora cobrindo
+`ConfigurarComercialClienteRequest` e `ConfigurarCompraFornecedorRequest`. Prova durável
+`tests/unit/gateContractRequestFields.test.ts`: 53/53, com a prova histórica contra `9fcda80`
+acusando os 15 críticos, e o AC-13 ficando vermelho (3 casos) quando o gate deixa de cobrir os dois
+records. Schemas: `tests/unit/clientesSchemas.test.ts` 16 e `tests/unit/fornecedoresSchemas.test.ts`
+23 — 39/39 (`parse({})` falha, bloco todo-nulo passa). Componente:
+`tests/components/ClientesPageAC2AC4.test.tsx` 7/7 e
+`tests/components/FornecedoresPageAC7AC10.test.tsx` 10/10; 10 defeitos plantados um a um numa
+worktree descartável, 10 acusados. E2E mockado `tests/e2e/b66-cliente-fornecedor.spec.ts`: 5/5 em
+duas execuções, servidor isolado na 3411 com identidade conferida.
+
+Fato de processo, em linguagem honesta: a primeira tentativa de testes alterou o parser do gate e
+passou a descartar todo campo `email:` (exit 1 com duas divergências falsas); a segunda reescreveu o
+parser e o deixou cego para os defeitos históricos; a correção foi voltar o parser ao da `b65` e
+ajustar a forma dos dois schemas novos, que o parser lia errado.
+
+**O QA rodou e aprovou, sem ressalva.** Conferiu por conta própria validate:source, typecheck, lint, validate:ci, build, validate:backend-permissions, validate:guard-permission-map, validate:backend-contract-map, o gate de contratos de request (exit 0, 0/0/3) e os 109 testes do recorte (5 arquivos, `npx vitest run`); e verificou no código, campo a campo, que nenhum campo dos dois blocos de configuração pode ficar fora do PUT.
+
+# v1.11.0a8b65
+
+## Classificação fiscal do produto ganha tela: SPED, unidade tributável oficial, EX-TIPI e benefício fiscal
+
+A `v1.11.0a8b64.c2` já tinha destravado o PATCH de dados fiscais de Produto; faltava dar à tela os
+campos que o backend já aceitava e devolvia sem nenhum input correspondente. Esta versão fecha os
+cinco campos do recorte original registrado em `docs/fatias/v1.11.0a8b58.c3-contratos-de-request.md`:
+`tipoItemSped` ganha `Dropdown` de edição (12 rótulos do Registro 0200 da EFD — antes só trafegava,
+sem controle de UI), `unidadeTributavelSigla` ganha autocomplete contra o catálogo oficial global
+(`GET /api/fiscal/cadastros/unidades-tributaveis`, primeiro consumo desse endpoint em `features/`),
+`exTipi` e `codigoBeneficioFiscalPadrao` ganham campo de texto, e `descricaoFornecedor` ganha campo
+no diálogo de vínculo de fornecedor. Rodada de arquitetura em `docs/arquitetura/debate/07-*-produtos-fiscais.md`,
+decisões travadas em D58–D61 (`docs/arquitetura/DECISOES.md`), plano em
+`docs/fatias/v1.11.0a8b65-produtos-fiscais.md`.
+
+**Risco da fatia: `HIGH`** (contrato de request muda tipo/campo, e o novo campo de catálogo entra sob
+guarda de uma segunda permissão). **Risco de acesso: `NENHUM`** — a guarda de
+`FISCAL_CADASTROS_CONSULTAR` (D61) é escopada só ao campo novo `unidadeTributavelSigla`, não à aba
+inteira: quem tem `PRODUTOS_DADOS_FISCAIS_GERENCIAR` sem a segunda permissão continua editando os
+outros nove campos fiscais normalmente, e não perde nada que tinha antes desta versão.
+
+### Seção operacional — leia antes do deploy
+
+1. **Classificar um produto para o SPED pela tela passa a ser possível pela primeira vez.** Antes
+   desta versão, `tipoItemSped` só trafegava no PATCH (lido do registro, reenviado sem alteração) —
+   nenhum produto podia ganhar ou trocar de classificação SPED pela UI, só por carga direta em banco.
+2. **Resolver a unidade tributável oficial (`uTrib` da NF-e) exige `FISCAL_CADASTROS_CONSULTAR`
+   além de `PRODUTOS_DADOS_FISCAIS_GERENCIAR`.** Sem a segunda permissão, o campo fica desabilitado
+   com aviso explícito ("Consulta de cadastros fiscais indisponível: seu usuário não possui
+   FISCAL_CADASTROS_CONSULTAR."), mesmo padrão já usado no endereço fiscal de Empresa/Filial (`b64`).
+   Um valor já gravado continua visível mesmo sem a permissão de busca.
+3. **O campo hoje rotulado só "Unidade tributável" virou dois campos com rótulos distintos**:
+   "Unidade tributável (medida interna)" (o que já existia, catálogo interno Mód.03, sem mudança de
+   comportamento) e "Unidade tributável (sigla oficial)" (novo, catálogo global Mód.04). Quem
+   preenchia o campo antigo não precisa reconferir nada — só o rótulo mudou.
+4. **Cliente e Fornecedor (configuração comercial, homologação) não entraram nesta versão** (D58) —
+   o rótulo "Produto, cliente, fornecedor" do plano de onda descrevia um escopo maior do que o
+   inventário sustentava; ficam para fatia própria, sem número reservado.
+
+### Testes e QA
+
+**O QA rodou e aprovou**, depois de um bloqueio inicial só pelo ritual de versão (corrigido nesta
+mesma versão). Verificado: `validate:source`, `typecheck`, `lint`, `validate:contract-request-fields`
+(`LACUNA` caiu de 7 para 3 — `TransferirEstoqueRequest.origemId`, `.documento`,
+`AtualizarEmpresaRequest.contribuinteIpi`, nenhum dos três desta fatia), e 69 testes verdes em três
+arquivos (16 de payload — incluindo `tipoItemSped = 0` como caso nominal e a opção sintética que
+evita mostrar vazio um valor de sigla já gravado —, 47 do gate de contrato, 6 de componente,
+incluindo a mensagem de erro do PATCH nomeando o campo em vez do toast genérico). O gate estrutural
+novo (asserção contra entrada órfã em `LACUNA_DESTINO`) provou vermelho contra a árvore da `c2`
+(11 entradas órfãs acusadas, worktree sobre `00e8316`) antes de fechar verde na árvore de hoje.
+
+**Lacuna conhecida, não bloqueadora, registrada no plano (`GAP-E2E-b65`)**: o comportamento visual
+do guard escopado (campo desabilitado + aviso quando falta `FISCAL_CADASTROS_CONSULTAR`, e os
+rótulos/campos visíveis na aba) não tem teste automatizado — nem componente (sem precedente de
+render de `TabView`/`SearchSelect` em `jsdom` neste repositório) nem E2E. Mesma lacuna existe desde
+a `b64` para o caso irmão idêntico (`EnderecoFiscalFormSection`). A decisão de negócio por trás do
+guard (payload, permissão de disparo do PATCH, mapeamento de erro) está coberta; o que falta é só a
+confirmação visual em navegador.
+
+# v1.11.0a8b64.c2
+
+## O PATCH de dados fiscais de Produto volta a passar nos dois caminhos da tela
+
+`PATCH /api/produtos/{id}/dados-fiscais` falhava com 400 nos dois caminhos da tela de Produtos. O
+backend só aceita o bloco fiscal inteiramente em branco (dez campos nulos) ou com `tipoItemSped`
+preenchido; o frontend mandava seis dos dez e nunca o `tipoItemSped`. Na criação havia ainda um
+`tipoItemFiscal: Mercadoria` como padrão silencioso, que tirava o bloco do estado "em branco". Em
+ambos os casos o cadastro já tinha gravado quando o PATCH falhava, e a mensagem dizia "Não foi
+possível salvar o produto" — negando o que de fato tinha acontecido. Plano em
+`docs/fatias/v1.11.0a8b64.c2-produto-fiscal-em-branco.md`.
+
+**Risco da fatia: `HIGH`** (contrato de request que o backend recusa, num fluxo de cadastro usado
+por qualquer operador com a permissão fiscal). **Risco de acesso: `NENHUM`**.
+
+O padrão silencioso saiu; `tipoItemSped` passa a trafegar (lido do response e devolvido no
+request, sem campo na tela); o PATCH só dispara quando o bloco não está em branco; e a mensagem de
+erro passa a reconhecer a gravação parcial. Medido no banco do ambiente de desenvolvimento:
+`erp.produtos` tem 3 linhas e zero com `TipoItemSped` — coerente com o defeito, já que nenhum
+produto poderia ter sido classificado enquanto a chamada falhava. Três linhas não provam nada
+sobre produção.
+
+### Seção operacional — leia antes do deploy
+
+1. **Classificar um produto fiscalmente pela tela continua indisponível.** O backend exige
+   `tipoItemSped` assim que qualquer campo fiscal é preenchido, e o campo só chega na `b65`. Quem
+   preencher NCM, CEST, origem ou tipo fiscal vai receber erro — agora com mensagem honesta,
+   dizendo que o produto foi gravado e os dados fiscais não. Antes desta versão, toda criação de
+   produto falhava, mesmo sem tocar em nada fiscal.
+2. **Produtos sem classificação fiscal salvam normalmente**, na criação e na edição, e o bloco
+   fiscal de um produto já classificado sobrevive a uma edição que não toca nele.
+
+### Testes e QA
+
+**O QA rodou e aprovou.** Verificado: `validate:source`, `tsc --noEmit`, `next lint --dir
+features/produtos`, `validate:contract-request-fields` (7 lacunas, era 8), `npm run build`, e 60
+testes verdes em três arquivos (9 de payload, 46 do gate, 5 de componente). O teste de componente
+teve prova vermelha: com o defeito reintroduzido, os casos AC-2 e AC-2b falham e os outros três
+seguem verdes.
+
+**Lacuna conhecida, não bloqueadora, destinada à `b65`**: nenhum teste pega a volta do
+`tipoItemFiscal: Mercadoria` como padrão de criação, porque isso mora no `buildInitialValues` do
+diálogo, que os testes de fluxo stubam e os de payload não exercitam.
+
 # v1.11.0a8b64.c1
 
 ## Os dois gates de contrato existiam desde a c3 e nunca rodaram em CI

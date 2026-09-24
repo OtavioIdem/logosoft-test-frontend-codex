@@ -1,4 +1,4 @@
-import { EntityStatus, Guid, TipoItemFiscal, TipoProduto } from '@/types/erp';
+import { EntityStatus, Guid, TipoItemFiscal, TipoItemSped, TipoProduto } from '@/types/erp';
 
 export type ProdutoListQuery = {
     empresaId?: string | null;
@@ -74,7 +74,11 @@ export type ProdutoResponse = {
     cest?: string | null;
     origemMercadoriaCodigo?: string | null;
     tipoItemFiscal?: TipoItemFiscal | number | null;
+    tipoItemSped?: TipoItemSped | number | null;
+    unidadeTributavelSigla?: string | null;
     unidadeMedidaTributavelId?: Guid | null;
+    exTipi?: string | null;
+    codigoBeneficioFiscalPadrao?: string | null;
     codigoFiscalExterno?: string | null;
     observacao?: string | null;
     status: EntityStatus | number;
@@ -165,7 +169,17 @@ export type AtualizarDadosFiscaisProdutoRequest = {
     cestCodigo?: string | null;
     origemMercadoriaCodigo?: string | null;
     tipoItemFiscal?: TipoItemFiscal | number | null;
+    /**
+     * O backend exige este campo sempre que qualquer outro campo do bloco fiscal está preenchido
+     * (ver `EstaEmBranco` no resolver) — `0` (`MercadoriaParaRevenda`) é valor válido, não "vazio".
+     * Editável na tela desde a v1.11.0a8b65 (D59).
+     */
+    tipoItemSped?: TipoItemSped | number | null;
+    /** Sigla da unidade tributável oficial (Mód.04) — nunca um Id; o backend resolve o Id no servidor (D60). */
+    unidadeTributavelSigla?: string | null;
     unidadeMedidaTributavelId?: Guid | null;
+    exTipi?: string | null;
+    codigoBeneficioFiscalPadrao?: string | null;
     codigoFiscalExterno?: string | null;
 };
 
@@ -178,7 +192,27 @@ export type AdicionarCodigoBarrasProdutoRequest = {
 export type VincularFornecedorProdutoRequest = {
     fornecedorId: Guid;
     codigoFornecedor: string;
+    descricaoFornecedor?: string | null;
     principal: boolean;
+};
+
+// UnidadeTributavelResponse(Guid Id, string Sigla, string Descricao, bool Ativo, string? MotivoInativacao)
+// — GET /api/fiscal/cadastros/unidades-tributaveis, cadastro global (Mód.04), sem escopo de
+// empresa/filial (D60). Paginado (CadastrosFiscaisController.cs:151-163).
+export type UnidadeTributavelCadastro = {
+    id: Guid;
+    sigla: string;
+    descricao: string;
+    ativo: boolean;
+    motivoInativacao?: string | null;
+};
+
+export type UnidadeTributavelCadastroQuery = {
+    termo?: string | null;
+    sigla?: string | null;
+    ativo?: boolean | null;
+    pagina?: number;
+    tamanhoPagina?: number;
 };
 
 export type MotivoRequest = {

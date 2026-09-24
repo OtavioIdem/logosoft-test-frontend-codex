@@ -6,6 +6,8 @@ import { FornecedorFormValues, FornecedorListQuery } from '@/features/fornecedor
 
 type SavePayload = { id?: string; values: FornecedorFormValues };
 type InativarPayload = { id: string; motivo: string };
+type ConfigurarCompraPayload = { id: string; values: unknown };
+type RevogarPayload = { id: string; motivo: string };
 
 export const fornecedoresQueryKey = (query?: FornecedorListQuery) => ['fornecedores', query] as const;
 
@@ -28,6 +30,18 @@ export const useFornecedorMutations = (query: FornecedorListQuery = {}) => {
         mutationFn: ({ id, motivo }: InativarPayload) => fornecedoresApi.inativar(id, motivo),
         onSuccess: invalidate
     });
+    const configurarCompraMutation = useMutation({
+        mutationFn: ({ id, values }: ConfigurarCompraPayload) => fornecedoresApi.configurarCompra(id, values),
+        onSuccess: invalidate
+    });
+    const homologarMutation = useMutation({
+        mutationFn: (id: string) => fornecedoresApi.homologar(id),
+        onSuccess: invalidate
+    });
+    const revogarMutation = useMutation({
+        mutationFn: ({ id, motivo }: RevogarPayload) => fornecedoresApi.revogarHomologacao(id, motivo),
+        onSuccess: invalidate
+    });
 
-    return { saveMutation, inativarMutation, queryKey: fornecedoresQueryKey(query) };
+    return { saveMutation, inativarMutation, configurarCompraMutation, homologarMutation, revogarMutation, queryKey: fornecedoresQueryKey(query) };
 };

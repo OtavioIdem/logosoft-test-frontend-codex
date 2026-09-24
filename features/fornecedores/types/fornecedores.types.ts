@@ -13,6 +13,10 @@ export type FornecedorResponse = {
     pessoaId: Guid;
     codigo: string;
     observacao: string | null;
+    condicaoPagamentoPadraoId: Guid | null;
+    prazoEntregaMedio: number | null;
+    homologado: boolean;
+    categoriaFornecimento: string | null;
     status: EntityStatus;
 };
 
@@ -32,4 +36,17 @@ export type FornecedorMotivoRequest = {
     motivo: string;
 };
 
-export type FornecedorFormValues = Partial<CriarFornecedorRequest & AtualizarFornecedorRequest> & { id?: Guid };
+// PUT /api/fornecedores/{id}/configuracao-compra substitui o bloco inteiro (D62), mesma trava
+// estrutural do Cliente: os três campos vão sempre, nunca `undefined` (omitir apaga/zera no backend).
+export type ConfigurarCompraFornecedorRequest = {
+    condicaoPagamentoPadraoId: Guid | null;
+    prazoEntregaMedio: number | null;
+    categoriaFornecimento: string | null;
+};
+
+// POST /api/fornecedores/{id}/revogar-homologacao — homologar não tem request (POST sem corpo, D63).
+export type RevogarHomologacaoFornecedorRequest = {
+    motivo: string;
+};
+
+export type FornecedorFormValues = Partial<CriarFornecedorRequest & AtualizarFornecedorRequest & ConfigurarCompraFornecedorRequest> & { id?: Guid };

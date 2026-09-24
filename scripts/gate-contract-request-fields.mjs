@@ -12,6 +12,8 @@
  *   - administracao: CriarEmpresaRequest, AtualizarEmpresaRequest, DefinirEnderecoFiscalRequest
  *   - seguranca: CriarUsuarioRequest
  *   - rh: AdmitirColaboradorRequest
+ *   - clientes: ConfigurarComercialClienteRequest (v1.11.0a8b66, AC-13)
+ *   - fornecedores: ConfigurarCompraFornecedorRequest (v1.11.0a8b66, AC-13)
  *
  * Modo de falha: asserção nominal por campo, jamais por total.
  * Prova vermelha: contra a árvore de hoje deve acusar 29 campos específicos em três categorias.
@@ -45,6 +47,12 @@ const SCHEMA_TO_REQUEST_MAP = {
   },
   rh: {
     admitirColaboradorSchema: 'AdmitirColaboradorRequest'
+  },
+  clientes: {
+    configurarComercialClienteSchema: 'ConfigurarComercialClienteRequest'
+  },
+  fornecedores: {
+    configurarCompraFornecedorSchema: 'ConfigurarCompraFornecedorRequest'
   }
 };
 
@@ -69,7 +77,9 @@ function loadRequestContractFromDocument(contractPath) {
     'AtualizarEmpresaRequest',
     'DefinirEnderecoFiscalRequest',
     'CriarUsuarioRequest',
-    'AdmitirColaboradorRequest'
+    'AdmitirColaboradorRequest',
+    'ConfigurarComercialClienteRequest',
+    'ConfigurarCompraFornecedorRequest'
   ];
 
   for (const recordName of recordNames) {
@@ -354,27 +364,17 @@ function filterAllowlisted(divergences, allowlist) {
  * Indica em qual bloco cada campo será preenchido.
  */
 const LACUNA_DESTINO = {
-  'AtualizarDadosFiscaisProdutoRequest.ncmCodigo': 'b58.c3 · Bloco B',
-  'AtualizarDadosFiscaisProdutoRequest.cestCodigo': 'b58.c3 · Bloco B',
-  'AtualizarDadosFiscaisProdutoRequest.unidadeMedidaTributavelId': 'b58.c3 · Bloco B',
-  'AtualizarDadosFiscaisProdutoRequest.unidadeTributavelSigla': 'b65',
-  'AtualizarDadosFiscaisProdutoRequest.exTipi': 'b65',
-  'AtualizarDadosFiscaisProdutoRequest.codigoBeneficioFiscalPadrao': 'b65',
-  'AtualizarDadosFiscaisProdutoRequest.tipoItemSped': 'b65',
-  'VincularProdutoFornecedorRequest.descricaoFornecedor': 'b65',
+  // Campos LACUNA que ainda não têm cobertura de UI (próximas fatias)
   'TransferirEstoqueRequest.origemId': 'b66',
   'TransferirEstoqueRequest.documento': 'b66',
-  'CriarEmpresaRequest.crt': 'b64',
-  'AtualizarEmpresaRequest.crt': 'b64',
-  'AtualizarEmpresaRequest.contribuinteIpi': 'b64',
-  'AdmitirColaboradorRequest.pessoaId': 'b63'
+  'AtualizarEmpresaRequest.contribuinteIpi': 'b64'
 };
 
 /**
  * Ponto de entrada.
  */
 function main() {
-  const modules = ['produtos', 'estoque', 'administracao', 'seguranca', 'rh'];
+  const modules = ['produtos', 'estoque', 'administracao', 'seguranca', 'rh', 'clientes', 'fornecedores'];
   const allDivergences = [];
   const allMissingSchemas = [];
   const ignoredRecords = new Set();

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { TipoItemFiscal, TipoProduto } from '@/types/erp';
+import { TipoItemFiscal, TipoItemSped, TipoProduto } from '@/types/erp';
 import { isValidGuid } from '@/lib/http/requestUtils';
 
 const guidMessage = 'Selecione um registro válido.';
@@ -11,6 +11,17 @@ const nullableText = z.union([z.string(), z.null(), z.undefined()]).transform((v
     const normalized = value.trim();
     return normalized.length ? normalized : null;
 });
+// Campos curtos com limite do backend (`ProdutoValidators.cs`) — mesma normalização de `nullableText`,
+// mais o teto de caracteres, para o erro aparecer no formulário em vez de só no 400 do PATCH.
+const nullableTextMax = (max: number, label: string) =>
+    z
+        .union([z.string(), z.null(), z.undefined()])
+        .transform((value) => {
+            if (value === null || value === undefined) return null;
+            const normalized = value.trim();
+            return normalized.length ? normalized : null;
+        })
+        .refine((value) => value === null || value.length <= max, `${label} deve ter no máximo ${max} caracteres.`);
 const money = (label: string) => z.coerce.number({ invalid_type_error: `${label} deve ser numérico.` }).min(0, `${label} não pode ser negativo.`);
 const integer = (label: string) => z.coerce.number({ invalid_type_error: `${label} deve ser numérico.` }).int(`${label} deve ser inteiro.`).min(0, `${label} não pode ser negativo.`);
 
@@ -99,7 +110,15 @@ export const atualizarDadosFiscaisProdutoSchema = z.object({
     cestCodigo: nullableText,
     origemMercadoriaCodigo: nullableText,
     tipoItemFiscal: z.union([z.nativeEnum(TipoItemFiscal), z.null(), z.undefined()]).transform((value) => value ?? null),
+    // Editável desde a v1.11.0a8b65 (D59) — `0` (MercadoriaParaRevenda) é valor válido, `nativeEnum`
+    // aceita e `?? null` (nunca `|| null`) preserva o zero.
+    tipoItemSped: z.union([z.nativeEnum(TipoItemSped), z.null(), z.undefined()]).transform((value) => value ?? null),
+    // Sigla da unidade tributável oficial (Mód.04) resolvida por catálogo — nunca um Id (D60, ProdutoValidators linha 49).
+    unidadeTributavelSigla: nullableTextMax(6, 'Unidade tributável (sigla oficial)'),
     unidadeMedidaTributavelId: optionalGuid,
+    // Vazio = herda o EX-TIPI do NCM resolvido no backend (ProdutoDadosFiscaisResolver linha 152).
+    exTipi: nullableTextMax(3, 'EX-TIPI'),
+    codigoBeneficioFiscalPadrao: nullableTextMax(10, 'Código de benefício fiscal'),
     codigoFiscalExterno: nullableText
 });
 
@@ -112,5 +131,6 @@ export const adicionarCodigoBarrasProdutoSchema = z.object({
 export const vincularFornecedorProdutoSchema = z.object({
     fornecedorId: requiredGuid('Fornecedor'),
     codigoFornecedor: textRequired('Informe o código do fornecedor.'),
+    descricaoFornecedor: nullableTextMax(200, 'Descrição no fornecedor'),
     principal: z.boolean().default(false)
 });

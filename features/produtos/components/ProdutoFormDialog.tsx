@@ -15,12 +15,14 @@ import { FieldError } from '@/components/forms/FieldError';
 import { EmpresaFilialFields } from '@/components/forms/EmpresaFilialFields';
 import { MoneyInput } from '@/components/forms/MoneyInput';
 import { FormGrid } from '@/components/forms/FormGrid';
+import { SearchSelect } from '@/components/forms/SearchSelect';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
 import { atualizarProdutoSchema, criarProdutoSchema } from '@/features/produtos/schemas/produtosSchemas';
 import { CatalogoListQuery, ProdutoFormValues, ProdutoResponse } from '@/features/produtos/types/produtos.types';
 import { useCategoriasProduto, useMarcas, useUnidadesMedida } from '@/features/produtos/hooks/useProdutosResources';
+import { useUnidadesTributaveis } from '@/features/produtos/hooks/useUnidadeTributavelCatalogo';
 import { FieldErrors, fieldErrorMap, textValue, toOptions } from '@/features/produtos/components/produtoFormUtils';
-import { TipoItemFiscal, TipoProduto } from '@/types/erp';
+import { SelectOption, TipoItemFiscal, TipoItemSped, TipoProduto } from '@/types/erp';
 
 const tipoProdutoOptions = [
     { label: 'Mercadoria', value: TipoProduto.Mercadoria },
@@ -38,6 +40,35 @@ const tipoFiscalOptions = [
     { label: 'Composição', value: TipoItemFiscal.Composicao },
     { label: 'Outro', value: TipoItemFiscal.Outro }
 ];
+
+// 12 rótulos oficiais do Registro 0200 da EFD (SPED Fiscal), tabela fechada do backend — não é catálogo (D59).
+const tipoItemSpedOptions = [
+    { label: '0 — Mercadoria para revenda', value: TipoItemSped.MercadoriaParaRevenda },
+    { label: '1 — Matéria-prima', value: TipoItemSped.MateriaPrima },
+    { label: '2 — Embalagem', value: TipoItemSped.Embalagem },
+    { label: '3 — Produto em processo', value: TipoItemSped.ProdutoEmProcesso },
+    { label: '4 — Produto acabado', value: TipoItemSped.ProdutoAcabado },
+    { label: '5 — Subproduto', value: TipoItemSped.Subproduto },
+    { label: '6 — Produto intermediário', value: TipoItemSped.ProdutoIntermediario },
+    { label: '7 — Material de uso e consumo', value: TipoItemSped.MaterialDeUsoEConsumo },
+    { label: '8 — Ativo imobilizado', value: TipoItemSped.AtivoImobilizado },
+    { label: '9 — Serviços', value: TipoItemSped.Servicos },
+    { label: '10 — Outros insumos', value: TipoItemSped.OutrosInsumos },
+    { label: '99 — Outras', value: TipoItemSped.Outras }
+];
+
+const mensagemSemCadastrosFiscais = 'Consulta de cadastros fiscais indisponível: seu usuário não possui FISCAL_CADASTROS_CONSULTAR.';
+
+/**
+ * A busca do catálogo traz só a página corrente. Sem este merge, uma sigla já gravada no produto
+ * some do campo quando a busca atual não a contém — defeito já corrigido duas vezes no repositório
+ * (`CadastroFiscalSelects.tsx`, `useEnderecoFiscalCatalogos.ts`); aqui não há Id/descrição para
+ * resolver o rótulo (o `value` é a própria sigla, D60), então a opção sintética usa a sigla como label.
+ */
+export const comSiglaSelecionada = (options: SelectOption<string>[], siglaAtual?: string | null): SelectOption<string>[] => {
+    if (!siglaAtual || options.some((option) => option.value === siglaAtual)) return options;
+    return [{ label: siglaAtual, value: siglaAtual }, ...options];
+};
 
 const buildInitialValues = (record?: ProdutoResponse | null): ProdutoFormValues =>
     record
@@ -59,7 +90,12 @@ const buildInitialValues = (record?: ProdutoResponse | null): ProdutoFormValues 
               cestCodigo: record.cest,
               origemMercadoriaCodigo: record.origemMercadoriaCodigo,
               tipoItemFiscal: record.tipoItemFiscal === null || record.tipoItemFiscal === undefined ? null : Number(record.tipoItemFiscal),
+              // `0` é `MercadoriaParaRevenda`, checagem tem de ser explícita (nunca `value || null`).
+              tipoItemSped: record.tipoItemSped === null || record.tipoItemSped === undefined ? null : Number(record.tipoItemSped),
+              unidadeTributavelSigla: record.unidadeTributavelSigla,
               unidadeMedidaTributavelId: record.unidadeMedidaTributavelId,
+              exTipi: record.exTipi,
+              codigoBeneficioFiscalPadrao: record.codigoBeneficioFiscalPadrao,
               codigoFiscalExterno: record.codigoFiscalExterno,
               observacao: record.observacao
           }
@@ -82,8 +118,15 @@ const buildInitialValues = (record?: ProdutoResponse | null): ProdutoFormValues 
               ncmCodigo: null,
               cestCodigo: null,
               origemMercadoriaCodigo: null,
-              tipoItemFiscal: TipoItemFiscal.Mercadoria,
+              // Sem classificação fiscal por padrão: ninguém escolheu "Mercadoria" — mandar isso como
+              // se fosse decisão do operador é o DEFAULT_SILENCIOSO que faz o PATCH virar 400 quando
+              // o bloco deveria ficar em branco.
+              tipoItemFiscal: null,
+              tipoItemSped: null,
+              unidadeTributavelSigla: null,
               unidadeMedidaTributavelId: null,
+              exTipi: null,
+              codigoBeneficioFiscalPadrao: null,
               codigoFiscalExterno: null,
               observacao: null
           };
@@ -123,6 +166,12 @@ export const ProdutoFormDialog = ({
     const categoriaOptions = useMemo(() => toOptions(categoriasQuery.data ?? [], (item) => `${item.codigo} - ${item.nome}`), [categoriasQuery.data]);
     const marcaOptions = useMemo(() => toOptions(marcasQuery.data ?? [], (item) => item.nome), [marcasQuery.data]);
     const semEmpresaSelecionada = !record && !catalogoQuery.empresaId;
+
+    // Catálogo oficial global (Mód.04) da sigla de unidade tributável — guarda escopada ao próprio
+    // campo, não à aba inteira (D61): quem não tem FISCAL_CADASTROS_CONSULTAR continua editando os
+    // outros nove campos fiscais normalmente.
+    const unidadeTributavelCatalogo = useUnidadesTributaveis(visible);
+    const unidadeTributavelOptions = useMemo(() => comSiglaSelecionada(unidadeTributavelCatalogo.options, textValue(values.unidadeTributavelSigla) || null), [unidadeTributavelCatalogo.options, values.unidadeTributavelSigla]);
 
     useEffect(() => {
         if (visible) {
@@ -262,10 +311,44 @@ export const ProdutoFormDialog = ({
                                 <Dropdown id="tipoItemFiscal" value={values.tipoItemFiscal ?? null} options={tipoFiscalOptions} showClear onChange={(event) => update('tipoItemFiscal', event.value ?? null)} />
                                 <FieldError message={errors.tipoItemFiscal} />
                             </div>
-                            <div className="field col-12 md:col-6">
-                                <label htmlFor="unidadeMedidaTributavelId" className="font-medium">Unidade tributável</label>
+                            <div className="field col-12 md:col-3">
+                                <label htmlFor="tipoItemSped" className="font-medium">Tipo do item no SPED</label>
+                                <Dropdown id="tipoItemSped" value={values.tipoItemSped ?? null} options={tipoItemSpedOptions} showClear onChange={(event) => update('tipoItemSped', event.value ?? null)} />
+                                <FieldError message={errors.tipoItemSped} />
+                            </div>
+                            <div className="field col-12 md:col-3">
+                                <label htmlFor="unidadeTributavelSigla" className="font-medium">Unidade tributável (sigla oficial)</label>
+                                <SearchSelect
+                                    id="unidadeTributavelSigla"
+                                    value={textValue(values.unidadeTributavelSigla) || null}
+                                    options={unidadeTributavelOptions}
+                                    onChange={(value) => update('unidadeTributavelSigla', value)}
+                                    onSearch={unidadeTributavelCatalogo.buscar}
+                                    placeholder="Buscar unidade tributável"
+                                    filterPlaceholder="Sigla ou descrição"
+                                    emptyMessage={unidadeTributavelCatalogo.permitido ? 'Nenhuma unidade tributável encontrada.' : mensagemSemCadastrosFiscais}
+                                    loading={unidadeTributavelCatalogo.isFetching}
+                                    disabled={!unidadeTributavelCatalogo.permitido}
+                                    maxLabelLength={40}
+                                />
+                                <FieldError message={errors.unidadeTributavelSigla} />
+                                {!unidadeTributavelCatalogo.permitido ? <Message className="w-full mt-2" severity="warn" text={mensagemSemCadastrosFiscais} /> : null}
+                            </div>
+                            <div className="field col-12 md:col-3">
+                                <label htmlFor="unidadeMedidaTributavelId" className="font-medium">Unidade tributável (medida interna)</label>
                                 <EntitySelect id="unidadeMedidaTributavelId" entityName="unidade tributável" value={textValue(values.unidadeMedidaTributavelId) || null} options={unidadeOptions} onChange={(value) => update('unidadeMedidaTributavelId', value)} />
                                 <FieldError message={errors.unidadeMedidaTributavelId} />
+                            </div>
+                            <div className="field col-12 md:col-3">
+                                <label htmlFor="exTipi" className="font-medium">EX-TIPI</label>
+                                <InputText id="exTipi" value={textValue(values.exTipi)} className={className('exTipi')} onChange={(event) => update('exTipi', event.target.value)} />
+                                <FieldError message={errors.exTipi} />
+                                <small className="text-color-secondary">Em branco: herda o EX-TIPI do NCM.</small>
+                            </div>
+                            <div className="field col-12 md:col-6">
+                                <label htmlFor="codigoBeneficioFiscalPadrao" className="font-medium">Código de benefício fiscal</label>
+                                <InputText id="codigoBeneficioFiscalPadrao" value={textValue(values.codigoBeneficioFiscalPadrao)} className={className('codigoBeneficioFiscalPadrao')} onChange={(event) => update('codigoBeneficioFiscalPadrao', event.target.value)} />
+                                <FieldError message={errors.codigoBeneficioFiscalPadrao} />
                             </div>
                             <div className="field col-12 md:col-6">
                                 <label htmlFor="codigoFiscalExterno" className="font-medium">Código fiscal externo</label>
