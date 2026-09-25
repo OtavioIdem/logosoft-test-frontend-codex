@@ -246,6 +246,9 @@ alavancagem e andam em paralelo com a `c3` e a `b59`.
 | B-12 | A recusa de pedido de compra para fornecedor não homologado (parâmetro `COMPRAS_BLOQUEIA_FORNECEDOR_NAO_HOMOLOGADO`) vai para dentro da criação do pedido, ou `situacao-compra` é deliberadamente só consultivo? Hoje nenhum use case de Pedido de Compra lê `Homologado`. | `situacao-compra` (D64) e `b70` |
 | B-14 | Vai existir `GET` de listagem de bloqueios de estoque? Hoje a tela pede o GUID do bloqueio digitado, e não há como listá-los. | `b68` (D76) |
 | B-15 | O sistema de estoque avançado (ajuste, bloqueio, inventário) deveria atualizar `EstoqueSaldo`? Hoje só o básico o toca, e o saldo que Compras e Vendas integram não reflete as operações do avançado — dois livros-razão que não se reconciliam. | antes de `b69`/`b70` (D72) |
+| B-16 | `VENDAS_PRECO_MINIMO_SOBRESCREVER` e `POLITICA_COMERCIAL_GERENCIAR` saíram do catálogo (`PermissoesCatalogoDefinition.cs:119,130`) mas continuam em `SystemPermissions.All` e no contrato v1.23/§12, de onde o snapshot do frontend é gerado. Os documentos serão atualizados? | `b69` (D81) |
+| B-17 | `HistoricoStatusPedidoVenda` é gravado a cada troca de status e nenhum endpoint o expõe. Vai existir leitura? | depois da `b69` |
+| B-18 | `GET /api/vendas/pedidos` corta em 200 (`.Take(200)`) sem `page`/`pageSize`. Vai paginar? | `b69` (D78, aviso de teto) |
 | B-13 | Vai existir reativação de Classificação de Pessoa? Hoje `AuditableEntity.Reativar` existe no domínio, nenhum use case a expõe, e `Atualizar` recusa registro inativo — uma classificação inativada por engano fica travada. | `b67` (D69) |
 
 ## Correções fora da sequência funcional

@@ -2108,3 +2108,107 @@ Por quê: unanimidade nas rotas e nos bloqueios; Reservas proposta por operaçã
 Achado registrado, fora do recorte: `scripts/validate-guid-references.mjs` não enxerga o campo
 `id="blId"` de `BloqueiosEstoqueTab.tsx` (posição de plataforma).
 Reversível: sim. Quem arbitrou: orquestrador.
+
+### D77 — Tabelas de preço: o envelope `resultado` é corrigido como primeiro bloco da `b69`, sem `.cN` separada
+
+Data: 2026-09-25. Rodada: `11-venda`.
+Decisão: a tela de Tabelas de preço fica vazia porque `GET /api/tabelas-preco` devolve
+`{ "resultado": { ... } }` (`TabelaPrecoPagedResponse`, `TabelasPrecoResponses.cs:44`) e
+`tabelasPrecoApi.ts:23-28` só lê a página na raiz. A hipótese `v1.11.0a8b58.c4` cai: o backend
+resolve `empresaId` pelo JWT (`TabelaPrecoConsultaContextoResolver.cs:14-20`), e `termo` é ignorado
+pelo model binding, sem gerar 400. Entram juntos, no Bloco A da `b69`: desembrulhar `resultado` no
+client do módulo, sem parser genérico (há um caso só); as divergências de status e anulabilidade
+de Tabela de Preço (V2–V4 do inventário, incluindo `precoMinimo`/`margemPercentual` anuláveis); e
+parar de enviar `termo`, que o endpoint não declara. Uma busca que não filtra nada não fica na tela.
+Prova: teste do client com fixture no formato do record C#, e prova vermelha contra a `b68`.
+O lado backend do gate de campos precisa vir do C#, não de
+`docs/backend-v1.23/CONTRATO-API-v1.23.md`, cujos blocos de Tabelas de preço estão sem DTO ou com o
+schema errado (`:15471`, `:15480`, `:15515`; posição de plataforma, §0).
+Por quê: 3 a 1 (plataforma, escopo, design). É o mesmo critério da D71: a `b69` já reescreve essas
+telas, e o pior caso da correção é o estado atual.
+Alternativa descartada: `.cN` isolada antes da `b69` (operação). Não trouxe evidência que os outros
+três não tinham, só a preferência por ordem.
+Gatilho de revisita: uma captura HTTP autenticada que mostre a lista na raiz. Hoje a medição é
+leitura de código nas duas pontas mais 3 tabelas gravadas no banco que a tela nunca mostra.
+`accessRisk: NENHUM`. Reversível: sim. Quem arbitrou: orquestrador.
+
+### D78 — fila de pendentes: filtro de status sobre a listagem existente, sem rota nem item de menu novo
+
+Data: 2026-09-25. Rodada: `11-venda`.
+Decisão: o card "Aguardando aprovação" que já existe em `PedidosVendaPage` vira atalho clicável
+que aplica o filtro de status `AguardandoAprovacao(2)`. O filtro persiste na querystring, para
+voltar do detalhe para a mesma fila. O detalhe continua sob demanda, pela rota de detalhe que já
+existe. O backend não pagina a listagem (`.Take(200)` fixo em `VendasRepository.cs:39`, sem
+`page`/`pageSize`), então não há paginação de servidor. Quando a resposta vier com 200 linhas, a
+tela avisa que pode haver mais pedidos do que os exibidos. Se `GET /api/vendas/pedidos` declarar
+`termo`, a busca passa a ir ao servidor em vez de filtrar localmente; se não declarar, a busca
+local fica e o texto dela diz que só procura entre os exibidos.
+Por quê: 4 a 0 contra rota nova. O aviso de teto veio de plataforma e a querystring de operação;
+ninguém se opôs a nenhum dos dois.
+`accessRisk: NENHUM`. Reversível: sim. Quem arbitrou: orquestrador.
+
+### D79 — aprovação: resumo dentro do diálogo que já existe, `reservarEstoque` marcado por padrão e explicado
+
+Data: 2026-09-25. Rodada: `11-venda`.
+Decisão: o `AprovarPedidoVendaDialog` passa a mostrar número, cliente (por rótulo, nunca GUID),
+quantidade de itens e valor total antes de confirmar. Os dados vêm do `GET /api/vendas/pedidos/{id}`
+pela `pedidoVendaQueryKey` já em cache, nunca de uma chamada por linha da lista. `reservarEstoque`
+continua marcado por padrão, que é o comportamento de hoje, e ganha texto dizendo o efeito: reserva
+no estoque básico via `IEstoqueService`, o mesmo saldo que Compras e Vendas integram (B-15). O
+diálogo ganha o `ApiErrorPanel`. Erro de domínio sem `field` aparece como o backend o manda, sem
+mapeamento inventado. "Reprovar" não é construído, porque não existe no backend (B-5).
+Por quê: o resumo no diálogo existente foi 4 a 0. Sobre o padrão de `reservarEstoque`, operação e
+design votaram por marcado, escopo por desmarcado e plataforma se absteve. Ficar marcado não muda
+o que o operador faz hoje; desmarcar mudaria em silêncio o efeito da aprovação rápida antes de a
+B-5 responder, que é o risco que a própria posição de escopo queria evitar.
+Fora: feedback visual de `reservaEstoqueId` nos itens depois de aprovar (plataforma registrou, sem
+dono nesta rodada).
+Gatilho de revisita: resposta à B-5. `accessRisk: NENHUM`. Reversível: sim. Quem arbitrou: orquestrador.
+
+### D80 — a `b69` para em Aprovado; Faturar não é revisto, e V10 fica fora
+
+Data: 2026-09-25. Rodada: `11-venda`.
+Decisão: "liberação" não é termo do domínio de Vendas. O status mais próximo é
+`Aprovado(3)`, a partir do qual Faturar fica disponível. O recorte vai de Rascunho a Aprovado.
+Faturar já está em produção (`FaturarPedidoVendaUseCase.cs`, `PedidoVendaDetalhePage.tsx:232`) e
+fica com a `b71` (D67). A lacuna de resumo que a D79 fecha na aprovação também existe no diálogo de
+Faturar (posição de operação) e fica registrada como entrada da `b71`. A integração Pedido de Venda
+× Tabela de Preço (V10) não entra: nenhuma ponta do backend liga um ao outro, e preencher ou
+bloquear preço pela tela seria inventar regra. A consulta informativa de preço vigente dentro do
+item (proposta só por operação) também fica fora, pelo acoplamento entre features que ela traz sem
+regra de backend que a sustente.
+Por quê: 4 a 0 no corte em Aprovado e 4 a 0 em V10 fora.
+Gatilho de revisita: um use case do backend que leia `TabelasPreco` a partir de `PedidoVenda`.
+`accessRisk: NENHUM`. Reversível: sim. Quem arbitrou: orquestrador.
+
+### D81 — `VENDAS_PRECO_MINIMO_SOBRESCREVER` e `POLITICA_COMERCIAL_GERENCIAR` saem do union e do catálogo do frontend
+
+Data: 2026-09-25. Rodada: `11-venda`.
+Decisão: as duas saem de `types/erp.ts` e de `features/seguranca/permissoesCatalogo.ts`. O snapshot
+documental (`scripts/backend-permissions.snapshot.json`) ainda as lista, porque é gerado do contrato
+v1.23 e do catálogo §12, que não foram atualizados. Por isso cada uma entra em `coberturaPendente`
+de `scripts/backend-permissions.allowlist.json`, com a evidência do código abaixo. O snapshot não é
+editado.
+`accessRisk: NENHUM`, desempatado por medição e não por voto (2 a 2 entre `NENHUM` e `ILUSAO`):
+- no backend, as constantes existem (`SystemPermissions.cs:99-100`), mas saíram do catálogo
+  (`PermissoesCatalogoDefinition.cs:119,130`, D3 v1.21.3/G1) e não guardam nenhum endpoint;
+- no banco dev, `erp.permissoes` não tem nenhuma das duas (0 linhas, medido em 2026-09-25 por
+  `psql` no `logosoft-postgres`), então nenhum grupo as detém;
+- no frontend, só aparecem no union e no rótulo do catálogo, sem nenhum guard, regra de rota ou
+  item de menu (medido por `grep` no repositório).
+Não há botão que alguém deixe de ver, nem capacidade que se perca.
+Pergunta ao backend: **B-16**.
+Reversível: sim. Quem arbitrou: orquestrador.
+
+### D82 — `usePedidosVenda` só dispara com `empresaId` resolvido, e a `b69` é uma versão só
+
+Data: 2026-09-25. Rodada: `11-venda`.
+Decisão: `GET /api/vendas/pedidos` exige `empresaId` e hoje a primeira chamada sai sem ele,
+recebendo `[]` em silêncio (V5). O hook ganha `enabled: Boolean(filters.empresaId)`, no padrão que
+outros hooks do módulo já usam. O gate de campos de response (`scripts/gate-contract-fields.mjs`)
+passa a cobrir os responses de Pedido de Venda e de Tabela de Preço, com o C# como fonte do lado
+backend (D77). A entrega é uma versão só, `v1.11.0a8b69`, em blocos: A (Tabelas de preço, D77),
+B (listagem e fila, D78 e V5), C (aprovação, D79), D (permissões, D81).
+Por quê: `enabled` foi 4 a 0. A versão única foi 3 a 1, pelo mesmo raciocínio da D71.
+Alternativa descartada: `.cN` para Tabelas de preço antes da `b69` (ver D77).
+Reversível: sim. Quem arbitrou: orquestrador.
