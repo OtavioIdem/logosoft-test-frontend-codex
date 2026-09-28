@@ -80,8 +80,6 @@ export const PERMISSOES_CATALOGO: Record<PermissionCode, PermissaoCatalogoItem> 
     TABELAS_PRECO_ATIVAR: { grupo: 'Tabelas de preço', label: 'Ativar' },
     TABELAS_PRECO_INATIVAR: { grupo: 'Tabelas de preço', label: 'Inativar' },
     TABELAS_PRECO_ITENS_GERENCIAR: { grupo: 'Tabelas de preço', label: 'Itens · Gerenciar' },
-    POLITICA_COMERCIAL_GERENCIAR: { grupo: 'Tabelas de preço', label: 'Política comercial · Gerenciar' },
-    VENDAS_PRECO_MINIMO_SOBRESCREVER: { grupo: 'Tabelas de preço', label: 'Preço mínimo · Sobrescrever' },
     // Financeiro
     FINANCEIRO_CONSULTAR: { grupo: 'Financeiro', label: 'Consultar' },
     FINANCEIRO_GERENCIAR: { grupo: 'Financeiro', label: 'Gerenciar' },

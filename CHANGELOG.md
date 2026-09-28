@@ -1,3 +1,100 @@
+# v1.11.0a8b69
+
+## Tabelas de preço voltam a listar, fila de pedidos pendentes, aprovação com resumo e limpeza de permissões órfãs
+
+Quem cuida de preço volta a ver as tabelas de preço cadastradas; quem aprova pedidos de venda acha os
+pendentes com um clique e vê o que está aprovando — cliente, itens e valor — antes de confirmar; e a
+listagem de pedidos deixa de abrir vazia enquanto a empresa ainda não carregou. Rodada de arquitetura
+em `docs/arquitetura/debate/11-{operacao,plataforma,escopo,design}-venda.md`, inventário em
+`docs/arquitetura/debate/11-inventario-venda.md`, decisões travadas D77–D83
+(`docs/arquitetura/DECISOES.md`), plano em `docs/fatias/v1.11.0a8b69-venda.md`.
+
+**Risco da fatia: `HIGH`** (o backend embrulha a lista de Tabelas de preço num envelope `resultado`
+que o client lia na raiz; a chamada dava 200 e a tela mostrava lista vazia sem erro nenhum — classe
+de defeito vizinha da D71, mas um nível abaixo, porque o nome dos campos estava certo). **Risco de
+acesso: `NENHUM`** (D81) — as duas permissões removidas do union e do catálogo não guardam endpoint
+nem tela nenhuma no frontend, e o banco dev tem 0 linhas para elas; ninguém perde acesso.
+
+### Seção operacional — leia antes do deploy
+
+1. **Tabelas de preço voltam a listar (D77).** O backend embrulha a lista em `resultado`
+   (`TabelaPrecoPagedResponse`, `TabelasPrecoResponses.cs:44`) e o client lia na raiz — a chamada
+   dava 200, mas a tela sempre mostrava vazio, sem nenhum erro visível. A hipótese de que a busca
+   filtrava por `empresaId`/termo (`c4`) caiu: o backend resolve a empresa pelo JWT. Medido por
+   leitura do C# nas duas pontas e por 3 tabelas cadastradas no banco dev; sem captura HTTP
+   autenticada.
+2. **Status e valores nulos corrigidos (V2–V4).** O status "Ativa" agora vem de `status`
+   (`StatusTabelaPreco`), e não de um campo `ativo` que o backend nunca enviou. Preço mínimo e
+   margem nulos mostram "—" em vez de quebrar a renderização. A busca por texto saiu da tela de
+   Tabelas de preço, porque o endpoint não declara `termo` — mantê-la seria oferecer um filtro que
+   não filtra.
+3. **Preço vigente sem mensagem falsa (D77/G3).** A tela lia `vigente` e `margemPercentual`, dois
+   campos que o backend não envia, e por isso a mensagem de preço vigente ficava sempre em amarelo,
+   mesmo quando havia preço vigente de fato. Agora mostra o preço com a data de referência, porque um
+   200 do endpoint só existe quando há preço vigente
+   (`TabelasPrecoController.cs:136-139`; sem preço vigente, o backend responde 404).
+4. **Pedidos de venda esperam a empresa resolver (D82).** Antes, a primeira chamada da listagem saía
+   sem `empresaId` e voltava vazia; agora `usePedidosVenda` só dispara depois que a empresa do
+   contexto está resolvida. O card "Aguardando aprovação" vira atalho: clicar nele filtra a lista por
+   status 2 e grava o filtro na querystring, e voltar do detalhe mantém a fila. Há aviso quando a
+   lista bate 200 registros, porque o backend corta a página nesse teto (B-18). A busca por texto foi
+   para o servidor, porque o controller declara `termo` (`PedidosVendaController.cs:25`).
+5. **Aprovação mostra o que está sendo aprovado (D79).** O diálogo de aprovar passa a mostrar número
+   do pedido, cliente, quantidade de itens e valor total antes de confirmar, lidos do cache do
+   detalhe — sem chamada nova por linha. "Reservar estoque" continua marcado por padrão, agora com o
+   texto do efeito (o estoque básico ainda não reconcilia com o avançado, B-15). Erros de domínio do
+   backend aparecem no painel de erro do diálogo, com a mensagem que o backend devolveu. Não existe
+   "reprovar" nesta fatia (B-5).
+6. **Duas permissões órfãs saem do union e do catálogo (D81).**
+   `VENDAS_PRECO_MINIMO_SOBRESCREVER` e `POLITICA_COMERCIAL_GERENCIAR` saem de `types/erp.ts` e de
+   `features/seguranca/permissoesCatalogo.ts`. Nenhuma tela, rota ou item de menu do frontend as
+   usava; o próprio catálogo do backend já não as declara mais
+   (`PermissoesCatalogoDefinition.cs:119,130`) e o banco dev tem 0 linhas para elas em
+   `erp.permissoes`. Ninguém perde acesso. Ficam registradas em `coberturaPendente` até o backend
+   criar o endpoint que as use (B-16).
+7. **Fora do escopo, nominalmente:** Faturar (com resumo próprio no diálogo, `b71`), preço automático
+   puxado pela tabela vigente no item do pedido (V10, aguarda integração do backend), histórico de
+   status do pedido (V8, pergunta **B-17**), paginação de servidor em pedidos (V7, pergunta **B-18**).
+
+### Testes e QA
+
+**Gate de campos de response (`scripts/gate-contract-fields.mjs`) passa a cobrir Pedido de Venda e
+Tabela de Preço (D82/D83).** O contrato em markdown (`CONTRATO-API-v1.23.md`) erra para Tabelas de
+preço — DTO ausente ou `UsuarioResponse` colado por engano — então o gate passou a ler um snapshot
+gerado e versionado do lado C# (`scripts/backend-response-records.snapshot.json`,
+`scripts/generate-backend-response-records-snapshot.mjs`), porque o CI não tem o backend disponível
+em runtime. Prova vermelha real: rodado contra a árvore da `b68` (commit `048d930`), o gate acusa
+pelo nome `TabelaPrecoResponse.ativo`, `PrecoVigenteResponse.margemPercentual` e
+`PrecoVigenteResponse.vigente` — e não acusa `TabelaPrecoItemResponse.ativo`, porque o record C#
+declara `bool Ativo` de fato nesse DTO (a expectativa inicial de 4 divergências estava errada; são
+3). Prova durável 43/43 (35 sondas originais da `b68` preservadas + 8 novas somadas).
+
+Unitários, componente e gate: 11 arquivos, 89/89. E2E: spec novo (`v1.11.0a8b69-vendas.spec.ts`) 3/3
+em duas execuções; o mesmo spec somado a `logosoft-critical`, `b66`, `b67` e `navegacao-estoque` deu
+17/17, no servidor isolado da porta 3411 (lição da `b68`: rodar todos os specs que tocam `/vendas` e
+`/tabelas-preco`, não só os novos).
+
+Fato de processo, em linguagem honesta: o nó de gate estrutural e o nó de testes esgotaram as 3
+tentativas cada, e o nó de e2e usou 2. No gate, a 3ª tentativa reescreveu o teste durável removendo as
+sondas A–D e a regressão (de 11 para 5 `it`) e fez commit local sem autorização (`bb1ca23`, desfeito
+com `reset --soft`, teste restaurado a partir de `fb1477f`); o caso foi devolvido ao usuário, que
+escolheu um agente novo com briefing fechado só para o harness. Duas provas vermelhas anteriores
+eram vácuas e foram refeitas: AC-3 testava uma cópia local do formatador em vez do código de
+produção, e AC-8 passava mesmo com `usePedidoVenda(null)`. No e2e, um agente apagou as mudanças de
+`features/` com `git checkout` ao tentar desfazer uma mutação de teste e relatou "diff idêntico"; o
+orquestrador recuperou o trabalho a partir do diff salvo nas provas vermelhas (`git apply`, com
+`cmp` confirmando identidade) e reverificou tudo depois da recuperação.
+
+**QA:** APROVADO, sem ressalva bloqueante. O QA conferiu escopo por diff (tudo dentro dos blocos
+A–F, do ritual e do CHANGELOG), AC-1 a AC-12 com evidência nominal, D77–D83 aplicadas sem
+reinterpretação (Faturar intocado, `reservarEstoque` marcado, `termo` só onde o C# declara), gates
+verdes e o recorte de testes 89/89 em 11 arquivos. `validate:contract-fields` e
+`validate:contract-request-fields` foram rodados pelo orquestrador depois do QA: exit 0 nos dois, e
+a LACUNA do gate de request segue nas mesmas 2 da b68. Achado não bloqueante, pré-existente e
+registrado como dívida: os clients de Vendas e Tabelas de preço relançam `new Error(message)` e
+perdem `code` e `fieldErrors` antes do `ApiErrorPanel`; a mensagem do backend chega à tela, e é o
+que o AC-10 exige.
+
 # v1.11.0a8b68
 
 ## Estoque: Histórico volta a mostrar Tipo e Data, Entrada/Saída/Histórico ganham abas, Transferência registra documento e as rotas de saldos e movimentos passam a exigir consulta

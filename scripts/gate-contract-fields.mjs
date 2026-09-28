@@ -43,6 +43,15 @@ const BACKEND_TYPE_MAP = {
   },
   estoque: {
     MovimentoEstoque: 'MovimentoEstoqueResponse'  // D71, v1.11.0a8b68: nomes de campo tipo/dataMovimento
+  },
+  'tabelas-preco': {
+    TabelaPrecoResponse: 'TabelaPrecoResponse',
+    TabelaPrecoItemResponse: 'TabelaPrecoItemResponse',  // D77/D82, v1.11.0a8b69: prova vermelha contra b68
+    PrecoVigenteResponse: 'PrecoProdutoVigenteResponse'
+  },
+  vendas: {
+    PedidoVendaResponse: 'PedidoVendaResponse',  // D82, v1.11.0a8b69: prova vermelha contra b68
+    ItemPedidoVendaResponse: 'ItemPedidoVendaResponse'
   }
 };
 
@@ -69,6 +78,32 @@ function extractCSharpFields(csharpBlock) {
   }
 
   return [...new Set(fields)]; // Remove duplicatas
+}
+
+/**
+ * Tenta extrair campos do record C# usando grep e processamento de saída.
+ * Procura pela declaração `public sealed record RecordName(...)`.
+ */
+/**
+ * D83: Carrega records do snapshot versionado gerado por generate-backend-response-records-snapshot.mjs
+ */
+function loadSnapshotRecords() {
+  const snapshotPath = path.join(ROOT, 'scripts', 'backend-response-records.snapshot.json');
+  if (!fs.existsSync(snapshotPath)) {
+    return {};
+  }
+  try {
+    const content = fs.readFileSync(snapshotPath, 'utf8');
+    const snapshot = JSON.parse(content);
+    const result = {};
+    for (const [recordName, data] of Object.entries(snapshot.records || {})) {
+      result[recordName] = data.fields || [];
+    }
+    return result;
+  } catch (e) {
+    console.error(`❌ Erro ao ler snapshot: ${e.message}`);
+    process.exit(1);
+  }
 }
 
 /**
@@ -127,10 +162,12 @@ function loadContractFromDocument(contractPath) {
 
 /**
  * Constrói o mapa de contrato resolvendo a ligação TS → C#.
- * Se o record esperado não existir, tenta resolver a partir de IReadOnlyCollection<Record>.
+ * D83: Lê snapshot com precedência para tabelas-preco; fallback para snapshot em outros módulos.
+ * Record não encontrado em markdown E snapshot = FALHA (exit ≠ 0).
  */
 function buildBackendContracts(contractPath) {
   const contractRecords = loadContractFromDocument(contractPath);
+  const snapshotRecords = loadSnapshotRecords();
   const result = {};
 
   for (const [module, typeMap] of Object.entries(BACKEND_TYPE_MAP)) {
@@ -150,12 +187,30 @@ function buildBackendContracts(contractPath) {
         found = contractRecords[listKey];
       }
 
-      if (!found) {
-        console.warn(`⚠️  Record ${csharpRecord} (esperado por ${tsType}) não encontrado no contrato`);
-        result[module][tsType] = [];
-      } else {
-        result[module][tsType] = found;
+      // D77/D82: Para tabelas-preco e vendas, o snapshot tem precedência
+      // Se o record não existe no snapshot, é FALHA (não fallback para markdown)
+      if (module === 'tabelas-preco' || module === 'vendas') {
+        if (snapshotRecords[csharpRecord]) {
+          found = snapshotRecords[csharpRecord];
+          console.warn(`ℹ️  Record ${csharpRecord} (esperado por ${tsType}) lido do snapshot (precedência D77/D82)`);
+        } else {
+          // Record não existe em snapshot = FALHA ESTRUTURAL (mesmo se estiver em markdown)
+          console.error(`❌ FALHA ESTRUTURAL — Record ${csharpRecord} (esperado por ${tsType}) não encontrado em snapshot (obrigatório para módulo ${module})`);
+          process.exit(1);
+        }
+      } else if (!found && snapshotRecords[csharpRecord]) {
+        // Para outros módulos, snapshot é fallback
+        found = snapshotRecords[csharpRecord];
+        console.warn(`ℹ️  Record ${csharpRecord} (esperado por ${tsType}) lido do snapshot`);
       }
+
+      // D83: FALHA se não encontrar em lugar nenhum
+      if (!found) {
+        console.error(`❌ FALHA ESTRUTURAL — Record ${csharpRecord} (esperado por ${tsType}) não encontrado no contrato markdown nem no snapshot`);
+        process.exit(1);
+      }
+
+      result[module][tsType] = found;
     }
   }
 
@@ -485,7 +540,7 @@ function filterAllowlisted(divergences, allowlist) {
  * Ponto de entrada: valida os quatro módulos e emite relatório.
  */
 function main() {
-  const modules = ['bancos', 'contabil', 'patrimonio', 'estoque'];
+  const modules = ['bancos', 'contabil', 'patrimonio', 'estoque', 'tabelas-preco', 'vendas'];
   const allDivergences = [];
   const allMissingTypes = [];
   const allowlist = loadAllowlist();
@@ -505,12 +560,15 @@ function main() {
   validateExceptionsCeiling(allowlist);
 
   for (const moduleName of modules) {
+    // Converte kebab-case para camelCase para nomes de arquivo
+    const fileModuleName = moduleName.replace(/-([a-z])/g, (match, letter) => letter.toUpperCase());
+
     const typesFile = path.join(
       ROOT,
       'features',
       moduleName,
       'types',
-      `${moduleName}.types.ts`
+      `${fileModuleName}.types.ts`
     );
 
     if (!fs.existsSync(typesFile)) {

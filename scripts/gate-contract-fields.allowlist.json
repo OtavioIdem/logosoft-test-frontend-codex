@@ -1,12 +1,14 @@
 {
-  "description": "Registro de exceção: campo declarado no TS que não existe no C#, drenado na fatia v1.11.0a8b54.c2 por D18 + b68 D71",
-  "scopeFatia": "v1.11.0a8b54.c2 — prova durável do gate de campo; v1.11.0a8b68 — MovimentoEstoque ganha validação",
+  "description": "Registro de exceção: campo declarado no TS que não existe no C#, drenado na fatia v1.11.0a8b54.c2 por D18 + b68 D71 + b69 D77/D82",
+  "scopeFatia": "v1.11.0a8b54.c2 — prova durável do gate de campo; v1.11.0a8b68 — MovimentoEstoque ganha validação; v1.11.0a8b69 — Tabelas de Preço e Vendas ganham validação",
   "exceptions": [
     { "module": "estoque", "type": "MovimentoEstoque", "field": "codigo", "reason": "BaseOperationalRecord: backend não serializa para MovimentoEstoqueResponse" },
     { "module": "estoque", "type": "MovimentoEstoque", "field": "status", "reason": "BaseOperationalRecord: backend não serializa para MovimentoEstoqueResponse" },
     { "module": "estoque", "type": "MovimentoEstoque", "field": "auditoria", "reason": "BaseOperationalRecord: backend não serializa para MovimentoEstoqueResponse" },
-    { "module": "estoque", "type": "MovimentoEstoque", "field": "historicoStatus", "reason": "BaseOperationalRecord: backend não serializa para MovimentoEstoqueResponse" }
+    { "module": "estoque", "type": "MovimentoEstoque", "field": "historicoStatus", "reason": "BaseOperationalRecord: backend não serializa para MovimentoEstoqueResponse" },
+    { "module": "tabelas-preco", "type": "TabelaPrecoResponse", "field": "criadoEm", "reason": "D77/D82: TabelaPrecoResponse do C# não serializa timestamps de auditoria; grep confirma que não é lido em tela" },
+    { "module": "tabelas-preco", "type": "TabelaPrecoResponse", "field": "alteradoEm", "reason": "D77/D82: TabelaPrecoResponse do C# não serializa timestamps de auditoria; grep confirma que não é lido em tela" }
   ],
-  "teto": 4,
-  "note": "Prova: 24 nomes contra 2c50771 (17 próprios + 7 herdados por interseção), complemento de D19. Estoque: MovimentoEstoque herda BaseOperationalRecord, mas backend não envia esses campos."
+  "teto": 6,
+  "note": "Prova b68: 048d930; na b69 sem vigente: gate acusa vigente (defeito sendo corrigido pelo builder). Estoque: 4 campos. Tabelas de Preço: 2 campos de auditoria."
 }

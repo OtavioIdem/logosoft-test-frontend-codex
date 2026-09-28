@@ -2212,3 +2212,23 @@ B (listagem e fila, D78 e V5), C (aprovação, D79), D (permissões, D81).
 Por quê: `enabled` foi 4 a 0. A versão única foi 3 a 1, pelo mesmo raciocínio da D71.
 Alternativa descartada: `.cN` para Tabelas de preço antes da `b69` (ver D77).
 Reversível: sim. Quem arbitrou: orquestrador.
+
+### D83 — o gate de campos lê o C# de um snapshot gerado e versionado, nunca de `../New project 3` em tempo de execução
+
+Data: 2026-09-25. Fatia: `v1.11.0a8b69`, nó `gate_estrutural` (1ª tentativa).
+Decisão: os records C# que o gate de campos de response precisa (os de Tabelas de preço, por D77,
+e os que o contrato em markdown não expande, como `TabelaPrecoItemResponse` e
+`ItemPedidoVendaResponse`) entram num snapshot versionado,
+`scripts/backend-response-records.snapshot.json`. Quem o gera é
+`scripts/generate-backend-response-records-snapshot.mjs`, que lê `../New project 3/src` na máquina
+de quem tem o backend. O snapshot registra a origem de cada record (arquivo e linha) e a data. O
+gate lê o snapshot, e não o diretório do backend. Para Tabelas de preço, o snapshot tem precedência
+sobre o markdown. Record mapeado que não está nem no markdown nem no snapshot faz o gate **falhar**.
+O snapshot é artefato gerado: não se escreve à mão, e correção é no gerador ou na origem.
+Por quê: a primeira tentativa lia `../New project 3` em tempo de execução. No runner do CI esse
+diretório não existe; o record não encontrado virava lista vazia com aviso, e o gate ficaria verde
+sem medir, a mesma classe de defeito que a b68 corrigiu. O snapshot de permissões
+(`scripts/backend-permissions.snapshot.json`) já resolve o mesmo problema desse jeito.
+Alternativas descartadas: fazer o checkout do backend no CI (acopla o pipeline a um segundo
+repositório e a credencial); pular os records ausentes (gate vácuo).
+Reversível: sim. Quem arbitrou: orquestrador.

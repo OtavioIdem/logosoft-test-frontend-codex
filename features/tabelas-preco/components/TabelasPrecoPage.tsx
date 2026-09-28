@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
-import { SearchInput } from '@/components/forms/SearchInput';
 import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
 import { PageHeader } from '@/components/common/PageHeader';
@@ -23,19 +22,19 @@ import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { useProdutos } from '@/features/produtos/hooks/useProdutosResources';
 import { TabelaPrecoFormDialog } from '@/features/tabelas-preco/components/TabelaPrecoFormDialog';
 import { TabelaPrecoItemDialog } from '@/features/tabelas-preco/components/TabelaPrecoItemDialog';
+import { isTabelaAtiva } from '@/features/tabelas-preco/components/tabelasPrecoUiUtils';
 import { usePrecoVigente, useTabelaPrecoDetalhe, useTabelaPrecoMutations, useTabelasPreco } from '@/features/tabelas-preco/hooks/useTabelasPreco';
 import { TabelaPrecoFormValues, TabelaPrecoItemFormValues, TabelaPrecoItemResponse, TabelaPrecoListQuery, TabelaPrecoResponse } from '@/features/tabelas-preco/types/tabelasPreco.types';
 import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
-import { formatMoney } from '@/lib/formatters/money';
+import { formatMoney, formatMoneyOptional } from '@/lib/formatters/money';
 
 const formatDate = (value?: string | null) => (value ? new Date(`${value}T00:00:00`).toLocaleDateString('pt-BR') : '-');
-const isTabelaAtiva = (tabela: TabelaPrecoResponse) => tabela.ativo === true || String(tabela.status ?? '').toLowerCase() === 'ativa' || Number(tabela.status) === 1;
+const formatPercentOptional = (value: number | null | undefined) => (value === null || value === undefined || Number.isNaN(value) ? '—' : `${value.toFixed(2)}%`);
 
 export const TabelasPrecoPage = () => {
     const runWithToast = useMutationWithToast();
     const { hasPermission } = usePermissions();
-    const [search, setSearch] = useState('');
     const [first, setFirst] = useState(0);
     const [rows, setRows] = useState(10);
     const [formVisible, setFormVisible] = useState(false);
@@ -50,7 +49,7 @@ export const TabelasPrecoPage = () => {
     const [precoEnabled, setPrecoEnabled] = useState(false);
 
     const page = Math.floor(first / rows) + 1;
-    const listQuery = useMemo<TabelaPrecoListQuery>(() => ({ termo: search.trim() || null, page, pageSize: rows }), [search, page, rows]);
+    const listQuery = useMemo<TabelaPrecoListQuery>(() => ({ page, pageSize: rows }), [page, rows]);
     const tabelasQuery = useTabelasPreco(listQuery);
     const detalheQuery = useTabelaPrecoDetalhe(selectedTabela?.id ?? null);
     const produtosQuery = useProdutos({});
@@ -107,7 +106,6 @@ export const TabelasPrecoPage = () => {
 
     const headerActions = (
         <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
-            <SearchInput ariaLabel="Buscar tabela" defaultValue={search} onChange={(term) => { setSearch(term); setFirst(0); }} />
             <PermissionGuard permission="TABELAS_PRECO_GERENCIAR" mode="disable">
                 {({ disabled }) => <Button label="Nova tabela" icon="pi pi-plus" disabled={disabled} onClick={() => { setSelectedTabela(null); setFormVisible(true); }} />}
             </PermissionGuard>
@@ -137,7 +135,7 @@ export const TabelasPrecoPage = () => {
                                 { key: 'inativar', label: 'Inativar', icon: 'pi pi-ban', permission: 'TABELAS_PRECO_INATIVAR', severity: 'danger' as const, disabled: !isTabelaAtiva(tabela), onClick: () => { setSelectedTabela(tabela); setReasonAction('inativar-tabela'); } }
                             ]} />} />
                         </DataTableServer>
-                        {!tabelasQuery.isLoading && totalRecords === 0 ? <EmptyState title="Nenhuma tabela" description="Crie uma tabela ou ajuste a busca." /> : null}
+                        {!tabelasQuery.isLoading && totalRecords === 0 ? <EmptyState title="Nenhuma tabela" description="Nenhuma tabela de preço cadastrada para a empresa." /> : null}
                     </Card>
                 </div>
 
@@ -152,8 +150,8 @@ export const TabelasPrecoPage = () => {
                             <DataTableServer<TabelaPrecoItemResponse> value={itens} totalRecords={itens.length} loading={detalheQuery.isFetching} first={0} rows={5} onPage={() => undefined} emptyMessage="Nenhum item encontrado.">
                                 <Column header="Produto" body={(item: TabelaPrecoItemResponse) => produtoLabelMap.get(item.produtoId) ?? item.produtoId} />
                                 <Column header="Preço" body={(item: TabelaPrecoItemResponse) => formatMoney(item.precoVenda)} />
-                                <Column header="Mínimo" body={(item: TabelaPrecoItemResponse) => formatMoney(item.precoMinimo)} />
-                                <Column header="Margem" body={(item: TabelaPrecoItemResponse) => `${item.margemPercentual.toFixed(2)}%`} />
+                                <Column header="Mínimo" body={(item: TabelaPrecoItemResponse) => formatMoneyOptional(item.precoMinimo)} />
+                                <Column header="Margem" body={(item: TabelaPrecoItemResponse) => formatPercentOptional(item.margemPercentual)} />
                                 <Column header="Ações" body={(item: TabelaPrecoItemResponse) => <DataTableActions actions={[
                                     { key: 'editar-item', label: 'Editar', icon: 'pi pi-pencil', permission: 'TABELAS_PRECO_ITENS_GERENCIAR', onClick: () => { setSelectedItem(item); setItemVisible(true); } },
                                     { key: 'inativar-item', label: 'Inativar', icon: 'pi pi-ban', permission: 'TABELAS_PRECO_ITENS_GERENCIAR', severity: 'danger' as const, disabled: item.ativo === false, onClick: () => { setSelectedItem(item); setReasonAction('inativar-item'); } }
@@ -171,7 +169,7 @@ export const TabelasPrecoPage = () => {
                             <div className="field col-12 md:col-6 flex align-items-end"><Button className="w-full" label="Consultar" icon="pi pi-search" disabled={!precoProdutoId} loading={precoVigenteQuery.isFetching} onClick={() => setPrecoEnabled(true)} /></div>
                         </div>
                         {precoVigenteQuery.error ? <ApiErrorPanel error={mapApiError(precoVigenteQuery.error)} /> : null}
-                        {precoVigenteQuery.data ? <Message severity={precoVigenteQuery.data.vigente ? 'success' : 'warn'} text={`Preço vigente: ${formatMoney(precoVigenteQuery.data.precoVenda)} • mínimo ${formatMoney(precoVigenteQuery.data.precoMinimo)} • margem ${precoVigenteQuery.data.margemPercentual.toFixed(2)}%`} /> : null}
+                        {precoVigenteQuery.data ? <Message severity="success" text={`Preço vigente em ${formatDate(precoVigenteQuery.data.dataReferencia)}: ${formatMoney(precoVigenteQuery.data.precoVenda)} • mínimo ${formatMoneyOptional(precoVigenteQuery.data.precoMinimo)}`} /> : null}
                     </Card>
                 </div>
             </div>

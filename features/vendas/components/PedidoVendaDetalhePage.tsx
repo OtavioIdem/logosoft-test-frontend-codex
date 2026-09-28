@@ -292,7 +292,7 @@ export const PedidoVendaDetalhePage = ({ pedidoId }: { pedidoId?: string }) => {
             <PedidoVendaItemDialog visible={Boolean(itemDialog)} pedido={pedido} item={itemDialog && itemDialog !== 'novo' ? itemDialog : null} loading={mutations.itemMutation.isPending} onHide={() => setItemDialog(null)} onSubmit={saveItem} />
             <ReasonDialog visible={Boolean(removeItem)} title="Motivo da remoção do item" confirmLabel="Remover" loading={mutations.removerItemMutation.isPending} onHide={() => setRemoveItem(null)} onConfirm={removerItem} />
             <ReasonDialog visible={cancelarVisible} title="Motivo do cancelamento" confirmLabel="Cancelar pedido" loading={mutations.cancelarMutation.isPending} onHide={() => setCancelarVisible(false)} onConfirm={cancelar} />
-            <AprovarPedidoVendaDialog visible={aprovarVisible} loading={mutations.aprovarMutation.isPending} onHide={() => setAprovarVisible(false)} onSubmit={aprovar} />
+            <AprovarPedidoVendaDialog visible={aprovarVisible} pedidoId={pedido?.id ?? null} loading={mutations.aprovarMutation.isPending} error={mutations.aprovarMutation.error} onHide={() => { setAprovarVisible(false); mutations.aprovarMutation.reset(); }} onSubmit={aprovar} />
             <FaturarPedidoVendaDialog visible={faturarVisible} loading={mutations.faturarMutation.isPending} onHide={() => setFaturarVisible(false)} onSubmit={faturar} />
             <GerarNotaFiscalPedidoVendaDialog visible={gerarNotaFiscalVisible} loading={fiscalMutations.gerarNotaPedidoMutation.isPending} onHide={() => setGerarNotaFiscalVisible(false)} onSubmit={gerarNotaFiscal} pedidoVendaId={pedido?.id} escopoPedido={pedido ? { empresaId: pedido.empresaId, filialId: pedido.filialId ?? null } : undefined} />
         </>

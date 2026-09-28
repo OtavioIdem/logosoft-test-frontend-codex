@@ -14,10 +14,15 @@ type FaturarPayload = { id: string; values: unknown };
 export const pedidosVendaQueryKey = (query?: PedidoVendaListQuery) => ['vendas', 'pedidos', query] as const;
 export const pedidoVendaQueryKey = (id?: string | null) => ['vendas', 'pedido', id] as const;
 
+// `GET /api/vendas/pedidos` exige `empresaId` como `Guid` obrigatório
+// (`PedidosVendaController.cs:25`); sem ele, `OrganizationalContextGuard` devolve falha que o
+// use case converte em lista vazia — HTTP 200, corpo `[]`, sem sinal de erro (V5, D82). O hook
+// só dispara depois que o contexto organizacional resolveu a empresa.
 export const usePedidosVenda = (query: PedidoVendaListQuery = {}) =>
     useQuery({
         queryKey: pedidosVendaQueryKey(query),
-        queryFn: () => vendasApi.listar(query)
+        queryFn: () => vendasApi.listar(query),
+        enabled: Boolean(query.empresaId)
     });
 
 export const usePedidoVenda = (id?: string | null) =>
