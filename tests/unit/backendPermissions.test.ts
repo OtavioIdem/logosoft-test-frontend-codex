@@ -90,9 +90,16 @@ describe('backend permissions', () => {
         expect(allowlist.fantasmasConhecidos.length).toBe(0);
         expect(allowlist.teto.fantasmas).toBe(allowlist.fantasmasConhecidos.length);
 
-        expect(allowlist.teto.coberturaPendente).toBe(0);
-        expect(allowlist.coberturaPendente.length).toBe(0);
+        expect(allowlist.teto.coberturaPendente).toBe(2);
+        expect(allowlist.coberturaPendente.length).toBe(2);
         expect(allowlist.teto.coberturaPendente).toBe(allowlist.coberturaPendente.length);
+
+        // Validar que as duas permissões pendentes são as esperadas (D81)
+        const codes = allowlist.coberturaPendente.map((item: any) => item.code).sort();
+        expect(codes).toEqual(['POLITICA_COMERCIAL_GERENCIAR', 'VENDAS_PRECO_MINIMO_SOBRESCREVER']);
+
+        // Validar que ambas têm alvo B-16
+        expect(allowlist.coberturaPendente.every((item: any) => item.target === 'B-16')).toBe(true);
     });
 
     it('allowlist expiresAt não está vencido', () => {
@@ -236,7 +243,7 @@ Permissões no backend | **2** (mais MASTER_GOD e *)`;
         expect(allowlist.teto.fantasmas).toBe(0);
     });
 
-    it('estado real do repositório: nenhuma cobertura pendente (F1.2/F1.3 fecharam as 36 de b49)', () => {
+    it('estado real: cobertura pendente contém só as duas permissões de D81 (B-16)', () => {
         const snapshot = JSON.parse(read('scripts/backend-permissions.snapshot.json'));
         const allowlist = JSON.parse(read('scripts/backend-permissions.allowlist.json'));
         const inputs = readPermissionInputs(root);
@@ -246,11 +253,16 @@ Permissões no backend | **2** (mais MASTER_GOD e *)`;
             snapshotPermissions: snapshot.permissions
         });
 
-        expect(comparison.coberturaPendente.length).toBe(0);
+        // Comparação com snapshot: exatamente as duas permissões da D81
+        const comparisonCodes = comparison.coberturaPendente.sort();
+        expect(comparisonCodes).toEqual(['POLITICA_COMERCIAL_GERENCIAR', 'VENDAS_PRECO_MINIMO_SOBRESCREVER']);
 
-        // Allowlist mantém registro histórico vazio; teto é 0
-        expect(allowlist.coberturaPendente.length).toBe(0);
-        expect(allowlist.teto.coberturaPendente).toBe(0);
+        // Allowlist registra as mesmas duas; teto é 2
+        expect(allowlist.coberturaPendente.length).toBe(2);
+        expect(allowlist.teto.coberturaPendente).toBe(2);
+
+        const allowlistCodes = allowlist.coberturaPendente.map((item: any) => item.code).sort();
+        expect(allowlistCodes).toEqual(['POLITICA_COMERCIAL_GERENCIAR', 'VENDAS_PRECO_MINIMO_SOBRESCREVER']);
     });
 
     it('rejeita allowlist duplicada, expirada ou supressora', () => {
