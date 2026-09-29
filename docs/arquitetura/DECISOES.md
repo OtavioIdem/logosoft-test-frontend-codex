@@ -2232,3 +2232,113 @@ sem medir, a mesma classe de defeito que a b68 corrigiu. O snapshot de permissõ
 Alternativas descartadas: fazer o checkout do backend no CI (acopla o pipeline a um segundo
 repositório e a credencial); pular os records ausentes (gate vácuo).
 Reversível: sim. Quem arbitrou: orquestrador.
+
+### D84 — reversão de compra: a `b70` diz a verdade sobre o que não se desfaz, e não constrói reversão
+
+Data: 2026-09-29. Rodada: `12-compra-financeiro`.
+Decisão: não existe caminho para reverter um recebimento de compra. Não há endpoint, e
+`PedidoCompra.Cancelar` recusa depois de `ParcialmenteRecebido`/`Recebido` (CF-4). A `b70` não
+constrói reversão e não põe botão desabilitado para uma capacidade que não existe. Entra texto
+explícito em dois pontos: um quarto bloco no card "Impacto em estoque e financeiro" de
+`PedidoCompraDetalhePage`, que já existe, e a confirmação do diálogo de recebimento. O texto diz que
+o recebimento não se desfaz pela tela e que o único estorno possível é o do pagamento da conta
+gerada, que não devolve estoque nem quantidade recebida. Pergunta ao backend: **B-19**.
+Por quê: 4 a 0 contra construir reversão. O texto no card existente veio de design, a confirmação
+no recebimento de operação, e ninguém se opôs a nenhum dos dois.
+Gatilho de revisita: resposta à B-19. `accessRisk: NENHUM`. Reversível: sim. Quem arbitrou: orquestrador.
+
+### D85 — origem do título visível como rótulo nos dois módulos financeiros; sem link e sem filtro
+
+Data: 2026-09-29. Rodada: `12-compra-financeiro`.
+Decisão: o enum `OrigemFinanceira` do frontend passa a ter os 8 valores do backend, com
+`OrdemServico` e `Frota` acrescentados e rotulados (CF-2). No Financeiro avançado, `origemModulo` e
+`origemId` passam a ser exibidos, como rótulo legível e referência, na lista e no detalhe (CF-3).
+Link ao documento de origem e filtro por origem ficam fora. O link só teria rota conhecida para
+`PedidoVenda`, e o filtro rodaria sobre uma lista que o backend trunca (D88).
+Por quê: o rótulo nos dois módulos foi 4 a 0. O link restrito a `PedidoVenda` foi proposta só de
+design; operação, escopo e plataforma o deixaram fora.
+Gatilho de revisita: catálogo de `origemModulo`→rota (B-3), ou paginação real (B-23).
+`accessRisk: NENHUM`. Reversível: sim. Quem arbitrou: orquestrador.
+
+### D86 — Contas a Receber manual aceita só origem "Manual", como Contas a Pagar
+
+Data: 2026-09-29. Rodada: `12-compra-financeiro`.
+Decisão: o formulário de lançamento manual de Contas a Receber restringe a origem a `Manual`, o
+mesmo recorte que Contas a Pagar já faz (D7, P3). Hoje a tela deixa escolher
+`Contrato`/`NotaFiscal`/`AjusteAutorizado` sem nenhum vínculo real (CF-1). A conta a receber de um
+pedido de venda continua sendo gerada pelo `GerarContaReceberPedidoDialog`, que já existe e é o
+caminho com vínculo. A tela não fecha o buraco de contrato, porque a API continua aceitando outra
+origem por outro cliente. Pergunta ao backend: **B-21**.
+Por quê: operação e escopo votaram por "Manual"; design recomendou "Manual" ou `PedidoVenda`,
+deixando a escolha para o produto; plataforma não se opôs. `PedidoVenda` já tem caminho próprio com
+vínculo, então pô-lo no formulário manual repetiria o defeito que se está fechando.
+`accessRisk: NENHUM`: nenhuma capacidade real se perde, porque a escolha que sai criava título sem
+vínculo. Reversível: sim. Quem arbitrou: orquestrador.
+
+### D87 — compras: progresso de recebimento por item entra; `CotacaoCompraId` e locais na aprovação de cotação ficam fora
+
+Data: 2026-09-29. Rodada: `12-compra-financeiro`.
+Decisão:
+- `ItemPedidoCompraResponse` do frontend passa a declarar os 5 campos que o backend já entrega e o
+  tipo omitia: `sequencia`, `quantidadeRecebida`, `quantidadePendente`, `valorBruto` e `status`
+  (CF-7). A tela mostra o progresso de recebimento na célula de quantidade, de forma compacta e só
+  quando o pedido está `ParcialmenteRecebido` ou `Recebido`, sem cinco colunas novas.
+  `localEstoqueId` fica anulável no tipo, como no record.
+- `CotacaoCompraId` fica fora, porque o mapper do backend nunca o serializa (CF-5). Sem o dado não
+  há tela possível. Pergunta **B-22**.
+- `ItensLocalEstoque` na aprovação de cotação fica fora (CF-6). O local continua sendo escolhido
+  no recebimento, então o fluxo não trava.
+- Pedido de compra direto segue permitido: o backend aceita (B-4, lido no código), e a tela não
+  inventa obrigatoriedade.
+Por quê: CF-7 teve o voto de escopo e design; a condição de operação ("se o backend entregar") está
+satisfeita, porque o inventário mediu os 13 campos no record; e a objeção de plataforma era contra
+*simular* progresso, não contra ler o dado real. CF-5 foi 4 a 0 fora. CF-6: operação a favor, design
+só com confirmação do backend, escopo contra; fica fora sem custo de fluxo.
+Gatilho de revisita: B-22. `accessRisk: NENHUM`. Reversível: sim. Quem arbitrou: orquestrador.
+
+### D88 — Compras e Financeiro básico: `enabled` por empresa e aviso de teto nas seis listagens truncadas
+
+Data: 2026-09-29. Rodada: `12-compra-financeiro`.
+Decisão: `usePedidosCompra`, `useContasPagar` e `useContasReceber` ganham
+`enabled: Boolean(empresaId)`, no padrão da D82; os três repositórios exigem `EmpresaId`. As seis
+listagens que o backend corta sem paginação ganham o aviso de teto da D78: pedidos, solicitações,
+cotações e recebimentos de compra em 200 (`ComprasRepository.cs:40,74,103,140`), e contas a pagar e
+a receber em 300 (`FinanceiroRepository.cs:50,78`). O aviso aparece quando a resposta vem com
+exatamente o teto. Não há paginação de servidor. Pergunta **B-23**.
+Por quê: é a terceira ocorrência medida da mesma classe (Estoque avançado, Vendas, agora Compras e
+Financeiro), trazida por plataforma e conferida pelo orquestrador no código dos dois lados.
+Ninguém se opôs.
+`accessRisk: NENHUM`. Reversível: sim. Quem arbitrou: orquestrador.
+
+### D89 — `FINANCEIRO_CAIXA_GERENCIAR` e `FINANCEIRO_BANCO_GERENCIAR` saem do union e do catálogo, como na D81
+
+Data: 2026-09-29. Rodada: `12-compra-financeiro`.
+Decisão: as duas saem de `types/erp.ts` e de `features/seguranca/permissoesCatalogo.ts` e entram em
+`coberturaPendente` da allowlist de permissões, com alvo **B-16**, que é a mesma pergunta sobre o
+contrato e o §12 desatualizados. O snapshot não é editado. O teste
+`tests/unit/backendPermissions.test.ts` passa a afirmar as quatro coberturas pendentes pelo nome.
+`accessRisk: NENHUM`, medido: no backend saíram do catálogo (`PermissoesCatalogoDefinition.cs:158-159`)
+e não guardam endpoint; no banco dev, `erp.permissoes` não tem nenhuma das duas (0 linhas, `psql` em
+2026-09-29); no frontend, aparecem só no union (`types/erp.ts:294-295`) e no rótulo do catálogo
+(`permissoesCatalogo.ts:93-94`), sem guard, regra de rota ou item de menu.
+Por quê: 4 a 0 pela remoção. A classificação saiu da medição, e não do voto (design disse
+`ILUSAO`, os outros três `NENHUM`).
+Reversível: sim. Quem arbitrou: orquestrador.
+
+### D90 — gate de campos cobre títulos e pedido de compra; allowlist de contrato perde as referências obsoletas; `b70` é uma versão só
+
+Data: 2026-09-29. Rodada: `12-compra-financeiro`.
+Decisão: o gate de campos de response (D83) passa a cobrir `ContaPagarResponse`,
+`ContaReceberResponse`, `PedidoCompraResponse` e `ItemPedidoCompraResponse`. Os records entram no
+snapshot pelo gerador, e a prova vermelha roda contra a `b69`. As seis `legacyReferences` de
+`scripts/backend-contract-map.allowlist.json` que descrevem como abertos endpoints de Financeiro já
+corrigidos (CF-10) só saem **regenerando** o artefato (`npm run report:backend-contract-map`), que é
+gerado e protegido pelo hook. Se o gerador as preservar, porque são uma seção curada, a correção é
+no gerador ou na origem dele, dentro desta fatia só se for trivial; senão o CF-10 vira dívida
+registrada. Nunca edição à mão. O título de venda por pedido
+faturado não ganha ação nova: o `GerarContaReceberPedidoDialog` já existe e funciona. A entrega é
+uma versão só, `v1.11.0a8b70`, em blocos: A (Financeiro: origem, manual, enabled, teto),
+B (Compras: progresso, reversão honesta, enabled, teto), C (permissões), D (gate e dívida
+documental).
+Por quê: a extensão do gate e a versão única foram 4 a 0.
+Reversível: sim. Quem arbitrou: orquestrador.

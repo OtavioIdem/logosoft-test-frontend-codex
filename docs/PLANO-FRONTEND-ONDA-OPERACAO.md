@@ -249,6 +249,11 @@ alavancagem e andam em paralelo com a `c3` e a `b59`.
 | B-16 | `VENDAS_PRECO_MINIMO_SOBRESCREVER` e `POLITICA_COMERCIAL_GERENCIAR` saíram do catálogo (`PermissoesCatalogoDefinition.cs:119,130`) mas continuam em `SystemPermissions.All` e no contrato v1.23/§12, de onde o snapshot do frontend é gerado. Os documentos serão atualizados? | `b69` (D81) |
 | B-17 | `HistoricoStatusPedidoVenda` é gravado a cada troca de status e nenhum endpoint o expõe. Vai existir leitura? | depois da `b69` |
 | B-18 | `GET /api/vendas/pedidos` corta em 200 (`.Take(200)`) sem `page`/`pageSize`. Vai paginar? | `b69` (D78, aviso de teto) |
+| B-19 | Vai existir reversão de recebimento de compra? Hoje não há endpoint, `PedidoCompra.Cancelar` recusa depois de `ParcialmenteRecebido`/`Recebido`, e o estorno do pagamento não devolve estoque nem quantidade recebida. | `b70` (D84, texto honesto) |
+| B-20 | `OrigemFinanceira.OrdemServico` e `.Frota` são gravados hoje por algum fluxo? O frontend passa a rotulá-los (D85). | `b70` |
+| B-21 | A validação D7 de Contas a Pagar (origem não manual exige vínculo, `ContaPagarUseCases.cs:87-90`) vai para Contas a Receber? Hoje a API aceita origem não manual sem vínculo. | `b70` (D86, só a tela restringe) |
+| B-22 | `PedidoCompra.CotacaoCompraId` existe no domínio e o mapper nunca o serializa. Vai para o DTO, para o pedido mostrar de qual cotação veio? | depois da `b70` (D87) |
+| B-23 | As seis listagens de Compras e Financeiro básico cortam fixo (`.Take(200)`/`.Take(300)`) sem `page`/`pageSize`, enquanto o Financeiro avançado já pagina. Vão paginar? | `b70` (D88, aviso de teto) |
 | B-13 | Vai existir reativação de Classificação de Pessoa? Hoje `AuditableEntity.Reativar` existe no domínio, nenhum use case a expõe, e `Atualizar` recusa registro inativo — uma classificação inativada por engano fica travada. | `b67` (D69) |
 
 ## Correções fora da sequência funcional
