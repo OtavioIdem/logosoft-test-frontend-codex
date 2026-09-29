@@ -109,6 +109,15 @@ concorrência entre agentes. Verificou no código que as quatro exceções novas
 são lidas por nenhuma tela de estoque, e que a condição de `ILUSAO` da D76 vale: as telas já
 recusavam sem `ESTOQUE_CONSULTAR` antes desta versão.
 
+**O CI do PR reprovou um E2E que o recorte local não rodava.** `tests/e2e/navegacao-estoque.spec.ts`
+(da `b62`) abria `/estoque/entradas` e esperava o título "Entrada de estoque"; com a D72 as três rotas
+abrem o mesmo componente, sob o título "Movimentos de estoque". A tela está certa e o teste estava
+desatualizado: a asserção passa a exigir esse título e a aba Entrada com `aria-selected="true"`.
+Prova vermelha: com `/estoque/entradas` abrindo temporariamente na aba Saída, o caso falha em
+`aria-selected` (recebe `false`). No servidor isolado da 3411, a primeira execução a frio falhou
+enquanto o `.next` recompilava com o cache corrompido (`ENOENT ... pack.gz`, o servidor anterior foi
+encerrado à força); a segunda e a terceira deram 2/2. Nenhuma mudança de produto; a versão não muda.
+
 # v1.11.0a8b67
 
 ## Cadastro de Classificações de Pessoa ganha tela própria, e o Cliente ganha o seletor
