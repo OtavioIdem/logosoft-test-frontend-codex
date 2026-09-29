@@ -40,3 +40,16 @@ export const statusContaOptions = [
 
 export const contaPodeBaixar = (status: number) => [StatusContaFinanceira.Aberta, StatusContaFinanceira.ParcialmenteBaixada].includes(n(status));
 export const contaPodeCancelar = (status: number) => ![StatusContaFinanceira.Cancelada, StatusContaFinanceira.Quitada].includes(n(status));
+
+// `origemModulo` é texto livre no backend (`ContaFinanceiraResponse.OrigemModulo`, string?). Não há
+// catálogo módulo -> rota nem módulo -> rótulo: o texto é só humanizado ("Compras.PedidoCompra"
+// vira "Compras › Pedido Compra"), sem link e sem inventar nome de tela (D85).
+export const origemModuloLabel = (origemModulo?: string | null, origemId?: string | null) => {
+    const modulo = origemModulo?.trim();
+    if (!modulo) return origemId ? '—' : 'Manual';
+    return modulo
+        .split(/[._/-]+/)
+        .filter(Boolean)
+        .map((parte) => parte.replace(/([a-z0-9])([A-Z])/g, '$1 $2'))
+        .join(' › ');
+};

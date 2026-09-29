@@ -8,7 +8,9 @@ export const origemFinanceiraOptions: SelectOption<number>[] = [
     { label: 'Nota fiscal', value: OrigemFinanceira.NotaFiscal },
     { label: 'Compra', value: OrigemFinanceira.Compra },
     { label: 'Contrato', value: OrigemFinanceira.Contrato },
-    { label: 'Ajuste autorizado', value: OrigemFinanceira.AjusteAutorizado }
+    { label: 'Ajuste autorizado', value: OrigemFinanceira.AjusteAutorizado },
+    { label: 'Ordem de serviço', value: OrigemFinanceira.OrdemServico },
+    { label: 'Frota', value: OrigemFinanceira.Frota }
 ];
 
 export const statusContaOptions: SelectOption<number>[] = [

@@ -5,6 +5,7 @@ import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
 import { Dropdown } from 'primereact/dropdown';
+import { Message } from 'primereact/message';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTableActions } from '@/components/data/DataTableActions';
 import { DataTableServer } from '@/components/data/DataTableServer';
@@ -25,6 +26,10 @@ import { usePessoas } from '@/features/pessoas/hooks/usePessoasResources';
 import { ContaPagarFormValues, ContaPagarResponse, ContaReceberFormValues, ContaReceberResponse, FinanceiroListQuery } from '@/features/financeiro/types/financeiro.types';
 import { useAppToast } from '@/hooks/useAppToast';
 import { mapApiError } from '@/lib/http/apiError';
+
+// `.Take(300)` fixo em `FinanceiroRepository.cs:50` (receber) e `:78` (pagar): sem `page`/`pageSize`/`hasMore` no
+// contrato, a resposta com 300 linhas pode estar truncando títulos mais antigos sem sinal (D88).
+const TETO_CONTAS_SEM_PAGINACAO = 300;
 
 type ContasFinanceirasPageProps = { type: 'receber' | 'pagar' };
 type ContaRecord = ContaReceberResponse | ContaPagarResponse;
@@ -56,6 +61,7 @@ export const ContasFinanceirasPage = ({ type }: ContasFinanceirasPageProps) => {
         abertas: countOpenFinancialRecords(records)
     }), [records]);
     const visibleRecords = useMemo(() => records.slice(first, first + rows), [first, records, rows]);
+    const podeExcederTeto = records.length >= TETO_CONTAS_SEM_PAGINACAO;
     const pessoaLabelMap = useMemo(() => new Map((pessoasQuery.data ?? []).map((pessoa) => [pessoa.id, pessoa.nomeFantasia ? `${pessoa.nomeRazaoSocial} • ${pessoa.nomeFantasia}` : pessoa.nomeRazaoSocial])), [pessoasQuery.data]);
     const clienteLabelMap = useMemo(() => new Map((clientesQuery.data ?? []).map((cliente) => [cliente.id, `${cliente.codigo} • ${pessoaLabelMap.get(cliente.pessoaId) ?? 'Pessoa não carregada'}`])), [clientesQuery.data, pessoaLabelMap]);
     const fornecedorLabelMap = useMemo(() => new Map((fornecedoresQuery.data ?? []).map((fornecedor) => [fornecedor.id, `${fornecedor.codigo} • ${pessoaLabelMap.get(fornecedor.pessoaId) ?? 'Pessoa não carregada'}`])), [fornecedoresQuery.data, pessoaLabelMap]);
@@ -120,7 +126,7 @@ export const ContasFinanceirasPage = ({ type }: ContasFinanceirasPageProps) => {
             <div className="col-12 md:col-4"><Card className="h-full"><span className="text-600">Saldo em aberto</span><div className="text-2xl font-semibold mt-2">{formatMoney(summary.saldo)}</div></Card></div>
             <div className="col-12 md:col-4"><Card className="h-full"><span className="text-600">Contas com saldo</span><div className="text-2xl font-semibold mt-2">{summary.abertas}</div></Card></div>
         </div>
-        <Card>{query.error ? <ApiErrorPanel error={mapApiError(query.error)} /> : null}<DataTableServer<ContaRecord> value={visibleRecords} totalRecords={records.length} first={first} rows={rows} loading={query.isFetching} onPage={(event) => { setFirst(event.first); setRows(event.rows); }}><Column field="documento" header="Documento" /><Column header={type === 'receber' ? 'Cliente' : 'Fornecedor'} body={(row: ContaRecord) => displayParty(row)} /><Column header="Origem" body={(row: ContaRecord) => origemFinanceiraLabel(Number(row.origem))} /><Column header="Emissão" body={(row: ContaRecord) => formatDate(row.dataEmissao)} /><Column header="Total" body={(row: ContaRecord) => formatMoney(row.valorOriginal)} /><Column header="Saldo" body={(row: ContaRecord) => formatMoney(row.valorSaldo)} /><Column header="Status" body={(row: ContaRecord) => <StatusTag status={contaStatusTagValue(displayStatus(row))} />} /><Column header="Ações" body={(row: ContaRecord) => <DataTableActions actions={[{ key: 'baixar', label: baixarLabel, icon: 'pi pi-check-circle', permission: actionPermission, disabled: isContaEncerrada(displayStatus(row)), onClick: () => openAction('baixar', row) }, { key: 'estornar', label: 'Estornar', icon: 'pi pi-undo', permission: 'FINANCEIRO_ESTORNAR', severity: 'warning', onClick: () => openAction('estornar', row) }, { key: 'cancelar', label: 'Cancelar', icon: 'pi pi-ban', permission: 'FINANCEIRO_CANCELAR', severity: 'danger', disabled: isContaEncerrada(displayStatus(row)), onClick: () => openAction('cancelar', row) }]} />} /></DataTableServer></Card>
+        <Card>{query.error ? <ApiErrorPanel error={mapApiError(query.error)} /> : null}{podeExcederTeto ? <Message severity="warn" className="mb-3 w-full" text={`A listagem devolve no máximo ${TETO_CONTAS_SEM_PAGINACAO} contas por filtro. Pode haver mais contas do que as exibidas — refine os filtros para ver as demais.`} /> : null}<DataTableServer<ContaRecord> value={visibleRecords} totalRecords={records.length} first={first} rows={rows} loading={query.isFetching} onPage={(event) => { setFirst(event.first); setRows(event.rows); }}><Column field="documento" header="Documento" /><Column header={type === 'receber' ? 'Cliente' : 'Fornecedor'} body={(row: ContaRecord) => displayParty(row)} /><Column header="Origem" body={(row: ContaRecord) => origemFinanceiraLabel(Number(row.origem))} /><Column header="Emissão" body={(row: ContaRecord) => formatDate(row.dataEmissao)} /><Column header="Total" body={(row: ContaRecord) => formatMoney(row.valorOriginal)} /><Column header="Saldo" body={(row: ContaRecord) => formatMoney(row.valorSaldo)} /><Column header="Status" body={(row: ContaRecord) => <StatusTag status={contaStatusTagValue(displayStatus(row))} />} /><Column header="Ações" body={(row: ContaRecord) => <DataTableActions actions={[{ key: 'baixar', label: baixarLabel, icon: 'pi pi-check-circle', permission: actionPermission, disabled: isContaEncerrada(displayStatus(row)), onClick: () => openAction('baixar', row) }, { key: 'estornar', label: 'Estornar', icon: 'pi pi-undo', permission: 'FINANCEIRO_ESTORNAR', severity: 'warning', onClick: () => openAction('estornar', row) }, { key: 'cancelar', label: 'Cancelar', icon: 'pi pi-ban', permission: 'FINANCEIRO_CANCELAR', severity: 'danger', disabled: isContaEncerrada(displayStatus(row)), onClick: () => openAction('cancelar', row) }]} />} /></DataTableServer></Card>
         <ContaFinanceiraFormDialog type={type} visible={formVisible} loading={mutations.contaReceberCreateMutation.isPending || mutations.contaPagarCreateMutation.isPending} onHide={() => setFormVisible(false)} onSubmit={createConta} />
         <BaixaFinanceiraDialog type={type} visible={action === 'baixar'} conta={selected} loading={mutations.receberMutation.isPending || mutations.pagarMutation.isPending} onHide={() => openAction(null)} onSubmit={baixar} />
         <EstornoFinanceiroDialog type={type === 'receber' ? 'recebimento' : 'pagamento'} visible={action === 'estornar'} conta={selected} loading={mutations.estornarRecebimentoMutation.isPending || mutations.estornarPagamentoMutation.isPending} onHide={() => openAction(null)} onSubmit={estornar} />

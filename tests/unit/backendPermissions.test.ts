@@ -90,13 +90,13 @@ describe('backend permissions', () => {
         expect(allowlist.fantasmasConhecidos.length).toBe(0);
         expect(allowlist.teto.fantasmas).toBe(allowlist.fantasmasConhecidos.length);
 
-        expect(allowlist.teto.coberturaPendente).toBe(2);
-        expect(allowlist.coberturaPendente.length).toBe(2);
+        expect(allowlist.teto.coberturaPendente).toBe(4);
+        expect(allowlist.coberturaPendente.length).toBe(4);
         expect(allowlist.teto.coberturaPendente).toBe(allowlist.coberturaPendente.length);
 
-        // Validar que as duas permissões pendentes são as esperadas (D81)
+        // Validar que as quatro permissões pendentes são as esperadas (D81 + D89)
         const codes = allowlist.coberturaPendente.map((item: any) => item.code).sort();
-        expect(codes).toEqual(['POLITICA_COMERCIAL_GERENCIAR', 'VENDAS_PRECO_MINIMO_SOBRESCREVER']);
+        expect(codes).toEqual(['FINANCEIRO_BANCO_GERENCIAR', 'FINANCEIRO_CAIXA_GERENCIAR', 'POLITICA_COMERCIAL_GERENCIAR', 'VENDAS_PRECO_MINIMO_SOBRESCREVER']);
 
         // Validar que ambas têm alvo B-16
         expect(allowlist.coberturaPendente.every((item: any) => item.target === 'B-16')).toBe(true);
@@ -243,7 +243,7 @@ Permissões no backend | **2** (mais MASTER_GOD e *)`;
         expect(allowlist.teto.fantasmas).toBe(0);
     });
 
-    it('estado real: cobertura pendente contém só as duas permissões de D81 (B-16)', () => {
+    it('estado real: cobertura pendente contém as quatro permissões de D81 + D89 (B-16)', () => {
         const snapshot = JSON.parse(read('scripts/backend-permissions.snapshot.json'));
         const allowlist = JSON.parse(read('scripts/backend-permissions.allowlist.json'));
         const inputs = readPermissionInputs(root);
@@ -253,16 +253,16 @@ Permissões no backend | **2** (mais MASTER_GOD e *)`;
             snapshotPermissions: snapshot.permissions
         });
 
-        // Comparação com snapshot: exatamente as duas permissões da D81
+        // Comparação com snapshot: exatamente as quatro permissões de D81 + D89
         const comparisonCodes = comparison.coberturaPendente.sort();
-        expect(comparisonCodes).toEqual(['POLITICA_COMERCIAL_GERENCIAR', 'VENDAS_PRECO_MINIMO_SOBRESCREVER']);
+        expect(comparisonCodes).toEqual(['FINANCEIRO_BANCO_GERENCIAR', 'FINANCEIRO_CAIXA_GERENCIAR', 'POLITICA_COMERCIAL_GERENCIAR', 'VENDAS_PRECO_MINIMO_SOBRESCREVER']);
 
-        // Allowlist registra as mesmas duas; teto é 2
-        expect(allowlist.coberturaPendente.length).toBe(2);
-        expect(allowlist.teto.coberturaPendente).toBe(2);
+        // Allowlist registra as mesmas quatro; teto é 4
+        expect(allowlist.coberturaPendente.length).toBe(4);
+        expect(allowlist.teto.coberturaPendente).toBe(4);
 
         const allowlistCodes = allowlist.coberturaPendente.map((item: any) => item.code).sort();
-        expect(allowlistCodes).toEqual(['POLITICA_COMERCIAL_GERENCIAR', 'VENDAS_PRECO_MINIMO_SOBRESCREVER']);
+        expect(allowlistCodes).toEqual(['FINANCEIRO_BANCO_GERENCIAR', 'FINANCEIRO_CAIXA_GERENCIAR', 'POLITICA_COMERCIAL_GERENCIAR', 'VENDAS_PRECO_MINIMO_SOBRESCREVER']);
     });
 
     it('rejeita allowlist duplicada, expirada ou supressora', () => {

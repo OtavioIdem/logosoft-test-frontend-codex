@@ -6,6 +6,7 @@ import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
 import { Dropdown } from 'primereact/dropdown';
+import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmpresaFilialFilter } from '@/components/forms/EmpresaFilialFilter';
@@ -31,6 +32,10 @@ const filterLocal = (records: CotacaoCompraResponse[], term: string) => {
     return records.filter((record) => record.numero.toLowerCase().includes(normalized));
 };
 
+// `.Take(200)` fixo em `ComprasRepository.cs:103`: sem `page`/`pageSize`/`hasMore` no contrato, a resposta com 200
+// linhas pode estar truncando cotações mais antigos sem sinal (D88).
+const TETO_COTACOES_SEM_PAGINACAO = 200;
+
 export const CotacoesCompraPage = () => {
     const router = useRouter();
     const { hasPermission } = usePermissions();
@@ -45,6 +50,7 @@ export const CotacoesCompraPage = () => {
     const { criarMutation } = useCotacoesCompraMutations();
 
     const records = useMemo(() => filterLocal(cotacoesQuery.data ?? [], localSearch), [cotacoesQuery.data, localSearch]);
+    const podeExcederTeto = (cotacoesQuery.data?.length ?? 0) >= TETO_COTACOES_SEM_PAGINACAO;
     const visibleRecords = useMemo(() => records.slice(first, first + rows), [records, first, rows]);
 
     if (!hasPermission('COMPRAS_COTACOES_CONSULTAR')) {
@@ -78,6 +84,7 @@ export const CotacoesCompraPage = () => {
             <PageHeader title="Cotações de compra" description="Cotação vinculada a solicitação; aprovar gera o pedido de compra." actions={headerActions} />
             <Card>
                 {cotacoesQuery.error ? <ApiErrorPanel error={mapApiError(cotacoesQuery.error)} /> : null}
+                {podeExcederTeto ? <Message severity="warn" className="mb-3 w-full" text={`A listagem devolve no máximo ${TETO_COTACOES_SEM_PAGINACAO} cotações por filtro. Pode haver mais cotações do que as exibidas — refine os filtros para ver as demais.`} /> : null}
                 <DataTableServer<CotacaoCompraResponse> value={visibleRecords} totalRecords={records.length} loading={cotacoesQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhuma cotação encontrada.">
                     <Column field="numero" header="Número" />
                     <Column header="Data" headerClassName="hidden md:table-cell" bodyClassName="hidden md:table-cell" body={(row: CotacaoCompraResponse) => formatDate(row.dataCotacao)} />

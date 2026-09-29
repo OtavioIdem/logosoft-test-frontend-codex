@@ -6,6 +6,7 @@ import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
 import { Dropdown } from 'primereact/dropdown';
+import { Message } from 'primereact/message';
 import { InputText } from 'primereact/inputtext';
 import { PageHeader } from '@/components/common/PageHeader';
 import { DataTableActions } from '@/components/data/DataTableActions';
@@ -32,6 +33,10 @@ const filterLocal = (items: PedidoCompraResponse[], term: string) => {
     return items.filter((pedido) => [pedido.numero, pedido.observacao, pedido.fornecedorId].some((value) => String(value ?? '').toLowerCase().includes(normalized)));
 };
 
+// `.Take(200)` fixo em `ComprasRepository.cs:40`: sem `page`/`pageSize`/`hasMore` no contrato, a resposta com 200
+// linhas pode estar truncando pedidos mais antigos sem sinal (D88).
+const TETO_PEDIDOS_COMPRA_SEM_PAGINACAO = 200;
+
 export const PedidosCompraPage = () => {
     const router = useRouter();
     const { hasPermission } = usePermissions();
@@ -45,6 +50,7 @@ export const PedidosCompraPage = () => {
     const pessoaLabelMap = useMemo(() => new Map((pessoasQuery.data ?? []).map((pessoa) => [pessoa.id, pessoa.nomeFantasia ? `${pessoa.nomeRazaoSocial} • ${pessoa.nomeFantasia}` : pessoa.nomeRazaoSocial])), [pessoasQuery.data]);
     const fornecedorLabelMap = useMemo(() => new Map((fornecedoresQuery.data ?? []).map((fornecedor) => [fornecedor.id, `${fornecedor.codigo} • ${pessoaLabelMap.get(fornecedor.pessoaId) ?? 'Pessoa não carregada'}`])), [fornecedoresQuery.data, pessoaLabelMap]);
     const records = useMemo(() => filterLocal(pedidosQuery.data ?? [], localSearch), [pedidosQuery.data, localSearch]);
+    const podeExcederTeto = (pedidosQuery.data?.length ?? 0) >= TETO_PEDIDOS_COMPRA_SEM_PAGINACAO;
     const visibleRecords = useMemo(() => records.slice(first, first + rows), [records, first, rows]);
     const summary = useMemo(() => {
         const total = records.reduce<number>((acc, pedido) => acc + Number(pedido.valorTotal ?? 0), 0);
@@ -82,6 +88,7 @@ export const PedidosCompraPage = () => {
             </div>
             <Card>
                 {pedidosQuery.error ? <ApiErrorPanel error={mapApiError(pedidosQuery.error)} /> : null}
+                {podeExcederTeto ? <Message severity="warn" className="mb-3 w-full" text={`A listagem devolve no máximo ${TETO_PEDIDOS_COMPRA_SEM_PAGINACAO} pedidos por filtro. Pode haver mais pedidos do que os exibidos — refine os filtros para ver os demais.`} /> : null}
                 <DataTableServer<PedidoCompraResponse> value={visibleRecords} totalRecords={records.length} loading={pedidosQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhum pedido encontrado.">
                     <Column field="numero" header="Número" />
                     <Column header="Fornecedor" body={(row: PedidoCompraResponse) => fornecedorLabelMap.get(row.fornecedorId) ?? 'Fornecedor não carregado'} />

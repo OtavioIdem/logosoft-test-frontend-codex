@@ -17,7 +17,8 @@ export const pedidoCompraQueryKey = (id?: string | null) => ['compras', 'pedido'
 export const usePedidosCompra = (query: PedidoCompraListQuery = {}) =>
     useQuery({
         queryKey: pedidosCompraQueryKey(query),
-        queryFn: () => comprasApi.listar(query)
+        queryFn: () => comprasApi.listar(query),
+        enabled: Boolean(query.empresaId)
     });
 
 export const usePedidoCompra = (id?: string | null) =>

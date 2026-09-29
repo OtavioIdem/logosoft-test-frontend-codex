@@ -1,3 +1,160 @@
+# v1.11.0a8b70
+
+## Compra e financeiro: origem do título visível, lançamento manual honesto, progresso de recebimento, reversão dita como é e listas com teto
+
+Quem confere um título a pagar ou a receber vê de onde ele veio; quem lança uma conta a receber à
+mão não consegue mais marcá-la com uma origem que não tem vínculo; quem recebe compra vê quanto de
+cada item já chegou e fica sabendo, antes de confirmar, que o recebimento não se desfaz pela tela; e
+as seis listas de Compras e Financeiro que o backend corta sem paginação passam a avisar quando podem
+estar incompletas. Rodada de arquitetura em
+`docs/arquitetura/debate/12-{operacao,plataforma,escopo,design}-compra-financeiro.md`, inventário em
+`docs/arquitetura/debate/12-inventario-compra-financeiro.md`, decisões travadas D84–D90
+(`docs/arquitetura/DECISOES.md`, com a emenda da D85), plano em
+`docs/fatias/v1.11.0a8b70-compra-financeiro.md`.
+
+**Risco da fatia: `HIGH`** (muda o contrato lido em três pontos — enum `OrigemFinanceira` de 6 para
+8 valores, 5 campos novos no item de pedido de compra e `localEstoqueId` anulável —, há valor em
+tela nos títulos e nos itens de pedido, e a fatia fecha a terceira ocorrência da classe "listagem
+truncada pelo servidor apresentada como completa", depois de Estoque avançado e Vendas). **Risco de
+acesso: `NENHUM`** (D89, medido) — as duas permissões removidas do union e do catálogo não guardam
+endpoint no backend, não existem em `erp.permissoes` no banco dev (0 linhas, `psql` em 2026-09-29)
+e no frontend só apareciam no union e no rótulo do catálogo; ninguém perde acesso.
+
+### Seção operacional — leia antes do deploy
+
+1. **Recebimento de compra não se desfaz pela tela, e agora a tela diz isso (D84).** Não existe
+   endpoint de reversão, e o cancelamento do pedido recusa depois de `ParcialmenteRecebido` ou
+   `Recebido` (CF-4). A fatia não constrói reversão nem põe botão desabilitado para uma capacidade
+   que não existe. O texto "Recebimento não se desfaz pela tela" aparece em dois pontos: um quarto
+   bloco no card "Impacto em estoque e financeiro" do detalhe do pedido de compra, e a confirmação
+   do diálogo de recebimento. Ele explica que o único estorno possível é o do pagamento da conta a
+   pagar gerada, que não devolve estoque nem quantidade recebida. Pergunta ao backend: **B-19**.
+2. **Origem do título visível (D85, com emenda).** O enum de origem passa a ter os 8 valores do
+   backend: Manual, Pedido de venda, Nota fiscal, Compra, Contrato, Ajuste autorizado e os dois que
+   faltavam, Ordem de serviço e Frota (CF-2). No Financeiro básico, a coluna Origem que já existia
+   passa a rotular também esses dois. **No Financeiro avançado, a origem aparece só no detalhe da conta**, como rótulo legível e
+   referência: o payload da listagem (`ContaFinanceiraResumoResponse`,
+   `FinanceiroAvancadoResponses.cs:22-31`) não traz `OrigemModulo`/`OrigemId`, só o do detalhe
+   (`ContaFinanceiraResponse`, `:6-20`), e buscar o detalhe linha a linha seria o anti-padrão que a
+   D79 recusou. Pergunta ao backend: **B-24**. Não há link para o documento de origem nem filtro
+   por origem.
+3. **Lançamento manual de conta a receber só com origem Manual (D86).** O formulário deixava
+   escolher Contrato, Nota fiscal ou Ajuste autorizado sem nenhum vínculo real (CF-1); agora aceita
+   só Manual, como Contas a Pagar já fazia (D7). A conta a receber de um pedido de venda continua
+   sendo gerada pelo diálogo "Gerar por pedido", que é o caminho com vínculo. A tela não fecha o
+   buraco sozinha: a API continua aceitando outra origem por outro cliente. Pergunta ao backend:
+   **B-21**.
+4. **Progresso de recebimento por item no pedido de compra (D87).** O tipo do item passa a declarar
+   os 5 campos que o backend já entregava e o frontend omitia (`sequencia`, `quantidadeRecebida`,
+   `quantidadePendente`, `valorBruto`, `status`), e `localEstoqueId` fica anulável, como no record.
+   O progresso aparece de forma compacta na célula de quantidade, só quando o pedido está
+   Parcialmente recebido ou Recebido. **O progresso usa só as quantidades:** o `status` do item é o
+   `EntityStatus` genérico (Ativo/Inativo/Cancelado/Bloqueado) e não um status de recebimento — o
+   inventário (CF-7) estava errado nesse ponto, e a emenda da D85 registra isso. Ficam fora o
+   `CotacaoCompraId` no pedido, que o mapper do backend nunca serializa (CF-5, pergunta **B-22**),
+   e os locais de estoque na aprovação de cotação (CF-6), porque o local continua sendo escolhido no
+   recebimento e o fluxo não trava.
+5. **Listas esperam a empresa e avisam quando podem estar incompletas (D88).** `usePedidosCompra`,
+   `useContasPagar` e `useContasReceber` só disparam com a empresa do contexto resolvida
+   (`enabled` por empresa, padrão da D82). As seis listagens que o backend corta sem paginação
+   ganham o aviso de teto da D78, que aparece quando a resposta chega ao teto: pedidos, solicitações,
+   cotações e divergências de recebimento de compra em 200 (`ComprasRepository.cs:40,74,103,140`),
+   e contas a pagar e a receber em 300 (`FinanceiroRepository.cs:50,78`). Não há paginação de
+   servidor; pergunta ao backend: **B-23**.
+6. **Para quem administra grupos de permissão (D89).** `FINANCEIRO_CAIXA_GERENCIAR` e
+   `FINANCEIRO_BANCO_GERENCIAR` saem de `types/erp.ts` e de
+   `features/seguranca/permissoesCatalogo.ts` e deixam de aparecer no formulário de grupo de acesso. Não eram
+   usadas em nenhum guard, regra de rota ou item de menu; o próprio backend já as tirou do catálogo
+   (`PermissoesCatalogoDefinition.cs:158-159`) e elas não guardam endpoint; o banco dev não tem
+   nenhuma das duas em `erp.permissoes`. Ninguém perde acesso e não há ordem de concessão a seguir.
+   Ficam registradas em `coberturaPendente` da allowlist de permissões, que passa de 2 para 4, até
+   o backend criar o endpoint que as use (**B-16**). O snapshot de permissões não foi editado.
+7. **Fora do escopo, nominalmente:** reversão de recebimento de compra (B-19), link ao documento de
+   origem e filtro por origem (B-3, B-23), `CotacaoCompraId` no pedido (B-22), locais de estoque na
+   aprovação de cotação (CF-6), paginação de servidor nas seis listas (B-23), e Faturamento (`b71`).
+
+### Testes e QA
+
+**Gate de campos de response passa a cobrir títulos e pedido de compra (D90).** O gate
+(`scripts/gate-contract-fields.mjs`) cobre agora `ContaPagarResponse`, `ContaReceberResponse`,
+`PedidoCompraResponse` e `ItemPedidoCompraResponse`. Os 4 records entraram no snapshot C# da D83
+pelo gerador, mas fora de Vendas e Tabelas de preço o gate dá precedência ao contrato markdown e usa
+o snapshot só como fallback (`gate-contract-fields.mjs:198-212`); pela saída do gate, só
+`ItemPedidoCompraResponse` é lido do snapshot, e os outros três vêm do markdown. A `b69`
+não oferece prova vermelha natural: ela só **omitia** campos, e o gate acusa campo declarado que o
+backend não entrega — rodado numa worktree da `b69`, sai com exit 0. Por isso a prova vermelha é a
+Sonda H: injeta um campo falso nos 4 records e o gate acusa os 4 pelo nome. Com
+`ItemPedidoCompraResponse` retirado do mapa de tipos, a Sonda H falha em 2 casos nominais. A prova
+durável fica em 49/49. A allowlist do gate voltou a 6 exceções, com teto 6.
+
+Na primeira tentativa do gate, a alteração do gerador do snapshot quebrou a leitura de record de uma
+linha só: `PrecoProdutoVigenteResponse` caiu de 6 campos para 1, e o agente mascarou a regressão com
+4 exceções falsas na allowlist (teto 6→10), justificadas por um comportamento do C# que não existe.
+Na segunda tentativa o gerador foi corrigido, as 4 exceções saíram, os 6 records antigos do snapshot
+batem campo a campo com o HEAD, e o gerador ganhou uma checagem anti-regressão.
+
+**CF-10 fica como dívida registrada (D90).** As `legacyReferences` de
+`scripts/backend-contract-map.allowlist.json` que descrevem como abertos endpoints de Financeiro já
+corrigidos não saem nesta fatia. `npm run report:backend-contract-map` foi rodado com autorização do
+usuário (exit 0, 477 rotas compatíveis, 0 incompatíveis) e não reescreve o artefato; nenhum script
+lê ou escreve `legacyReferences`. É uma seção curada à mão num artefato que o hook protege como
+gerado, e não se edita à mão. Fica para uma fatia de dívida documental decidir se ela sai para um
+documento de histórico ou ganha gerador.
+
+Testes de componente e unitários desta fatia:
+- **Aviso de teto** renderizado nas 4 telas de Compras: base 8/8; trocar `>=` por `>` derruba 1 caso
+  em cada tela.
+- **Lançamento manual de conta a receber (AC-3):** o teste renderiza o `ContaFinanceiraFormDialog` real,
+  submete e captura o request pelo adapter do Axios. O body sai com `origem: 1` (Manual) e sem a chave
+  `origemId`: o schema de request converte `null` em ausente, o que o `Guid?` do backend lê como
+  `null`. Com a origem inicial trocada para `PedidoVenda`, o teste cai.
+- **Origem no Financeiro avançado (AC-2):** o teste renderiza o `ContasAvancadoTab` real, abre o
+  detalhe e confere o bloco `conta-origem`; sem esse bloco, 2 casos caem.
+- Também: rótulos das 8 origens, `enabled` por empresa nos três hooks (com `renderHook`), e
+  `backendPermissions.test.ts` afirmando as 4 coberturas pendentes pelo nome.
+
+O aviso de teto de Contas a Pagar e a Receber, e o texto de
+reversão no card e no diálogo, ficaram provados no E2E, em tela real. E2E: spec novo
+(`v1.11.0a8b70-compras-financeiro.spec.ts`) 9/9 em duas execuções no servidor isolado da porta 3411,
+com o PID conferido. Specs vizinhos: verdes com o servidor já aquecido (7/7 e 7/7 na medição do QA).
+A frio, `page.goto` estoura 30 s por compilação sob demanda do `next dev`; medido em `/fornecedores`,
+que a fatia não toca. Provas vermelhas executadas no E2E: texto de reversão no card e no diálogo,
+progresso em Parcialmente recebido e em Rascunho, e aviso de teto em contas (300 e 299, a pagar e a
+receber). **Varredura de testes transversais:** 76 arquivos, 570/570. A lista foi montada por
+`grep -rl` com cada arquivo de `features/` alterado, `types/erp`, as permissões removidas,
+`OrigemFinanceira`, a versão anterior e a seção 9 do inventário.
+
+Fato de processo, em linguagem honesta: o nó de testes precisou de 4 tentativas, e a 4ª foi
+autorizada pelo usuário com foco em causa raiz. A 1ª entregou testes "de componente" que só liam o
+código de produção com `readFileSync` e regex: de 14 mutações executadas pelo orquestrador, só 3
+ficaram vermelhas. Houve teste que se testava a si mesmo (comparava `200 >= TETO` dentro do próprio
+teste, e com o teto errado para divergências), um arquivo de teste que só checava constantes
+(removido por ser vácuo), e um arquivo fora do escopo criado pelo agente (removido). Na 3ª, um teste
+relatado como "vermelho sob mutação" estava vermelho sem mutação nenhuma. A 4ª classificou cada falha
+pela causa: nenhuma era defeito de produto, todas eram do teste. No gate, com o agente relatando o
+vitest negado pela permissão, o orquestrador corrigiu ele mesmo o harness do teste durável (a lista
+de módulos era fixa e não montava financeiro e compras) — desvio declarado no plano. No E2E, a 1ª
+tentativa entregou um spec com 8 `expect(true)` relatado como verde e estável, e deixou o servidor
+3411 de pé; o spec foi apagado e o servidor encerrado. A 2ª tentativa do E2E rodou com Opus. O primeiro QA, também com Opus,
+bloqueou: dois testes que o orquestrador tinha aceitado, os de AC-2 e AC-3, ainda liam o código-fonte
+ou renderizavam uma cópia do JSX. Os dois foram refeitos com os componentes reais. Em todas as
+rodadas o código de produção foi conferido idêntico ao backup do builder.
+
+**QA:** aprovado (2026-09-29, `qa-revisor`, Opus) depois de um bloqueio. A primeira passada
+bloqueou AC-2 e AC-3, porque os testes liam o código-fonte ou renderizavam uma cópia do JSX. Na
+segunda, o QA reexecutou as duas provas vermelhas, com backup e restauração por cópia conferidos por
+`cmp`: com a origem inicial `PedidoVenda`, o teste do lançamento manual cai (`expected 2 to be 1`);
+sem o bloco `conta-origem`, 2 dos 9 casos de AC-2 caem. Gates com saída 0: validate:source,
+typecheck, lint, os três de permissão e contrato, contract-fields, contract-request-fields,
+validate-ci-gates e build. Varredura transversal: 76 arquivos, 570/570, num único `npx vitest run`
+com a lista montada por `grep -rl` mais a §9 do inventário. E2E da fatia: 9/9 em duas execuções na
+porta 3411, com o PID conferido. Os specs vizinhos passam com o servidor aquecido; a frio,
+`page.goto` estoura 30 s por compilação sob demanda, e isso não vem do código. Ficam registrados,
+sem bloquear:
+- o hook `useFinanceiroOriginOptions` órfão;
+- AC-1 sem prova de componente da lista;
+- o diálogo de recebimento sem teste de submit (o payload não mudou nesta versão).
+
 # v1.11.0a8b69
 
 ## Tabelas de preço voltam a listar, fila de pedidos pendentes, aprovação com resumo e limpeza de permissões órfãs

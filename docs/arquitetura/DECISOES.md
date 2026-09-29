@@ -2259,6 +2259,13 @@ Por quê: o rótulo nos dois módulos foi 4 a 0. O link restrito a `PedidoVenda`
 design; operação, escopo e plataforma o deixaram fora.
 Gatilho de revisita: catálogo de `origemModulo`→rota (B-3), ou paginação real (B-23).
 `accessRisk: NENHUM`. Reversível: sim. Quem arbitrou: orquestrador.
+Emenda (2026-09-29, nó builder, `needs_decision`): a origem no Financeiro avançado aparece **só no
+detalhe**. `ContaFinanceiraResumoResponse` (`FinanceiroAvancadoResponses.cs:22-31`), payload da
+listagem, não tem `OrigemModulo`/`OrigemId`; só `ContaFinanceiraResponse` (`:6-20`) os traz. Uma
+chamada de detalhe por linha para preencher a coluna seria o anti-padrão que a D79 recusou.
+Pergunta **B-24**. Nota do mesmo nó: `ItemPedidoCompraResponse.Status` é o `EntityStatus` de
+`AuditableEntity` (Ativo/Inativo/Cancelado/Bloqueado), e não um status de recebimento. O progresso
+da D87 usa só `quantidadeRecebida`/`quantidadePendente`, e o CF-7 do inventário estava errado nesse ponto.
 
 ### D86 — Contas a Receber manual aceita só origem "Manual", como Contas a Pagar
 
@@ -2335,7 +2342,15 @@ snapshot pelo gerador, e a prova vermelha roda contra a `b69`. As seis `legacyRe
 corrigidos (CF-10) só saem **regenerando** o artefato (`npm run report:backend-contract-map`), que é
 gerado e protegido pelo hook. Se o gerador as preservar, porque são uma seção curada, a correção é
 no gerador ou na origem dele, dentro desta fatia só se for trivial; senão o CF-10 vira dívida
-registrada. Nunca edição à mão. O título de venda por pedido
+registrada. Nunca edição à mão. (Medido em 2026-09-29: `report:backend-contract-map` só reporta e
+não reescreve o artefato, e nenhum script lê ou escreve `legacyReferences`. O CF-10 ficou como
+dívida.) Nota de 2026-09-29 (nó changelog): para `financeiro` e `compras`, o gate prefere o markdown
+e usa o snapshot só como fallback. `ContaPagarResponse`, `ContaReceberResponse` e
+`PedidoCompraResponse` são comparados com o markdown, e só `ItemPedidoCompraResponse`, que o
+markdown não expande, com o C#. Medido: o markdown bate com o C# campo a campo nos três (18/18,
+18/18, 14/14), então hoje o gate mede certo. Gatilho de revisita: estender a precedência do snapshot
+(hoje só `tabelas-preco`, D77) a todo record que o snapshot tiver, na primeira vez que o markdown
+divergir do C#. O título de venda por pedido
 faturado não ganha ação nova: o `GerarContaReceberPedidoDialog` já existe e funciona. A entrega é
 uma versão só, `v1.11.0a8b70`, em blocos: A (Financeiro: origem, manual, enabled, teto),
 B (Compras: progresso, reversão honesta, enabled, teto), C (permissões), D (gate e dívida

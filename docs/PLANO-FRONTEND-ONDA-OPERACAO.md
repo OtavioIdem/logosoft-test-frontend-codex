@@ -253,6 +253,7 @@ alavancagem e andam em paralelo com a `c3` e a `b59`.
 | B-20 | `OrigemFinanceira.OrdemServico` e `.Frota` são gravados hoje por algum fluxo? O frontend passa a rotulá-los (D85). | `b70` |
 | B-21 | A validação D7 de Contas a Pagar (origem não manual exige vínculo, `ContaPagarUseCases.cs:87-90`) vai para Contas a Receber? Hoje a API aceita origem não manual sem vínculo. | `b70` (D86, só a tela restringe) |
 | B-22 | `PedidoCompra.CotacaoCompraId` existe no domínio e o mapper nunca o serializa. Vai para o DTO, para o pedido mostrar de qual cotação veio? | depois da `b70` (D87) |
+| B-24 | `ContaFinanceiraResumoResponse` (listagem do Financeiro avançado) não traz `OrigemModulo`/`OrigemId`, que só o detalhe tem. Vão entrar no resumo, para a origem aparecer na lista? | depois da `b70` (emenda da D85) |
 | B-23 | As seis listagens de Compras e Financeiro básico cortam fixo (`.Take(200)`/`.Take(300)`) sem `page`/`pageSize`, enquanto o Financeiro avançado já pagina. Vão paginar? | `b70` (D88, aviso de teto) |
 | B-13 | Vai existir reativação de Classificação de Pessoa? Hoje `AuditableEntity.Reativar` existe no domínio, nenhum use case a expõe, e `Atualizar` recusa registro inativo — uma classificação inativada por engano fica travada. | `b67` (D69) |
 
