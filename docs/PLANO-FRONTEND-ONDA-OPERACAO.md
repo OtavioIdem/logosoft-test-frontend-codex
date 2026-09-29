@@ -261,6 +261,6 @@ alavancagem e andam em paralelo com a `c3` e a `b59`.
 
 | Versão | O quê | Estado |
 | --- | --- | --- |
-| `v1.11.0a8b58.c3` | 15 campos de request sem par, mais 3 fantasmas de response e o enum `RegimeTributario` | em execução — QA `BLOCKED`, AC-5 a AC-8 sem medição |
-| `v1.11.0a8b58.c4` | "Tabela de preços não carrega" — `TabelasPrecoPage.tsx:53` nunca envia `empresaId`/`filialId`, e manda `termo`, que o endpoint não declara | hipótese, aguarda medição autenticada |
+| `v1.11.0a8b58.c3` | 15 campos de request sem par, mais 3 fantasmas de response e o enum `RegimeTributario` | **absorvida** (conferido em 2026-09-29): os gates de contrato que ela criou entraram no CI na `b64.c1`, e os campos fiscais do recorte foram entregues na `b65`. O estado "qa_review" no plano da fatia ficou velho |
+| `v1.11.0a8b58.c4` | "Tabela de preços não carrega" | **resolvida na `b69`** (D77): a causa não era `empresaId`/`termo`, era o envelope `resultado` que o client não desembrulhava |
 | rodada **05** | a forma dos enums: 449 membros numéricos no frontend contra 156 colunas de texto no banco | `arquitetura`, inventário em andamento |
