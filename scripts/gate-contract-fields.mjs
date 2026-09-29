@@ -52,6 +52,14 @@ const BACKEND_TYPE_MAP = {
   vendas: {
     PedidoVendaResponse: 'PedidoVendaResponse',  // D82, v1.11.0a8b69: prova vermelha contra b68
     ItemPedidoVendaResponse: 'ItemPedidoVendaResponse'
+  },
+  financeiro: {
+    ContaPagarResponse: 'ContaPagarResponse',  // D90, v1.11.0a8b70: origem visível
+    ContaReceberResponse: 'ContaReceberResponse'
+  },
+  compras: {
+    PedidoCompraResponse: 'PedidoCompraResponse',  // D90, v1.11.0a8b70: progresso de recebimento
+    ItemPedidoCompraResponse: 'ItemPedidoCompraResponse'
   }
 };
 
@@ -540,7 +548,7 @@ function filterAllowlisted(divergences, allowlist) {
  * Ponto de entrada: valida os quatro módulos e emite relatório.
  */
 function main() {
-  const modules = ['bancos', 'contabil', 'patrimonio', 'estoque', 'tabelas-preco', 'vendas'];
+  const modules = ['bancos', 'contabil', 'patrimonio', 'estoque', 'tabelas-preco', 'vendas', 'financeiro', 'compras'];
   const allDivergences = [];
   const allMissingTypes = [];
   const allowlist = loadAllowlist();

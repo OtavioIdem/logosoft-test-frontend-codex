@@ -90,8 +90,6 @@ export const PERMISSOES_CATALOGO: Record<PermissionCode, PermissaoCatalogoItem> 
     FINANCEIRO_FLUXO_CAIXA_CONSULTAR: { grupo: 'Financeiro', label: 'Fluxo de caixa · Consultar' },
     FORMAS_PAGAMENTO_GERENCIAR: { grupo: 'Financeiro', label: 'Formas de pagamento · Gerenciar' },
     CONDICOES_PAGAMENTO_GERENCIAR: { grupo: 'Financeiro', label: 'Condições de pagamento · Gerenciar' },
-    FINANCEIRO_CAIXA_GERENCIAR: { grupo: 'Financeiro', label: 'Caixa · Gerenciar' },
-    FINANCEIRO_BANCO_GERENCIAR: { grupo: 'Financeiro', label: 'Banco · Gerenciar' },
     // Compras
     COMPRAS_CONSULTAR: { grupo: 'Compras', label: 'Consultar' },
     COMPRAS_GERENCIAR: { grupo: 'Compras', label: 'Gerenciar' },

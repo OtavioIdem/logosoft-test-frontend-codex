@@ -8,15 +8,23 @@ export type PedidoCompraListQuery = {
     termo?: string | null;
 };
 
+// Espelha `ItemPedidoCompraResponse` (Erp.Application/Compras/Pedidos/PedidoCompraResponse.cs:21-34).
+// `status` é o `EntityStatus` do item (Ativo/Inativo/...), herdado de `AuditableEntity`, e não um
+// status de recebimento: o progresso de recebimento vem de `quantidadeRecebida`/`quantidadePendente`.
 export type ItemPedidoCompraResponse = {
     id: Guid;
+    sequencia: number;
     produtoId: Guid;
-    localEstoqueId: Guid;
+    localEstoqueId?: Guid | null;
     quantidade: number;
+    quantidadeRecebida: number;
+    quantidadePendente: number;
     valorUnitario: number;
+    valorBruto: number;
     valorDesconto: number;
     valorTotal?: number;
     observacao?: string | null;
+    status: string;
 };
 
 export type PedidoCompraResponse = {

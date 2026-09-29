@@ -24,6 +24,10 @@ import { formatMoney } from '@/lib/formatters/money';
 
 const formatDateTime = (value?: string | null) => (value ? new Date(value).toLocaleString('pt-BR') : '—');
 
+// `.Take(200)` fixo em `ComprasRepository.cs:140` (divergências de recebimento): sem `page`/`pageSize`/`hasMore` no
+// contrato, a resposta com 200 linhas pode estar truncando divergências mais antigas sem sinal (D88).
+const TETO_DIVERGENCIAS_SEM_PAGINACAO = 200;
+
 export const RecebimentosCompraPage = () => {
     const { hasPermission } = usePermissions();
     const runWithToast = useMutationWithToast();
@@ -42,6 +46,7 @@ export const RecebimentosCompraPage = () => {
     }
 
     const divergencias = divergenciasQuery.data ?? [];
+    const podeExcederTeto = divergencias.length >= TETO_DIVERGENCIAS_SEM_PAGINACAO;
 
     const registrarConferencia = async (values: ConferenciaFiscalFormValues) => {
         if (!recebimentoId) return;
@@ -60,6 +65,7 @@ export const RecebimentosCompraPage = () => {
             <Card title="Divergências de recebimento" className="mb-3">
                 {!empresaId ? <Message className="w-full" severity="info" text="Selecione a empresa para carregar as divergências." /> : null}
                 {divergenciasQuery.error ? <ApiErrorPanel error={mapApiError(divergenciasQuery.error)} /> : null}
+                {podeExcederTeto ? <Message severity="warn" className="mb-3 w-full" text={`A listagem devolve no máximo ${TETO_DIVERGENCIAS_SEM_PAGINACAO} divergências por filtro. Pode haver mais divergências do que as exibidas — refine os filtros para ver as demais.`} /> : null}
                 {empresaId ? (
                     <DataTable value={divergencias} dataKey="id" loading={divergenciasQuery.isFetching} emptyMessage="Nenhuma divergência." responsiveLayout="scroll" stripedRows size="small">
                         <Column header="Tipo" body={(row: RecebimentoDivergenciaResponse) => <Tag value={tipoDivergenciaLabel(Number(row.tipo))} severity="warning" />} />

@@ -40,11 +40,15 @@ import {
     getPedidoCompraNextAction,
     getPedidoCompraOperationalBlocks,
     getPedidoCompraStatusSteps,
+    itemPedidoCompraProgressoLabel,
+    pedidoCompraMostraProgressoRecebimento,
     pedidoCompraPodeAprovar,
     pedidoCompraPodeCancelar,
     pedidoCompraPodeEditar,
     pedidoCompraPodeEnviar,
     pedidoCompraPodeReceber,
+    RECEBIMENTO_COMPRA_REVERSAO_TEXTO,
+    RECEBIMENTO_COMPRA_REVERSAO_TITULO,
     statusPedidoCompraTagValue
 } from '@/features/compras/components/comprasUiUtils';
 
@@ -242,7 +246,7 @@ export const PedidoCompraDetalhePage = ({ pedidoId }: { pedidoId?: string }) => 
                             <DataTableServer<ItemPedidoCompraResponse> value={visibleItens} totalRecords={itens.length} loading={pedidoQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhum item informado.">
                                 <Column header="Produto" body={(row: ItemPedidoCompraResponse) => produtoLabelMap.get(row.produtoId) ?? 'Produto não carregado'} />
                                 <Column header="Local" body={(row: ItemPedidoCompraResponse) => row.localEstoqueId ? localLabelMap.get(row.localEstoqueId) ?? 'Local não carregado' : '-'} />
-                                <Column header="Qtd." body={(row: ItemPedidoCompraResponse) => row.quantidade} />
+                                <Column header="Qtd." body={(row: ItemPedidoCompraResponse) => <>{row.quantidade}{pedidoCompraMostraProgressoRecebimento(pedido) ? <small className="block text-color-secondary">{itemPedidoCompraProgressoLabel(row)}</small> : null}</>} />
                                 <Column header="Unitário" body={(row: ItemPedidoCompraResponse) => formatMoney(row.valorUnitario)} />
                                 <Column header="Desconto" body={(row: ItemPedidoCompraResponse) => formatMoney(row.valorDesconto)} />
                                 <Column header="Total" body={(row: ItemPedidoCompraResponse) => formatMoney(row.valorTotal ?? row.quantidade * row.valorUnitario - row.valorDesconto)} />
@@ -260,6 +264,7 @@ export const PedidoCompraDetalhePage = ({ pedidoId }: { pedidoId?: string }) => 
                                 <div className="border-1 surface-border border-round p-3"><strong>Estoque</strong><span className="block text-color-secondary mt-1">Ao receber, cada item selecionado movimenta o local de estoque informado.</span></div>
                                 <div className="border-1 surface-border border-round p-3"><strong>Financeiro</strong><span className="block text-color-secondary mt-1">Se a opção estiver marcada, o recebimento solicita geração de conta a pagar.</span></div>
                                 <div className="border-1 surface-border border-round p-3"><strong>Tolerância</strong><span className="block text-color-secondary mt-1">Receber acima do pedido só é enviado quando a opção explícita for marcada.</span></div>
+                                <div className="border-1 surface-border border-round p-3"><strong>{RECEBIMENTO_COMPRA_REVERSAO_TITULO}</strong><span className="block text-color-secondary mt-1">{RECEBIMENTO_COMPRA_REVERSAO_TEXTO}</span></div>
                             </div>
                         </Card>
                     </div>

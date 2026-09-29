@@ -126,9 +126,13 @@ function montarEspelho(refTypos: string): string {
   const contratoDest = path.join(espelho, 'docs', 'backend-v1.23', 'CONTRATO-API-v1.23.md');
   writeFileSync(contratoDest, readFileSync(contratoSource, 'utf8'));
 
-  // Lê a lista de módulos mapeados do gate para não desincronizar
-  // Nota: hardcoding evitado — a lista vem do próprio gate como fonte de verdade
-  const modulosAMapear = ['bancos', 'contabil', 'patrimonio', 'estoque', 'tabelas-preco', 'vendas'];
+  // A lista de módulos vem das chaves de primeiro nível de BACKEND_TYPE_MAP do próprio gate: uma lista
+  // fixa aqui ficou para trás quando a b70 mapeou financeiro e compras, e toda sonda passou a cair na
+  // FALHA ESTRUTURAL antes de listar divergências.
+  const fonteDoGate = readFileSync(gateSource, 'utf8');
+  const blocoDoMapa = fonteDoGate.slice(fonteDoGate.indexOf('const BACKEND_TYPE_MAP = {'), fonteDoGate.indexOf('\n};', fonteDoGate.indexOf('const BACKEND_TYPE_MAP = {')));
+  const modulosAMapear = Array.from(blocoDoMapa.matchAll(/^ {2}'?([a-z][a-z-]*)'?: \{/gm), (m) => m[1]);
+  if (modulosAMapear.length === 0) throw new Error('montarEspelho: nenhum módulo lido de BACKEND_TYPE_MAP');
 
   // Extrai tipos de refTypos (a árvore a validar)
   for (const modulo of modulosAMapear) {
@@ -160,6 +164,7 @@ function montarEspelho(refTypos: string): string {
     }
 
     const dest = path.join(espelho, 'features', modulo, 'types', `${fileModuleName}.types.ts`);
+    mkdirSync(path.dirname(dest), { recursive: true });
     writeFileSync(dest, conteudo);
   }
 
@@ -269,8 +274,10 @@ describe('Gate de campos em response — prova durável (F1.4.c2, D19, b68 D71, 
   let espelhoEabe03c = '';
   let espelhoB68 = '';
   let espelhoComSnapshotBranco = '';
+  let espelhoFantasmaB70 = '';
 
   let resultadoAntigo: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoFantasmaB70: Awaited<ReturnType<typeof executarGate>>;
   let resultadoHoje: Awaited<ReturnType<typeof executarGate>>;
   let resultadoFantasma: Awaited<ReturnType<typeof executarGate>>;
   let resultadoEabe03c: Awaited<ReturnType<typeof executarGate>>;
@@ -323,10 +330,26 @@ describe('Gate de campos em response — prova durável (F1.4.c2, D19, b68 D71, 
     delete snapshotObj.records['TabelaPrecoResponse'];
     writeFileSync(snapshotEmEspelho, JSON.stringify(snapshotObj));
     resultadoComSnapshotBranco = executarGate(espelhoComSnapshotBranco, 'Sonda F (snapshot sem TabelaPrecoResponse)');
+
+    // Sonda H (D90, b70): tipos de hoje + campo fantasma em cada um dos 4 records novos. Não existe
+    // prova vermelha natural contra a b69 (0fc5d03): ela só omitia campos que o backend entrega, e o gate
+    // acusa campo declarado que o backend NÃO entrega — medido rodando o gate atual numa worktree da b69,
+    // que sai com exit 0. A sonda prova que os 4 records são medidos de verdade, e não lidos como [].
+    espelhoFantasmaB70 = montarEspelho('HEAD-WORKING');
+    for (const [modulo, arquivo, tipos] of [
+      ['financeiro', 'financeiro.types.ts', ['ContaPagarResponse', 'ContaReceberResponse']],
+      ['compras', 'compras.types.ts', ['PedidoCompraResponse', 'ItemPedidoCompraResponse']]
+    ] as const) {
+      const caminho = path.join(espelhoFantasmaB70, 'features', modulo, 'types', arquivo);
+      let tiposConteudo = readFileSync(caminho, 'utf8');
+      for (const tipo of tipos) tiposConteudo = injetarCampoFantasma(tiposConteudo, tipo);
+      writeFileSync(caminho, tiposConteudo);
+    }
+    resultadoFantasmaB70 = executarGate(espelhoFantasmaB70, 'Sonda H (HEAD-WORKING + fantasma nos 4 records da b70)');
   }, 300_000);
 
   afterAll(() => {
-    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoEabe03c, espelhoB68, espelhoComSnapshotBranco]) {
+    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoEabe03c, espelhoB68, espelhoComSnapshotBranco, espelhoFantasmaB70]) {
       if (!espelho || !existsSync(espelho)) continue;
       try {
         rmSync(espelho, { recursive: true, force: true });
@@ -376,6 +399,27 @@ describe('Gate de campos em response — prova durável (F1.4.c2, D19, b68 D71, 
       for (const nomeCampo of CAMPOS_ESPERADOS_EM_2C50771) {
         expect(Array.from(resultadoFantasma.nomesDivergencias)).not.toContain(nomeCampo);
       }
+    });
+  });
+
+  describe('Sonda H — árvore de hoje + campo fake nos 4 records da b70 (D90)', () => {
+    it('deve sair com código de erro 1', () => {
+      expect(resultadoFantasmaB70.exitCode).toBe(1);
+    });
+
+    for (const nome of [
+      'ContaPagarResponse.campoFantasmaSonda',
+      'ContaReceberResponse.campoFantasmaSonda',
+      'PedidoCompraResponse.campoFantasmaSonda',
+      'ItemPedidoCompraResponse.campoFantasmaSonda'
+    ]) {
+      it(`acusa ${nome}`, () => {
+        expect(Array.from(resultadoFantasmaB70.nomesDivergencias)).toContain(nome);
+      });
+    }
+
+    it('não acusa mais nada além dos 4 campos fake (a árvore de hoje é limpa)', () => {
+      expect(resultadoFantasmaB70.nomesDivergencias.size).toBe(4);
     });
   });
 

@@ -1,6 +1,6 @@
 {
-  "description": "Registro de exceção: campo declarado no TS que não existe no C#, drenado na fatia v1.11.0a8b54.c2 por D18 + b68 D71 + b69 D77/D82",
-  "scopeFatia": "v1.11.0a8b54.c2 — prova durável do gate de campo; v1.11.0a8b68 — MovimentoEstoque ganha validação; v1.11.0a8b69 — Tabelas de Preço e Vendas ganham validação",
+  "description": "Registro de exceção: campo declarado no TS que não existe no C#, drenado na fatia v1.11.0a8b54.c2 por D18 + b68 D71 + b69 D77/D82 + b70 D90",
+  "scopeFatia": "v1.11.0a8b54.c2 — prova durável do gate de campo; v1.11.0a8b68 — MovimentoEstoque ganha validação; v1.11.0a8b69 — Tabelas de Preço e Vendas ganham validação; v1.11.0a8b70 — Financeiro e Compras ganham validação (D90)",
   "exceptions": [
     { "module": "estoque", "type": "MovimentoEstoque", "field": "codigo", "reason": "BaseOperationalRecord: backend não serializa para MovimentoEstoqueResponse" },
     { "module": "estoque", "type": "MovimentoEstoque", "field": "status", "reason": "BaseOperationalRecord: backend não serializa para MovimentoEstoqueResponse" },
@@ -10,5 +10,5 @@
     { "module": "tabelas-preco", "type": "TabelaPrecoResponse", "field": "alteradoEm", "reason": "D77/D82: TabelaPrecoResponse do C# não serializa timestamps de auditoria; grep confirma que não é lido em tela" }
   ],
   "teto": 6,
-  "note": "Prova b68: 048d930; na b69 sem vigente: gate acusa vigente (defeito sendo corrigido pelo builder). Estoque: 4 campos. Tabelas de Preço: 2 campos de auditoria."
+  "note": "Prova b68: 048d930; na b69 sem vigente: gate acusa vigente (defeito sendo corrigido pelo builder). Estoque: 4 campos. Tabelas de Preço: 2 campos de auditoria. PrecoProdutoVigenteResponse: 6 campos entregues corretamente após correção do gerador (D83). Financeiro e Compras: 0 divergências (D90 OK)."
 }

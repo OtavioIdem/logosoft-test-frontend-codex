@@ -6,7 +6,6 @@ import { Dialog } from 'primereact/dialog';
 import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
 import { InputTextarea } from 'primereact/inputtextarea';
-import { Message } from 'primereact/message';
 import { EmpresaFilialFields } from '@/components/forms/EmpresaFilialFields';
 import { EntitySelect } from '@/components/forms/EntitySelect';
 import { FormGrid } from '@/components/forms/FormGrid';
@@ -15,7 +14,6 @@ import { DateTimeInput } from '@/components/forms/DateTimeInput';
 import { useClientes } from '@/features/clientes/hooks/useClientesResources';
 import { useFornecedores } from '@/features/fornecedores/hooks/useFornecedoresResources';
 import { usePessoas } from '@/features/pessoas/hooks/usePessoasResources';
-import { useFinanceiroOriginOptions } from '@/features/financeiro/hooks/useFinanceiroOriginOptions';
 import { ContaPagarFormValues, ContaReceberFormValues, ParcelaFinanceiraRequest } from '@/features/financeiro/types/financeiro.types';
 import { defaultParcela, formatMoney, origemFinanceiraOptions, sumMoneyValues } from '@/features/financeiro/components/financeiroUiUtils';
 import { OrigemFinanceira, SelectOption } from '@/types/erp';
@@ -54,13 +52,9 @@ const initialValues = (type: 'receber' | 'pagar'): FormValues => ({
     parcelas: [defaultParcela()]
 });
 
-const financialOriginOptions = (type: 'receber' | 'pagar') => {
-    if (type === 'pagar') {
-        return origemFinanceiraOptions.filter((option) => option.value === OrigemFinanceira.Manual);
-    }
-
-    return origemFinanceiraOptions.filter((option) => option.value !== OrigemFinanceira.Compra);
-};
+// D86: o lançamento manual, a pagar ou a receber, só nasce com origem Manual. A conta a receber de
+// um pedido de venda tem caminho próprio, com vínculo, no diálogo "Gerar por pedido".
+const financialOriginOptions = () => origemFinanceiraOptions.filter((option) => option.value === OrigemFinanceira.Manual);
 
 export const ContaFinanceiraFormDialog = ({ type, visible, loading, onHide, onSubmit }: ContaFinanceiraFormDialogProps) => {
     const [values, setValues] = useState<FormValues>(initialValues(type));
@@ -68,7 +62,6 @@ export const ContaFinanceiraFormDialog = ({ type, visible, loading, onHide, onSu
     const clienteQuery = useClientes(queryBase);
     const fornecedorQuery = useFornecedores(queryBase);
     const pessoasQuery = usePessoas(queryBase);
-    const originQuery = useFinanceiroOriginOptions(values.origem, queryBase);
 
     useEffect(() => {
         if (visible) setValues(initialValues(type));
@@ -97,10 +90,6 @@ export const ContaFinanceiraFormDialog = ({ type, visible, loading, onHide, onSu
     const addParcela = () => setValues((current) => ({ ...current, parcelas: [...current.parcelas, { numero: current.parcelas.length + 1, vencimento: new Date(), valor: 0 }] }));
     const removeParcela = (index: number) => setValues((current) => ({ ...current, parcelas: current.parcelas.filter((_, currentIndex) => currentIndex !== index).map((parcela, currentIndex) => ({ ...parcela, numero: currentIndex + 1 })) }));
 
-    const changeOrigem = (origem: number) => {
-        setValues((current) => ({ ...current, origem, origemId: null }));
-    };
-
     const submit = () => {
         if (type === 'receber') {
             onSubmit({ empresaId: values.empresaId, filialId: values.filialId ?? null, clienteId: values.clienteId ?? '', documento: values.documento, origem: values.origem, origemId: values.origemId ?? null, dataEmissao: values.dataEmissao, observacao: values.observacao ?? null, parcelas: values.parcelas });
@@ -109,11 +98,9 @@ export const ContaFinanceiraFormDialog = ({ type, visible, loading, onHide, onSu
         onSubmit({ empresaId: values.empresaId, filialId: values.filialId ?? null, fornecedorId: values.fornecedorId ?? '', documento: values.documento, origem: values.origem, origemId: values.origemId ?? null, dataEmissao: values.dataEmissao, observacao: values.observacao ?? null, parcelas: values.parcelas });
     };
 
-    const needsOriginReference = values.origem === OrigemFinanceira.PedidoVenda;
-    const unsupportedOriginReference = values.origem !== OrigemFinanceira.Manual && !needsOriginReference;
     const parcelasTotal = useMemo(() => sumMoneyValues(values.parcelas.map((parcela) => parcela.valor)), [values.parcelas]);
     const selectedEntityMissing = type === 'receber' ? !values.clienteId : !values.fornecedorId;
-    const canSubmit = Boolean(values.empresaId && !selectedEntityMissing && values.documento.trim() && values.parcelas.length > 0 && parcelasTotal > 0 && (!needsOriginReference || values.origemId));
+    const canSubmit = Boolean(values.empresaId && !selectedEntityMissing && values.documento.trim() && values.parcelas.length > 0 && parcelasTotal > 0);
 
     const footer = (
         <div className="flex justify-content-end gap-2">
@@ -135,11 +122,9 @@ export const ContaFinanceiraFormDialog = ({ type, visible, loading, onHide, onSu
                 <div className="field col-12 md:col-3"><label htmlFor="dataEmissao" className="font-medium">Data de emissão</label><DateTimeInput id="dataEmissao" value={values.dataEmissao} onChange={(value) => update('dataEmissao', value ?? new Date())} disabled={loading} /></div>
                 <div className="field col-12 md:col-4">
                     <label htmlFor="origem" className="font-medium">Origem</label>
-                    <Dropdown id="origem" value={values.origem} options={financialOriginOptions(type)} optionLabel="label" optionValue="value" onChange={(event) => changeOrigem(Number(event.value))} disabled={loading || type === 'pagar'} />
-                    {type === 'pagar' ? <small className="text-600">A origem de uma conta a pagar é derivada pelo backend a partir do documento que a gerou. O lançamento manual nasce com origem Manual.</small> : null}
+                    <Dropdown id="origem" value={values.origem} options={financialOriginOptions()} optionLabel="label" optionValue="value" disabled />
+                    {type === 'pagar' ? <small className="text-600">A origem de uma conta a pagar é derivada pelo backend a partir do documento que a gerou. O lançamento manual nasce com origem Manual.</small> : <small className="text-600">O lançamento manual nasce com origem Manual. Para gerar a conta a receber de um pedido de venda faturado, use &quot;Gerar por pedido&quot;.</small>}
                 </div>
-                {needsOriginReference ? <div className="field col-12 md:col-8"><label htmlFor="origemId" className="font-medium">Documento de origem</label><EntitySelect id="origemId" value={values.origemId ?? null} options={originQuery.options} onChange={(value) => update('origemId', value)} entityName="pedido de venda" disabled={loading || !values.empresaId || originQuery.isLoading || originQuery.isFetching} /><small className="text-600">Selecione pelo número e descrição. O vínculo da origem será enviado automaticamente.</small></div> : null}
-                {unsupportedOriginReference ? <div className="col-12 md:col-8 flex align-items-end"><Message className="w-full" severity="info" text="Esta origem ainda não possui busca de referência no frontend; a conta será enviada sem vínculo técnico de origem até o módulo correspondente expor seleção própria." /></div> : null}
                 <div className="field col-12"><label htmlFor="observacaoFinanceira" className="font-medium">Observação</label><InputTextarea id="observacaoFinanceira" value={values.observacao ?? ''} onChange={(event) => update('observacao', event.target.value)} rows={2} disabled={loading} /></div>
                 <div className="col-12 mt-3">
                     <div className="surface-card border-1 surface-border border-round p-3">

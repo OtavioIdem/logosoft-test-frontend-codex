@@ -97,7 +97,9 @@ export enum OrigemFinanceira {
     NotaFiscal = 3,
     Compra = 4,
     Contrato = 5,
-    AjusteAutorizado = 6
+    AjusteAutorizado = 6,
+    OrdemServico = 7,
+    Frota = 8
 }
 
 export enum StatusContaFinanceira {
@@ -291,8 +293,6 @@ export type PermissionCode =
     | 'FINANCEIRO_CANCELAR'
     | 'FORMAS_PAGAMENTO_GERENCIAR'
     | 'CONDICOES_PAGAMENTO_GERENCIAR'
-    | 'FINANCEIRO_CAIXA_GERENCIAR'
-    | 'FINANCEIRO_BANCO_GERENCIAR'
     | 'COMPRAS_CONSULTAR'
     | 'COMPRAS_GERENCIAR'
     | 'COMPRAS_APROVAR'

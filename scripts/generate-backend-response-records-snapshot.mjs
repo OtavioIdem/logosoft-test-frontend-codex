@@ -28,7 +28,11 @@ const TYPES_TO_EXTRACT = {
   PrecoVigenteResponse: { csharpRecord: 'PrecoProdutoVigenteResponse', module: 'tabelas-preco' },
   PedidoVendaResponse: { csharpRecord: 'PedidoVendaResponse', module: 'vendas' },
   ItemPedidoVendaResponse: { csharpRecord: 'ItemPedidoVendaResponse', module: 'vendas' },
-  MovimentoEstoque: { csharpRecord: 'MovimentoEstoqueResponse', module: 'estoque' }
+  MovimentoEstoque: { csharpRecord: 'MovimentoEstoqueResponse', module: 'estoque' },
+  ContaPagarResponse: { csharpRecord: 'ContaPagarResponse', module: 'financeiro' },
+  ContaReceberResponse: { csharpRecord: 'ContaReceberResponse', module: 'financeiro' },
+  PedidoCompraResponse: { csharpRecord: 'PedidoCompraResponse', module: 'compras' },
+  ItemPedidoCompraResponse: { csharpRecord: 'ItemPedidoCompraResponse', module: 'compras' }
 };
 
 /**
@@ -64,11 +68,11 @@ function extractFieldsFromCSharpRecord(recordName, csharpContent, filePath, line
     const trimmed = line.trim();
     if (!trimmed) continue;
 
-    // Padrão: `Tipo Nome,` ou `Tipo Nome` em fim de linha
-    const fieldPattern = /(?:Guid|string|decimal|int|bool|DateTimeOffset|DateOnly|IReadOnlyList<[^>]+>|IReadOnlyCollection<[^>]+>|[\w.]+)\??(?:<[^>]+>)?\s+([A-Z][a-zA-Z0-9]*)/;
-    const fieldMatch = fieldPattern.exec(trimmed);
-
-    if (fieldMatch) {
+    // Padrão: `Tipo Nome,` ou `Tipo Nome` — com flag global para capturar TODOS os campos de uma linha
+    // Suporta uma linha com múltiplos campos: "Guid TabelaPrecoId, Guid ItemId, Guid ProdutoId, ..."
+    const fieldPattern = /(?:Guid|string|decimal|int|bool|DateTimeOffset|DateOnly|IReadOnlyList<[^>]+>|IReadOnlyCollection<[^>]+>|[\w.]+)\??(?:<[^>]+>)?\s+([A-Z][a-zA-Z0-9]*)/g;
+    let fieldMatch;
+    while ((fieldMatch = fieldPattern.exec(trimmed)) !== null) {
       const fieldName = fieldMatch[1];
       // Converte PascalCase → camelCase
       const camelCased = fieldName.charAt(0).toLowerCase() + fieldName.slice(1);
@@ -88,7 +92,12 @@ function extractRecordFromBackend(recordName) {
     path.join(BACKEND_ROOT, 'src', 'Erp.Application', 'Vendas', 'Pedidos'),
     path.join(BACKEND_ROOT, 'src', 'Erp.Application', 'Vendas'),
     path.join(BACKEND_ROOT, 'src', 'Erp.Application', 'Estoque', 'Movimentos'),
-    path.join(BACKEND_ROOT, 'src', 'Erp.Application', 'Estoque')
+    path.join(BACKEND_ROOT, 'src', 'Erp.Application', 'Estoque'),
+    path.join(BACKEND_ROOT, 'src', 'Erp.Application', 'Financeiro', 'ContasPagar'),
+    path.join(BACKEND_ROOT, 'src', 'Erp.Application', 'Financeiro', 'ContasReceber'),
+    path.join(BACKEND_ROOT, 'src', 'Erp.Application', 'Financeiro'),
+    path.join(BACKEND_ROOT, 'src', 'Erp.Application', 'Compras', 'Pedidos'),
+    path.join(BACKEND_ROOT, 'src', 'Erp.Application', 'Compras')
   ];
 
   for (const dir of possibleDirs) {
@@ -169,8 +178,48 @@ function generateSnapshot() {
     process.exit(1);
   }
 
-  // Escreve o snapshot
+  // D83: Valida que nenhum record perdeu campos sem explicação (regressão mascarada)
+  // Compara os fields do novo snapshot com os do HEAD
   const snapshotPath = path.join(ROOT, 'scripts', 'backend-response-records.snapshot.json');
+  const headSnapshotExists = fs.existsSync(snapshotPath);
+  if (headSnapshotExists) {
+    try {
+      const headSnapshotText = fs.readFileSync(snapshotPath, 'utf8');
+      const headSnapshot = JSON.parse(headSnapshotText);
+      const regressions = [];
+
+      for (const [recordName, newData] of Object.entries(snapshot.records)) {
+        const headData = headSnapshot.records?.[recordName];
+        if (headData && headData.fields && newData.fields) {
+          const headFieldCount = headData.fields.length;
+          const newFieldCount = newData.fields.length;
+          if (newFieldCount < headFieldCount) {
+            const missingFields = headData.fields.filter(f => !newData.fields.includes(f));
+            regressions.push({
+              record: recordName,
+              headCount: headFieldCount,
+              newCount: newFieldCount,
+              missingFields
+            });
+          }
+        }
+      }
+
+      if (regressions.length > 0) {
+        console.error('\n❌ REGRESSÃO DETECTADA — campos perdidos em records existentes:');
+        for (const reg of regressions) {
+          console.error(`   ${reg.record}: ${reg.headCount} → ${reg.newCount} campos`);
+          console.error(`      Faltam: ${reg.missingFields.join(', ')}`);
+        }
+        console.error('\nSe a perda de campos é intencional, documente no allowlist com justificativa por campo.');
+        process.exit(1);
+      }
+    } catch (e) {
+      console.warn(`⚠️  Não conseguiu validar regressão (snapshot anterior ilegível): ${e.message}`);
+    }
+  }
+
+  // Escreve o snapshot
   fs.writeFileSync(snapshotPath, JSON.stringify(snapshot, null, 2));
 
   console.log(`\n✅ Snapshot gerado: ${snapshotPath}`);

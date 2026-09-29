@@ -6,6 +6,7 @@ import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
 import { Dropdown } from 'primereact/dropdown';
+import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
 import { PageHeader } from '@/components/common/PageHeader';
 import { EmpresaFilialFilter } from '@/components/forms/EmpresaFilialFilter';
@@ -31,6 +32,10 @@ const filterLocal = (records: SolicitacaoCompraResponse[], term: string) => {
     return records.filter((record) => `${record.numero} ${record.solicitante}`.toLowerCase().includes(normalized));
 };
 
+// `.Take(200)` fixo em `ComprasRepository.cs:74`: sem `page`/`pageSize`/`hasMore` no contrato, a resposta com 200
+// linhas pode estar truncando solicitações mais antigos sem sinal (D88).
+const TETO_SOLICITACOES_SEM_PAGINACAO = 200;
+
 export const SolicitacoesCompraPage = () => {
     const router = useRouter();
     const { hasPermission } = usePermissions();
@@ -45,6 +50,7 @@ export const SolicitacoesCompraPage = () => {
     const { criarMutation } = useSolicitacoesCompraMutations();
 
     const records = useMemo(() => filterLocal(solicitacoesQuery.data ?? [], localSearch), [solicitacoesQuery.data, localSearch]);
+    const podeExcederTeto = (solicitacoesQuery.data?.length ?? 0) >= TETO_SOLICITACOES_SEM_PAGINACAO;
     const visibleRecords = useMemo(() => records.slice(first, first + rows), [records, first, rows]);
 
     if (!hasPermission('COMPRAS_SOLICITACOES_CONSULTAR')) {
@@ -78,6 +84,7 @@ export const SolicitacoesCompraPage = () => {
             <PageHeader title="Solicitações de compra" description="Abertura → itens → aprovação (habilita cotação)." actions={headerActions} />
             <Card>
                 {solicitacoesQuery.error ? <ApiErrorPanel error={mapApiError(solicitacoesQuery.error)} /> : null}
+                {podeExcederTeto ? <Message severity="warn" className="mb-3 w-full" text={`A listagem devolve no máximo ${TETO_SOLICITACOES_SEM_PAGINACAO} solicitações por filtro. Pode haver mais solicitações do que as exibidas — refine os filtros para ver as demais.`} /> : null}
                 <DataTableServer<SolicitacaoCompraResponse> value={visibleRecords} totalRecords={records.length} loading={solicitacoesQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhuma solicitação encontrada.">
                     <Column field="numero" header="Número" />
                     <Column field="solicitante" header="Solicitante" />

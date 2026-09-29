@@ -4,7 +4,7 @@ import { FornecedorResponse } from '@/features/fornecedores/types/fornecedores.t
 import { ProdutoResponse } from '@/features/produtos/types/produtos.types';
 import { LocalEstoqueResponse } from '@/features/estoque/types/estoque.types';
 import { CondicaoPagamentoResponse } from '@/features/financeiro/types/financeiro.types';
-import { PedidoCompraResponse } from '@/features/compras/types/compras.types';
+import { ItemPedidoCompraResponse, PedidoCompraResponse } from '@/features/compras/types/compras.types';
 
 export { formatMoney, formatMoneyOptional } from '@/lib/formatters/money';
 
@@ -203,3 +203,16 @@ export const calculateRecebimentoTotals = (items: Array<{ selecionado?: boolean;
     const total = selected.reduce((acc, item) => acc + Number(item.quantidade ?? 0) * Number(item.valorUnitario ?? 0), 0);
     return { selectedCount: selected.length, total };
 };
+
+// D87: o progresso de recebimento só faz sentido depois do primeiro recebimento. Em Rascunho,
+// Aguardando aprovação, Aprovado e Cancelado a célula de quantidade fica como sempre foi.
+export const pedidoCompraMostraProgressoRecebimento = (pedido?: PedidoCompraResponse | null) =>
+    [StatusPedidoCompra.ParcialmenteRecebido, StatusPedidoCompra.Recebido].includes(Number(pedido?.statusPedido));
+
+export const itemPedidoCompraProgressoLabel = (item: Pick<ItemPedidoCompraResponse, 'quantidadeRecebida' | 'quantidadePendente'>) =>
+    `Recebido ${Number(item.quantidadeRecebida ?? 0)} • Pendente ${Number(item.quantidadePendente ?? 0)}`;
+
+// D84: não existe caminho para desfazer um recebimento de compra (sem endpoint; o cancelamento do
+// pedido é recusado depois de ParcialmenteRecebido/Recebido no backend). O texto diz isso, sem botão.
+export const RECEBIMENTO_COMPRA_REVERSAO_TITULO = 'Recebimento não se desfaz pela tela';
+export const RECEBIMENTO_COMPRA_REVERSAO_TEXTO = 'Depois de confirmado, o recebimento não pode ser desfeito por esta tela nem cancelando o pedido. O único estorno possível é o do pagamento da conta a pagar gerada, e ele não devolve o estoque nem a quantidade recebida do item.';

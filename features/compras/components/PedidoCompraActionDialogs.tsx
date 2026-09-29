@@ -17,7 +17,7 @@ import { EntitySelect } from '@/components/forms/EntitySelect';
 import { useLocaisEstoque } from '@/features/estoque/hooks/useEstoqueResources';
 import { aprovarPedidoCompraSchema, receberPedidoCompraSchema } from '@/features/compras/schemas/comprasSchemas';
 import { AprovarPedidoCompraRequest, ItemPedidoCompraResponse, PedidoCompraResponse, ReceberPedidoCompraFormValues, ReceberPedidoCompraRequest } from '@/features/compras/types/compras.types';
-import { calculateRecebimentoTotals, dateFromIso, FieldErrors, fieldErrorMap, formatMoney, localOptions, textValue } from '@/features/compras/components/comprasUiUtils';
+import { calculateRecebimentoTotals, dateFromIso, FieldErrors, fieldErrorMap, formatMoney, localOptions, RECEBIMENTO_COMPRA_REVERSAO_TEXTO, RECEBIMENTO_COMPRA_REVERSAO_TITULO, textValue } from '@/features/compras/components/comprasUiUtils';
 import { SelectOption } from '@/types/erp';
 
 export const AprovarPedidoCompraDialog = ({ visible, loading, onHide, onSubmit }: { visible: boolean; loading?: boolean; onHide: () => void; onSubmit: (values: AprovarPedidoCompraRequest) => Promise<void> }) => {
@@ -136,6 +136,7 @@ export const ReceberPedidoCompraDialog = ({
                             <Tag value={formatMoney(recebimentoTotals.total)} severity="info" />
                         </div>
                     </div>
+                    <Message severity="warn" className="w-full mt-2" text={`${RECEBIMENTO_COMPRA_REVERSAO_TITULO}. ${RECEBIMENTO_COMPRA_REVERSAO_TEXTO}`} />
                     {!hasSelectedItems ? <Message severity="warn" className="w-full mt-2" text="Selecione pelo menos um item para registrar o recebimento." /> : null}
                     {values.permiteReceberAcimaDoPedido ? <Message severity="warn" className="w-full mt-2" text="Recebimento acima do pedido será enviado de forma explícita para validação do backend." /> : null}
                     <FieldError message={errors.itens} />

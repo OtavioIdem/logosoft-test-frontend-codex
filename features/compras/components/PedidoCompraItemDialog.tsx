@@ -17,7 +17,7 @@ import { FieldErrors, fieldErrorMap, formatMoney, localOptions, produtoOptions, 
 
 const buildInitialValues = (item?: ItemPedidoCompraResponse | null): ItemPedidoCompraFormValues =>
     item
-        ? { id: item.id, localEstoqueId: item.localEstoqueId, quantidade: item.quantidade, valorUnitario: item.valorUnitario, valorDesconto: item.valorDesconto, observacao: item.observacao ?? null }
+        ? { id: item.id, localEstoqueId: item.localEstoqueId ?? '', quantidade: item.quantidade, valorUnitario: item.valorUnitario, valorDesconto: item.valorDesconto, observacao: item.observacao ?? null }
         : { produtoId: '', localEstoqueId: '', quantidade: 1, valorUnitario: 0, valorDesconto: 0, observacao: null };
 
 export const PedidoCompraItemDialog = ({ visible, pedido, item, loading, onHide, onSubmit }: { visible: boolean; pedido: PedidoCompraResponse | null; item?: ItemPedidoCompraResponse | null; loading?: boolean; onHide: () => void; onSubmit: (values: ItemPedidoCompraFormValues) => Promise<void> }) => {

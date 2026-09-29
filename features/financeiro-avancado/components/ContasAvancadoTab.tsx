@@ -19,7 +19,7 @@ import { PermissionCode } from '@/types/erp';
 import { useContaAvancado, useContasAvancado, useContasAvancadoMutations } from '@/features/financeiro-avancado/hooks/useFinanceiroAvancadoResources';
 import { BaixarContaFormValues, ContaFinanceiraResumoResponse, ContasListQuery, CriarContaFormValues, EstornarBaixaFormValues, TipoConta } from '@/features/financeiro-avancado/types/financeiroAvancado.types';
 import { BaixarContaDialog, CriarContaDialog, EstornarBaixaDialog } from '@/features/financeiro-avancado/components/ContaDialogs';
-import { contaPodeBaixar, contaPodeCancelar, statusContaLabel, statusContaOptions, statusContaSeverity } from '@/features/financeiro-avancado/components/financeiroAvancadoLabels';
+import { contaPodeBaixar, contaPodeCancelar, origemModuloLabel, statusContaLabel, statusContaOptions, statusContaSeverity } from '@/features/financeiro-avancado/components/financeiroAvancadoLabels';
 import { formatMoney } from '@/lib/formatters/money';
 
 const formatDate = (value?: string | null) => (value ? new Date(value).toLocaleDateString('pt-BR') : '—');
@@ -91,6 +91,11 @@ export const ContasAvancadoTab = ({ tipo, baixarPermission, gerenciarPermission 
                         {contaPodeBaixar(status) ? <PermissionGuard permission={baixarPermission} mode="disable">{({ disabled }) => <Button label="Baixar" icon="pi pi-check" size="small" severity="success" disabled={disabled} onClick={() => setDialog('baixar')} />}</PermissionGuard> : null}
                         <PermissionGuard permission="FINANCEIRO_ESTORNAR" mode="disable">{({ disabled }) => <Button label="Estornar" icon="pi pi-undo" size="small" severity="warning" outlined disabled={disabled || conta.baixas.every((baixa) => baixa.estornada)} onClick={() => setDialog('estornar')} />}</PermissionGuard>
                         {contaPodeCancelar(status) ? <PermissionGuard permission="FINANCEIRO_CANCELAR" mode="disable">{({ disabled }) => <Button label="Cancelar" icon="pi pi-ban" size="small" severity="danger" outlined disabled={disabled} onClick={() => setDialog('cancelar')} />}</PermissionGuard> : null}
+                    </div>
+                    <div className="mb-3" data-testid="conta-origem">
+                        <span className="block text-color-secondary">Origem</span>
+                        <strong>{origemModuloLabel(conta.origemModulo, conta.origemId)}</strong>
+                        {conta.origemId ? <small className="block text-color-secondary">Referência: {conta.origemId}</small> : null}
                     </div>
                     <DataTable value={conta.baixas} dataKey="id" emptyMessage="Nenhuma baixa." responsiveLayout="scroll" stripedRows size="small">
                         <Column header="Valor" body={(baixa) => formatMoney(baixa.valor)} />

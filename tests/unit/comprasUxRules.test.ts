@@ -37,7 +37,7 @@ describe('compras UX rules', () => {
     });
 
     it('marca recebimento como etapa atual para pedido parcialmente recebido', () => {
-        const steps = getPedidoCompraStatusSteps({ ...pedidoBase, statusPedido: StatusPedidoCompra.ParcialmenteRecebido, itens: [{ id: '56565656-5656-5656-5656-565656565656', produtoId: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', localEstoqueId: '99999999-9999-9999-9999-999999999999', quantidade: 10, valorUnitario: 50, valorDesconto: 0, valorTotal: 500 }] });
+        const steps = getPedidoCompraStatusSteps({ ...pedidoBase, statusPedido: StatusPedidoCompra.ParcialmenteRecebido, itens: [{ id: '56565656-5656-5656-5656-565656565656', produtoId: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee', localEstoqueId: '99999999-9999-9999-9999-999999999999', quantidade: 10, valorUnitario: 50, valorDesconto: 0, valorTotal: 500, sequencia: 1, quantidadeRecebida: 5, quantidadePendente: 5, valorBruto: 500, status: 'Ativo' }] });
         expect(steps.find((step) => step.key === 'recebimento')?.active).toBe(true);
     });
 

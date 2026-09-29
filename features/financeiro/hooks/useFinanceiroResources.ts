@@ -74,13 +74,15 @@ export const useCondicoesPagamentoOptions = (empresaId?: string | null, enabled 
 export const useContasReceber = (query: FinanceiroListQuery = {}) =>
     useQuery({
         queryKey: contasReceberQueryKey(query),
-        queryFn: () => financeiroApi.listarContasReceber(query)
+        queryFn: () => financeiroApi.listarContasReceber(query),
+        enabled: Boolean(query.empresaId)
     });
 
 export const useContasPagar = (query: FinanceiroListQuery = {}) =>
     useQuery({
         queryKey: contasPagarQueryKey(query),
-        queryFn: () => financeiroApi.listarContasPagar(query)
+        queryFn: () => financeiroApi.listarContasPagar(query),
+        enabled: Boolean(query.empresaId)
     });
 
 export const useContaReceberDetalhe = (id?: string | null, enabled = true) =>
