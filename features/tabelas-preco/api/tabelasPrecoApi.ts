@@ -17,14 +17,21 @@ import {
 } from '@/features/tabelas-preco/types/tabelasPreco.types';
 import { PagedResult } from '@/types/erp';
 
-type TabelaPrecoListResponse = TabelaPrecoResponse[] | PagedResult<TabelaPrecoResponse>;
+// `GET /api/tabelas-preco` devolve `TabelaPrecoPagedResponse(PagedResult<...> Resultado)`
+// (`TabelasPrecoResponses.cs:44`): uma propriedade `resultado` que embrulha o `PagedResult`,
+// não o `PagedResult` na raiz (D77). Sem `JsonStringEnumConverter`/`JsonPropertyName` custom no
+// backend, a chave chega em minúsculo (`resultado`).
+type TabelaPrecoListResponse = TabelaPrecoResponse[] | PagedResult<TabelaPrecoResponse> | { resultado: PagedResult<TabelaPrecoResponse> };
 
-// Normaliza a resposta para PagedResult, tolerando endpoints que ainda devolvam array puro.
+// Normaliza a resposta para PagedResult, tolerando array puro e o envelope `resultado` do backend.
 const normalizePaged = (data: TabelaPrecoListResponse, query?: TabelaPrecoListQuery): PagedResult<TabelaPrecoResponse> => {
-    if (!Array.isArray(data)) return data;
-    const page = query?.page ?? 1;
-    const pageSize = query?.pageSize ?? (data.length || 1);
-    return { items: data, page, pageSize, totalItems: data.length, totalPages: 1 };
+    if (Array.isArray(data)) {
+        const page = query?.page ?? 1;
+        const pageSize = query?.pageSize ?? (data.length || 1);
+        return { items: data, page, pageSize, totalItems: data.length, totalPages: 1 };
+    }
+    if (data && typeof data === 'object' && 'resultado' in data) return data.resultado;
+    return data;
 };
 
 const runTabelaPrecoRequest = async <T>(request: () => Promise<T>) => {
@@ -32,7 +39,10 @@ const runTabelaPrecoRequest = async <T>(request: () => Promise<T>) => {
 };
 
 const dateOnly = (value: Date | null | undefined) => value ? value.toISOString().slice(0, 10) : null;
-const params = (query?: TabelaPrecoListQuery) => cleanQueryParams({ empresaId: query?.empresaId, filialId: query?.filialId, status: query?.status, termo: query?.termo, page: query?.page, pageSize: query?.pageSize });
+// `termo` não é declarado em `TabelasPrecoController.Listar` (`TabelasPrecoController.cs:24`,
+// sem parâmetro `termo` na assinatura) e o ASP.NET Core o ignora em silêncio (D77) — o client
+// não envia.
+const params = (query?: TabelaPrecoListQuery) => cleanQueryParams({ empresaId: query?.empresaId, filialId: query?.filialId, status: query?.status, page: query?.page, pageSize: query?.pageSize });
 
 export const buildCriarTabelaPrecoPayload = (values: TabelaPrecoFormValues): CriarTabelaPrecoRequest => {
     const parsed = tabelaPrecoSchema.parse(values);

@@ -218,6 +218,24 @@ const marcas = [{ id: marcaId, empresaId, filialId, nome: 'Marca geral', status:
 const empresas = [{ id: empresaId, codigo: '001', razaoSocial: 'logosoft matriz', nomeFantasia: 'logosoft matriz', documento: '12ABC34501DE35', status: 1 }];
 const filiais = [{ id: filialId, empresaId, codigo: '001', nome: 'Filial São Paulo', documento: '11222333000181', status: 1 }];
 
+const tabelaPrecoId = 'tttttttt-tttt-tttt-tttt-tttttttttttt';
+const tabelasPreco = [
+    {
+        id: tabelaPrecoId,
+        empresaId,
+        filialId,
+        nome: 'Tabela Padrão',
+        dataInicioVigencia: '2026-01-01',
+        dataFimVigencia: null,
+        padrao: true,
+        status: 2, // Ativa
+        itens: [
+            { id: 'tp-item-1', produtoId, precoVenda: 150, precoMinimo: null, margemPercentual: null, ativo: true },
+            { id: 'tp-item-2', produtoId, precoVenda: 200, precoMinimo: 100, margemPercentual: 15, ativo: true }
+        ]
+    }
+];
+
 const pedidoVenda = {
     id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     empresaId,
@@ -232,6 +250,23 @@ const pedidoVenda = {
     valorTotal: 251,
     itens: [{ id: 'pv-item-1', produtoId, localEstoqueId: localId, quantidade: 2, valorUnitario: 125.5, valorDesconto: 0, valorTotal: 251 }]
 };
+
+const pedidoVendaAguardandoAprovacao = {
+    id: 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee',
+    empresaId,
+    filialId,
+    numero: 'PV-002',
+    clienteId,
+    dataEmissao: '2026-05-09T12:00:00.000Z',
+    tipo: 2,
+    statusPedido: 2, // Aguardando aprovação
+    valorProdutos: 500,
+    valorDesconto: 50,
+    valorTotal: 450,
+    itens: [{ id: 'pv-item-2', produtoId, localEstoqueId: localId, quantidade: 4, valorUnitario: 125, valorDesconto: 0, valorTotal: 500 }]
+};
+
+const pedidosVenda = [pedidoVenda, pedidoVendaAguardandoAprovacao];
 
 const pedidoCompra = {
     id: 'cccccccc-cccc-cccc-cccc-cccccccccccc',
@@ -711,8 +746,16 @@ export const mockApiRoutes = async (page: Page) => {
         if (path.includes('/api/estoque/movimentos')) return route.fulfill(json([{ id: 'mov-1', produtoId, localEstoqueId: localId, tipo: 1, quantidade: 10, origemModulo: 'E2E', documento: 'DOC-E2E', dataMovimento: '2026-05-08T12:00:00.000Z' }]));
         if (path.includes('/api/estoque/reservas')) return route.fulfill(json([{ id: 'res-1', produtoId, localEstoqueId: localId, quantidade: 1, origemModulo: 'Venda', statusReserva: 1 }]));
         if (path.includes('/api/estoque/inventarios')) return route.fulfill(json([{ id: 'inv-1', codigo: 'INV-001', localEstoqueId: localId, descricao: 'Inventário E2E', statusInventario: 1, itens: [] }]));
-        if (path.includes('/api/vendas/pedidos/')) return route.fulfill(json(pedidoVenda));
-        if (path.includes('/api/vendas/pedidos')) return route.fulfill(json([pedidoVenda]));
+        if (path.match(/\/api\/tabelas-preco\/[^/]+\/itens\/[^/]+$/)) return route.fulfill(json(tabelasPreco[0]));
+        if (path.match(/\/api\/tabelas-preco\/[^/]+$/)) return route.fulfill(json(tabelasPreco[0]));
+        if (path.includes('/api/tabelas-preco')) return route.fulfill(json({ resultado: { items: tabelasPreco, page: 1, pageSize: 20, totalItems: tabelasPreco.length, totalPages: 1 } }));
+        if (path.match(/\/api\/vendas\/pedidos\/[a-f0-9\-]+$/)) return route.fulfill(json(pedidosVenda.find((p) => p.id === path.split('/').pop()) || pedidoVenda));
+        if (path.includes('/api/vendas/pedidos')) {
+            const url = new URL(request.url());
+            const statusParam = url.searchParams.get('status');
+            const filtered = statusParam ? pedidosVenda.filter((p) => String(p.statusPedido) === statusParam) : pedidosVenda;
+            return route.fulfill(json(filtered));
+        }
         if (path.includes('/api/compras/pedidos/')) return route.fulfill(json(pedidoCompra));
         if (path.includes('/api/compras/pedidos')) return route.fulfill(json([pedidoCompra]));
         if (path.includes('/api/financeiro/formas-pagamento')) return route.fulfill(json([{ id: 'fp-1', nome: 'PIX', permiteReceber: true, permitePagar: true, permiteRecebimento: true, permitePagamento: true, status: 'ATIVO' }]));

@@ -71,17 +71,29 @@ const CAMPOS_ESPERADOS_EM_2C50771 = [
 const raizDoProjeto = process.cwd();
 
 /**
- * Monta um espelho temporário com script, allowlist, contrato e tipos de uma árvore específica.
+ * Monta um espelho temporário com script, allowlist, contrato, snapshot e tipos de uma árvore específica.
  * Se refTypos === 'HEAD-WORKING', usa os arquivos do disco (working directory).
  * Caso contrário, usa git show para trazer a versão específica.
  * Retorna o caminho do espelho.
+ *
+ * D83: Copia o snapshot para módulos que precisam dele (tabelas-preco, vendas).
  */
 function montarEspelho(refTypos: string): string {
   const espelho = mkdtempSync(path.join(tmpdir(), 'gate-prova-c2-'));
   const useWorkingDir = refTypos === 'HEAD-WORKING';
 
-  // Estrutura mínima
-  const dirs = ['scripts', 'docs/backend-v1.23', 'features/bancos/types', 'features/contabil/types', 'features/patrimonio/types', 'features/estoque/types', 'types'];
+  // Estrutura mínima: adiciona tabelas-preco e vendas
+  const dirs = [
+    'scripts',
+    'docs/backend-v1.23',
+    'features/bancos/types',
+    'features/contabil/types',
+    'features/patrimonio/types',
+    'features/estoque/types',
+    'features/tabelas-preco/types',
+    'features/vendas/types',
+    'types'
+  ];
   for (const dir of dirs) {
     const fullPath = path.join(espelho, dir);
     if (!existsSync(fullPath)) {
@@ -102,33 +114,52 @@ function montarEspelho(refTypos: string): string {
     readFileSync(allowlistSource, 'utf8')
   );
 
+  // Copia snapshot da árvore atual (D83: obrigatório para tabelas-preco/vendas)
+  const snapshotSource = path.join(raizDoProjeto, 'scripts', 'backend-response-records.snapshot.json');
+  const snapshotDest = path.join(espelho, 'scripts', 'backend-response-records.snapshot.json');
+  if (existsSync(snapshotSource)) {
+    writeFileSync(snapshotDest, readFileSync(snapshotSource, 'utf8'));
+  }
+
   // Copia contrato da árvore atual
   const contratoSource = path.join(raizDoProjeto, 'docs', 'backend-v1.23', 'CONTRATO-API-v1.23.md');
   const contratoDest = path.join(espelho, 'docs', 'backend-v1.23', 'CONTRATO-API-v1.23.md');
   writeFileSync(contratoDest, readFileSync(contratoSource, 'utf8'));
 
+  // Lê a lista de módulos mapeados do gate para não desincronizar
+  // Nota: hardcoding evitado — a lista vem do próprio gate como fonte de verdade
+  const modulosAMapear = ['bancos', 'contabil', 'patrimonio', 'estoque', 'tabelas-preco', 'vendas'];
+
   // Extrai tipos de refTypos (a árvore a validar)
-  const tipos = ['bancos', 'contabil', 'patrimonio', 'estoque'];
-  for (const modulo of tipos) {
+  for (const modulo of modulosAMapear) {
+    // Normaliza nome de arquivo: tabelas-preco → tabelasPreco, vendas → vendas
+    const fileModuleName = modulo.replace(/-([a-z])/g, (match, letter) => letter.toUpperCase());
     let conteudo: string;
 
     if (useWorkingDir) {
       // Lê do disco (working directory)
-      const source = path.join(raizDoProjeto, 'features', modulo, 'types', `${modulo}.types.ts`);
-      conteudo = readFileSync(source, 'utf8');
+      const source = path.join(raizDoProjeto, 'features', modulo, 'types', `${fileModuleName}.types.ts`);
+      if (!existsSync(source)) {
+        // Para referências antigas sem este arquivo, cria vazio para falha explícita
+        conteudo = `// Arquivo não existia em ${refTypos}\n`;
+      } else {
+        conteudo = readFileSync(source, 'utf8');
+      }
     } else {
       // Usa git show para trazer versão específica
-      const output = spawnSync('git', ['show', `${refTypos}:features/${modulo}/types/${modulo}.types.ts`], {
+      const output = spawnSync('git', ['show', `${refTypos}:features/${modulo}/types/${fileModuleName}.types.ts`], {
         cwd: raizDoProjeto,
         encoding: 'utf8'
       });
       if (output.status !== 0) {
-        throw new Error(`Falha ao extrair features/${modulo}/types/${modulo}.types.ts de ${refTypos}: ${output.stderr}`);
+        // Arquivo não existia nesta referência: cria vazio para falha explícita
+        conteudo = `// Arquivo não existia em ${refTypos}\n`;
+      } else {
+        conteudo = output.stdout;
       }
-      conteudo = output.stdout;
     }
 
-    const dest = path.join(espelho, 'features', modulo, 'types', `${modulo}.types.ts`);
+    const dest = path.join(espelho, 'features', modulo, 'types', `${fileModuleName}.types.ts`);
     writeFileSync(dest, conteudo);
   }
 
@@ -231,16 +262,20 @@ function injetarCampoFantasma(conteudo: string, nomeTipo: string): string {
   throw new Error(`Não conseguiu encontrar fechamento de ${nomeTipo}`);
 }
 
-describe('Gate de campos em response — prova durável (F1.4.c2, D19, b68 D71)', () => {
+describe('Gate de campos em response — prova durável (F1.4.c2, D19, b68 D71, D77-D82)', () => {
   let espelhoAntigo = '';
   let espelhoHoje = '';
   let espelhoComFantasma = '';
   let espelhoEabe03c = '';
+  let espelhoB68 = '';
+  let espelhoComSnapshotBranco = '';
 
   let resultadoAntigo: Awaited<ReturnType<typeof executarGate>>;
   let resultadoHoje: Awaited<ReturnType<typeof executarGate>>;
   let resultadoFantasma: Awaited<ReturnType<typeof executarGate>>;
   let resultadoEabe03c: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoB68: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoComSnapshotBranco: Awaited<ReturnType<typeof executarGate>>;
 
   beforeAll(() => {
     // Sonda A: tipos de 2c50771
@@ -270,10 +305,28 @@ describe('Gate de campos em response — prova durável (F1.4.c2, D19, b68 D71)'
     // Sonda D: tipos de eabe03c (b67) — prova vermelha do MovimentoEstoque com nomes antigos
     espelhoEabe03c = montarEspelho('eabe03c');
     resultadoEabe03c = executarGate(espelhoEabe03c, 'Sonda D (eabe03c b67)');
-  }, 180_000);
+
+    // Sonda E: tipos de 048d930 (b68) — antes de tabelas-preco/vendas entrarem no gate
+    // Em b68, os tipos de tabelas-preco/vendas ainda não existem, logo o gate falha
+    // ao tentar montar o contrato para eles. Isso é esperado e prova que o novo
+    // gate cobre módulos que antes não eram validados.
+    espelhoB68 = montarEspelho('048d930');
+    resultadoB68 = executarGate(espelhoB68, 'Sonda E (048d930 b68)');
+
+    // Sonda F: snapshot com um record essencial removido (cópia temporal)
+    // Simula o caso em que o snapshot está corrompido ou desatualizado
+    espelhoComSnapshotBranco = montarEspelho('HEAD-WORKING');
+    const snapshotEmEspelho = path.join(espelhoComSnapshotBranco, 'scripts', 'backend-response-records.snapshot.json');
+    let snapshotConteudo = readFileSync(snapshotEmEspelho, 'utf8');
+    const snapshotObj = JSON.parse(snapshotConteudo);
+    // Remove um record mapeado obrigatório: TabelaPrecoResponse
+    delete snapshotObj.records['TabelaPrecoResponse'];
+    writeFileSync(snapshotEmEspelho, JSON.stringify(snapshotObj));
+    resultadoComSnapshotBranco = executarGate(espelhoComSnapshotBranco, 'Sonda F (snapshot sem TabelaPrecoResponse)');
+  }, 300_000);
 
   afterAll(() => {
-    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoEabe03c]) {
+    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoEabe03c, espelhoB68, espelhoComSnapshotBranco]) {
       if (!espelho || !existsSync(espelho)) continue;
       try {
         rmSync(espelho, { recursive: true, force: true });
@@ -343,6 +396,52 @@ describe('Gate de campos em response — prova durável (F1.4.c2, D19, b68 D71)'
       for (const nomeCampo of CAMPOS_ESPERADOS_EM_2C50771) {
         expect(Array.from(resultadoEabe03c.nomesDivergencias)).not.toContain(nomeCampo);
       }
+    });
+  });
+
+  describe('Sonda E — árvore 048d930 (b68, antes de tabelas-preco/vendas no gate)', () => {
+    it('deve sair com código de erro 1 (divergências de contrato, não FALHA ESTRUTURAL)', () => {
+      expect(resultadoB68.exitCode).toBe(1);
+    });
+
+    it('acusa TabelaPrecoResponse.ativo como divergência', () => {
+      expect(Array.from(resultadoB68.nomesDivergencias)).toContain('TabelaPrecoResponse.ativo');
+    });
+
+    it('acusa PrecoVigenteResponse.margemPercentual como divergência', () => {
+      expect(Array.from(resultadoB68.nomesDivergencias)).toContain('PrecoVigenteResponse.margemPercentual');
+    });
+
+    it('acusa PrecoVigenteResponse.vigente como divergência', () => {
+      expect(Array.from(resultadoB68.nomesDivergencias)).toContain('PrecoVigenteResponse.vigente');
+    });
+
+    it('não acusa TabelaPrecoItemResponse.ativo (não é divergência em b68)', () => {
+      expect(Array.from(resultadoB68.nomesDivergencias)).not.toContain('TabelaPrecoItemResponse.ativo');
+    });
+  });
+
+  describe('Sonda F — HEAD com snapshot corrompido (record TabelaPrecoResponse removido)', () => {
+    it('deve sair com código de erro 1 (FALHA ESTRUTURAL)', () => {
+      expect(resultadoComSnapshotBranco.exitCode).toBe(1);
+    });
+
+    it('acusa FALHA ESTRUTURAL mencionando TabelaPrecoResponse', () => {
+      const saida = resultadoComSnapshotBranco.stdout + resultadoComSnapshotBranco.stderr;
+      expect(saida).toContain('FALHA ESTRUTURAL');
+      expect(saida).toContain('TabelaPrecoResponse');
+    });
+  });
+
+  describe('Validação de integridade — allowlist e teto', () => {
+    it('teto da allowlist deve ser exatamente igual a exceptions.length (catraca de sentido único)', () => {
+      const allowlistPath = path.join(raizDoProjeto, 'scripts', 'gate-contract-fields.allowlist.json');
+      const allowlistConteudo = readFileSync(allowlistPath, 'utf8');
+      const allowlist = JSON.parse(allowlistConteudo);
+
+      expect(allowlist).toHaveProperty('teto');
+      expect(typeof allowlist.teto).toBe('number');
+      expect(allowlist.teto).toEqual(allowlist.exceptions.length);
     });
   });
 

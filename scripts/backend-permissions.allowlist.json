@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "1.11.0a8b68",
+  "version": "1.11.0a8b69",
   "status": "registro-fechado-monotonico",
   "snapshotDocument": "scripts/backend-permissions.snapshot.json",
   "auditPolicy": {
@@ -10,11 +10,26 @@
     "target": "Ondas F1.2 e F1.3"
   },
   "suppressions": [],
-  "description": "Registro auditável, fechado e monotônico das divergências entre o union PermissionCode (types/erp.ts) e o snapshot documental de permissões (scripts/backend-permissions.snapshot.json). F1.2/F1.3 fecharam os 3 fantasmas e as 36 coberturas pendentes registradas em b48/b49: o teto é agora 0/0, tolerância zero.",
+  "description": "Registro auditável, fechado e monotônico das divergências entre o union PermissionCode (types/erp.ts) e o snapshot documental de permissões (scripts/backend-permissions.snapshot.json). F1.2/F1.3 fecharam os 3 fantasmas e as 36 coberturas pendentes registradas em b48/b49. A b69 (D81) reabre 2 coberturas pendentes: POLITICA_COMERCIAL_GERENCIAR e VENDAS_PRECO_MINIMO_SOBRESCREVER saíram do union e do catálogo do frontend porque o próprio backend as tirou do catálogo (sem endpoint), mas o snapshot documental — gerado do contrato v1.23/§12, que a B-16 ainda não atualizou — continua listando as duas.",
   "teto": {
     "fantasmas": 0,
-    "coberturaPendente": 0
+    "coberturaPendente": 2
   },
   "fantasmasConhecidos": [],
-  "coberturaPendente": []
+  "coberturaPendente": [
+    {
+      "id": "POLITICA_COMERCIAL_GERENCIAR_PENDENTE",
+      "code": "POLITICA_COMERCIAL_GERENCIAR",
+      "backendOperacoes": ["Nenhuma — a permissão não guarda nenhum [RequiredPermission] no backend (ver decision)."],
+      "decision": "Não suprimir; removida do union PermissionCode e do catálogo features/seguranca/permissoesCatalogo.ts na v1.11.0a8b69 (D81) porque a constante (SystemPermissions.PoliticaComercialGerenciar) não guarda nenhum [RequiredPermission] em src/Erp.Api/Controllers — o próprio backend já a tirou do catálogo (PermissoesCatalogoDefinition.cs:130, decisão D3 v1.21.3/G1). 0 linhas para o código em erp.permissoes, medido por psql em 2026-09-25. accessRisk NENHUM: nenhum guard, regra de rota ou item de menu do frontend a referenciava. Volta a ser cobertura quando o backend criar o endpoint que a use e o contrato v1.23/§12 e o snapshot documental forem atualizados (B-16).",
+      "target": "B-16"
+    },
+    {
+      "id": "VENDAS_PRECO_MINIMO_SOBRESCREVER_PENDENTE",
+      "code": "VENDAS_PRECO_MINIMO_SOBRESCREVER",
+      "backendOperacoes": ["Nenhuma — a permissão não guarda nenhum [RequiredPermission] no backend (ver decision)."],
+      "decision": "Não suprimir; removida do union PermissionCode e do catálogo features/seguranca/permissoesCatalogo.ts na v1.11.0a8b69 (D81) porque a constante (SystemPermissions.VendasPrecoMinimoSobrescrever) não guarda nenhum [RequiredPermission] em src/Erp.Api/Controllers — o próprio backend já a tirou do catálogo (PermissoesCatalogoDefinition.cs:119, decisão D3 v1.21.3/G1). 0 linhas para o código em erp.permissoes, medido por psql em 2026-09-25. accessRisk NENHUM: nenhum guard, regra de rota ou item de menu do frontend a referenciava. Volta a ser cobertura quando o backend criar o endpoint que a use e o contrato v1.23/§12 e o snapshot documental forem atualizados (B-16).",
+      "target": "B-16"
+    }
+  ]
 }
