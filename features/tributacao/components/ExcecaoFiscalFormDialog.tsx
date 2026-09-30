@@ -13,7 +13,7 @@ import { Message } from 'primereact/message';
 import { Panel } from 'primereact/panel';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { LoadingState } from '@/components/feedback/LoadingState';
-import { NcmSelect } from '@/features/tributacao/components/CadastroFiscalSelects';
+import { NcmSelect } from '@/features/fiscal/components/CadastroFiscalSelects';
 import { csosnOptions, cstIcmsOptions, cstPisCofinsOptions, tipoCalculoPisCofinsOptions } from '@/features/tributacao/components/tributacaoUiUtils';
 import { useExcecaoFiscal, useExcecaoFiscalNcm, useExcecoesFiscaisMutations, useExcecoesFiscaisNcmMutations } from '@/features/tributacao/hooks/useTributacao';
 import { atualizarExcecaoFiscalNcmSchema, atualizarExcecaoFiscalSchema, criarExcecaoFiscalNcmSchema, criarExcecaoFiscalSchema, fromDateOnly, toDateOnly } from '@/features/tributacao/schemas/tributacaoSchemas';

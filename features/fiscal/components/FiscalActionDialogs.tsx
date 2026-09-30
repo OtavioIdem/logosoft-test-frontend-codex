@@ -11,6 +11,7 @@ import { InputText } from 'primereact/inputtext';
 import { Message } from 'primereact/message';
 import { classNames } from 'primereact/utils';
 import { z } from 'zod';
+import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { EntitySelect } from '@/components/forms/EntitySelect';
 import { EmpresaSelect } from '@/components/forms/EmpresaSelect';
 import { FieldError } from '@/components/forms/FieldError';
@@ -25,11 +26,17 @@ import { useCondicoesPagamentoOptions } from '@/features/financeiro/hooks/useFin
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { usePedidosVenda } from '@/features/vendas/hooks/useVendasResources';
 import { PedidoVendaResponse } from '@/features/vendas/types/vendas.types';
-import { FormatoDocumentoAuxiliarFiscal, OrigemNotaFiscal, StatusPedidoVenda, TipoContingenciaFiscal, TipoDocumentoFiscal, TipoOperacaoFiscal, TipoServicoTransmissaoFiscal, TipoXmlFiscal } from '@/types/erp';
+import { ApiError, FormatoDocumentoAuxiliarFiscal, OrigemNotaFiscal, StatusPedidoVenda, TipoContingenciaFiscal, TipoDocumentoFiscal, TipoOperacaoFiscal, TipoServicoTransmissaoFiscal, TipoXmlFiscal } from '@/types/erp';
 import { adicionarImpostoNotaFiscalSchema, definirValoresAcessoriosNotaFiscalSchema } from '@/features/fiscal/schemas/fiscalSchemas';
 import { ItemNotaFiscalResponse, NotaFiscalResponse } from '@/features/fiscal/types/fiscal.types';
 import { gerarCorrelationId, maskFiscalSensitiveText, servicoTransmissaoFiscalOptions, tipoDocumentoFiscalOptions, tipoOperacaoFiscalOptions } from '@/features/fiscal/components/fiscalUiUtils';
-import { CRIAR_NOTA_FISCAL, GERAR_NF_PEDIDO_VENDA } from '@/features/fiscal/components/fiscalLabels';
+import { GERAR_NF_PEDIDO_VENDA } from '@/features/fiscal/components/fiscalLabels';
+import { FiscalErroCadastroAcao } from '@/features/fiscal/components/FiscalErroCadastroAcao';
+import { resolveFiscalErroCadastroLink } from '@/features/fiscal/components/fiscalErrosCadastro';
+import { NaturezaOperacaoField } from '@/features/fiscal/components/NaturezaOperacaoField';
+import { NATUREZA_OPERACAO_DICA_NOTA } from '@/features/fiscal/components/naturezasOperacaoLabels';
+import { naturezaOperacaoIndisponivelMotivo, useNaturezasOperacaoOpcoes } from '@/features/fiscal/hooks/useNaturezasOperacao';
+import { mapApiError } from '@/lib/http/apiError';
 
 const buildFieldErrors = (error: z.ZodError) => {
     const map: Record<string, string> = {};
@@ -101,6 +108,28 @@ const pedidoVendaOptions = (pedidos: PedidoVendaResponse[]) =>
 
 const findById = <T extends { id: string }>(items: T[], id?: string | null) => items.find((item) => item.id === id);
 
+// D101: erro de cadastro ausente (`Fiscal.CfopSemMapeamentoParaAmbito`) dentro do diálogo, com o link para o cadastro. O toast
+// do chamador continua; este painel só abre para código do mapa da D50 (nunca por texto de mensagem).
+const ErroCadastroNoDialogo = ({ erro }: { erro: ApiError | null }) => {
+    if (!erro || !resolveFiscalErroCadastroLink(erro.code)) return null;
+    return (
+        <div className="col-12">
+            <ApiErrorPanel error={erro} />
+            <FiscalErroCadastroAcao erro={erro} mostrarTitulo />
+        </div>
+    );
+};
+
+// O submit dos chamadores relança o erro para manter o diálogo aberto; aqui ele é capturado para o painel D101.
+const submeterCapturandoErro = async (onSubmit: () => Promise<void> | void, setErro: (erro: ApiError | null) => void) => {
+    setErro(null);
+    try {
+        await onSubmit();
+    } catch (error) {
+        setErro(mapApiError(error));
+    }
+};
+
 export const CriarNotaFiscalDialog = ({ visible, loading, onHide, onSubmit }: BaseDialogProps<Record<string, unknown>>) => {
     const { hasAllPermissions } = usePermissions();
     // AC-15: o padrão '1' só vale no modo texto (sem as duas permissões do combo); com elas, nada fica
@@ -132,14 +161,14 @@ export const CriarNotaFiscalDialog = ({ visible, loading, onHide, onSubmit }: Ba
         <Dialog header="Nova nota fiscal manual" visible={visible} modal style={{ width: 'min(56rem, 96vw)' }} onHide={onHide} footer={footer('criar-nota-fiscal-form', loading, onHide, 'Criar nota')}>
             <form id="criar-nota-fiscal-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
                 <ReferencePolicyMessage />
-                <Field label="Empresa"><EmpresaSelect value={values.empresaId || null} required onChange={(empresaId) => setValues((v) => ({ ...v, empresaId: empresaId ?? '', filialId: '', pessoaId: '' }))} /></Field>
+                <Field label="Empresa"><EmpresaSelect value={values.empresaId || null} required onChange={(empresaId) => setValues((v) => ({ ...v, empresaId: empresaId ?? '', filialId: '', pessoaId: '', naturezaOperacaoId: '' }))} /></Field>
                 <Field label="Filial"><FilialSelect empresaId={values.empresaId || null} value={values.filialId || null} onChange={(filialId) => setValues((v) => ({ ...v, filialId: filialId ?? '', pessoaId: '' }))} /></Field>
                 <Field label="Tipo documento"><Dropdown value={values.tipoDocumento} options={tipoDocumentoFiscalOptions} onChange={(e) => setValues((v) => ({ ...v, tipoDocumento: e.value }))} /></Field>
                 <Field label="Operação"><Dropdown value={values.tipoOperacao} options={tipoOperacaoFiscalOptions} onChange={(e) => setValues((v) => ({ ...v, tipoOperacao: e.value }))} /></Field>
                 <Field label="Série"><NotaFiscalSerieField value={values.serie} onChange={(serie) => setValues((v) => ({ ...v, serie }))} empresaId={values.empresaId || null} filialId={values.filialId || null} tipoDocumento={values.tipoDocumento} /></Field>
                 <Field label="Número"><InputText value={values.numero} onChange={(e) => setValues((v) => ({ ...v, numero: e.target.value }))} /></Field>
                 <Field label="Pessoa/cliente" hint="Seleção carregada da API de Pessoas; o backend valida se a pessoa pode ser usada na nota."><EntitySelect entityName="pessoa" value={values.pessoaId || null} options={pessoasOptions} disabled={!values.empresaId || pessoasQuery.isLoading} loading={pessoasQuery.isFetching} onSearch={setPessoaSearch} onChange={(pessoaId) => setValues((v) => ({ ...v, pessoaId: pessoaId ?? '' }))} /></Field>
-                <Field label="Natureza de operação" hint={CRIAR_NOTA_FISCAL.naturezaDica}><InputText value={values.naturezaOperacaoId} disabled placeholder="Parametrização fiscal futura" onChange={(e) => setValues((v) => ({ ...v, naturezaOperacaoId: e.target.value }))} /></Field>
+                <Field label="Natureza de operação" hint={NATUREZA_OPERACAO_DICA_NOTA.notaManual}><NaturezaOperacaoField id="criarNotaNatureza" value={values.naturezaOperacaoId || null} empresaId={values.empresaId || null} onChange={(naturezaOperacaoId) => setValues((v) => ({ ...v, naturezaOperacaoId: naturezaOperacaoId ?? '' }))} /></Field>
                 <TextAreaField label="Observação" value={values.observacao} onChange={(observacao) => setValues((v) => ({ ...v, observacao }))} />
                 <button type="submit" className="hidden" />
             </form>
@@ -172,21 +201,45 @@ export const GerarNotaFiscalPedidoVendaDialog = ({ visible, loading, onHide, onS
     // selecionado inline; sem nenhum dos dois, o combo fica desabilitado aguardando a escolha do pedido.
     const pedidoSelecionadoInline = pedidoVendaId ? null : findById(pedidosQuery.data ?? [], values.pedidoVendaId);
     const escopoEfetivo = escopoPedido ?? (pedidoSelecionadoInline ? { empresaId: pedidoSelecionadoInline.empresaId, filialId: pedidoSelecionadoInline.filialId ?? null } : undefined);
+    // D100 + emenda da D91: sem natureza ativa selecionada o Gerar NF não envia, e o motivo fica visível.
+    const naturezasGerar = useNaturezasOperacaoOpcoes(escopoEfetivo?.empresaId ?? null);
+    const motivoSemNatureza =
+        naturezaOperacaoIndisponivelMotivo({ empresaId: escopoEfetivo?.empresaId ?? null, permitido: naturezasGerar.permitido, isLoading: naturezasGerar.isLoading, isError: naturezasGerar.isError, options: naturezasGerar.options }) ??
+        (values.naturezaOperacaoId ? null : GERAR_NF_PEDIDO_VENDA.naturezaObrigatoria);
+    const [erroCadastro, setErroCadastro] = useState<ApiError | null>(null);
+    useEffect(() => {
+        if (!visible) setErroCadastro(null);
+    }, [visible]);
+    const submeterGerar = (event: React.FormEvent) => {
+        event.preventDefault();
+        if (motivoSemNatureza) return;
+        void submeterCapturandoErro(() => onSubmit(values), setErroCadastro);
+    };
+    const footerGerar = (
+        <div className="flex flex-column gap-2">
+            {motivoSemNatureza && !naturezasGerar.isLoading ? <Message className="w-full" severity="warn" text={`${GERAR_NF_PEDIDO_VENDA.indisponivelPrefixo} ${motivoSemNatureza}`} /> : null}
+            <div className="flex justify-content-end gap-2">
+                <Button label="Cancelar" icon="pi pi-times" text onClick={onHide} disabled={loading} />
+                <Button label="Gerar NF" icon="pi pi-check" type="submit" form="gerar-nf-pedido-form" loading={loading} disabled={Boolean(motivoSemNatureza)} />
+            </div>
+        </div>
+    );
 
     useEffect(() => {
         if (visible && pedidoVendaId) setValues((current) => ({ ...current, pedidoVendaId }));
     }, [pedidoVendaId, visible]);
 
     return (
-        <Dialog header="Gerar nota fiscal de pedido de venda" visible={visible} modal style={{ width: 'min(52rem, 96vw)' }} onHide={onHide} footer={footer('gerar-nf-pedido-form', loading, onHide, 'Gerar NF')}>
-            <form id="gerar-nf-pedido-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
+        <Dialog header="Gerar nota fiscal de pedido de venda" visible={visible} modal style={{ width: 'min(52rem, 96vw)' }} onHide={onHide} footer={footerGerar}>
+            <form id="gerar-nf-pedido-form" className="grid formgrid p-fluid" onSubmit={submeterGerar}>
                 <ReferencePolicyMessage />
+                <ErroCadastroNoDialogo erro={erroCadastro} />
                 <div className="field col-12">
                     <Message severity="warn" className="w-full" text={GERAR_NF_PEDIDO_VENDA.efeito} />
                 </div>
                 {!pedidoVendaId ? (
                     <>
-                        <Field label="Empresa"><EmpresaSelect value={values.empresaId || null} required onChange={(empresaId) => setValues((v) => ({ ...v, empresaId: empresaId ?? '', filialId: '', pedidoVendaId: '' }))} /></Field>
+                        <Field label="Empresa"><EmpresaSelect value={values.empresaId || null} required onChange={(empresaId) => setValues((v) => ({ ...v, empresaId: empresaId ?? '', filialId: '', pedidoVendaId: '', naturezaOperacaoId: '' }))} /></Field>
                         <Field label="Filial"><FilialSelect empresaId={values.empresaId || null} value={values.filialId || null} onChange={(filialId) => setValues((v) => ({ ...v, filialId: filialId ?? '', pedidoVendaId: '' }))} /></Field>
                         <Field label="Pedido aprovado"><EntitySelect entityName="pedido aprovado" value={values.pedidoVendaId || null} options={pedidosOptions} disabled={!values.empresaId || pedidosQuery.isLoading} loading={pedidosQuery.isFetching} onSearch={setPedidoSearch} onChange={(pedidoId) => setValues((v) => ({ ...v, pedidoVendaId: pedidoId ?? '' }))} /></Field>
                     </>
@@ -200,7 +253,7 @@ export const GerarNotaFiscalPedidoVendaDialog = ({ visible, loading, onHide, onS
                 <Field label="Número"><InputText value={values.numero} onChange={(e) => setValues((v) => ({ ...v, numero: e.target.value }))} /></Field>
                 <Field label="CFOP padrão" hint="Obrigatório quando a validação fiscal do produto estiver ativa."><InputText value={values.cfopPadrao} onChange={(e) => setValues((v) => ({ ...v, cfopPadrao: e.target.value }))} /></Field>
                 <Field label="Unidade padrão"><InputText value={values.unidadeComercialPadrao} onChange={(e) => setValues((v) => ({ ...v, unidadeComercialPadrao: e.target.value }))} /></Field>
-                <Field label="Natureza de operação" hint={GERAR_NF_PEDIDO_VENDA.naturezaDica}><InputText value={values.naturezaOperacaoId} disabled placeholder="Parametrização fiscal futura" onChange={(e) => setValues((v) => ({ ...v, naturezaOperacaoId: e.target.value }))} /></Field>
+                <Field label="Natureza de operação *" hint={NATUREZA_OPERACAO_DICA_NOTA.gerarNf}><NaturezaOperacaoField id="gerarNfNatureza" value={values.naturezaOperacaoId || null} empresaId={escopoEfetivo?.empresaId ?? null} onChange={(naturezaOperacaoId) => setValues((v) => ({ ...v, naturezaOperacaoId: naturezaOperacaoId ?? '' }))} /></Field>
                 <div className="field col-12 flex align-items-center gap-2">
                     <Checkbox inputId="validarDadosFiscaisProduto" checked={values.validarDadosFiscaisProduto} onChange={(e) => setValues((v) => ({ ...v, validarDadosFiscaisProduto: Boolean(e.checked) }))} />
                     <label htmlFor="validarDadosFiscaisProduto">Validar NCM/CFOP mínimo dos produtos</label>
@@ -216,6 +269,10 @@ export const ItemNotaFiscalDialog = ({ visible, loading, onHide, onSubmit, empre
     const [values, setValues] = useState({ produtoId: '', codigoItem: '', descricao: '', ncm: '', cfop: '5102', unidadeComercial: 'UN', quantidade: 1, valorUnitario: 0, valorDesconto: 0, observacao: '' });
     const [produtoSearch, setProdutoSearch] = useState('');
     const produtoSearchTerm = useDebouncedValue(produtoSearch.trim());
+    const [erroCadastro, setErroCadastro] = useState<ApiError | null>(null);
+    useEffect(() => {
+        if (!visible) setErroCadastro(null);
+    }, [visible]);
     const produtosQuery = useProdutos({ empresaId: empresaId ?? null, filialId: filialId ?? null, termo: produtoSearchTerm || null });
     const produtos = produtosQuery.data ?? [];
     const produtosOptions = useMemo(() => produtoOptions(produtos), [produtos]);
@@ -234,8 +291,9 @@ export const ItemNotaFiscalDialog = ({ visible, loading, onHide, onSubmit, empre
 
     return (
         <Dialog header="Adicionar item fiscal" visible={visible} modal style={{ width: 'min(56rem, 96vw)' }} onHide={onHide} footer={footer('item-nota-fiscal-form', loading, onHide, 'Adicionar item')}>
-            <form id="item-nota-fiscal-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
+            <form id="item-nota-fiscal-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); void submeterCapturandoErro(() => onSubmit(values), setErroCadastro); }}>
                 <ReferencePolicyMessage />
+                <ErroCadastroNoDialogo erro={erroCadastro} />
                 <Field label="Produto" hint="Seleção carregada da API de produtos. Código, descrição, NCM e preço são preenchidos como sugestão operacional."><EntitySelect entityName="produto" value={values.produtoId || null} options={produtosOptions} disabled={produtosQuery.isLoading} loading={produtosQuery.isFetching} onSearch={setProdutoSearch} onChange={selecionarProduto} /></Field>
                 <Field label="Código"><InputText value={values.codigoItem} onChange={(e) => setValues((v) => ({ ...v, codigoItem: e.target.value }))} /></Field>
                 <Field label="Descrição"><InputText value={values.descricao} onChange={(e) => setValues((v) => ({ ...v, descricao: e.target.value }))} /></Field>

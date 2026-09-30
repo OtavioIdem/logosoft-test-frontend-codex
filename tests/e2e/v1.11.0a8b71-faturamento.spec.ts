@@ -31,9 +31,12 @@ const MOTIVO_LEG_1 = 'Já existe nota fiscal para a origem informada (NotaJaExis
 const RESULTADO_ERRO = `Faturamento terminou em erro. Parou no leg 1 (Gerar nota fiscal): ${MOTIVO_LEG_1}`;
 const RESULTADO_FATURADO = 'Faturamento confirmado. O faturamento chegou à etapa Faturado.';
 const PROXIMO_PASSO = 'Próximo passo: corrija a causa e use "Confirmar" de novo neste mesmo faturamento. Não prepare outro faturamento para o pedido.';
-// `FATURAMENTO_CONFIRMAR.indisponivelPrefixo` + `NATUREZA_OPERACAO_FIELD.vazio` (fiscalLabels.ts), D91.
+// `FATURAMENTO_CONFIRMAR.indisponivelPrefixo` + `NATUREZA_OPERACAO_FIELD_VAZIO.comPermissao` (naturezasOperacaoLabels.ts),
+// D91 e D100 (v1.11.0a8b72): o cadastro passou a ter tela e a sessão tem FISCAL_CADASTROS_CONSULTAR, então o motivo
+// diz o próximo passo e o campo oferece o link. O texto antigo ("ainda não tem tela") não pode voltar.
 const CONFIRMAR_INDISPONIVEL =
-    'Confirmar indisponível: Nenhuma natureza de operação ativa cadastrada para esta empresa. Sem natureza, a geração da nota é recusada pelo backend. O cadastro de naturezas ainda não tem tela; peça a inclusão ao responsável fiscal.';
+    'Confirmar indisponível: Nenhuma natureza de operação ativa cadastrada para esta empresa. Sem natureza, a geração da nota é recusada pelo backend. Cadastre uma natureza para continuar.';
+const LINK_CADASTRAR_NATUREZA = 'Cadastrar natureza de operação';
 // `FATURAMENTO_PREPARAR.existenteErro(1)` e `.abrirExistente`, D95.
 const PREPARAR_EXISTENTE_ERRO =
     'Este pedido já tem 1 faturamento(s) em Erro. Preparar de novo cria outro faturamento e não reaproveita os anteriores. Para tentar de novo, abra o mais recente e confirme.';
@@ -183,6 +186,9 @@ test.describe('v1.11.0a8b71 — Confirmar: natureza obrigatória (AC-2) e body d
         const dialog = await abrirConfirmar(page);
 
         await expect(dialog.getByText(CONFIRMAR_INDISPONIVEL, { exact: true })).toBeVisible();
+        // D100: o texto que dizia não haver tela saiu, e quem tem permissão de cadastro recebe o link para a tela.
+        await expect(dialog.getByText(/ainda não tem tela/)).toHaveCount(0);
+        await expect(dialog.getByRole('link', { name: LINK_CADASTRAR_NATUREZA })).toHaveAttribute('href', '/fiscal/naturezas-operacao');
         const confirmar = dialog.getByRole('button', { name: 'Confirmar', exact: true });
         await expect(confirmar).toBeDisabled();
         await confirmar.click({ force: true });

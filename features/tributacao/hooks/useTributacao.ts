@@ -1,11 +1,8 @@
 'use client';
 
-import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { tributacaoApi } from '@/features/tributacao/api/tributacaoApi';
 import { ExcecaoFiscalListQuery, ExcecaoFiscalNcmListQuery, RegraFiscalListQuery } from '@/features/tributacao/types/tributacao.types';
-import { usePermissions } from '@/features/auth/hooks/usePermissions';
-import { SelectOption } from '@/types/erp';
 
 export const regrasFiscaisQueryKey = (query?: RegraFiscalListQuery) => ['tributacao', 'regras', query] as const;
 export const regraFiscalQueryKey = (id?: string | null) => ['tributacao', 'regra', id] as const;
@@ -13,8 +10,6 @@ export const excecoesFiscaisQueryKey = (query?: ExcecaoFiscalListQuery) => ['tri
 export const excecaoFiscalQueryKey = (id?: string | null) => ['tributacao', 'excecao', id] as const;
 export const excecoesFiscaisNcmQueryKey = (query?: ExcecaoFiscalNcmListQuery) => ['tributacao', 'excecoes-ncm', query] as const;
 export const excecaoFiscalNcmQueryKey = (id?: string | null) => ['tributacao', 'excecao-ncm', id] as const;
-export const ncmOptionsQueryKey = (termo?: string | null) => ['tributacao', 'cadastros', 'ncm', termo] as const;
-export const cfopOptionsQueryKey = (termo?: string | null) => ['tributacao', 'cadastros', 'cfop', termo] as const;
 
 /**
  * Simulação é **mutation**, não query: o corpo é grande, o backend não cacheia e a tela dispara sob demanda.
@@ -63,41 +58,6 @@ export const useExcecaoFiscalNcm = (id?: string | null) =>
         queryFn: () => tributacaoApi.buscarExcecaoNcm(id ?? ''),
         enabled: Boolean(id)
     });
-
-/**
- * Busca de NCM por termo para os selects. Depende de `FISCAL_CADASTROS_CONSULTAR`, que é permissão de
- * **outro** módulo: sem ela a query nem sai, e a tela mostra a mensagem de indisponibilidade em vez de
- * empurrar um 403 para o usuário.
- */
-export const useNcmOptions = (termo?: string | null) => {
-    const { hasPermission } = usePermissions();
-    const permitido = hasPermission('FISCAL_CADASTROS_CONSULTAR');
-
-    const query = useQuery({
-        queryKey: ncmOptionsQueryKey(termo),
-        queryFn: () => tributacaoApi.listarNcm(termo),
-        enabled: permitido
-    });
-
-    const options = useMemo<SelectOption<string>[]>(() => (query.data?.items ?? []).map((item) => ({ label: `${item.codigo} — ${item.descricao}`, value: item.id })), [query.data]);
-
-    return { ...query, options, permitido, itens: query.data?.items ?? [] };
-};
-
-export const useCfopOptions = (termo?: string | null) => {
-    const { hasPermission } = usePermissions();
-    const permitido = hasPermission('FISCAL_CADASTROS_CONSULTAR');
-
-    const query = useQuery({
-        queryKey: cfopOptionsQueryKey(termo),
-        queryFn: () => tributacaoApi.listarCfop(termo),
-        enabled: permitido
-    });
-
-    const options = useMemo<SelectOption<string>[]>(() => (query.data?.items ?? []).map((item) => ({ label: `${item.codigo} — ${item.descricao}`, value: item.id })), [query.data]);
-
-    return { ...query, options, permitido, itens: query.data?.items ?? [] };
-};
 
 export const useRegrasFiscaisMutations = () => {
     const queryClient = useQueryClient();

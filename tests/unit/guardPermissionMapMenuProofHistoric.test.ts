@@ -75,6 +75,7 @@ const divergenciasEm = async (raiz: string): Promise<{
   c2: Array<{ grupo: string; permissao: string }>;
   c3: Array<{ rota: string; permissao: string }>;
   hierarchy: number;
+  itens: Array<{ grupo: string; rota: string; permissoes: string[]; permissoesDoPai: string[] }>;
 }> => {
   const lib = await import(
     path.join(raizDoProjeto, 'scripts/lib/guard-permission-map.mjs').replace(/\\/g, '/')
@@ -91,14 +92,20 @@ const divergenciasEm = async (raiz: string): Promise<{
       rota: item.rota,
       permissao: item.permission
     })),
-    hierarchy: inputs.menuData.hierarchy.length
+    hierarchy: inputs.menuData.hierarchy.length,
+    itens: inputs.menuData.hierarchy.map((item: any) => ({
+      grupo: item.group,
+      rota: item.rota,
+      permissoes: item.permissions,
+      permissoesDoPai: item.parentPermissions
+    }))
   };
 };
 
 describe('Gate de menu (C2 e C3) — prova histórica da b53', () => {
   let arvoreAntiga = '';
-  let divergenciasNaArvoreAntiga: Awaited<ReturnType<typeof divergenciasEm>> = { c2: [], c3: [], hierarchy: 0 };
-  let divergenciasHoje: Awaited<ReturnType<typeof divergenciasEm>> = { c2: [], c3: [], hierarchy: 0 };
+  let divergenciasNaArvoreAntiga: Awaited<ReturnType<typeof divergenciasEm>> = { c2: [], c3: [], hierarchy: 0, itens: [] };
+  let divergenciasHoje: Awaited<ReturnType<typeof divergenciasEm>> = { c2: [], c3: [], hierarchy: 0, itens: [] };
   let hierarchyCountAtuais = 0;
 
   beforeAll(async () => {
@@ -175,13 +182,23 @@ describe('Gate de menu (C2 e C3) — prova histórica da b53', () => {
   });
 
   describe('Contagem de itens do menu', () => {
-    it('parser enumera 84 itens na árvore atual', () => {
+    it('parser enumera 85 itens na árvore atual', () => {
       // b58: +1 "Séries fiscais" (84). b62: −1 "Bloqueios" (`/estoque/bloqueios`,
       // ESTOQUE_MOVIMENTAR), removido em 6d42c62 por levar a rota inexistente — a contagem caiu
       // para 83 e esta prova não foi atualizada junto, então `test:unit` ficou vermelho da b62 em
       // diante e assim foi commitado pela b62, b63 e b64. Corrigido aqui.
       // b67: +1 "Classificações de pessoa" (D68) em Cadastros > /pessoas/classificacoes — contagem sobe para 84.
-      expect(hierarchyCountAtuais).toBe(84);
+      // b72: +1 "Naturezas de operação" (D98) em Fiscal > /fiscal/naturezas-operacao — contagem sobe para 85.
+      expect(hierarchyCountAtuais).toBe(85);
+    });
+
+    it('b72: o item novo é /fiscal/naturezas-operacao no grupo Fiscal, e o pai carrega as duas permissões do filho (D49)', () => {
+      const item = divergenciasHoje.itens.filter((candidato) => candidato.rota === '/fiscal/naturezas-operacao');
+      expect(item).toHaveLength(1);
+      expect(item[0].grupo).toBe('Fiscal');
+      expect(item[0].permissoes).toEqual(['FISCAL_CADASTROS_CONSULTAR', 'FISCAL_CADASTROS_GERENCIAR']);
+      expect(item[0].permissoesDoPai).toEqual(expect.arrayContaining(['FISCAL_CADASTROS_CONSULTAR', 'FISCAL_CADASTROS_GERENCIAR']));
+      expect(divergenciasHoje.c2.filter((par) => par.grupo === 'Fiscal')).toEqual([]);
     });
   });
 });

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FaturamentoDetalhePage } from '@/features/faturamento/components/FaturamentoDetalhePage';
 import { FATURAMENTO_CONFIRMAR, FATURAMENTO_RESULTADO } from '@/features/faturamento/components/faturamentoLabels';
+import { NATUREZA_OPERACAO_LINK } from '@/features/fiscal/components/naturezasOperacaoLabels';
 import { httpClient } from '@/lib/http/httpClient';
 import type { FaturamentoResponse } from '@/features/faturamento/types/faturamento.types';
 
@@ -109,7 +110,7 @@ const faturamentoFaturado = () =>
         legs: [1, 2, 3, 4, 5, 6].map((leg) => ({ id: `l${leg}`, leg, estado: 1, ocorreuEm: '2026-09-30T10:00:00Z' }))
     });
 
-type RespostaConfirmar = { tipo: 200; faturamento: FaturamentoResponse; alertas?: string[] } | { tipo: 400 };
+type RespostaConfirmar = { tipo: 200; faturamento: FaturamentoResponse; alertas?: string[] } | { tipo: 400; code?: string; message?: string };
 
 describe('Faturamento — detalhe — resultado do Confirmar (AC-4) e erro da API no diálogo (AC-5)', () => {
     const originalAdapter = httpClient.defaults.adapter;
@@ -128,13 +129,14 @@ describe('Faturamento — detalhe — resultado do Confirmar (AC-4) e erro da AP
             if (config.method === 'get' && url === `/api/faturamento/${faturamentoId}/historico`) return ok([]);
             if (config.method === 'get' && url === `/api/faturamento/${faturamentoId}/ocorrencias`) return ok([]);
             if (config.method === 'get' && url === '/api/fiscal/naturezas-operacao') {
-                return ok({ items: [{ id: naturezaId, empresaId, codigo: '5102', descricao: 'Venda de mercadoria', ativa: true }], page: 1, pageSize: 200, totalItems: 1, totalPages: 1 });
+                // Os 15 campos de `NaturezaOperacaoResponse` (b72, D98): o schema de resposta exige todos, com `cfops`.
+                return ok({ items: [{ id: naturezaId, empresaId, filialId: null, codigo: '5102', descricao: 'Venda de mercadoria', tipoDocumento: 1, tipoOperacao: 1, finalidade: 1, indicadorPresencaComprador: 1, indicadorConsumidorFinal: false, movimentaEstoque: true, geraFinanceiro: true, observacao: null, ativa: true, cfops: [{ ambito: 1, cfopId: 'cccccccc-cccc-cccc-cccc-cccccccccccc', cfopCodigo: '5102', tipoItem: null }] }], page: 1, pageSize: 200, totalItems: 1, totalPages: 1 });
             }
             if (config.method === 'post' && url === `/api/faturamento/${faturamentoId}/confirmar`) {
                 postsConfirmar += 1;
                 if (respostaConfirmar.tipo === 400) {
                     const response = {
-                        data: { code: 'Faturamento.CfopNaturezaOperacaoNaoInformada', message: 'Natureza de operação não informada para o CFOP.', traceId: 'trace-b71-ac5' },
+                        data: { code: respostaConfirmar.code ?? 'Faturamento.CfopNaturezaOperacaoNaoInformada', message: respostaConfirmar.message ?? 'Natureza de operação não informada para o CFOP.', traceId: 'trace-b71-ac5' },
                         status: 400,
                         statusText: 'Bad Request',
                         headers: new AxiosHeaders(),
@@ -247,5 +249,27 @@ describe('Faturamento — detalhe — resultado do Confirmar (AC-4) e erro da AP
         expect(within(dialog).getByText('Código: Faturamento.CfopNaturezaOperacaoNaoInformada • HTTP 400 • Trace: trace-b71-ac5')).toBeInTheDocument();
         expect(screen.queryByText(FATURAMENTO_RESULTADO.cardTitulo)).not.toBeInTheDocument();
         expect(toastMock.success).not.toHaveBeenCalled();
+        // D101: código fora do mapa da D50 não abre o atalho de cadastro.
+        expect(within(dialog).queryByText(NATUREZA_OPERACAO_LINK.tituloCfopSemMapeamento)).not.toBeInTheDocument();
+        expect(within(dialog).queryByRole('link', { name: NATUREZA_OPERACAO_LINK.cadastrar })).not.toBeInTheDocument();
+    });
+
+    // D101 (b72, AC-10): o 400 `Fiscal.CfopSemMapeamentoParaAmbito` do Confirmar leva à tela de naturezas. S3 e S4
+    // não chegam a este 400 pelo Confirmar: sem FISCAL_CADASTROS_CONSULTAR o combo de natureza não lista e o
+    // Confirmar fica indisponível antes (AC-2 do ConfirmarFaturamentoDialog.test). O caso S4 sem link é provado no
+    // Adicionar item (FiscalActionDialogsNatureza.test).
+    it.each([
+        ['S1', ['FATURAMENTO_CONSULTAR', 'FATURAMENTO_CONFIRMAR', 'FISCAL_CADASTROS_CONSULTAR']],
+        ['S2', ['FATURAMENTO_CONSULTAR', 'FATURAMENTO_CONFIRMAR', 'FISCAL_CADASTROS_CONSULTAR', 'FISCAL_CADASTROS_GERENCIAR']]
+    ])('AC-10 (%s): 400 CfopSemMapeamentoParaAmbito mostra o texto do backend e o link para /fiscal/naturezas-operacao', async (_sessao, perms) => {
+        permsState.perms = perms;
+        respostaConfirmar = { tipo: 400, code: 'Fiscal.CfopSemMapeamentoParaAmbito', message: 'Natureza VENDA sem CFOP para o âmbito Interestadual.' };
+        await abrirPreencherConfirmar();
+
+        const dialog = screen.getByRole('dialog');
+        expect(await within(dialog).findByText('Natureza VENDA sem CFOP para o âmbito Interestadual.')).toBeInTheDocument();
+        expect(within(dialog).getByText(NATUREZA_OPERACAO_LINK.tituloCfopSemMapeamento)).toBeInTheDocument();
+        expect(within(dialog).getByRole('link', { name: NATUREZA_OPERACAO_LINK.cadastrar })).toHaveAttribute('href', '/fiscal/naturezas-operacao');
+        expect(postsConfirmar).toBe(1);
     });
 });

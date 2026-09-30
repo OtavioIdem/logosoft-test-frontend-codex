@@ -1,3 +1,109 @@
+# v1.11.0a8b72
+
+## Naturezas de operação: cadastro, CFOP por âmbito e tipo de item, e natureza real na nota
+
+Quem cuida do fiscal cadastra e mantém as naturezas de operação da empresa em
+`/fiscal/naturezas-operacao` (criar, editar, inativar) e diz qual CFOP vale para cada âmbito e tipo
+de item. Nova nota e Gerar NF passam a escolher a natureza de verdade, e o erro de CFOP sem
+mapeamento leva à tela que resolve. Inventário em
+`docs/arquitetura/debate/14-inventario-naturezas-operacao.md` (NO-1 a NO-17), decisões D98–D101
+(`docs/arquitetura/DECISOES.md`, com as emendas da D98), plano em
+`docs/fatias/v1.11.0a8b72-naturezas-operacao.md`. Sem quarteto de arquitetura: o desenho já estava
+travado pela D47–D53 (a `b59` da D53, renumerada pela D97).
+
+**Risco da fatia: `HIGH`** (3 requests novos e a resposta completa de natureza; permissão nova na
+rota e no menu; a busca de CFOP/NCM muda de módulo; a classe "lista de substituição completa", em
+que omitir um item apaga o mapeamento). **Risco de acesso: `NENHUM`** — a fatia só dá acesso novo.
+
+### Seção operacional — leia antes do deploy
+
+1. **Conceda as permissões antes de esperar ver a tela.** Nenhum grupo concede
+   `FISCAL_CADASTROS_CONSULTAR` nem `FISCAL_CADASTROS_GERENCIAR` hoje (medido por `psql` no
+   `logosoft-postgres`, inventário 14). Ordem de concessão: `FISCAL_CADASTROS_CONSULTAR` a quem
+   consulta; `FISCAL_CADASTROS_CONSULTAR` **e** `FISCAL_CADASTROS_GERENCIAR` a quem mantém. Só
+   `GERENCIAR`, sem `CONSULTAR`, abre a tela em "sem autorização" (listar e buscar CFOP exigem
+   consultar; mesmo comportamento de Séries fiscais). Quem tem só `FISCAL_CONSULTAR` continua sem o
+   item. Ninguém perde tela nem ação.
+2. **O faturamento e a nota ainda não concluem de ponta a ponta.** Com natureza cadastrada e CFOP
+   mapeado, a falha seguinte é o endereço fiscal do destinatário (FT-21,
+   `DestinatarioFiscalResolver.cs:157-186`), que vem na `b73` (endereço de Pessoa) e na `b74`
+   (bloco fiscal de Pessoa e links `DestinatarioSem*`). O banco de homologação tinha 0 naturezas, 0
+   mapeamentos e 64 CFOPs (medido por `psql`).
+3. **A tela (D98):**
+   - Lista paginada no servidor, só com empresa resolvida; filtro Situação "Ativas" (padrão) ou
+     "Todas", porque o servidor não filtra só inativas. Coluna Filial pelo nome, nunca GUID.
+   - Criar e editar num diálogo só. O código (até 40, sem espaço, maiúsculo no servidor) fica só
+     leitura na edição e não vai no PUT. Código duplicado aparece no campo Código; o resto dos
+     erros sai pelo painel de erro com o texto do backend, porque quase tudo chega como
+     `FISCAL_CADASTROS_VALIDACAO`.
+   - Grade de CFOP por âmbito × tipo de item ("Qualquer item" = `tipoItem` nulo). A tela impede
+     combinação repetida: o backend aceitaria e a última venceria em silêncio. A busca de CFOP de cada
+     linha filtra pelo âmbito da linha; Venda filtra CFOP de saída e Compra de entrada; os demais
+     tipos de operação não filtram tipo (emenda da D98). O backend não impõe o tipo: **B-32**.
+   - **A edição sempre reenvia a lista completa de CFOPs.** No backend, `null` preserva, `[]` apaga e
+     uma lista substitui. O client da `b71` descartava 9 dos 15 campos da natureza no parse,
+     inclusive `cfops` (NO-1); agora a resposta é lida inteira, e um formulário de edição sobre o
+     client antigo teria apagado os mapeamentos ao salvar.
+   - Inativar pede motivo de 1 a 400 caracteres e diz que é definitivo pela tela: não existe rota de
+     reativar (**B-31**), e a auditoria grava o motivo numa coluna de 500. Natureza inativa fica sem
+     ação na linha.
+   - Quem não alcança a filial da natureza recebe o 404 do backend no painel (NO-7, lido no C#, não
+     medido em execução): **B-33**.
+4. **A busca de CFOP e NCM mudou de módulo (D99, cumpre a D47 item 3 e a D52).**
+   `CadastroFiscalSelects` saiu de `features/tributacao` para `features/fiscal`, com espera entre a
+   digitação e a busca, erro visível com "Tentar novamente" e leitura validada. Regras fiscais,
+   Exceções e Itens tributáveis importam de lá; o comportamento para o operador não muda.
+5. **Natureza real na nota (D100).** Nova nota e Gerar NF usam o mesmo seletor do Confirmar
+   Faturamento, só com naturezas ativas da empresa, e o Gerar NF não envia sem natureza, com o motivo
+   visível (mesma regra da emenda da D91). Os textos "ainda não oferece a seleção" e "ainda não tem
+   tela" saíram. Sem natureza cadastrada, o seletor leva à tela nova quem tem permissão de cadastro.
+6. **Link de correção (D101).** O erro `CfopSemMapeamentoParaAmbito` mostra "Cadastrar natureza de
+   operação" em Adicionar item, Gerar NF e no erro 400 do Confirmar Faturamento, só a quem tem uma
+   das permissões de cadastro, pelo código do erro (D50). O link leva à lista, e não à natureza
+   certa, porque a nota não expõe a natureza (**B-34**). O resultado 200 do Confirmar com etapa em
+   erro não traz o código, então ali não há link.
+7. **Fora do escopo, nominalmente:** reativar natureza (B-31), recusar natureza inativa na derivação
+   (B-7), filtro por filial (B-33), link com a natureza certa (B-34), corrigir o `CONTRATO-API` e o
+   `GAP` do backend (`empresaId` opcional, contagem 0/5) e regenerar o `BACKEND-ESTADO` com `TipoItem`
+   (artefatos gerados no backend), endereço de Pessoa (`b73`), bloco fiscal de Pessoa (`b74`), os
+   outros endpoints de cadastros fiscais (D53). Pendente de decisão do usuário: incluir o snapshot
+   novo `scripts/backend-request-records.snapshot.json` na política `generated_only` e no hook.
+
+### Testes e QA
+
+**Gate de campos de request cobre natureza (emenda da D98, D83 estendida).**
+`scripts/gate-contract-request-fields.mjs` passa a cobrir Criar, Atualizar e Inativar natureza e o
+`MapeamentoCfopRequest` aninhado, os quatro em `RECORDS_ENVIO_INTEGRAL`. O markdown do contrato não
+traz `TipoItem` no mapeamento (NO-4), então esses records vêm de um snapshot gerado do C#
+(`scripts/generate-backend-request-records-snapshot.mjs` → `scripts/backend-request-records.snapshot.json`,
+backend `0387e44`); sem o snapshot, falha dura. Prova vermelha executada por mutação: sem
+`tipoItem` no mapeamento e sem `cfops` no PUT, o gate sai 1 e acusa `NAO_ENVIADO` pelo nome. Contra
+o HEAD `48eb7ff` e a `b70` (`9713de4`), em worktree, os casos de Confirmar e Faturar acusam igual.
+`gateContractRequestFields.test.ts`: 79/79 em duas execuções (Sondas K a P novas).
+
+**Unit e componente**, com componentes reais e request capturado (só o adapter do axios trocado):
+`naturezasOperacaoPayload` (35), `NaturezasOperacaoPage` (15), `useNaturezasOperacao` (8),
+`CadastroFiscalSelects` (6), `FiscalActionDialogsNatureza` (11), `AppMenuNaturezasOperacao` (10),
+`naturezasOperacaoRegressaoTextual` (4), mais o AC-10 no `FaturamentoConfirmarResultado`. Os 6
+vermelhos esperados pela mudança (mapa D50 com 2 entradas, fixture de natureza com 15 campos, pai
+Fiscal com +2 permissões, menu de 84 para 85 itens) foram atualizados pela razão certa. 11 provas
+vermelhas executadas (AC-5 x3, AC-6 x2, AC-7 x3, AC-9 x3), cada uma com mutação real e restauração
+por `cp` conferida com `cmp`. **Varredura transversal:** 54 arquivos, 517/517 em duas execuções
+seguidas, num único `npx vitest run` sobre a lista de `grep -rlF` pelos 33 arquivos tocados. Uma
+execução anterior teve 5 estouros de 5000 ms sob carga (3 no teste novo da página e 2 testes da
+`b71`), sem falha de asserção. Diferente da `b71`, aqui **o timeout foi aumentado**: `vi.setConfig({ testTimeout: 30_000 })` em `tests/components/NaturezasOperacaoPage.test.tsx` e `tests/components/FiscalActionDialogsNatureza.test.tsx`, com `userEvent.setup({ delay: null })`. O custo é a digitação sob a carga da varredura, não a primeira montagem. Medição do QA, com o reporter json na varredura inteira: sem o override, a página teve 1 estouro em 2 rodadas, e com ele os testes mais lentos levaram de 5,6 a 7,3 s; `FiscalActionDialogsNatureza` chegou a 4,99 s com override e 3,8 s sem, com 0 estouros. O risco aceito é que o limite de 30 s esconda lentidão futura desses dois arquivos.
+
+**E2E:** spec novo `tests/e2e/v1.11.0a8b72-naturezas-operacao.spec.ts` (6 testes: criar pelo menu com 2 linhas de CFOP e body capturado item a item; editar só a descrição reenviando os 3 mapeamentos; inativar com motivo e 204; S1 com Nova natureza desabilitado e sem Editar/Inativar; S4 sem o item e com a rota negada, com controle positivo em Notas fiscais; empresa com 0 naturezas e filtro Ativas com o próximo passo), mais o spec da `b71` ajustado ao texto novo do vazio (e com o link D100 afirmado), `fiscal-impostos` e `b66-cliente-fornecedor`: 22/22 em duas execuções no servidor isolado da porta 3411, com o PID conferido e o servidor encerrado no fim. A primeira execução teve 2 falhas por locator do teste (o nome acessível do link de menu inclui o glifo do ícone), corrigido antes do par oficial. 3 provas vermelhas executadas (`tipoItem` sempre nulo; edição carregando só parte dos mapeamentos; PUT sem o último mapeamento), cada uma com "1 failed" e restauração conferida com `cmp`. Os 32 arquivos de produção seguem idênticos ao backup do builder.
+
+Fato de processo: sem quarteto de arquitetura, porque a D53 já travava o desenho; o orquestrador arbitrou as pendências do inventário (D98–D101) e as duas do design (emenda da D98). Todos os nós de teste e o QA rodaram com Opus.
+
+**QA:** aprovado na segunda passada (`qa-revisor`, Opus). A primeira bloqueou por três achados, nenhum em produção: QA-01, este CHANGELOG omitia o aumento de timeout; QA-02, o AC-3 do plano dizia S1 sem o botão Nova natureza, e a tela o mostra desabilitado; QA-03, um comentário de aquecimento dado como falso, que o próprio QA reconheceu como leitura truncada (o `beforeAll` monta a página). Os dois primeiros foram corrigidos e o comentário foi reescrito.
+- **Gates** rodados pelo QA, todos verdes: source, typecheck, lint, backend-permissions, guard-permission-map, backend-contract-map, contract-request-fields, guid-references, mocks-isolation, validate-ci-gates, build (rota `/fiscal/naturezas-operacao`) e diff --check.
+- **Varredura:** 54 arquivos, 517/517, duas vezes em cada passada.
+- **E2E da b72:** 6/6 duas vezes na porta 3411, PID conferido.
+- **Provas vermelhas reexecutadas pelo QA** para o AC-6 (lista parcial e PUT sem `cfops`), com `cp` e `cmp`. O extrator do gate foi comparado com o do HEAD sobre a mesma árvore: os 15 schemas antigos extraem igual.
+- **Não verificado:** Nova nota, Gerar NF e o link D101 numa tela real (só teste de componente); o gerador do snapshot contra o C#; as medições por `psql`.
+- **Pendências não bloqueantes:** comentário com o caminho antigo dos selects em `EnderecoFiscalFormSection.tsx:62` (corrigir na `b73`); o schema da busca de CFOP/NCM exige `page`/`pageSize`/`totalPages` que o select não usa.
 # v1.11.0a8b71
 
 ## Faturamento honesto e corrigível: envia o que o backend exige, mostra o resultado real e não cria faturamento duplicado

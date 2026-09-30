@@ -21,6 +21,7 @@ import { formatMoney } from '@/lib/formatters/money';
 import { StatusPedidoVenda, TipoDocumentoFiscal as TipoDocumentoFiscalNota } from '@/types/erp';
 import { usePedidosVenda } from '@/features/vendas/hooks/useVendasResources';
 import { useCondicoesPagamentoOptions } from '@/features/financeiro/hooks/useFinanceiroResources';
+import { FiscalErroCadastroAcao } from '@/features/fiscal/components/FiscalErroCadastroAcao';
 import { NaturezaOperacaoField } from '@/features/fiscal/components/NaturezaOperacaoField';
 import { NotaFiscalSerieField } from '@/features/fiscal/components/NotaFiscalSerieField';
 import { NATUREZA_OPERACAO_FIELD } from '@/features/fiscal/components/fiscalLabels';
@@ -237,6 +238,7 @@ export const ConfirmarFaturamentoDialog = ({
             <Message className="w-full mb-2" severity="warn" text={FATURAMENTO_CONFIRMAR.instrucao} />
             <Message className="w-full mb-3" severity="info" text={FATURAMENTO_CONFIRMAR.preRequisitos} />
             {error ? <ApiErrorPanel error={mapApiError(error)} title={FATURAMENTO_CONFIRMAR.erroTitulo} /> : null}
+            {error ? <FiscalErroCadastroAcao erro={mapApiError(error)} mostrarTitulo /> : null}
             <FormGrid>
                 <div className="col-12"><span className="block font-semibold text-color-secondary">{FATURAMENTO_CONFIRMAR.grupoDocumento}</span></div>
                 <div className="field col-12 md:col-4">
