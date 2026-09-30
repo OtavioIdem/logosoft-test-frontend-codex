@@ -254,6 +254,12 @@ alavancagem e andam em paralelo com a `c3` e a `b59`.
 | B-21 | A validação D7 de Contas a Pagar (origem não manual exige vínculo, `ContaPagarUseCases.cs:87-90`) vai para Contas a Receber? Hoje a API aceita origem não manual sem vínculo. | `b70` (D86, só a tela restringe) |
 | B-22 | `PedidoCompra.CotacaoCompraId` existe no domínio e o mapper nunca o serializa. Vai para o DTO, para o pedido mostrar de qual cotação veio? | depois da `b70` (D87) |
 | B-24 | `ContaFinanceiraResumoResponse` (listagem do Financeiro avançado) não traz `OrigemModulo`/`OrigemId`, que só o detalhe tem. Vão entrar no resumo, para a origem aparecer na lista? | depois da `b70` (emenda da D85) |
+| B-25 | Reusar um `correlationId` depois de falha finalizada é recusado e exige id novo (`FiscalIntegracaoSefazSupport.cs:30-68`). Reconfirmar em `PendenteFiscal` com id novo pode autorizar duas vezes? | `b71` (D92) |
+| B-26 | `cfopPadrao` é um só e é comparado com o CFOP derivado de cada item (`CfopDoItemResolver.cs:162-184`); numa nota mista, qualquer valor é recusado. É intencional? | `b71` (D94, CFOP sai) |
+| B-27 | A trava de nota por origem não filtra status (`FiscalRepository.cs:33-39`): uma nota cancelada continua travando o pedido, e o Preparar cria faturamento novo em vez de reaproveitar o em `Erro`. Vai mudar? | `b71` (D95) |
+| B-28 | Qual rota lista as UFs com endpoint SEFAZ configurado? Hoje a UF válida não é descobrível pela tela. | `b71` (D94) |
+| B-29 | O thumbprint digitado escolhe qualquer certificado do servidor, sem conferir o CNPJ da empresa (`SefazCertificateProvider.cs:17-60`). Vai existir certificado por empresa (`erp.certificados_digitais` tem tabela sem endpoint)? É a B-6 refinada. | `b71` (D97) |
+| B-30 | O response de faturamento traz o número do pedido e o nome do cliente, para a tela não precisar de consulta extra? | `b71` (D95) |
 | B-23 | As seis listagens de Compras e Financeiro básico cortam fixo (`.Take(200)`/`.Take(300)`) sem `page`/`pageSize`, enquanto o Financeiro avançado já pagina. Vão paginar? | `b70` (D88, aviso de teto) |
 | B-13 | Vai existir reativação de Classificação de Pessoa? Hoje `AuditableEntity.Reativar` existe no domínio, nenhum use case a expõe, e `Atualizar` recusa registro inativo — uma classificação inativada por engano fica travada. | `b67` (D69) |
 
