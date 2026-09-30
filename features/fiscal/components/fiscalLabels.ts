@@ -14,21 +14,7 @@ export const NATUREZA_OPERACAO_FIELD = {
     semEmpresa: 'Selecione a empresa para listar as naturezas de operação.',
     semPermissao: 'Listar as naturezas de operação exige a permissão FISCAL_CADASTROS_CONSULTAR.',
     erroConsulta: 'Não foi possível carregar as naturezas de operação. Tente recarregar.',
-    vazio:
-        'Nenhuma natureza de operação ativa cadastrada para esta empresa. Sem natureza, a geração da nota é recusada pelo backend. O cadastro de naturezas ainda não tem tela; peça a inclusão ao responsável fiscal.',
     listaCortada: 'A lista mostra só as primeiras 200 naturezas ativas da empresa, em ordem de código.'
-} as const;
-
-// ---------------------------------------------------------------------------------------------
-// Criar nota fiscal manual
-// ---------------------------------------------------------------------------------------------
-
-export const CRIAR_NOTA_FISCAL = {
-    // O endpoint existe (`NaturezasOperacaoController.cs:41-73`); este diálogo ainda não oferece a seleção.
-    // Na nota manual, sem natureza não é erro: o CFOP do item vem do que for informado, sem derivação
-    // (`NotaFiscalBasicaUseCases.cs:118-124`), diferente do Gerar NF a partir do pedido.
-    naturezaDica:
-        'A natureza vem do cadastro de naturezas de operação ativas da empresa; este diálogo ainda não oferece a seleção. Sem natureza, a nota é criada e o CFOP de cada item vem do que for informado no item, sem derivação.'
 } as const;
 
 // ---------------------------------------------------------------------------------------------
@@ -36,10 +22,9 @@ export const CRIAR_NOTA_FISCAL = {
 // ---------------------------------------------------------------------------------------------
 
 export const GERAR_NF_PEDIDO_VENDA = {
-    // O endpoint existe (`NaturezasOperacaoController.cs:41-73`); este diálogo ainda não oferece a seleção.
-    // Sem natureza e com a validação ligada, o backend recusa (`GerarNotaFiscalPedidoVendaUseCase.cs:165-167`).
-    naturezaDica:
-        'A natureza vem do cadastro de naturezas de operação ativas da empresa; este diálogo ainda não oferece a seleção. Sem natureza, a geração com a validação fiscal ligada é recusada pelo backend.',
+    // D100 + emenda da D91: sem natureza selecionada, o Gerar NF não envia (a nota sairia sem CFOP e ficaria presa ao pedido, B-27).
+    naturezaObrigatoria: 'Selecione a natureza de operação para gerar a nota.',
+    indisponivelPrefixo: 'Gerar NF indisponível:',
     efeito:
         'Gera a nota fiscal em rascunho a partir do pedido. Depois disso, o módulo Faturamento não consegue faturar este pedido: a nota já existe para a origem e não é reaproveitada.'
 } as const;

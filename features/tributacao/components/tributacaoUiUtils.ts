@@ -23,7 +23,7 @@ import {
  * Tabelas de apoio das telas de tributação. Enums e códigos aqui são **tabelas legais fixas** (Tabela A de
  * origem, Tabela B de CST, CSOSN, 4.3.2 do IPI, CST de PIS/COFINS) e os enums numéricos do contrato — por
  * isso ficam locais, sem depender de carga de cadastro nem da permissão `FISCAL_CADASTROS_CONSULTAR`.
- * NCM e CFOP, que são cadastro de verdade, vêm da API (ver `useNcmOptions` / `useCfopOptions`).
+ * NCM e CFOP, que são cadastro de verdade, vêm da API (ver `useNcmOptions` / `useCfopOptions` em `features/fiscal`).
  */
 
 export const tipoOperacaoOptions: SelectOption<number>[] = [

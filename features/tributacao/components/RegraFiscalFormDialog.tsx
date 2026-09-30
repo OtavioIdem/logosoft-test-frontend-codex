@@ -12,7 +12,7 @@ import { Message } from 'primereact/message';
 import { Panel } from 'primereact/panel';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { LoadingState } from '@/components/feedback/LoadingState';
-import { CfopSelect, NcmSelect } from '@/features/tributacao/components/CadastroFiscalSelects';
+import { CfopSelect, NcmSelect } from '@/features/fiscal/components/CadastroFiscalSelects';
 import {
     comCuringa,
     consumidorFinalCuringaOptions,

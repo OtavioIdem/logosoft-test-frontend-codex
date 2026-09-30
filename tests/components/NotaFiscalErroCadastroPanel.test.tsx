@@ -11,6 +11,7 @@ vi.mock('@/features/auth/hooks/usePermissions', () => ({ usePermissions: vi.fn()
 
 const usePermissoes = vi.mocked(usePermissions) as any;
 const codigoSerie = 'Fiscal.SerieFiscalNaoCadastradaParaContexto';
+const codigoCfop = 'Fiscal.CfopSemMapeamentoParaAmbito';
 
 afterEach(() => vi.clearAllMocks());
 
@@ -40,9 +41,11 @@ describe('NotaFiscalErroCadastroPanel — AC-16', () => {
     });
 
     it('o mapa é indexado exclusivamente pelo código, não pelo texto da mensagem', () => {
-        expect(Object.keys(fiscalErrosCadastroMap)).toEqual([codigoSerie]);
+        // D101 (b72): o mapa ganha, de propósito, a entrada de CFOP sem mapeamento. As `DestinatarioSem*` seguem fora até a b74.
+        expect(Object.keys(fiscalErrosCadastroMap)).toEqual([codigoSerie, codigoCfop]);
         expect(resolveFiscalErroCadastroLink(codigoSerie)).toMatchObject({ href: '/fiscal/series' });
-        expect(resolveFiscalErroCadastroLink('Fiscal.CfopSemMapeamentoParaAmbito')).toBeNull();
+        expect(resolveFiscalErroCadastroLink(codigoCfop)).toMatchObject({ href: '/fiscal/naturezas-operacao', anyOf: ['FISCAL_CADASTROS_CONSULTAR', 'FISCAL_CADASTROS_GERENCIAR'] });
+        expect(resolveFiscalErroCadastroLink('Fiscal.DestinatarioSemEnderecoFiscal')).toBeNull();
         expect(resolveFiscalErroCadastroLink('Não há série 7 ativa para a filial.')).toBeNull();
     });
 });

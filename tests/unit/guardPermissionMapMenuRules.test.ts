@@ -457,7 +457,7 @@ export const MenuFixtureFRulePrecedence = () => {
   });
 
   describe('AC-1: parser enumera todo universo', () => {
-    it('parser deve enumerar 83 itens do AppMenu.tsx atual', () => {
+    it('parser deve enumerar 85 itens do AppMenu.tsx atual', () => {
       const appMenuSource = readFileSync(
         join(root, 'layout/AppMenu.tsx'),
         'utf8'
@@ -474,7 +474,13 @@ export const MenuFixtureFRulePrecedence = () => {
       expect(result.hierarchy.length).toBeGreaterThan(0);
       // b62: -1 "Bloqueios" removido — o item apontava para /estoque/bloqueios que só faz redirect('/estoque/avancado')
       // b67: +1 "Classificações de pessoa" adicionado (D68) em Cadastros > /pessoas/classificacoes
-      expect(itemsWithTo).toBe(84);
+      // b72: +1 "Naturezas de operação" adicionado (D98) em Fiscal > /fiscal/naturezas-operacao
+      expect(itemsWithTo).toBe(85);
+      // O item novo, pelo nome: um único item com a rota, no grupo Fiscal, com as duas permissões do filho.
+      const itemNovo = result.hierarchy.filter((item: any) => item.rota === '/fiscal/naturezas-operacao');
+      expect(itemNovo).toHaveLength(1);
+      expect(itemNovo[0]).toMatchObject({ group: 'Fiscal', permissions: ['FISCAL_CADASTROS_CONSULTAR', 'FISCAL_CADASTROS_GERENCIAR'] });
+      expect(appMenuSource).toContain("{ label: 'Naturezas de operação', icon: 'pi pi-fw pi-book', to: '/fiscal/naturezas-operacao', anyPermissions: ['FISCAL_CADASTROS_CONSULTAR', 'FISCAL_CADASTROS_GERENCIAR'] },");
     });
 
     it('D46: nenhum item ou grupo do AppMenu.tsx atual declara mais de uma forma de permissão', () => {

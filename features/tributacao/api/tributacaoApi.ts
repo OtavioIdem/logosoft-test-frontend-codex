@@ -15,7 +15,6 @@ import {
     AtualizarExcecaoFiscalNcmRequest,
     AtualizarExcecaoFiscalRequest,
     AtualizarRegraFiscalOperacaoRequest,
-    CfopResumoResponse,
     CriarExcecaoFiscalNcmRequest,
     CriarExcecaoFiscalRequest,
     CriarRegraFiscalOperacaoRequest,
@@ -27,13 +26,11 @@ import {
     ExcecaoFiscalNcmResponse,
     ExcecaoFiscalResponse,
     InativarRegraFiscalOperacaoRequest,
-    NcmResumoResponse,
     RegraFiscalListQuery,
     RegraFiscalListagemResponse,
     RegraFiscalOperacaoResponse,
     ResultadoTributacaoDocumento
 } from '@/features/tributacao/types/tributacao.types';
-import { PagedResult } from '@/types/erp';
 
 type Schema<T> = { parse: (value: unknown) => T };
 
@@ -223,22 +220,6 @@ export const tributacaoApi = {
         return runTributacaoRequest(async () => {
             await httpClient.post(`/api/fiscal/excecoes-ncm/${id}/inativar`, payload);
             return id;
-        });
-    },
-    /**
-     * Consulta de NCM para os selects de item/regra/exceção. Exige `FISCAL_CADASTROS_CONSULTAR` — quando o
-     * usuário não tem a permissão, a tela degrada para lista vazia em vez de quebrar (ver `useNcmOptions`).
-     */
-    async listarNcm(termo?: string | null) {
-        return runTributacaoRequest(async () => {
-            const response = await httpClient.get<PagedResult<NcmResumoResponse>>('/api/fiscal/cadastros/ncm', { params: cleanQueryParams({ termo, ativo: true, pagina: 1, tamanhoPagina: 20 }) });
-            return response.data;
-        });
-    },
-    async listarCfop(termo?: string | null) {
-        return runTributacaoRequest(async () => {
-            const response = await httpClient.get<PagedResult<CfopResumoResponse>>('/api/fiscal/cadastros/cfop', { params: cleanQueryParams({ termo, ativo: true, pagina: 1, tamanhoPagina: 20 }) });
-            return response.data;
         });
     }
 };

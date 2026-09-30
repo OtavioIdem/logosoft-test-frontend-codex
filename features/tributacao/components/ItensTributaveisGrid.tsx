@@ -5,7 +5,7 @@ import { Dropdown } from 'primereact/dropdown';
 import { InputNumber } from 'primereact/inputnumber';
 import { InputText } from 'primereact/inputtext';
 import { Message } from 'primereact/message';
-import { CfopSelect, NcmSelect } from '@/features/tributacao/components/CadastroFiscalSelects';
+import { CfopSelect, NcmSelect } from '@/features/fiscal/components/CadastroFiscalSelects';
 import { formatMoeda, origemMercadoriaOptions, tipoItemSpedOptions } from '@/features/tributacao/components/tributacaoUiUtils';
 import { TipoItemSped } from '@/features/tributacao/types/tributacao.types';
 
