@@ -29,6 +29,7 @@ import { FormatoDocumentoAuxiliarFiscal, OrigemNotaFiscal, StatusPedidoVenda, Ti
 import { adicionarImpostoNotaFiscalSchema, definirValoresAcessoriosNotaFiscalSchema } from '@/features/fiscal/schemas/fiscalSchemas';
 import { ItemNotaFiscalResponse, NotaFiscalResponse } from '@/features/fiscal/types/fiscal.types';
 import { gerarCorrelationId, maskFiscalSensitiveText, servicoTransmissaoFiscalOptions, tipoDocumentoFiscalOptions, tipoOperacaoFiscalOptions } from '@/features/fiscal/components/fiscalUiUtils';
+import { CRIAR_NOTA_FISCAL, GERAR_NF_PEDIDO_VENDA } from '@/features/fiscal/components/fiscalLabels';
 
 const buildFieldErrors = (error: z.ZodError) => {
     const map: Record<string, string> = {};
@@ -138,7 +139,7 @@ export const CriarNotaFiscalDialog = ({ visible, loading, onHide, onSubmit }: Ba
                 <Field label="Série"><NotaFiscalSerieField value={values.serie} onChange={(serie) => setValues((v) => ({ ...v, serie }))} empresaId={values.empresaId || null} filialId={values.filialId || null} tipoDocumento={values.tipoDocumento} /></Field>
                 <Field label="Número"><InputText value={values.numero} onChange={(e) => setValues((v) => ({ ...v, numero: e.target.value }))} /></Field>
                 <Field label="Pessoa/cliente" hint="Seleção carregada da API de Pessoas; o backend valida se a pessoa pode ser usada na nota."><EntitySelect entityName="pessoa" value={values.pessoaId || null} options={pessoasOptions} disabled={!values.empresaId || pessoasQuery.isLoading} loading={pessoasQuery.isFetching} onSearch={setPessoaSearch} onChange={(pessoaId) => setValues((v) => ({ ...v, pessoaId: pessoaId ?? '' }))} /></Field>
-                <Field label="Natureza de operação" hint="Ainda sem endpoint operacional no backend; deixe vazio até parametrização fiscal oficial."><InputText value={values.naturezaOperacaoId} disabled placeholder="Parametrização fiscal futura" onChange={(e) => setValues((v) => ({ ...v, naturezaOperacaoId: e.target.value }))} /></Field>
+                <Field label="Natureza de operação" hint={CRIAR_NOTA_FISCAL.naturezaDica}><InputText value={values.naturezaOperacaoId} disabled placeholder="Parametrização fiscal futura" onChange={(e) => setValues((v) => ({ ...v, naturezaOperacaoId: e.target.value }))} /></Field>
                 <TextAreaField label="Observação" value={values.observacao} onChange={(observacao) => setValues((v) => ({ ...v, observacao }))} />
                 <button type="submit" className="hidden" />
             </form>
@@ -180,6 +181,9 @@ export const GerarNotaFiscalPedidoVendaDialog = ({ visible, loading, onHide, onS
         <Dialog header="Gerar nota fiscal de pedido de venda" visible={visible} modal style={{ width: 'min(52rem, 96vw)' }} onHide={onHide} footer={footer('gerar-nf-pedido-form', loading, onHide, 'Gerar NF')}>
             <form id="gerar-nf-pedido-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(values); }}>
                 <ReferencePolicyMessage />
+                <div className="field col-12">
+                    <Message severity="warn" className="w-full" text={GERAR_NF_PEDIDO_VENDA.efeito} />
+                </div>
                 {!pedidoVendaId ? (
                     <>
                         <Field label="Empresa"><EmpresaSelect value={values.empresaId || null} required onChange={(empresaId) => setValues((v) => ({ ...v, empresaId: empresaId ?? '', filialId: '', pedidoVendaId: '' }))} /></Field>
@@ -196,7 +200,7 @@ export const GerarNotaFiscalPedidoVendaDialog = ({ visible, loading, onHide, onS
                 <Field label="Número"><InputText value={values.numero} onChange={(e) => setValues((v) => ({ ...v, numero: e.target.value }))} /></Field>
                 <Field label="CFOP padrão" hint="Obrigatório quando a validação fiscal do produto estiver ativa."><InputText value={values.cfopPadrao} onChange={(e) => setValues((v) => ({ ...v, cfopPadrao: e.target.value }))} /></Field>
                 <Field label="Unidade padrão"><InputText value={values.unidadeComercialPadrao} onChange={(e) => setValues((v) => ({ ...v, unidadeComercialPadrao: e.target.value }))} /></Field>
-                <Field label="Natureza de operação" hint="Ainda sem endpoint operacional no backend; deixe vazio até parametrização fiscal oficial."><InputText value={values.naturezaOperacaoId} disabled placeholder="Parametrização fiscal futura" onChange={(e) => setValues((v) => ({ ...v, naturezaOperacaoId: e.target.value }))} /></Field>
+                <Field label="Natureza de operação" hint={GERAR_NF_PEDIDO_VENDA.naturezaDica}><InputText value={values.naturezaOperacaoId} disabled placeholder="Parametrização fiscal futura" onChange={(e) => setValues((v) => ({ ...v, naturezaOperacaoId: e.target.value }))} /></Field>
                 <div className="field col-12 flex align-items-center gap-2">
                     <Checkbox inputId="validarDadosFiscaisProduto" checked={values.validarDadosFiscaisProduto} onChange={(e) => setValues((v) => ({ ...v, validarDadosFiscaisProduto: Boolean(e.checked) }))} />
                     <label htmlFor="validarDadosFiscaisProduto">Validar NCM/CFOP mínimo dos produtos</label>

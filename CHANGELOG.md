@@ -1,3 +1,155 @@
+# v1.11.0a8b71
+
+## Faturamento honesto e corrigível: envia o que o backend exige, mostra o resultado real e não cria faturamento duplicado
+
+Quem confirma um faturamento passa a enviar a natureza de operação e o `correlationId` que o backend
+exige, e vê o resultado que o backend devolveu, etapa por etapa, sem "confirmado" em verde quando o
+faturamento parou no meio. O Preparar não cria um segundo faturamento para o mesmo pedido, e quem
+fatura pelo pedido de venda vê o que está confirmando. Rodada de arquitetura em
+`docs/arquitetura/debate/13-{operacao,plataforma,escopo,design}-faturamento.md`, inventário em
+`docs/arquitetura/debate/13-inventario-faturamento.md` (FT-1 a FT-21), decisões travadas D91–D97
+(`docs/arquitetura/DECISOES.md`, com as emendas da D91 e da D97), plano em
+`docs/fatias/v1.11.0a8b71-faturamento.md`. A proposta do Codex (contexto de backend) ficou guardada
+no branch `codex/b71-planejamento-codex` (commit `38e2213`) e entrou no debate como posição.
+
+**Risco da fatia: `HIGH`** (muda o contrato enviado: `naturezaOperacaoId` e `correlationId` passam
+a ser enviados no Confirmar, `cfopPadrao` deixa de ser, e o `documento` do Faturar de Vendas fica
+opcional; há valor em tela no resumo do Faturar e no resultado; e a fatia abre a classe "campo que o
+backend exige e a UI nunca envia", somada a "HTTP 200 com etapa Erro lido como sucesso"). **Risco de
+acesso: `ILUSAO`** (D91) — hoje nenhuma confirmação conclui, então o Confirmar indisponível sem
+natureza não tira capacidade real de ninguém. Nenhuma permissão entra ou sai.
+
+### Seção operacional — leia antes do deploy
+
+1. **Esta versão torna o faturamento honesto e corrigível, mas nenhum faturamento conclui ainda.**
+   Sem endereço fiscal do cliente, o backend recusa sempre (FT-21,
+   `DestinatarioFiscalResolver.cs:157-186`). Sem natureza de operação, recusa com a validação fiscal
+   ligada; desligada, geraria nota sem CFOP, o que a tela agora impede (item 7). Nenhum dos dois
+   cadastros tem tela. O banco de homologação tem 0 naturezas
+   de operação e 0 endereços de pessoa (para 2 pessoas), medido por `psql` no `logosoft-postgres`
+   (inventário 13 e posições de design e operação). Os cadastros vêm em `b72`–`b74`: a manutenção de
+   naturezas, que é dívida por orientação do usuário (D91), o endereço de Pessoa (conteúdo da `b60`)
+   e o conteúdo da `b61` (D97). Não há produção; o desenvolvimento está em homologação.
+2. **Antes, a tela não concluía nenhum faturamento, por duas razões.**
+   - (D92) A tela nunca enviava o `correlationId`, que a transmissão exige
+     (`NotaFiscalValidators.cs:236-238`, FT-1). Agora ele é gerado a cada abertura do diálogo de
+     Confirmar, reenviado igual só quando a chamada falha no transporte (sem resposta) e trocado
+     depois de qualquer resposta HTTP, porque o backend exige id novo após falha finalizada
+     (`FiscalIntegracaoSefazSupport.cs:30-68`). Aparece somente leitura no resultado, para o suporte.
+   - (D91) Sem natureza de operação e com a validação fiscal ligada, o backend recusa com 400
+     `CfopNaturezaOperacaoNaoInformada` (FT-2, `GerarNotaFiscalPedidoVendaUseCase.cs:165-167`). O Confirmar ganha o `NaturezaOperacaoField`, compartilhado em `features/fiscal`, que
+     consome `GET /api/fiscal/naturezas-operacao`, lista só as ativas da empresa do faturamento e
+     envia o id. Sem natureza disponível, o Confirmar fica indisponível e o motivo aparece.
+3. **Sucesso só com etapa Faturado (D93).** Antes, uma falha nos legs 2 a 6 aparecia como
+   "confirmado" em verde (FT-3). Agora o resultado aparece por leg, com a etapa que parou, o motivo e
+   o próximo passo; tentar de novo é confirmar o mesmo faturamento. O client de faturamento preserva
+   `code`, `status` e `traceId`, e o diálogo mostra o `ApiErrorPanel`.
+4. **Campos do Confirmar (D94).** O CFOP sai do diálogo e não é enviado: o backend compara um único
+   `cfopPadrao` com o CFOP de cada item (`CfopDoItemResolver.cs:162-184`), e para o operador o campo
+   só podia gerar erro. A UF continua texto, validada contra as 27 siglas. A unidade comercial fica
+   limitada a 20 caracteres. A série usa o `NotaFiscalSerieField` do Fiscal. O tipo de documento só
+   oferece NF-e e NFC-e, no lugar de 6 opções.
+5. **O Preparar não cria faturamento duplicado (D95).** Ele lista só pedidos `Aprovado` e, ao
+   escolher o pedido, consulta pelo filtro `pedidoVendaId` e oferece o faturamento em `Erro`
+   existente antes de criar outro. Nenhum botão sai. Pedido e cliente aparecem por rótulo no
+   detalhe. **O pedido 00014 de homologação continua travado:** tem 2 faturamentos em `Erro`, ambos
+   com `NotaJaExisteParaOrigem` no leg 1 (medido por `psql`, inventário 13), porque a trava de nota
+   por origem não filtra status (`FiscalRepository.cs:33-39`). Pergunta ao backend: **B-27**.
+6. **Faturar de Vendas com resumo e texto de efeito (D96).** O diálogo mostra número, cliente por
+   rótulo e valor antes de confirmar, no padrão da D79, ganha o `ApiErrorPanel` e diz que o
+   faturamento é lógico, sem NF nem título. O `documento` passa a opcional, com até 80 caracteres
+   (`PedidoVendaValidators.cs:73-79`), e a observação fica limitada a 300.
+7. **O que fica, e duas dicas corrigidas (D97, emenda da D91).**
+   - O thumbprint digitável do Fiscal fica: remover da tela não fecha o risco na API, e sem medição
+     de uso a remoção tiraria capacidade. Pergunta ao backend: **B-29**. O Faturamento segue sem
+     campo de certificado.
+   - O checkbox "Validar dados fiscais" fica; a remoção vai como pergunta ao produto, junto da F-2.
+   - As dicas falsas "Ainda sem endpoint" no Gerar NF e na nota fiscal manual foram corrigidas, com
+     textos diferentes conforme o backend. O Gerar NF continua com o campo antigo de natureza; a
+     troca pelo `NaturezaOperacaoField` é dívida.
+   - A natureza é exigida em qualquer estado de "Validar dados fiscais" (emenda da D91), nos dois
+     schemas, do formulário e do request. Desligada a validação, o backend aceitaria sem natureza
+     (`GerarNotaFiscalPedidoVendaUseCase.cs:169-172`), mas a nota sairia sem CFOP e ficaria presa ao
+     pedido pela mesma trava da B-27. Na primeira passada do QA essa regra **não** estava no código:
+     com natureza disponível e a validação desligada, saía POST sem `naturezaOperacaoId` (QA-01,
+     medido por teste de componente). Foi corrigida antes do release.
+   - A lista de faturamentos só consulta com a empresa resolvida (`enabled` por empresa, quarta
+     ocorrência da classe D82/D88).
+8. **Fora do escopo, nominalmente:** manutenção de naturezas de operação (dívida, D91; `b72`),
+   endereço fiscal de Pessoa (FT-21; `b73`), o conteúdo da `b61` (`b74`), o caminho canônico a
+   partir de Aprovado (F-2), o aviso de pedido aprovado sem reserva (pendência; tocaria a D79),
+   remover o thumbprint (B-29) e "Validar dados fiscais", destravar o pedido 00014 (B-27), gate de
+   campos de response para faturamento (sem árvore com defeito para provar o vermelho) e dropdown de
+   UF e de unidade (B-28). Também fica registrado que `vendasApi.ts` continua descartando
+   `code`/`traceId`, a mesma classe da b69.
+
+### Testes e QA
+
+**Gate de campos de request cobre Confirmar e Faturar (D97, com emenda).**
+`scripts/gate-contract-request-fields.mjs` ganhou a severidade `NAO_ENVIADO`, que reprova, restrita
+aos records de envio integral (`ConfirmarFaturamentoRequest` e `FaturarPedidoVendaRequest`):
+`naturezaOperacaoId` e `correlationId` são anuláveis no C#, e na regra antiga cairiam em LACUNA, que só informa, deixando a `b70`
+verde. Os campos que a UI não envia por decisão travada (`cfopPadrao`, D94; `certificateThumbprint`,
+D97) ficam em `FORA_DA_UI_POR_DECISAO`: são impressos com a Dn e não reprovam, e uma entrada órfã
+reprova. Prova vermelha executada numa worktree temporária da `b70` (`9713de4`): o gate sai 1 e
+acusa pelo nome `NAO_ENVIADO ConfirmarFaturamentoRequest.naturezaOperacaoId` e `.correlationId`; no
+HEAD sai 0. Prova durável: `tests/unit/gateContractRequestFields.test.ts` passa de 56 para 67
+casos, nenhum removido (Sondas I e J), 67/67.
+
+**Unit e componente**, com componentes reais e request capturado: `ConfirmarFaturamentoDialog`,
+`FaturamentoConfirmarResultado`, `PrepararFaturamentoDialog`, `FaturarPedidoVendaDialog` e
+`useFaturamentos` (em `tests/components/`), cobrindo AC-1 a AC-9. 17 mutações executadas, 17
+vermelhas: cada uma é uma troca de linha no arquivo de produção, com o teste do AC rodado e a
+restauração por cópia conferida com `cmp`. Dois testes antigos ficaram vermelhos por desenho (`faturamentoPayload`: `cfopPadrao` e
+`correlationId`; `faturamentoStructure`: `result.alertas`) e foram atualizados sem perder a prova;
+um caso vácuo de "obrigatórios" virou nominal. O orquestrador conferiu a produção rastreada idêntica
+ao backup do builder, os 7 arquivos não rastreados batendo, e 0 `expect(true)`/`readFileSync` nos 5
+arquivos novos. **Varredura de testes transversais:** 28 arquivos, 238/238, em duas execuções
+seguidas. Medida por um único `npx vitest run` sobre a lista de `LC_ALL=C grep -rlF` em
+`tests/unit` e `tests/components`, com os basenames dos 20 arquivos de `features/` alterados ou
+novos e os termos da fatia, mais os testes novos e o do gate. Na primeira passada do QA, dois testes
+novos estouravam 5000 ms sob essa carga (QA-02). A causa medida foi a primeira montagem da página no
+jsdom, que pesa só no primeiro teste de cada arquivo. Foi resolvida com aquecimento em `beforeAll`
+e com `paste`/`fireEvent.change` no lugar de digitação longa, sem aumentar nenhum timeout de teste.
+Folga restante sob essa carga: o teste **novo** mais lento leva cerca de 3,5 s, contra o limite de
+5 s. O mais lento da varredura é o `backendContractMap.test.ts`, anterior a esta versão, com até
+6 s e limite próprio. A
+carga maior do CI (suíte completa) não foi medida nesta máquina.
+
+**E2E:** spec novo `tests/e2e/v1.11.0a8b71-faturamento.spec.ts` (6 testes: AC-1, AC-2 x2, AC-4 x2,
+AC-7) mais `faturamento-legs` (AC-11, 4/4, sem regressão da D30/P4) = 10/10 em duas execuções
+oficiais no servidor isolado da porta 3411, com o PID conferido. O primeiro par teve 1 falha por
+seletor ambíguo no teste; o seletor foi corrigido e o par, repetido. Vizinhos
+(`logosoft-critical-flows` e `v1.11.0a8b69-vendas`, uma execução no mesmo servidor): 5/5. 4 provas
+vermelhas executadas (AC-4, AC-2, AC-7 e AC-1), cada uma com "1 failed".
+
+Fato de processo, em linguagem honesta: a proposta do Codex, escrita com contexto de backend, ficou
+guardada no branch `codex/b71-planejamento-codex` e entrou no debate como uma posição, arbitrada com
+emendas (D91). Todos os nós de teste e o QA rodaram com Opus. O primeiro QA bloqueou por dois
+motivos, os dois medidos: QA-01, a regra da natureza com a validação desligada, que o relatório do
+builder dava como aplicada e não estava; e QA-02, dois testes novos que estouravam 5000 ms sob a
+carga da varredura. Os dois voltaram ao builder e ao nó de testes, na segunda tentativa de cada um.
+O nó de testes deixou 1 erro TS2802 no teste do gate (`gateContractRequestFields.test.ts:145`, do
+nó `gate_estrutural`), devolvido ao dono e corrigido no nó de E2E (typecheck com saída 0, 67/67).
+
+**QA:** aprovado na segunda passada (`qa-revisor`, Opus). A primeira passada bloqueou por dois
+motivos:
+- QA-01: a natureza não era exigida com "Validar dados fiscais" desligado;
+- QA-02: dois testes novos passavam de 5000 ms sob carga.
+
+Os dois foram corrigidos.
+- **Gates:** o QA rodou e todos passaram: source, typecheck, lint, backend-permissions,
+  guard-permission-map, backend-contract-map, contract-fields, contract-request-fields,
+  guid-references, mocks-isolation, validate-ci-gates, build e diff --check.
+- **Varredura:** 28 arquivos, 238/238, em duas execuções, cada uma num único `npx vitest run` sobre
+  a lista montada com `LC_ALL=C grep -rlF`. O teste novo mais lento levou 3,5 s, contra o limite de
+  5 s. A folga sob a carga do CI fica para medir no PR; se estourar, abre-se uma `.c1`.
+- **E2E:** 10/10 duas vezes na porta 3411, com o PID conferido, na primeira passada.
+- **Provas vermelhas reexecutadas pelo QA**, cada uma com mutação real e restauração por `cp`
+  conferida com `cmp`: AC-3 nos dois sentidos, AC-5, AC-7 no E2E e QA-01
+  (`Tests 2 failed | 23 passed`).
+- **Não reexecutada pelo QA:** a prova do gate em worktree da `b70`.
+
 # v1.11.0a8b70
 
 ## Compra e financeiro: origem do título visível, lançamento manual honesto, progresso de recebimento, reversão dita como é e listas com teto

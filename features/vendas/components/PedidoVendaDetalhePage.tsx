@@ -20,6 +20,7 @@ import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { AprovarPedidoVendaDialog, FaturarPedidoVendaDialog } from '@/features/vendas/components/PedidoVendaActionDialogs';
+import { vendasLabels } from '@/features/vendas/components/vendasLabels';
 import { PedidoVendaFormDialog } from '@/features/vendas/components/PedidoVendaFormDialog';
 import { PedidoVendaItemDialog } from '@/features/vendas/components/PedidoVendaItemDialog';
 import { GerarNotaFiscalPedidoVendaDialog } from '@/features/fiscal/components/FiscalActionDialogs';
@@ -219,7 +220,7 @@ export const PedidoVendaDetalhePage = ({ pedidoId }: { pedidoId?: string }) => {
                 await mutations.faturarMutation.mutateAsync({ id: pedido.id, values });
                 setFaturarVisible(false);
             },
-            { success: { summary: 'Pedido faturado', detail: values.baixarEstoque ? 'Pedido faturado com baixa de estoque.' : 'Pedido faturado sem baixa de estoque.' }, error: { summary: 'Erro ao faturar pedido', detail: 'Não foi possível faturar o pedido.' }, rethrow: true }
+            { success: { summary: vendasLabels.faturamento.toastSucesso, detail: values.baixarEstoque ? vendasLabels.faturamento.toastComBaixa : vendasLabels.faturamento.toastSemBaixa }, error: { summary: 'Erro ao faturar pedido', detail: 'Não foi possível faturar o pedido.' }, rethrow: true }
         );
     };
 
@@ -293,7 +294,7 @@ export const PedidoVendaDetalhePage = ({ pedidoId }: { pedidoId?: string }) => {
             <ReasonDialog visible={Boolean(removeItem)} title="Motivo da remoção do item" confirmLabel="Remover" loading={mutations.removerItemMutation.isPending} onHide={() => setRemoveItem(null)} onConfirm={removerItem} />
             <ReasonDialog visible={cancelarVisible} title="Motivo do cancelamento" confirmLabel="Cancelar pedido" loading={mutations.cancelarMutation.isPending} onHide={() => setCancelarVisible(false)} onConfirm={cancelar} />
             <AprovarPedidoVendaDialog visible={aprovarVisible} pedidoId={pedido?.id ?? null} loading={mutations.aprovarMutation.isPending} error={mutations.aprovarMutation.error} onHide={() => { setAprovarVisible(false); mutations.aprovarMutation.reset(); }} onSubmit={aprovar} />
-            <FaturarPedidoVendaDialog visible={faturarVisible} loading={mutations.faturarMutation.isPending} onHide={() => setFaturarVisible(false)} onSubmit={faturar} />
+            <FaturarPedidoVendaDialog visible={faturarVisible} pedidoId={pedido?.id ?? null} loading={mutations.faturarMutation.isPending} error={mutations.faturarMutation.error} onHide={() => { setFaturarVisible(false); mutations.faturarMutation.reset(); }} onSubmit={faturar} />
             <GerarNotaFiscalPedidoVendaDialog visible={gerarNotaFiscalVisible} loading={fiscalMutations.gerarNotaPedidoMutation.isPending} onHide={() => setGerarNotaFiscalVisible(false)} onSubmit={gerarNotaFiscal} pedidoVendaId={pedido?.id} escopoPedido={pedido ? { empresaId: pedido.empresaId, filialId: pedido.filialId ?? null } : undefined} />
         </>
     );

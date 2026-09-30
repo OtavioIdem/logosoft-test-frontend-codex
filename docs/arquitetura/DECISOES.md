@@ -2357,3 +2357,143 @@ B (Compras: progresso, reversão honesta, enabled, teto), C (permissões), D (ga
 documental).
 Por quê: a extensão do gate e a versão única foram 4 a 0.
 Reversível: sim. Quem arbitrou: orquestrador.
+
+### D91 — natureza de operação: a `b71` consome as naturezas ativas; a manutenção vira dívida por orientação do usuário
+
+Data: 2026-09-30. Rodada: `13-faturamento`.
+Origem: proposta escrita numa sessão do Codex, guardada no branch `codex/b71-planejamento-codex`
+(commit `38e2213`), arbitrada pela rodada com as emendas abaixo. O usuário confirmou em 2026-09-30
+que a manutenção de naturezas virar dívida foi orientação dele.
+Decisão:
+- O Confirmar do faturamento ganha um seletor de natureza de operação que consome o
+  `GET /api/fiscal/naturezas-operacao` existente, só com as ativas da empresa do faturamento. O
+  filtro é no servidor, quando o endpoint aceitar; senão no client, com isso declarado. Envia o id;
+  não há texto livre nem GUID digitado.
+- Sem natureza disponível, o Confirmar fica indisponível, com o motivo visível. Hoje o backend
+  recusa com 400 `CfopNaturezaOperacaoNaoInformada` (FT-2).
+- O campo é compartilhado (`NaturezaOperacaoField` em `features/fiscal`) pelos diálogos que pedem
+  natureza, sobre um client e uma chave de cache únicos, para não duplicar a fonte quando a
+  manutenção chegar. Os nomes seguem a D47; o sufixo `Consulta` do rascunho sai.
+- A tela de manutenção de naturezas (criar, editar, inativar, matriz → CFOP) **não** entra. É
+  dívida, por orientação do usuário.
+`accessRisk: ILUSAO`, e não o `AUTO_BLOQUEIO` do rascunho (4 a 0): o `AUTO_BLOQUEIO` do `risk.yaml`
+é sobre perder a permissão de conceder permissão, e hoje nenhuma confirmação conclui.
+Emendas ao rascunho, 4 a 0: o Confirmar não é bloqueado por falta de `PRODUTOS_CONSULTAR`, porque
+a unidade é só fallback; o CFOP não vira dropdown (D94); o cache não é de 5 minutos, porque a lista
+vazia é justamente o que bloqueia, então vale o padrão com botão de recarregar.
+Reversível: sim. Quem arbitrou: orquestrador, sobre proposta do Codex, com a origem confirmada pelo usuário.
+Emenda (2026-09-30, nó builder): o Confirmar fica indisponível sem natureza **mesmo com "Validar
+dados fiscais" desligado**. O backend aceitaria sem natureza nesse caso
+(`GerarNotaFiscalPedidoVendaUseCase.cs:169-172`), mas a nota sairia sem CFOP e ficaria presa ao
+pedido, porque a trava de nota por origem não filtra status (B-27). A posição de design queria
+bloquear só com a validação ligada; prevaleceu o risco medido pela posição de escopo. Dívidas
+registradas no mesmo nó: o Gerar NF ainda usa o campo antigo de natureza (a troca pelo
+`NaturezaOperacaoField` fica para depois, só o texto falso foi corrigido); e `vendasApi.ts`
+continua descartando `code`/`traceId`, a mesma classe da b69.
+
+### D92 — `correlationId`: um por abertura do diálogo, mantido só em falha de transporte
+
+Data: 2026-09-30. Rodada: `13-faturamento`.
+Decisão: o frontend gera o `correlationId` com o gerador que os diálogos fiscais já usam
+(`createFiscalCorrelationId`/`gerarCorrelationId`) a cada abertura do diálogo de Confirmar. O
+mesmo id é reenviado só quando a chamada falha no transporte (timeout, rede, sem resposta). Depois
+de qualquer resposta HTTP, o id é trocado. Ele aparece somente leitura no resultado, para o suporte.
+Por quê: a transmissão o exige (`NotaFiscalValidators.cs:236-238`) e a UI nunca o enviava (FT-1).
+O backend deduplica por id: sucesso reusado devolve sucesso sem chamar a SEFAZ, e falha finalizada
+exige id novo (`FiscalIntegracaoSefazSupport.cs:30-68`). O leg 4 já integrado também não é refeito.
+Manter o id só sem resposta evita as duas pontas, recusa por id gasto e autorização duplicada.
+Divergência arbitrada: plataforma queria manter o id também depois de 400/5xx. Operação e a regra
+do backend ("falha exige id novo") venceram.
+Gatilho de revisita: resposta à B-25. `accessRisk: NENHUM`. Reversível: sim. Quem arbitrou: orquestrador.
+
+### D93 — o resultado do faturamento é o que o backend diz: sucesso só em Faturado, cada leg com motivo
+
+Data: 2026-09-30. Rodada: `13-faturamento`.
+Decisão: o toast e a mensagem do Confirmar leem a etapa real da resposta, que já traz o faturamento
+com os legs e o motivo de cada um (`ConfirmarFaturamentoUseCase.cs:369-374`). "Faturamento
+confirmado" só com etapa `Faturado`. Qualquer leg em falha mostra, na tela, qual etapa parou, o
+motivo e o próximo passo. Tentar de novo é confirmar o mesmo faturamento, e não preparar outro
+(`Faturamento.cs:117-123`). O client de faturamento para de descartar `code`, `status` e `traceId`
+(`faturamentoApi.ts:18-24`), e o `ApiErrorPanel` entra no diálogo.
+Por quê: 4 a 0. Hoje uma falha nos legs 2 a 6 aparece como sucesso em verde (FT-3).
+`accessRisk: NENHUM`. Reversível: sim. Quem arbitrou: orquestrador.
+
+### D94 — campos do Confirmar: CFOP sai, UF validada, unidade texto, série pelo campo do Fiscal
+
+Data: 2026-09-30. Rodada: `13-faturamento`.
+Decisão:
+- **CFOP** sai do diálogo e não é enviado. O backend compara um único `cfopPadrao` com o CFOP
+  derivado de cada item (`CfopDoItemResolver.cs:162-184`). Numa nota com itens mistos, qualquer
+  valor é recusado, e vazio sempre passa: para o operador, o campo só pode gerar erro. (4 a 0.)
+- **UF** continua texto, validada contra as 27 siglas, como nos 6 diálogos fiscais. A UF válida é a
+  que tem endpoint SEFAZ configurado, e nenhuma rota a lista, então um dropdown das 27 não
+  expressaria validade. (Empate 2 a 2, desempatado pela consistência com os 6 diálogos.)
+- **Unidade comercial** continua texto, limitada a 20 caracteres: é fallback, porque o produto
+  sempre tem unidade. (3 a 1.)
+- **Série** usa o `NotaFiscalSerieField` que o Fiscal já usa.
+- **Tipo de documento** oferece só as 2 opções que o backend aceita (NF-e e NFC-e), no lugar de 6.
+Gatilho de revisita: B-26 (CFOP) e B-28 (UFs configuradas). `accessRisk: NENHUM`. Reversível: sim.
+Quem arbitrou: orquestrador.
+
+### D95 — três caminhos a partir de Aprovado: cada ação diz o próprio efeito, nenhuma sai, e o Preparar não cria faturamento duplicado
+
+Data: 2026-09-30. Rodada: `13-faturamento`.
+Decisão:
+- Nenhum botão sai: remover tiraria uma capacidade que funciona hoje (4 a 0).
+- "Faturar" (Vendas) e "Gerar NF" (Fiscal) ganham texto dizendo o efeito sobre os outros
+  caminhos. O Faturar, em particular, é só lógico: não gera NF nem título, e o pedido fica fora do
+  módulo Faturamento.
+- O Preparar lista só pedidos `Aprovado`. Ao escolher o pedido, ele consulta pelo filtro
+  `pedidoVendaId`, que o backend tem e nunca foi usado, e oferece o faturamento em `Erro`
+  existente, com o texto verdadeiro, antes de criar outro.
+- Pedido e cliente aparecem por rótulo no detalhe, sem GUID cru.
+Não resolvido pela tela: o pedido 00014 do dev segue travado, porque a trava de nota por origem não
+filtra status (`FiscalRepository.cs:33-39`). Pergunta **B-27**. O caminho canônico a partir de
+Aprovado é pergunta ao produto (**F-2**).
+`accessRisk: NENHUM`. Reversível: sim. Quem arbitrou: orquestrador.
+
+### D96 — heranças da D80: o Faturar ganha resumo, painel de erro e o `documento` do contrato
+
+Data: 2026-09-30. Rodada: `13-faturamento`.
+Decisão: o diálogo de Faturar pedido de venda mostra o resumo antes de confirmar, no padrão da
+D79 (número, cliente por rótulo, valor), ganha o `ApiErrorPanel` e diz que o faturamento é lógico.
+V11: `documento` passa a opcional com `.max(80)`, que é o contrato (`PedidoVendaValidators.cs:73-79`),
+e a observação ganha `.max(300)`.
+Fora: o aviso, na aprovação, de que pedido aprovado sem reserva nunca passa pelo Preparar. Tocaria a
+D79 e foi levado como pendência, não decidido aqui.
+`accessRisk: NENHUM`. Reversível: sim. Quem arbitrou: orquestrador.
+
+### D97 — o que fica: thumbprint no Fiscal, "Validar dados fiscais"; lista por empresa; gate de request; e a sequência depois da `b71`
+
+Data: 2026-09-30. Rodada: `13-faturamento`.
+Decisão:
+- **Thumbprint:** o campo digitável do Fiscal (`FiscalActionDialogs.tsx:399`) **não** sai na
+  `b71` (4 a 0). O backend honra o valor e escolhe qualquer certificado do repositório do servidor,
+  sem conferir a empresa (`SefazCertificateProvider.cs:17-60`, `XmlFiscalSigner.cs:26-28`).
+  Remover da tela não fecha o risco na API, e sem medição de uso a remoção é `CAPACIDADE`.
+  Pergunta **B-29** (B-6 refinada). O Faturamento segue sem campo de certificado.
+- **"Validar dados fiscais":** o checkbox fica. A remoção, proposta só por escopo, vai como
+  pergunta ao produto junto da F-2.
+- **Lista de faturamentos:** só consulta com `empresaId` resolvido. É a quarta ocorrência da classe
+  D82/D88.
+- **Gates:** o gate de campos de request passa a cobrir os requests de Confirmar e de Faturar. A
+  prova vermelha contra a `b70` acusa `naturezaOperacaoId` e `correlationId` pelo nome (a classe do
+  FT-1/FT-2: campo que o backend aceita e a UI nunca envia). O gate de response não é estendido: o
+  inventário mediu 0 divergências e não há árvore com defeito para provar o vermelho.
+- **Sequência (decidida pelo usuário em 2026-09-30):** a `b71` entrega o faturamento honesto e
+  corrigível, e não o "completo". Mesmo pronta, nenhum faturamento conclui sem natureza de operação
+  e sem endereço fiscal do destinatário (FT-21: `DestinatarioFiscalResolver.cs:157-186`; banco dev
+  com 0 naturezas e 0 endereços). Depois dela vêm os cadastros, renumerados como `b72`–`b74`
+  (precedente da D67; publicar como `b59` regrediria a versão): a manutenção de naturezas (dívida,
+  D91), o endereço de Pessoa (conteúdo da `b60`) e o conteúdo da `b61`. Não há produção: todo o
+  desenvolvimento está em homologação, e a urgência dos cadastros segue a homologação.
+`accessRisk` da fatia: `ILUSAO` (D91). Reversível: sim. Quem arbitrou: orquestrador, com a
+sequência e a origem da D91 decididas pelo usuário.
+Emenda (2026-09-30, nó `gate_estrutural`): o gate de campos de request ganhou a severidade
+`NAO_ENVIADO`, que reprova, restrita aos records de `RECORDS_ENVIO_INTEGRAL` (Confirmar
+faturamento e Faturar pedido). `naturezaOperacaoId` e `correlationId` são anuláveis no C#, então
+na regra antiga cairiam em LACUNA, que só informa, e a `b70` passaria verde, o que anula a prova.
+Os campos que a UI não envia por decisão travada (`cfopPadrao`, D94; `certificateThumbprint`, D97)
+ficam em `FORA_DA_UI_POR_DECISAO`, no próprio gate: são impressos com a Dn e não reprovam, e uma
+entrada órfã (campo que sumiu do record) reprova. O lado backend vem do markdown §10 do contrato,
+que bate com o C# nos dois records (12/12 e 3/3), então a D83 não foi necessária.

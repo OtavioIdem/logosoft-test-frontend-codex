@@ -15,11 +15,31 @@ import {
 type Schema<T> = { parse: (value: unknown) => T };
 type FaturamentosListResponse = FaturamentoResponse[] | FaturamentoPaginado;
 
+/**
+ * D93: o erro sai com `code`, `status`, `traceId` e erros por campo (antes o client trocava tudo por
+ * `new Error(message)`). `mapApiError` lê o `apiError` aninhado, então o `ApiErrorPanel` mostra os metadados.
+ */
+export class FaturamentoApiError extends Error {
+    apiError: ReturnType<typeof mapApiError>;
+
+    constructor(apiError: ReturnType<typeof mapApiError>) {
+        super(apiError.message);
+        this.name = 'FaturamentoApiError';
+        this.apiError = apiError;
+    }
+}
+
+/**
+ * D92: houve resposta HTTP (qualquer status)? Sem resposta -- rede, timeout, ou recusa local do schema antes
+ * de enviar -- o `status` fica indefinido e o mesmo `correlationId` pode ser reenviado.
+ */
+export const respostaHttpRecebida = (error: unknown) => typeof mapApiError(error).status === 'number';
+
 const runRequest = async <T>(request: () => Promise<T>) => {
     try {
         return await request();
     } catch (error) {
-        throw new Error(mapApiError(error).message);
+        throw new FaturamentoApiError(mapApiError(error));
     }
 };
 

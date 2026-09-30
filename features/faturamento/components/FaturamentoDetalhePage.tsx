@@ -19,13 +19,59 @@ import { useAppToast } from '@/hooks/useAppToast';
 import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { AnexosPanel } from '@/features/anexos/components/AnexosPanel';
+import { useClientes } from '@/features/clientes/hooks/useClientesResources';
+import { usePessoas } from '@/features/pessoas/hooks/usePessoasResources';
+import { usePedidosVenda } from '@/features/vendas/hooks/useVendasResources';
 import { useFaturamento, useFaturamentoHistorico, useFaturamentoMutations, useFaturamentoOcorrencias } from '@/features/faturamento/hooks/useFaturamentoResources';
-import { AcaoRetomadaReversaoLeg, ConfirmarFaturamentoFormValues, EstadoLegIntegracaoFaturamento, FaturamentoHistoricoResponse, FaturamentoOcorrenciaResponse, RetomarReversaoFormValues } from '@/features/faturamento/types/faturamento.types';
+import {
+    AcaoRetomadaReversaoLeg,
+    ConfirmarFaturamentoRequestValues,
+    EstadoLegIntegracaoFaturamento,
+    FaturamentoHistoricoResponse,
+    FaturamentoOcorrenciaResponse,
+    ResultadoConfirmacaoFaturamento,
+    RetomarReversaoFormValues,
+    StatusFaturamento
+} from '@/features/faturamento/types/faturamento.types';
 import { ConfirmarFaturamentoDialog, RetomarReversaoDialog } from '@/features/faturamento/components/FaturamentoDialogs';
-import { confirmacaoBloqueadaPorReversao, estadoLegLabel, estadoLegSeverity, LinhaLegFaturamento, montarLinhasDeLegs, podeCancelar, podeConfirmar, statusFaturamentoLabel, statusFaturamentoSeverity, tipoOcorrenciaLabel, tipoOcorrenciaSeverity } from '@/features/faturamento/components/faturamentoLabels';
+import { ResultadoConfirmacaoPanel } from '@/features/faturamento/components/ResultadoConfirmacaoPanel';
+import {
+    confirmacaoBloqueadaPorReversao,
+    descricaoLegQueParou,
+    estadoLegLabel,
+    estadoLegSeverity,
+    FATURAMENTO_DETALHE,
+    FATURAMENTO_LISTA,
+    FATURAMENTO_RESULTADO,
+    legQueParou,
+    LinhaLegFaturamento,
+    montarLinhasDeLegs,
+    podeCancelar,
+    podeConfirmar,
+    resumoResultadoConfirmacao,
+    statusFaturamentoLabel,
+    statusFaturamentoSeverity,
+    tipoOcorrenciaLabel,
+    tipoOcorrenciaSeverity
+} from '@/features/faturamento/components/faturamentoLabels';
 import { formatMoney } from '@/lib/formatters/money';
 
 const formatDateTime = (value?: string | null) => (value ? new Date(value).toLocaleString('pt-BR') : '—');
+
+// D95: cliente por rótulo, no padrão do resumo da aprovação (D79). Só monta quando o pedido foi achado, então
+// a consulta de clientes e pessoas não sai sem pedido resolvido.
+const ClientePedidoRotulo = ({ empresaId, filialId, clienteId }: { empresaId: string; filialId: string | null; clienteId: string }) => {
+    const clientesQuery = useClientes({ empresaId, filialId });
+    const pessoasQuery = usePessoas({ empresaId, filialId });
+    const rotulo = useMemo(() => {
+        const cliente = (clientesQuery.data ?? []).find((item) => item.id === clienteId);
+        if (!cliente) return null;
+        const pessoa = (pessoasQuery.data ?? []).find((item) => item.id === cliente.pessoaId);
+        return pessoa ? `${cliente.codigo} • ${pessoa.nomeRazaoSocial}` : cliente.codigo;
+    }, [clientesQuery.data, pessoasQuery.data, clienteId]);
+
+    return rotulo ? <strong>{rotulo}</strong> : <span className="text-color-secondary">{FATURAMENTO_DETALHE.clienteNaoCarregado}</span>;
+};
 
 export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: string }) => {
     const router = useRouter();
@@ -40,8 +86,15 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
     const ocorrenciasQuery = useFaturamentoOcorrencias(faturamentoId);
     const { confirmarMutation, cancelarMutation, retomarReversaoMutation } = useFaturamentoMutations();
     const faturamento = faturamentoQuery.data ?? null;
+    const [ultimaConfirmacao, setUltimaConfirmacao] = useState<ResultadoConfirmacaoFaturamento | null>(null);
+
+    // D95 (FT-15): pedido por número, sem GUID cru. Uma consulta da lista de pedidos da empresa (teto do
+    // backend, `VendasRepository.cs:40`), nunca uma por faturamento; fora dela, rótulo neutro (D66).
+    const pedidosQuery = usePedidosVenda({ empresaId: faturamento?.empresaId ?? null });
+    const pedido = useMemo(() => (pedidosQuery.data ?? []).find((item) => item.id === faturamento?.pedidoVendaId) ?? null, [pedidosQuery.data, faturamento]);
 
     const linhasLegs = useMemo(() => montarLinhasDeLegs(faturamento?.legs), [faturamento]);
+    const legParado = useMemo(() => legQueParou(faturamento?.legs), [faturamento]);
     // D27: o diálogo só fica visível enquanto a linha atual (reconsultada) mostrar o leg em EmReversao.
     const linhaEmRetomada = legEmRetomada !== null ? linhasLegs.find((linha) => linha.leg === legEmRetomada) ?? null : null;
     const dialogRetomarVisivel = legEmRetomada !== null && Number(linhaEmRetomada?.registro?.estado) === EstadoLegIntegracaoFaturamento.EmReversao;
@@ -50,15 +103,32 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
         return <UnauthorizedState description="A rotina de Faturamento exige a permissão FATURAMENTO_CONSULTAR." />;
     }
 
-    const confirmar = async (values: ConfirmarFaturamentoFormValues) => {
+    // D93: o toast e o painel leem a etapa REAL da resposta; "Faturamento confirmado" só com etapa Faturado.
+    const confirmar = async (values: ConfirmarFaturamentoRequestValues) => {
         await runWithToast(
             async () => {
-                const result = await confirmarMutation.mutateAsync({ id: faturamentoId, values });
+                const resposta = await confirmarMutation.mutateAsync({ id: faturamentoId, values });
                 setDialog(null);
-                if (result.alertas?.length) toast.warn('Alertas do faturamento', result.alertas.join(' • '));
+                setUltimaConfirmacao({ resposta, correlationId: values.correlationId });
+                const resumo = resumoResultadoConfirmacao(resposta.faturamento);
+                if (resumo.severity === 'success') toast.success(resumo.titulo, resumo.detalhe);
+                else if (resumo.severity === 'error') toast.error(resumo.titulo, resumo.detalhe);
+                else toast.info(resumo.titulo, resumo.detalhe);
             },
-            { success: { summary: 'Faturamento confirmado', detail: 'Transmissão registrada.' }, error: { summary: 'Erro ao confirmar', detail: 'Não foi possível confirmar o faturamento.' }, rethrow: true }
+            { error: { summary: 'Erro ao confirmar', detail: 'Não foi possível confirmar o faturamento.' }, rethrow: true }
         );
+    };
+
+    // Nova tentativa: o resultado anterior sai da tela (o sinal persistente do leg que parou volta a valer).
+    const abrirConfirmar = () => {
+        confirmarMutation.reset();
+        setUltimaConfirmacao(null);
+        setDialog('confirmar');
+    };
+
+    const fecharConfirmar = () => {
+        setDialog(null);
+        confirmarMutation.reset();
     };
 
     const cancelar = async (motivo: string) => {
@@ -105,7 +175,7 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
                                 disabled={disabled || bloqueadoPorReversao}
                                 tooltip={bloqueadoPorReversao ? 'Há um leg em reversão. Retome a reversão antes de confirmar o faturamento.' : undefined}
                                 tooltipOptions={{ showOnDisabled: true }}
-                                onClick={() => setDialog('confirmar')}
+                                onClick={abrirConfirmar}
                             />
                         );
                     }}
@@ -129,9 +199,16 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
                             <div className="col-12 md:col-3"><span className="block text-color-secondary text-sm">Etapa</span><Tag value={statusFaturamentoLabel(etapa)} severity={statusFaturamentoSeverity(etapa) ?? undefined} /></div>
                             <div className="col-12 md:col-3"><span className="block text-color-secondary text-sm">Valor total</span><strong>{formatMoney(faturamento.valorTotal)}</strong></div>
                             <div className="col-12 md:col-3"><span className="block text-color-secondary text-sm">Confirmado em</span>{formatDateTime(faturamento.confirmadoEm)}</div>
-                            <div className="col-12 md:col-3"><span className="block text-color-secondary text-sm">Pedido de venda</span>{faturamento.pedidoVendaId}</div>
+                            <div className="col-12 md:col-3">
+                                <span className="block text-color-secondary text-sm">{FATURAMENTO_DETALHE.pedidoRotulo}</span>
+                                <Button label={pedido?.numero ?? FATURAMENTO_LISTA.pedidoForaDaLista} icon="pi pi-external-link" text className="p-0" onClick={() => router.push(`/vendas/pedidos/${faturamento.pedidoVendaId}`)} />
+                            </div>
+                            <div className="col-12 md:col-6">
+                                <span className="block text-color-secondary text-sm">{FATURAMENTO_DETALHE.clienteRotulo}</span>
+                                {pedido ? <ClientePedidoRotulo empresaId={pedido.empresaId} filialId={pedido.filialId ?? null} clienteId={pedido.clienteId} /> : <span className="text-color-secondary">{FATURAMENTO_DETALHE.clienteNaoCarregado}</span>}
+                            </div>
                             {faturamento.notaFiscalId ? <div className="col-12 md:col-6"><span className="block text-color-secondary text-sm">Nota fiscal</span><Button label="Abrir nota fiscal" icon="pi pi-file" text onClick={() => router.push(`/fiscal/notas/${faturamento.notaFiscalId}`)} /></div> : null}
-                            {faturamento.contaReceberId ? <div className="col-12 md:col-6"><span className="block text-color-secondary text-sm">Conta a receber</span>{faturamento.contaReceberId}</div> : null}
+                            {faturamento.contaReceberId ? <div className="col-12 md:col-6"><span className="block text-color-secondary text-sm">Conta a receber</span>{FATURAMENTO_DETALHE.contaReceberGerada}</div> : null}
                             {faturamento.motivoCancelamento ? <div className="col-12"><Message className="w-full" severity="error" text={`Cancelado: ${faturamento.motivoCancelamento}`} /></div> : null}
                         </div>
                     </Card>
@@ -149,6 +226,16 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
                             severity="warn"
                             text="Há um leg em reversão: o efeito original pode continuar de pé até a retomada."
                         />
+                    ) : null}
+
+                    {ultimaConfirmacao ? (
+                        <ResultadoConfirmacaoPanel
+                            resultado={ultimaConfirmacao}
+                            podeConfirmarDeNovo={podeConfirmar(etapa) && hasPermission('FATURAMENTO_CONFIRMAR') && !confirmacaoBloqueadaPorReversao(faturamento)}
+                            onConfirmarDeNovo={abrirConfirmar}
+                        />
+                    ) : legParado && etapa === StatusFaturamento.Erro ? (
+                        <Message className="w-full mb-3" severity="error" text={`${FATURAMENTO_RESULTADO.persistentePrefixo} ${descricaoLegQueParou(legParado)} ${FATURAMENTO_RESULTADO.proximoPasso}`} />
                     ) : null}
 
                     <Card title="Legs de integração" className="mb-3">
@@ -207,7 +294,16 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
 
                     <AnexosPanel modulo="Faturamento" entidade="Faturamento" entidadeId={faturamento.id} empresaId={faturamento.empresaId} filialId={faturamento.filialId} />
 
-                    <ConfirmarFaturamentoDialog visible={dialog === 'confirmar'} loading={confirmarMutation.isPending} empresaId={faturamento.empresaId} onHide={() => setDialog(null)} onSubmit={confirmar} />
+                    <ConfirmarFaturamentoDialog
+                        visible={dialog === 'confirmar'}
+                        loading={confirmarMutation.isPending}
+                        faturamentoId={faturamento.id}
+                        empresaId={faturamento.empresaId}
+                        filialId={faturamento.filialId ?? null}
+                        error={confirmarMutation.error}
+                        onHide={fecharConfirmar}
+                        onSubmit={confirmar}
+                    />
                     <ReasonDialog visible={dialog === 'cancelar'} title="Cancelar faturamento" confirmLabel="Cancelar faturamento" loading={cancelarMutation.isPending} onHide={() => setDialog(null)} onConfirm={cancelar} />
                     <RetomarReversaoDialog visible={dialogRetomarVisivel} loading={retomarReversaoMutation.isPending} leg={legEmRetomada} onHide={() => setLegEmRetomada(null)} onSubmit={retomar} />
                 </>

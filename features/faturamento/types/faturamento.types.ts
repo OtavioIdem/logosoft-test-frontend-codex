@@ -130,16 +130,32 @@ export type FaturamentosListQuery = {
 
 // ---- Form value types ----
 export type PrepararFaturamentoFormValues = { pedidoVendaId: string; observacao?: string | null };
+
+// D94: o Confirmar só aceita NF-e ou NFC-e (`FaturamentoValidators.cs:20-21`).
+export type TipoDocumentoConfirmarFaturamento = TipoDocumentoFiscal.NFe | TipoDocumentoFiscal.NFCe;
+
+// ConfirmarFaturamentoRequest (`FaturamentoContracts.cs:87-99`). D94: `cfopPadrao` não é enviado (o backend
+// só confere o CFOP derivado de cada item, `CfopDoItemResolver.cs:162-184`); `certificateThumbprint` segue
+// fora (D97). D91: `naturezaOperacaoId` pelo combo. D92: `correlationId` gerado pelo diálogo, nunca digitado.
 export type ConfirmarFaturamentoFormValues = {
     ufAutorizadora: string;
-    tipoDocumento: TipoDocumentoFiscal | number;
+    tipoDocumento: TipoDocumentoConfirmarFaturamento;
     serie: string;
     numero: string;
-    cfopPadrao?: string | null;
+    naturezaOperacaoId: string | null;
     unidadeComercialPadrao: string;
     validarDadosFiscaisProduto: boolean;
     condicaoPagamentoId?: string | null;
     primeiraDataVencimentoContaReceber?: Date | null;
+};
+
+export type ConfirmarFaturamentoRequestValues = ConfirmarFaturamentoFormValues & { correlationId: string };
+
+// D93: o resultado da última confirmação que respondeu 200, com o id de correlação enviado (o backend não o
+// devolve no `FaturamentoResponse`).
+export type ResultadoConfirmacaoFaturamento = {
+    resposta: ConfirmarFaturamentoResponse;
+    correlationId: string;
 };
 // Payload validado de RetomarReversaoLegRequest (FaturamentoContracts.cs:137-140): { leg, acao, motivo }.
 export type RetomarReversaoFormValues = {
