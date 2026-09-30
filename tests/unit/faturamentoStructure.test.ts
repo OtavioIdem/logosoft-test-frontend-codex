@@ -45,7 +45,10 @@ describe('Faturamento — estrutura e scaffold', () => {
         const detalhe = read('features/faturamento/components/FaturamentoDetalhePage.tsx');
         expect(detalhe).toContain("permission=\"FATURAMENTO_CONFIRMAR\"");
         expect(detalhe).toContain('ConfirmarFaturamentoDialog');
-        expect(detalhe).toContain('result.alertas');
+        // b71 (D93): os alertas do Confirmar saem no painel "Resultado da última confirmação", que lê a resposta
+        // guardada; o comportamento é provado em tests/components/FaturamentoConfirmarResultado.test.tsx.
+        expect(detalhe).toContain('<ResultadoConfirmacaoPanel');
+        expect(read('features/faturamento/components/ResultadoConfirmacaoPanel.tsx')).toContain('resultado.resposta.alertas');
         expect(detalhe).toContain('AnexosPanel');
         const dialogs = read('features/faturamento/components/FaturamentoDialogs.tsx');
         expect(dialogs).toContain('ufAutorizadora');

@@ -2382,6 +2382,14 @@ Emendas ao rascunho, 4 a 0: o Confirmar não é bloqueado por falta de `PRODUTOS
 a unidade é só fallback; o CFOP não vira dropdown (D94); o cache não é de 5 minutos, porque a lista
 vazia é justamente o que bloqueia, então vale o padrão com botão de recarregar.
 Reversível: sim. Quem arbitrou: orquestrador, sobre proposta do Codex, com a origem confirmada pelo usuário.
+Emenda (2026-09-30, nó builder): o Confirmar fica indisponível sem natureza **mesmo com "Validar
+dados fiscais" desligado**. O backend aceitaria sem natureza nesse caso
+(`GerarNotaFiscalPedidoVendaUseCase.cs:169-172`), mas a nota sairia sem CFOP e ficaria presa ao
+pedido, porque a trava de nota por origem não filtra status (B-27). A posição de design queria
+bloquear só com a validação ligada; prevaleceu o risco medido pela posição de escopo. Dívidas
+registradas no mesmo nó: o Gerar NF ainda usa o campo antigo de natureza (a troca pelo
+`NaturezaOperacaoField` fica para depois, só o texto falso foi corrigido); e `vendasApi.ts`
+continua descartando `code`/`traceId`, a mesma classe da b69.
 
 ### D92 — `correlationId`: um por abertura do diálogo, mantido só em falha de transporte
 
@@ -2481,3 +2489,11 @@ Decisão:
   desenvolvimento está em homologação, e a urgência dos cadastros segue a homologação.
 `accessRisk` da fatia: `ILUSAO` (D91). Reversível: sim. Quem arbitrou: orquestrador, com a
 sequência e a origem da D91 decididas pelo usuário.
+Emenda (2026-09-30, nó `gate_estrutural`): o gate de campos de request ganhou a severidade
+`NAO_ENVIADO`, que reprova, restrita aos records de `RECORDS_ENVIO_INTEGRAL` (Confirmar
+faturamento e Faturar pedido). `naturezaOperacaoId` e `correlationId` são anuláveis no C#, então
+na regra antiga cairiam em LACUNA, que só informa, e a `b70` passaria verde, o que anula a prova.
+Os campos que a UI não envia por decisão travada (`cfopPadrao`, D94; `certificateThumbprint`, D97)
+ficam em `FORA_DA_UI_POR_DECISAO`, no próprio gate: são impressos com a Dn e não reprovam, e uma
+entrada órfã (campo que sumiu do record) reprova. O lado backend vem do markdown §10 do contrato,
+que bate com o C# nos dois records (12/12 e 3/3), então a D83 não foi necessária.

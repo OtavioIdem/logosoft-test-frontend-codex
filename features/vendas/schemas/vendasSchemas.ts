@@ -48,10 +48,18 @@ export const aprovarPedidoVendaSchema = z.object({
     observacao: nullableText
 });
 
+// D96 (V11): `FaturarPedidoVendaRequestValidator` (`PedidoVendaValidators.cs:73-79`) não exige `Documento`
+// e limita a 80; a observação vai até 300. Documento vazio sai do payload (`sanitizePayload` omite `''`),
+// e o backend recebe nulo, que a baixa de estoque aceita.
+const observacaoFaturarText = z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? null : value),
+    z.string().max(300, 'A observação aceita até 300 caracteres.').nullable().optional()
+);
+
 export const faturarPedidoVendaSchema = z.object({
     baixarEstoque: z.boolean(),
-    documento: z.string().trim().min(1, 'Informe o documento do faturamento.'),
-    observacao: nullableText
+    documento: z.string().trim().max(80, 'O documento aceita até 80 caracteres.').default(''),
+    observacao: observacaoFaturarText
 });
 
 export const pedidoVendaStatusFilterSchema = z.union([

@@ -20,12 +20,13 @@ import { AprovarPedidoVendaRequest, FaturarPedidoVendaRequest } from '@/features
 import { mapApiError } from '@/lib/http/apiError';
 
 /**
- * Resumo do pedido antes de confirmar a aprovação (D79). Lê pelo `pedidoVendaQueryKey` — a
- * mesma chave que o detalhe já usa — então, quando o diálogo abre a partir da tela de detalhe
- * (hoje o único caminho), o dado já está em cache e não há chamada nova; se um dia o diálogo for
- * aberto direto da lista, é uma chamada só para o pedido aberto, nunca uma por linha da lista.
+ * Resumo do pedido antes de confirmar a aprovação (D79) e o faturamento (D96). Lê pelo
+ * `pedidoVendaQueryKey` — a mesma chave que o detalhe já usa — então, quando o diálogo abre a
+ * partir da tela de detalhe (hoje o único caminho), o dado já está em cache e não há chamada nova;
+ * se um dia o diálogo for aberto direto da lista, é uma chamada só para o pedido aberto, nunca uma
+ * por linha da lista.
  */
-const AprovacaoResumo = ({ pedidoId, visible }: { pedidoId?: string | null; visible: boolean }) => {
+const PedidoVendaResumo = ({ pedidoId, visible, textoIndisponivel }: { pedidoId?: string | null; visible: boolean; textoIndisponivel: string }) => {
     const pedidoQuery = usePedidoVenda(visible ? pedidoId : null);
     const pedido = pedidoQuery.data ?? null;
     const clientesQuery = useClientes({ empresaId: pedido?.empresaId ?? null, filialId: pedido?.filialId ?? null });
@@ -40,7 +41,7 @@ const AprovacaoResumo = ({ pedidoId, visible }: { pedidoId?: string | null; visi
 
     if (!visible) return null;
     if (pedidoQuery.isLoading) return <Message className="w-full mb-3" severity="info" text={vendasLabels.aprovacao.resumoCarregando} />;
-    if (!pedido) return <Message className="w-full mb-3" severity="warn" text={vendasLabels.aprovacao.resumoIndisponivel} />;
+    if (!pedido) return <Message className="w-full mb-3" severity="warn" text={textoIndisponivel} />;
 
     return (
         <div className="surface-100 border-round p-3 mb-3">
@@ -68,7 +69,7 @@ export const AprovarPedidoVendaDialog = ({ visible, pedidoId, loading, error, on
 
     return (
         <Dialog header="Aprovar pedido" visible={visible} modal style={{ width: 'min(36rem, 94vw)' }} onHide={onHide} footer={<div className="flex justify-content-end gap-2"><Button label="Cancelar" icon="pi pi-times" severity="secondary" outlined disabled={loading} onClick={onHide} /><Button label="Aprovar" icon="pi pi-check" loading={loading} onClick={submit} /></div>}>
-            <AprovacaoResumo pedidoId={pedidoId} visible={visible} />
+            <PedidoVendaResumo pedidoId={pedidoId} visible={visible} textoIndisponivel={vendasLabels.aprovacao.resumoIndisponivel} />
             {error ? <ApiErrorPanel error={mapApiError(error)} /> : null}
             <FormGrid>
                 <div className="field col-12">
@@ -81,7 +82,8 @@ export const AprovarPedidoVendaDialog = ({ visible, pedidoId, loading, error, on
     );
 };
 
-export const FaturarPedidoVendaDialog = ({ visible, loading, onHide, onSubmit }: { visible: boolean; loading?: boolean; onHide: () => void; onSubmit: (values: FaturarPedidoVendaRequest) => Promise<void> }) => {
+// D96: resumo no padrão da D79, painel de erro com código/status/traceId e o efeito escrito (D95).
+export const FaturarPedidoVendaDialog = ({ visible, pedidoId, loading, error, onHide, onSubmit }: { visible: boolean; pedidoId?: string | null; loading?: boolean; error?: unknown; onHide: () => void; onSubmit: (values: FaturarPedidoVendaRequest) => Promise<void> }) => {
     const [values, setValues] = useState<FaturarPedidoVendaRequest>({ baixarEstoque: true, documento: '', observacao: null });
     const [errors, setErrors] = useState<FieldErrors>({});
 
@@ -95,10 +97,13 @@ export const FaturarPedidoVendaDialog = ({ visible, loading, onHide, onSubmit }:
 
     return (
         <Dialog header="Faturar pedido" visible={visible} modal style={{ width: 'min(38rem, 94vw)' }} onHide={onHide} footer={<div className="flex justify-content-end gap-2"><Button label="Cancelar" icon="pi pi-times" severity="secondary" outlined disabled={loading} onClick={onHide} /><Button label="Faturar" icon="pi pi-check" loading={loading} onClick={submit} /></div>}>
+            <PedidoVendaResumo pedidoId={pedidoId} visible={visible} textoIndisponivel={vendasLabels.faturamento.resumoIndisponivel} />
+            <Message className="w-full mb-3" severity="info" text={vendasLabels.faturamento.efeito} />
+            {error ? <ApiErrorPanel error={mapApiError(error)} /> : null}
             <FormGrid>
                 <div className="field col-12 flex align-items-center gap-2"><Checkbox inputId="baixarEstoque" checked={values.baixarEstoque} onChange={(event) => setValues((current) => ({ ...current, baixarEstoque: Boolean(event.checked) }))} /><label htmlFor="baixarEstoque">Baixar estoque no faturamento</label></div>
-                <div className="field col-12"><label htmlFor="documentoFaturamento" className="font-medium">Documento *</label><InputText id="documentoFaturamento" value={values.documento} onChange={(event) => setValues((current) => ({ ...current, documento: event.target.value }))} /><FieldError message={errors.documento} /></div>
-                <div className="field col-12"><label htmlFor="observacaoFaturamento" className="font-medium">Observação</label><InputTextarea id="observacaoFaturamento" rows={3} autoResize value={textValue(values.observacao)} onChange={(event) => setValues((current) => ({ ...current, observacao: event.target.value }))} /><FieldError message={errors.observacao} /></div>
+                <div className="field col-12"><label htmlFor="documentoFaturamento" className="font-medium">{vendasLabels.faturamento.documentoRotulo}</label><InputText id="documentoFaturamento" value={values.documento} maxLength={80} onChange={(event) => setValues((current) => ({ ...current, documento: event.target.value }))} /><small className="block text-color-secondary mt-1">{vendasLabels.faturamento.documentoAjuda}</small><FieldError message={errors.documento} /></div>
+                <div className="field col-12"><label htmlFor="observacaoFaturamento" className="font-medium">{vendasLabels.faturamento.observacaoRotulo}</label><InputTextarea id="observacaoFaturamento" rows={3} maxLength={300} autoResize value={textValue(values.observacao)} onChange={(event) => setValues((current) => ({ ...current, observacao: event.target.value }))} /><FieldError message={errors.observacao} /></div>
             </FormGrid>
         </Dialog>
     );

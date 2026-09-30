@@ -14,6 +14,15 @@
  *   - rh: AdmitirColaboradorRequest
  *   - clientes: ConfigurarComercialClienteRequest (v1.11.0a8b66, AC-13)
  *   - fornecedores: ConfigurarCompraFornecedorRequest (v1.11.0a8b66, AC-13)
+ *   - faturamento: ConfirmarFaturamentoRequest (v1.11.0a8b71, D97, AC-10)
+ *   - vendas: FaturarPedidoVendaRequest (v1.11.0a8b71, D97, AC-10)
+ *
+ * Lado backend: os records são lidos do catálogo de payloads de
+ * docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md (§10). Record mapeado e não encontrado lá reprova.
+ *
+ * Severidade NAO_ENVIADO (D97): nos records de RECORDS_ENVIO_INTEGRAL, campo anulável que a UI não
+ * envia reprova, em vez de virar LACUNA informativa. É a classe do FT-1/FT-2: o tipo C# é anulável,
+ * mas o fluxo a jusante exige o valor, e a UI nunca o mandava.
  *
  * Modo de falha: asserção nominal por campo, jamais por total.
  * Prova vermelha: contra a árvore de hoje deve acusar 29 campos específicos em três categorias.
@@ -58,7 +67,33 @@ const SCHEMA_TO_REQUEST_MAP = {
     criarClassificacaoPessoaSchema: 'CriarClassificacaoPessoaRequest',
     atualizarClassificacaoPessoaSchema: 'AtualizarClassificacaoPessoaRequest',
     inativarClassificacaoPessoaSchema: 'InativarClassificacaoPessoaRequest'
+  },
+  faturamento: {
+    confirmarFaturamentoSchema: 'ConfirmarFaturamentoRequest'
+  },
+  vendas: {
+    faturarPedidoVendaSchema: 'FaturarPedidoVendaRequest'
   }
+};
+
+/**
+ * D97 (AC-10): records em que todo campo do contrato tem de ser enviado pela UI. Campo anulável
+ * ausente do schema reprova como NAO_ENVIADO (não é LACUNA informativa).
+ *   - ConfirmarFaturamentoRequest: naturezaOperacaoId é exigido no leg 1 com validação fiscal
+ *     (GerarNotaFiscalPedidoVendaUseCase.cs:165-167, FT-2) e correlationId na transmissão
+ *     (NotaFiscalValidators.cs:236-238, FT-1), embora os dois sejam anuláveis no record.
+ *   - FaturarPedidoVendaRequest: três campos, todos oferecidos no diálogo.
+ */
+const RECORDS_ENVIO_INTEGRAL = new Set(['ConfirmarFaturamentoRequest', 'FaturarPedidoVendaRequest']);
+
+/**
+ * Campos que a UI deixa de enviar por decisão travada, nos records de RECORDS_ENVIO_INTEGRAL.
+ * Não reprovam nem entram na contagem de LACUNA; são impressos com a decisão. Entrada cujo campo
+ * não existe mais no record reprova (exclusão órfã).
+ */
+const FORA_DA_UI_POR_DECISAO = {
+  'ConfirmarFaturamentoRequest.cfopPadrao': 'D94 (o CFOP vem da natureza de operação)',
+  'ConfirmarFaturamentoRequest.certificateThumbprint': 'D97 (Faturamento sem campo de certificado; B-29)'
 };
 
 /**
@@ -87,7 +122,9 @@ function loadRequestContractFromDocument(contractPath) {
     'ConfigurarCompraFornecedorRequest',
     'CriarClassificacaoPessoaRequest',
     'AtualizarClassificacaoPessoaRequest',
-    'InativarClassificacaoPessoaRequest'
+    'InativarClassificacaoPessoaRequest',
+    'ConfirmarFaturamentoRequest',
+    'FaturarPedidoVendaRequest'
   ];
 
   for (const recordName of recordNames) {
@@ -157,17 +194,35 @@ function loadRequestContractFromDocument(contractPath) {
  * Extrai campos de um schema Zod de um arquivo TypeScript.
  * Detecta `fieldName:` ou `fieldName,` em linhas indentadas do objeto.
  */
-function extractZodSchemaFields(fileContent, schemaName) {
-  // Procura pela declaração do schema
-  const schemaDecl = `export const ${schemaName} = z.object({`;
-  const startIdx = fileContent.indexOf(schemaDecl);
-  if (startIdx < 0) {
+function extractZodSchemaFields(fileContent, schemaName, visitados = new Set()) {
+  if (visitados.has(schemaName)) return null;
+  visitados.add(schemaName);
+
+  // Procura pela declaração: `[export] const X = z.object({` ou `[export] const X = Base.extend({`
+  // (v1.11.0a8b71: o request do Confirmar é o schema de campos do formulário estendido com correlationId).
+  const declPattern = new RegExp(`(?:^|\\n)(?:export\\s+)?const\\s+${schemaName}\\s*=\\s*`);
+  const declMatch = declPattern.exec(fileContent);
+  if (!declMatch) {
+    return null;
+  }
+  const exprStart = declMatch.index + declMatch[0].length;
+  const expr = fileContent.substring(exprStart);
+
+  const objectMatch = /^z\s*\.\s*object\s*\(\s*\{/.exec(expr);
+  const extendMatch = objectMatch ? null : /^(\w+)\s*\.\s*extend\s*\(\s*\{/.exec(expr);
+  if (!objectMatch && !extendMatch) {
     return null;
   }
 
-  // Encontra o `})` que fecha
-  const blockStart = fileContent.indexOf('{', startIdx + schemaDecl.length - 1);
-  if (blockStart < 0) return null;
+  let baseFields = [];
+  if (extendMatch) {
+    const base = extractZodSchemaFields(fileContent, extendMatch[1], visitados);
+    if (!base) return null;
+    baseFields = base;
+  }
+
+  // Encontra o `}` que fecha o objeto
+  const blockStart = exprStart + (objectMatch || extendMatch)[0].length - 1;
 
   let braceCount = 0;
   let idx = blockStart;
@@ -216,7 +271,7 @@ function extractZodSchemaFields(fileContent, schemaName) {
     }
   }
 
-  return [...fields];
+  return [...new Set([...baseFields, ...fields])];
 }
 
 /**
@@ -275,7 +330,29 @@ function validateRequestModule(moduleName, fileContent, backendContracts) {
     // Verifica cada campo do C# que deveria ser enviado
     for (const [fieldName, nullable] of expectedFields.entries()) {
       if (!schemaFields.includes(fieldName)) {
-        if (nullable) {
+        const chave = `${recordName}.${fieldName}`;
+        if (nullable && RECORDS_ENVIO_INTEGRAL.has(recordName)) {
+          if (FORA_DA_UI_POR_DECISAO[chave]) {
+            divergences.push({
+              module: moduleName,
+              schema: schemaName,
+              record: recordName,
+              field: fieldName,
+              severity: 'FORA_POR_DECISAO',
+              reason: FORA_DA_UI_POR_DECISAO[chave]
+            });
+          } else {
+            // D97: o backend aceita o campo e a UI não o envia (classe FT-1/FT-2)
+            divergences.push({
+              module: moduleName,
+              schema: schemaName,
+              record: recordName,
+              field: fieldName,
+              severity: 'NAO_ENVIADO',
+              reason: `Campo aceito por ${recordName} e nunca enviado pela UI`
+            });
+          }
+        } else if (nullable) {
           // Campo anulável sem destino na UI
           divergences.push({
             module: moduleName,
@@ -381,7 +458,7 @@ const LACUNA_DESTINO = {
  * Ponto de entrada.
  */
 function main() {
-  const modules = ['produtos', 'estoque', 'administracao', 'seguranca', 'rh', 'clientes', 'fornecedores', 'pessoas'];
+  const modules = Object.keys(SCHEMA_TO_REQUEST_MAP);
   const allDivergences = [];
   const allMissingSchemas = [];
   const ignoredRecords = new Set();
@@ -400,6 +477,20 @@ function main() {
   const BACKEND_CONTRACTS = loadRequestContractFromDocument(contractPath);
 
   validateExceptionsCeiling(allowlist);
+
+  // Exclusão por decisão cujo campo não existe mais no record reprova (exclusão órfã)
+  const exclusoesOrfas = Object.keys(FORA_DA_UI_POR_DECISAO).filter((chave) => {
+    const [record, campo] = chave.split('.');
+    const contrato = BACKEND_CONTRACTS[record];
+    return contrato && !contrato.some((f) => f.name === campo);
+  });
+  if (exclusoesOrfas.length > 0) {
+    console.error('❌ FALHA ESTRUTURAL — exclusões de FORA_DA_UI_POR_DECISAO sem campo no record:');
+    for (const chave of exclusoesOrfas) {
+      console.error(`   ❌ ${chave}`);
+    }
+    process.exit(1);
+  }
 
   for (const moduleName of modules) {
     const schemaFile = path.join(
@@ -458,9 +549,19 @@ function main() {
   const descarte = filteredDivergences.filter(d => d.severity === 'DESCARTE');
   const defaultSilencioso = filteredDivergences.filter(d => d.severity === 'DEFAULT_SILENCIOSO');
   const lacuna = filteredDivergences.filter(d => d.severity === 'LACUNA');
+  const naoEnviado = filteredDivergences.filter(d => d.severity === 'NAO_ENVIADO');
+  const foraPorDecisao = filteredDivergences.filter(d => d.severity === 'FORA_POR_DECISAO');
+
+  const imprimirForaPorDecisao = () => {
+    if (foraPorDecisao.length === 0) return;
+    console.log(`\n📌 Campos fora da UI por decisão travada (${foraPorDecisao.length}):`);
+    for (const div of foraPorDecisao) {
+      console.log(`   ℹ️  ${div.record}.${div.field} → ${div.reason}`);
+    }
+  };
 
   // Relatório
-  if (descarte.length === 0 && defaultSilencioso.length === 0) {
+  if (descarte.length === 0 && defaultSilencioso.length === 0 && naoEnviado.length === 0) {
     console.log('✅ Nenhuma divergência crítica detectada.');
     console.log('   Schemas de request não enviam campos desconhecidos.');
     console.log('   Campos obrigatórios do contrato são enviados.');
@@ -473,6 +574,8 @@ function main() {
         console.log(`   ℹ️  ${chave} → ${destino}`);
       }
     }
+
+    imprimirForaPorDecisao();
 
     if (allowlist.exceptions && allowlist.exceptions.length > 0) {
       console.log(`\n   (${allowlist.exceptions.length} exceções no allowlist)`);
@@ -499,6 +602,15 @@ function main() {
     console.error('');
   }
 
+  if (naoEnviado.length > 0) {
+    console.error('❌ NAO_ENVIADO — campos que o backend aceita e a UI não envia (D97, classe FT-1/FT-2):');
+    console.error('');
+    for (const div of naoEnviado) {
+      console.error(`   ❌ ${div.record}.${div.field}`);
+    }
+    console.error('');
+  }
+
   // Imprime LACUNA (não reprova, mas monitora para AC-4)
   if (lacuna.length > 0) {
     console.log(`📋 LACUNA — campos anuláveis sem destino na UI (${lacuna.length}):`);
@@ -511,7 +623,9 @@ function main() {
     console.log('');
   }
 
-  console.error(`📊 Total: ${descarte.length} DESCARTE + ${defaultSilencioso.length} DEFAULT_SILENCIOSO + ${lacuna.length} LACUNA`);
+  imprimirForaPorDecisao();
+
+  console.error(`📊 Total: ${descarte.length} DESCARTE + ${defaultSilencioso.length} DEFAULT_SILENCIOSO + ${naoEnviado.length} NAO_ENVIADO + ${lacuna.length} LACUNA`);
   process.exit(1);
 }
 

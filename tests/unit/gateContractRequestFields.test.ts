@@ -19,6 +19,10 @@ import { tmpdir } from 'os';
  *   - Sonda E: remove um campo obrigatório de DefinirEnderecoFiscalRequest (DEFAULT_SILENCIOSO) — deve acusar e sair 1
  *   - Sonda G: remove descricao anulável de criarClassificacaoPessoaSchema (LACUNA) — AC-11
  *   - Sonda H: remove motivo obrigatório de inativarClassificacaoPessoaSchema (DEFAULT_SILENCIOSO) — AC-11
+ *   - Sonda I: schemas da b70 (9713de4) — acusa NAO_ENVIADO naturezaOperacaoId e correlationId do Confirmar (AC-10, D97)
+ *   - Sonda J: remove observacao anulável de faturarPedidoVendaSchema (NAO_ENVIADO) — AC-10, D97
+ *
+ * O espelho deriva a lista de módulos do SCHEMA_TO_REQUEST_MAP do próprio gate (modulosDoGate).
  *
  * Os 15 críticos (8 + 7) compõem a prova vermelha de 9fcda80 (Sonda A). Os 8 LACUNA permanecem para a Sonda B.
  * As Sondas D e E comprovam que o novo recorte DefinirEnderecoFiscalRequest é detectado em ambas direções.
@@ -30,6 +34,13 @@ import { tmpdir } from 'os';
 
 const raizDoProjeto = process.cwd();
 const REF_ANTIGA_C1 = '9fcda80'; // feat: release frontend v1.11.0a8b58
+const REF_B70 = '9713de4'; // docs(b70): registro final — árvore com FT-1/FT-2 (Confirmar sem naturezaOperacaoId e correlationId)
+
+/** AC-10 (b71, D97): o que a b70 deixa de enviar no Confirmar, medido rodando o gate na worktree da b70. */
+const NAO_ENVIADO_ESPERADOS_EM_B70 = [
+  'ConfirmarFaturamentoRequest.naturezaOperacaoId',
+  'ConfirmarFaturamentoRequest.correlationId'
+] as const;
 
 /**
  * Os 15 críticos que DEVEM aparecer na árvore de 9fcda80.
@@ -121,32 +132,36 @@ const LACUNA_ESPERADOS_HOJE = [
  * Caso contrário, usa git show para trazer a versão específica dos schemas.
  * Se stripNewMapping === true, remove DefinirEnderecoFiscalRequest do gate (para Sonda A em 9fcda80).
  */
+/**
+ * Módulos que o gate varre, derivados do próprio `SCHEMA_TO_REQUEST_MAP` (chaves de primeiro nível).
+ * Lista fixa no harness quebrou todas as sondas na b70 quando o gate ganhou módulo novo; derivar do
+ * gate mantém o espelho igual ao universo que o gate lê.
+ */
+function modulosDoGate(gateContent: string): string[] {
+  const inicio = gateContent.indexOf('const SCHEMA_TO_REQUEST_MAP = {');
+  if (inicio < 0) throw new Error('SCHEMA_TO_REQUEST_MAP não encontrado no gate');
+  const fim = gateContent.indexOf('\n};', inicio);
+  const bloco = gateContent.substring(inicio, fim);
+  const modulos = Array.from(bloco.matchAll(/^ {2}(\w+):\s*\{/gm), (m) => m[1]);
+  if (modulos.length === 0) throw new Error('Nenhum módulo derivado de SCHEMA_TO_REQUEST_MAP');
+  return modulos;
+}
+
 function montarEspelho(refSchemas: string, stripNewMapping?: boolean): string {
   const espelho = mkdtempSync(path.join(tmpdir(), 'gate-prova-request-'));
 
-  // Estrutura mínima
-  const dirs = [
-    'scripts',
-    'docs',
-    'features/produtos/schemas',
-    'features/estoque/schemas',
-    'features/administracao/schemas',
-    'features/seguranca/schemas',
-    'features/rh/schemas',
-    'features/clientes/schemas',
-    'features/fornecedores/schemas',
-    'features/pessoas/schemas'
-  ];
+  // Copia gate de request da árvore atual (sempre)
+  const gateSource = path.join(raizDoProjeto, 'scripts', 'gate-contract-request-fields.mjs');
+  let gateContent = readFileSync(gateSource, 'utf8');
+
+  // Estrutura mínima: scripts, docs e um diretório de schemas por módulo do gate
+  const dirs = ['scripts', 'docs', ...modulosDoGate(gateContent).map((m) => `features/${m}/schemas`)];
   for (const dir of dirs) {
     const fullPath = path.join(espelho, dir);
     if (!existsSync(fullPath)) {
       mkdirSync(fullPath, { recursive: true });
     }
   }
-
-  // Copia gate de request da árvore atual (sempre)
-  const gateSource = path.join(raizDoProjeto, 'scripts', 'gate-contract-request-fields.mjs');
-  let gateContent = readFileSync(gateSource, 'utf8');
 
   // Para Sonda A, remove DefinirEnderecoFiscalRequest do mapa (não existia em 9fcda80)
   if (stripNewMapping) {
@@ -171,7 +186,7 @@ function montarEspelho(refSchemas: string, stripNewMapping?: boolean): string {
   writeFileSync(contratoDest, readFileSync(contratoSource, 'utf8'));
 
   // Copia schemas (da árvore especificada)
-  const modulos = ['produtos', 'estoque', 'administracao', 'seguranca', 'rh', 'clientes', 'fornecedores', 'pessoas'];
+  const modulos = modulosDoGate(gateContent);
   for (const modulo of modulos) {
     let conteudo: string;
 
@@ -318,6 +333,10 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
   let resultadoFornecedorSemAnulavel: Awaited<ReturnType<typeof executarGate>>;
   let resultadoClassificacaoPessoaSemAnulavel: Awaited<ReturnType<typeof executarGate>>;
   let resultadoClassificacaoPessoaSemObrigatorio: Awaited<ReturnType<typeof executarGate>>;
+  let espelhoB70 = '';
+  let espelhoFaturarSemObservacao = '';
+  let resultadoB70: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoFaturarSemObservacao: Awaited<ReturnType<typeof executarGate>>;
 
   beforeAll(() => {
     // Sonda A: árvore de 9fcda80 (contém os 15 defeitos)
@@ -394,11 +413,20 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
     espelhoClassificacaoPessoaSemObrigatorio = montarEspelho('HEAD-WORKING');
     removerCampoDoSchemaNoEspelho(espelhoClassificacaoPessoaSemObrigatorio, 'pessoas', 'inativarClassificacaoPessoaSchema', 'motivo');
     resultadoClassificacaoPessoaSemObrigatorio = executarGate(espelhoClassificacaoPessoaSemObrigatorio);
+
+    // AC-10 (b71, D97) — Sonda I: schemas da b70 com o gate e o contrato de hoje → NAO_ENVIADO nominal
+    espelhoB70 = montarEspelho(REF_B70);
+    resultadoB70 = executarGate(espelhoB70);
+
+    // AC-10 (b71, D97) — Sonda J: árvore de hoje sem `observacao` (string? anulável) em faturarPedidoVendaSchema
+    espelhoFaturarSemObservacao = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoFaturarSemObservacao, 'vendas', 'faturarPedidoVendaSchema', 'observacao');
+    resultadoFaturarSemObservacao = executarGate(espelhoFaturarSemObservacao);
   }, 120_000);
 
   afterAll(() => {
     // Limpa espelhos
-    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoDefinirEnderecoFiscalComFantasma, espelhoDefinirEnderecoFiscalSemObrigatorio, espelhoComMapeamentoFake, espelhoClienteSemObrigatorio, espelhoClienteSemAnulavel, espelhoFornecedorSemAnulavel, espelhoClassificacaoPessoaSemAnulavel, espelhoClassificacaoPessoaSemObrigatorio]) {
+    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoDefinirEnderecoFiscalComFantasma, espelhoDefinirEnderecoFiscalSemObrigatorio, espelhoComMapeamentoFake, espelhoClienteSemObrigatorio, espelhoClienteSemAnulavel, espelhoFornecedorSemAnulavel, espelhoClassificacaoPessoaSemAnulavel, espelhoClassificacaoPessoaSemObrigatorio, espelhoB70, espelhoFaturarSemObservacao]) {
       if (espelho && existsSync(espelho)) {
         try {
           rmSync(espelho, { recursive: true });
@@ -759,6 +787,79 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
       expect(resultadoClassificacaoPessoaSemObrigatorio.exitCode).toBe(1);
       expect(resultadoClassificacaoPessoaSemObrigatorio.nomesDivergencias.has('InativarClassificacaoPessoaRequest.motivo')).toBe(true);
       expect(secao(saida, 'DEFAULT_SILENCIOSO')).toContain('InativarClassificacaoPessoaRequest.motivo');
+    });
+  });
+
+  describe('AC-10: v1.11.0a8b71 (D97) — ConfirmarFaturamentoRequest e FaturarPedidoVendaRequest no universo', () => {
+    /** Linhas entre o cabeçalho NAO_ENVIADO e o próximo cabeçalho. */
+    function secaoNaoEnviado(saida: string): string {
+      const linhas = saida.split('\n');
+      const inicio = linhas.findIndex((l) => l.includes('NAO_ENVIADO —'));
+      if (inicio < 0) return '';
+      const resto = linhas.slice(inicio + 1);
+      const fim = resto.findIndex((l) => /^(❌|📋|📊|✅|📌)/.test(l.trim()) && !/^❌\s+\w+\.\w+/.test(l.trim()));
+      return (fim < 0 ? resto : resto.slice(0, fim)).join('\n');
+    }
+
+    it('o gate mapeia os dois records novos (schema → record)', () => {
+      const gate = readFileSync(path.join(raizDoProjeto, 'scripts', 'gate-contract-request-fields.mjs'), 'utf8');
+      expect(gate).toMatch(/confirmarFaturamentoSchema:\s*'ConfirmarFaturamentoRequest'/);
+      expect(gate).toMatch(/faturarPedidoVendaSchema:\s*'FaturarPedidoVendaRequest'/);
+    });
+
+    it('o espelho deriva do gate os módulos faturamento e vendas', () => {
+      const gate = readFileSync(path.join(raizDoProjeto, 'scripts', 'gate-contract-request-fields.mjs'), 'utf8');
+      const modulos = modulosDoGate(gate);
+      expect(modulos).toContain('faturamento');
+      expect(modulos).toContain('vendas');
+    });
+
+    it('Sonda I (b70): gate sai com código de erro 1', () => {
+      expect(resultadoB70.exitCode).toBe(1);
+    });
+
+    it('Sonda I (b70): resolve os dois records sem falha estrutural', () => {
+      const saida = resultadoB70.stdout + resultadoB70.stderr;
+      expect(saida).not.toContain('FALHA ESTRUTURAL');
+    });
+
+    NAO_ENVIADO_ESPERADOS_EM_B70.forEach((nome) => {
+      it(`Sonda I (b70): acusa NAO_ENVIADO ${nome}`, () => {
+        const saida = resultadoB70.stdout + resultadoB70.stderr;
+        expect(resultadoB70.nomesDivergencias.has(nome)).toBe(true);
+        expect(secaoNaoEnviado(saida)).toContain(nome);
+      });
+    });
+
+    it('Sonda I (b70): não acusa como NAO_ENVIADO os campos fora da UI por decisão (cfopPadrao D94, certificateThumbprint D97)', () => {
+      expect(resultadoB70.nomesDivergencias.has('ConfirmarFaturamentoRequest.cfopPadrao')).toBe(false);
+      expect(resultadoB70.nomesDivergencias.has('ConfirmarFaturamentoRequest.certificateThumbprint')).toBe(false);
+    });
+
+    it('Sonda I (b70): não acusa nada em FaturarPedidoVendaRequest (a b70 envia os três campos)', () => {
+      const saida = resultadoB70.stdout + resultadoB70.stderr;
+      expect(saida).not.toMatch(/❌\s+FaturarPedidoVendaRequest\./);
+    });
+
+    it('Sonda B (hoje): não acusa nenhum campo de ConfirmarFaturamentoRequest nem de FaturarPedidoVendaRequest', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).not.toMatch(/❌\s+(ConfirmarFaturamentoRequest|FaturarPedidoVendaRequest)\./);
+      for (const nome of NAO_ENVIADO_ESPERADOS_EM_B70) {
+        expect(resultadoHoje.nomesDivergencias.has(nome)).toBe(false);
+      }
+    });
+
+    it('Sonda B (hoje): imprime os dois campos fora da UI por decisão, com a decisão', () => {
+      const saida = resultadoHoje.stdout + resultadoHoje.stderr;
+      expect(saida).toMatch(/ConfirmarFaturamentoRequest\.cfopPadrao → D94/);
+      expect(saida).toMatch(/ConfirmarFaturamentoRequest\.certificateThumbprint → D97/);
+    });
+
+    it('Sonda J: sem observacao em faturarPedidoVendaSchema — sai 1 e acusa NAO_ENVIADO FaturarPedidoVendaRequest.observacao', () => {
+      const saida = resultadoFaturarSemObservacao.stdout + resultadoFaturarSemObservacao.stderr;
+      expect(resultadoFaturarSemObservacao.exitCode).toBe(1);
+      expect(resultadoFaturarSemObservacao.nomesDivergencias.has('FaturarPedidoVendaRequest.observacao')).toBe(true);
+      expect(secaoNaoEnviado(saida)).toContain('FaturarPedidoVendaRequest.observacao');
     });
   });
 });
