@@ -19,6 +19,9 @@
  *   - naturezasOperacao: CriarNaturezaOperacaoRequest, AtualizarNaturezaOperacaoRequest,
  *     InativarNaturezaOperacaoRequest e o MapeamentoCfopRequest aninhado em `cfops`
  *     (v1.11.0a8b72, D98, AC-11, NO-17)
+ *   - pessoas (endereço): AdicionarEnderecoPessoaRequest, AtualizarEnderecoPessoaRequest
+ *     (v1.11.0a8b73, D102, AC-8), lidos do markdown: §10 traz os 9 campos com a mesma nulabilidade do C#
+ *     (`EnderecoContatoRequests.cs:5-25`), e só `Complemento` é anulável. Não precisam do snapshot.
  *
  * Lado backend: os records são lidos do catálogo de payloads de
  * docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md (§10). Record mapeado e não encontrado lá reprova.
@@ -74,7 +77,11 @@ const SCHEMA_TO_REQUEST_MAP = {
   pessoas: {
     criarClassificacaoPessoaSchema: 'CriarClassificacaoPessoaRequest',
     atualizarClassificacaoPessoaSchema: 'AtualizarClassificacaoPessoaRequest',
-    inativarClassificacaoPessoaSchema: 'InativarClassificacaoPessoaRequest'
+    inativarClassificacaoPessoaSchema: 'InativarClassificacaoPessoaRequest',
+    // v1.11.0a8b73 (D102, AC-8): endereços da Pessoa. O PATCH de município (`VincularMunicipioEnderecoPessoaRequest`)
+    // é da b74 e não entra aqui.
+    criarEnderecoPessoaSchema: 'AdicionarEnderecoPessoaRequest',
+    atualizarEnderecoPessoaSchema: 'AtualizarEnderecoPessoaRequest'
   },
   faturamento: {
     confirmarFaturamentoSchema: 'ConfirmarFaturamentoRequest'
@@ -133,6 +140,14 @@ const SNAPSHOT_REQUEST_PATH = 'scripts/backend-request-records.snapshot.json';
  *   - InativarNaturezaOperacaoRequest: o único campo (`motivo`) é obrigatório, então entrar no conjunto
  *     não muda o resultado de hoje; entra para que um campo anulável aditivo do backend neste request
  *     reprove como NAO_ENVIADO e force a decisão, em vez de passar como LACUNA.
+ *   - Adicionar/AtualizarEnderecoPessoaRequest (v1.11.0a8b73, D102, AC-8): entram. O `principal` omitido
+ *     muda o comportamento, mas ele é `bool` não anulável no C#, então a omissão reprova como
+ *     DEFAULT_SILENCIOSO com ou sem este conjunto: o backend leria `false`, e o POST ignoraria o "principal"
+ *     marcado na tela (`Pessoa.cs:128-142`). O conjunto protege o outro campo, `complemento`, o único anulável.
+ *     O PUT grava `NormalizarOpcional(complemento)` (`EnderecoPessoa.cs:58`), então omiti-lo apaga em
+ *     silêncio o complemento já cadastrado. Também faz um campo anulável aditivo do backend nestes
+ *     records reprovar e forçar a decisão: o `municipioIbgeCodigo` é do PATCH da b74, e se ele aparecer
+ *     aqui, alguém tem de decidir.
  */
 const RECORDS_ENVIO_INTEGRAL = new Set([
   'ConfirmarFaturamentoRequest',
@@ -140,7 +155,9 @@ const RECORDS_ENVIO_INTEGRAL = new Set([
   'CriarNaturezaOperacaoRequest',
   'AtualizarNaturezaOperacaoRequest',
   'InativarNaturezaOperacaoRequest',
-  'MapeamentoCfopRequest'
+  'MapeamentoCfopRequest',
+  'AdicionarEnderecoPessoaRequest',
+  'AtualizarEnderecoPessoaRequest'
 ]);
 
 /**
@@ -182,6 +199,9 @@ function loadRequestContractFromDocument(contractPath) {
     'InativarClassificacaoPessoaRequest',
     'ConfirmarFaturamentoRequest',
     'FaturarPedidoVendaRequest',
+    // v1.11.0a8b73 (D102): endereços da Pessoa, lidos do markdown (iguais ao C#, 9/9)
+    'AdicionarEnderecoPessoaRequest',
+    'AtualizarEnderecoPessoaRequest',
     // v1.11.0a8b72: lidos do markdown só para imprimir a diferença para o snapshot do C#
     'CriarNaturezaOperacaoRequest',
     'AtualizarNaturezaOperacaoRequest',

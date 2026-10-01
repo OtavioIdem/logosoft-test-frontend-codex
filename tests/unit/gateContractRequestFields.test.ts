@@ -26,6 +26,11 @@ import { tmpdir } from 'os';
  *     (todos NAO_ENVIADO nominais); N apaga o snapshot do C# (falha dura, sem cair no markdown); O é o
  *     contrafactual do NO-4 (lido do markdown, o tipoItem retirado passaria verde); P roda a b70 sem
  *     ignorar natureza (arquivo ausente é falha dura).
+ *   - Sondas Q–U (v1.11.0a8b73, AC-8, D102): requests de endereço da Pessoa. Q retira cep do criar e R retira
+ *     principal do atualizar (DEFAULT_SILENCIOSO nominal, cada um só no próprio record); S retira complemento
+ *     do atualizar (NAO_ENVIADO, porque o PUT apaga o complemento); T é o contrafactual de S sem
+ *     RECORDS_ENVIO_INTEGRAL (passaria verde como LACUNA); U roda a árvore de a3cf5e3 (b72, sem os schemas de
+ *     endereço) sem ignorar nada (falha dura nominal).
  *
  * O espelho deriva a lista de módulos do SCHEMA_TO_REQUEST_MAP do próprio gate (modulosDoGate).
  *
@@ -173,6 +178,10 @@ const RECORDS_NATUREZA = [
   'InativarNaturezaOperacaoRequest',
   'MapeamentoCfopRequest'
 ] as const;
+
+/** v1.11.0a8b73 (D102): records de endereço da Pessoa, que não existem nas revisões antigas sondadas. */
+const RECORDS_ENDERECO_PESSOA = ['AdicionarEnderecoPessoaRequest', 'AtualizarEnderecoPessoaRequest'] as const;
+const REF_B72 = 'a3cf5e3'; // feat(release): v1.11.0a8b72 — pessoasSchemas.ts sem os schemas de endereço
 
 function montarEspelho(refSchemas: string, stripNewMapping?: boolean): string {
   const espelho = mkdtempSync(path.join(tmpdir(), 'gate-prova-request-'));
@@ -390,6 +399,16 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
   let resultadoSemSnapshot: Awaited<ReturnType<typeof executarGate>>;
   let resultadoSoMarkdownSemTipoItem: Awaited<ReturnType<typeof executarGate>>;
   let resultadoB70SemIgnorar: Awaited<ReturnType<typeof executarGate>>;
+  let espelhoEnderecoCriarSemCep = '';
+  let espelhoEnderecoAtualizarSemPrincipal = '';
+  let espelhoEnderecoAtualizarSemComplemento = '';
+  let espelhoEnderecoSemEnvioIntegral = '';
+  let espelhoB72SemIgnorar = '';
+  let resultadoEnderecoCriarSemCep: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoEnderecoAtualizarSemPrincipal: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoEnderecoAtualizarSemComplemento: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoEnderecoSemEnvioIntegral: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoB72SemIgnorar: Awaited<ReturnType<typeof executarGate>>;
 
   beforeAll(() => {
     // Sonda A: árvore de 9fcda80 (contém os 15 defeitos)
@@ -398,7 +417,7 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
     // DefinirEnderecoFiscalRequest (b64), ConfigurarComercialClienteRequest e ConfigurarCompraFornecedorRequest (b66),
     // CriarClassificacaoPessoaRequest, AtualizarClassificacaoPessoaRequest, InativarClassificacaoPessoaRequest (b67) não existiam em 9fcda80.
     resultadoAntigo = executarGate(espelhoAntigo, {
-      GATE_RECORTES_IGNORADOS: ['DefinirEnderecoFiscalRequest', 'ConfigurarComercialClienteRequest', 'ConfigurarCompraFornecedorRequest', 'CriarClassificacaoPessoaRequest', 'AtualizarClassificacaoPessoaRequest', 'InativarClassificacaoPessoaRequest', ...RECORDS_NATUREZA].join(',')
+      GATE_RECORTES_IGNORADOS: ['DefinirEnderecoFiscalRequest', 'ConfigurarComercialClienteRequest', 'ConfigurarCompraFornecedorRequest', 'CriarClassificacaoPessoaRequest', 'AtualizarClassificacaoPessoaRequest', 'InativarClassificacaoPessoaRequest', ...RECORDS_NATUREZA, ...RECORDS_ENDERECO_PESSOA].join(',')
     });
 
     // Sonda B: árvore de hoje (sem os 15 defeitos)
@@ -470,7 +489,8 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
     // AC-10 (b71, D97) — Sonda I: schemas da b70 com o gate e o contrato de hoje → NAO_ENVIADO nominal
     espelhoB70 = montarEspelho(REF_B70);
     // v1.11.0a8b72: a b70 não tem o arquivo de schemas de natureza (FILE_NOT_FOUND ignorado de propósito)
-    resultadoB70 = executarGate(espelhoB70, { GATE_RECORTES_IGNORADOS: RECORDS_NATUREZA.join(',') });
+    // v1.11.0a8b73: nem os schemas de endereço da Pessoa (SCHEMA_NOT_FOUND ignorado de propósito)
+    resultadoB70 = executarGate(espelhoB70, { GATE_RECORTES_IGNORADOS: [...RECORDS_NATUREZA, ...RECORDS_ENDERECO_PESSOA].join(',') });
 
     // AC-10 (b71, D97) — Sonda J: árvore de hoje sem `observacao` (string? anulável) em faturarPedidoVendaSchema
     espelhoFaturarSemObservacao = montarEspelho('HEAD-WORKING');
@@ -518,11 +538,45 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
     // AC-11 (b72) — Sonda P: b70 sem ignorar natureza — o arquivo ausente é falha dura, não verde
     espelhoB70SemIgnorar = montarEspelho(REF_B70);
     resultadoB70SemIgnorar = executarGate(espelhoB70SemIgnorar);
-  }, 120_000);
+
+    // AC-8 (b73, D102) — Sonda Q: POST de endereço sem `cep` (string obrigatória)
+    espelhoEnderecoCriarSemCep = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoEnderecoCriarSemCep, 'pessoas', 'criarEnderecoPessoaSchema', 'cep');
+    resultadoEnderecoCriarSemCep = executarGate(espelhoEnderecoCriarSemCep);
+
+    // AC-8 (b73, D102) — Sonda R: PUT de endereço sem `principal` (bool não anulável: o backend leria false)
+    espelhoEnderecoAtualizarSemPrincipal = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoEnderecoAtualizarSemPrincipal, 'pessoas', 'atualizarEnderecoPessoaSchema', 'principal');
+    resultadoEnderecoAtualizarSemPrincipal = executarGate(espelhoEnderecoAtualizarSemPrincipal);
+
+    // AC-8 (b73, D102) — Sonda S: PUT de endereço sem `complemento` (string? anulável: o PUT o apagaria)
+    espelhoEnderecoAtualizarSemComplemento = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoEnderecoAtualizarSemComplemento, 'pessoas', 'atualizarEnderecoPessoaSchema', 'complemento');
+    resultadoEnderecoAtualizarSemComplemento = executarGate(espelhoEnderecoAtualizarSemComplemento);
+
+    // AC-8 (b73) — Sonda T (contrafactual de S): sem os records de endereço em RECORDS_ENVIO_INTEGRAL, passaria verde
+    espelhoEnderecoSemEnvioIntegral = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoEnderecoSemEnvioIntegral, 'pessoas', 'atualizarEnderecoPessoaSchema', 'complemento');
+    const gateSemEnvioIntegral = path.join(espelhoEnderecoSemEnvioIntegral, 'scripts', 'gate-contract-request-fields.mjs');
+    const gateComEnvioIntegral = readFileSync(gateSemEnvioIntegral, 'utf8');
+    const inicioEnvio = gateComEnvioIntegral.indexOf('const RECORDS_ENVIO_INTEGRAL = new Set([');
+    const fimEnvio = gateComEnvioIntegral.indexOf(']);', inicioEnvio);
+    let blocoEnvio = gateComEnvioIntegral.substring(inicioEnvio, fimEnvio);
+    for (const record of RECORDS_ENDERECO_PESSOA) blocoEnvio = blocoEnvio.replace(`'${record}'`, '');
+    if (inicioEnvio < 0 || RECORDS_ENDERECO_PESSOA.some((r) => blocoEnvio.includes(r))) {
+      throw new Error('Sonda T: os records de endereço não saíram de RECORDS_ENVIO_INTEGRAL');
+    }
+    writeFileSync(gateSemEnvioIntegral, gateComEnvioIntegral.substring(0, inicioEnvio) + blocoEnvio + gateComEnvioIntegral.substring(fimEnvio));
+    resultadoEnderecoSemEnvioIntegral = executarGate(espelhoEnderecoSemEnvioIntegral);
+
+    // AC-8 (b73) — Sonda U: árvore da b72 (sem os schemas de endereço) sem ignorar nada — falha dura nominal
+    espelhoB72SemIgnorar = montarEspelho(REF_B72);
+    resultadoB72SemIgnorar = executarGate(espelhoB72SemIgnorar);
+  }, 180_000);
 
   afterAll(() => {
     // Limpa espelhos
-    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoDefinirEnderecoFiscalComFantasma, espelhoDefinirEnderecoFiscalSemObrigatorio, espelhoComMapeamentoFake, espelhoClienteSemObrigatorio, espelhoClienteSemAnulavel, espelhoFornecedorSemAnulavel, espelhoClassificacaoPessoaSemAnulavel, espelhoClassificacaoPessoaSemObrigatorio, espelhoB70, espelhoFaturarSemObservacao, espelhoMapeamentoSemTipoItem, espelhoAtualizarSemCfops, espelhoCriarSemFilial, espelhoSemSnapshot, espelhoSoMarkdownSemTipoItem, espelhoB70SemIgnorar]) {
+    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoDefinirEnderecoFiscalComFantasma, espelhoDefinirEnderecoFiscalSemObrigatorio, espelhoComMapeamentoFake, espelhoClienteSemObrigatorio, espelhoClienteSemAnulavel, espelhoFornecedorSemAnulavel, espelhoClassificacaoPessoaSemAnulavel, espelhoClassificacaoPessoaSemObrigatorio, espelhoB70, espelhoFaturarSemObservacao, espelhoMapeamentoSemTipoItem, espelhoAtualizarSemCfops, espelhoCriarSemFilial, espelhoSemSnapshot, espelhoSoMarkdownSemTipoItem, espelhoB70SemIgnorar, espelhoEnderecoCriarSemCep, espelhoEnderecoAtualizarSemPrincipal, espelhoEnderecoAtualizarSemComplemento, espelhoEnderecoSemEnvioIntegral, espelhoB72SemIgnorar]) {
       if (espelho && existsSync(espelho)) {
         try {
           rmSync(espelho, { recursive: true });
@@ -1056,6 +1110,73 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
       expect(resultadoB70SemIgnorar.exitCode).toBe(1);
       expect(saida).toContain('FALHA ESTRUTURAL');
       expect(saida).toContain('naturezasOperacao/mapeamentoCfopSchema → mapeado a MapeamentoCfopRequest, e o arquivo features/fiscal/schemas/naturezasOperacaoSchemas.ts não existe');
+    });
+  });
+
+  describe('AC-8: v1.11.0a8b73 (D102) — requests de endereço da Pessoa', () => {
+    const lerGate = () => readFileSync(path.join(raizDoProjeto, 'scripts', 'gate-contract-request-fields.mjs'), 'utf8');
+    const saidaDe = (r: Awaited<ReturnType<typeof executarGate>>) => r.stdout + r.stderr;
+
+    /** Linhas entre o cabeçalho da severidade e o próximo cabeçalho. */
+    function secao(saida: string, cabecalho: 'DEFAULT_SILENCIOSO' | 'NAO_ENVIADO'): string {
+      const linhas = saida.split('\n');
+      const inicio = linhas.findIndex((l) => l.includes(`${cabecalho} —`));
+      if (inicio < 0) return '';
+      const resto = linhas.slice(inicio + 1);
+      const fim = resto.findIndex((l) => /^(❌|📋|📊|✅|📌)/.test(l.trim()) && !/^❌\s+\w+\.\w+/.test(l.trim()));
+      return (fim < 0 ? resto : resto.slice(0, fim)).join('\n');
+    }
+
+    it('o gate mapeia os dois schemas de endereço aos records do C#, no módulo pessoas', () => {
+      const gate = lerGate();
+      expect(gate).toMatch(/criarEnderecoPessoaSchema:\s*'AdicionarEnderecoPessoaRequest'/);
+      expect(gate).toMatch(/atualizarEnderecoPessoaSchema:\s*'AtualizarEnderecoPessoaRequest'/);
+      expect(arquivoDoModulo(gate, 'pessoas')).toBe('features/pessoas/schemas/pessoasSchemas.ts');
+    });
+
+    it('os dois records são de envio integral (o PUT apaga o complemento omitido)', () => {
+      const gate = lerGate();
+      const inicio = gate.indexOf('const RECORDS_ENVIO_INTEGRAL = new Set([');
+      const bloco = gate.substring(inicio, gate.indexOf(']);', inicio));
+      for (const record of RECORDS_ENDERECO_PESSOA) expect(bloco).toContain(`'${record}'`);
+    });
+
+    it('Sonda B (hoje): sai 0 e não acusa nenhum campo de endereço', () => {
+      const saida = saidaDe(resultadoHoje);
+      expect(resultadoHoje.exitCode).toBe(0);
+      expect(saida).not.toContain('FALHA ESTRUTURAL');
+      expect(saida).not.toMatch(/(AdicionarEnderecoPessoaRequest|AtualizarEnderecoPessoaRequest)\./);
+    });
+
+    it('Sonda Q: sem cep em criarEnderecoPessoaSchema — sai 1 e acusa DEFAULT_SILENCIOSO AdicionarEnderecoPessoaRequest.cep, e não o do PUT', () => {
+      expect(resultadoEnderecoCriarSemCep.exitCode).toBe(1);
+      expect(secao(saidaDe(resultadoEnderecoCriarSemCep), 'DEFAULT_SILENCIOSO')).toContain('AdicionarEnderecoPessoaRequest.cep');
+      expect(resultadoEnderecoCriarSemCep.nomesDivergencias.has('AtualizarEnderecoPessoaRequest.cep')).toBe(false);
+    });
+
+    it('Sonda R: sem principal em atualizarEnderecoPessoaSchema — sai 1 e acusa DEFAULT_SILENCIOSO AtualizarEnderecoPessoaRequest.principal, e não o do POST', () => {
+      expect(resultadoEnderecoAtualizarSemPrincipal.exitCode).toBe(1);
+      expect(secao(saidaDe(resultadoEnderecoAtualizarSemPrincipal), 'DEFAULT_SILENCIOSO')).toContain('AtualizarEnderecoPessoaRequest.principal');
+      expect(resultadoEnderecoAtualizarSemPrincipal.nomesDivergencias.has('AdicionarEnderecoPessoaRequest.principal')).toBe(false);
+    });
+
+    it('Sonda S: sem complemento em atualizarEnderecoPessoaSchema — sai 1 e acusa NAO_ENVIADO AtualizarEnderecoPessoaRequest.complemento', () => {
+      expect(resultadoEnderecoAtualizarSemComplemento.exitCode).toBe(1);
+      expect(secao(saidaDe(resultadoEnderecoAtualizarSemComplemento), 'NAO_ENVIADO')).toContain('AtualizarEnderecoPessoaRequest.complemento');
+    });
+
+    it('Sonda T (contrafactual de S): fora de RECORDS_ENVIO_INTEGRAL, o complemento retirado passaria verde como LACUNA', () => {
+      expect(resultadoEnderecoSemEnvioIntegral.exitCode).toBe(0);
+      expect(resultadoEnderecoSemEnvioIntegral.nomesDivergencias.has('AtualizarEnderecoPessoaRequest.complemento')).toBe(false);
+      expect(saidaDe(resultadoEnderecoSemEnvioIntegral)).toContain('AtualizarEnderecoPessoaRequest.complemento → ?');
+    });
+
+    it('Sonda U (b72): schemas de endereço ausentes, sem recorte ignorado, é falha dura nominal', () => {
+      const saida = saidaDe(resultadoB72SemIgnorar);
+      expect(resultadoB72SemIgnorar.exitCode).toBe(1);
+      expect(saida).toContain('FALHA ESTRUTURAL');
+      expect(saida).toContain('pessoas/criarEnderecoPessoaSchema → mapeado a AdicionarEnderecoPessoaRequest mas não existe no arquivo TS');
+      expect(saida).toContain('pessoas/atualizarEnderecoPessoaSchema → mapeado a AtualizarEnderecoPessoaRequest mas não existe no arquivo TS');
     });
   });
 });

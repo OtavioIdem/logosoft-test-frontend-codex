@@ -2582,3 +2582,45 @@ não lê o backend em execução. Sem o snapshot, o gate falha duro e não volta
 Prova vermelha executada por mutação: sem `tipoItem`, e sem `cfops` no PUT, o gate acusa cada um
 pelo nome (`NAO_ENVIADO`). Pendente, e depende do usuário porque muda hook e política: incluir o
 snapshot novo em `generated_only` e no hook que nega escrita à mão.
+
+### D102 — `b73`: endereços da Pessoa como aba, sem município
+
+Data: 2026-10-01. Rodada: inventário `15-endereco-pessoa`, sem quarteto, porque D47 item 2, D49 item 2,
+D52 e D53 já travam o desenho. Quem arbitrou: orquestrador.
+Decisão:
+- Aba "Endereços" no `PessoaFormDialog` (D49 item 2), com as 5 rotas: listar, criar, editar, marcar
+  principal e excluir. Não entram rota, item de menu nem permissão nova. Ler exige `PESSOAS_CONSULTAR`
+  e escrever exige `PESSOAS_GERENCIAR`.
+- A aba só funciona na edição (PF-3), porque as rotas exigem `pessoaId`. Ao criar uma Pessoa, a aba
+  aparece com o texto "salve a pessoa para cadastrar endereços".
+- Os 9 campos de escrita do contrato. A cidade é texto livre, obrigatório e de até 120 caracteres (PF-1):
+  é o campo do backend, e a D52 vale para a **busca** de município, que é da `b74`. O vínculo aparece
+  como "Município fiscal: vinculado / não vinculado", sem prometer versão.
+- A UF é um combo estático com as 27 siglas (D52). Não usa o catálogo do servidor, que exigiria
+  `FISCAL_CADASTROS_CONSULTAR`, fora do perfil de Pessoas (EP-14).
+- Quem vale para a nota é o endereço ativo e **principal**, de qualquer tipo. O tipo "Fiscal" não tem
+  efeito (EP-4), e a aba diz isso (pergunta **B-35**).
+- Depois de toda mutação, a lista é lida de novo, porque a resposta só traz o endereço tocado e o
+  principal muda em outro registro (EP-5/EP-6). Ao excluir o principal, a tela avisa que o backend
+  escolhe outro endereço como principal (sem ordem definida, **B-36**). A exclusão é definitiva pela
+  tela, porque não há rota de reativar.
+- Edição com UF trocada, quando há município vinculado: a tela avisa que o vínculo será removido.
+  Edição com cidade trocada e a mesma UF: a tela avisa que o vínculo antigo continua, porque o backend
+  não o zera (EP-2, **B-37**).
+- O client de Pessoas preserva `code`, `status`, `traceId` e `validationErrors` nas rotas de endereço
+  (EP-8, a classe da b69), e o diálogo mostra o `ApiErrorPanel`.
+- Os links `DestinatarioSem*` ficam na `b74` (PF-2), junto do link para a Pessoa por id: `/pessoas` não
+  abre uma Pessoa por id, e o erro só traz o `pessoaId` no texto (EP-12, **B-38**).
+- As rotas de endereço não chamam o guard de contexto organizacional (EP-1, lido no C#, não medido).
+  A UI não muda por isso. Pergunta **B-39**.
+- O gate de campos de request cobre os requests de criar e editar endereço, sem `municipioIbgeCodigo`,
+  que é do `PATCH` da `b74`.
+`accessRisk: NENHUM`. Honestidade obrigatória no CHANGELOG (PF-5): depois da `b73`, o faturamento
+falha em `DestinatarioSemMunicipioIbge`. Vincular o município exige `PESSOAS_DADOS_FISCAIS_GERENCIAR`
+e chega na `b74`, o que dá dois perfis (PF-4).
+Reversível: sim.
+Emenda à D102 (2026-10-01, nó `design`): `UFS_BRASIL` (27 siglas, `faturamentoSchemas.ts:25`, b71) muda
+para `lib/` e `features/faturamento` reexporta de lá. Pessoas não importa de Faturamento: seria o primeiro
+import cruzado entre features de negócio. O diálogo de endereço fica aninhado, e não inline, para não haver
+dois "Salvar" dentro do diálogo de Pessoa. A aba recebe as permissões de quem a monta, porque o
+`PessoaFormDialog` não as confere.

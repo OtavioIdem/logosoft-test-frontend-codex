@@ -1,3 +1,112 @@
+# v1.11.0a8b73
+
+## Endereços da Pessoa: aba no cadastro, principal visível e lista sempre relida
+
+Quem cadastra Pessoas passa a manter os endereços dela numa aba nova do diálogo de Pessoa:
+listar, criar, editar, marcar principal e excluir. A aba diz qual endereço vai para a nota, o
+principal, e mostra se ele tem município fiscal vinculado. O inventário está em
+`docs/arquitetura/debate/15-inventario-endereco-pessoa.md` (EP-1 a EP-19), a decisão é a D102, com
+emenda, em `docs/arquitetura/DECISOES.md`, e o plano em `docs/fatias/v1.11.0a8b73-endereco-pessoa.md`.
+Não houve quarteto de arquitetura, porque D47 item 2, D49 item 2, D52 e D53 já travavam o desenho.
+É a `b60` da D53, renumerada pela D97.
+
+**Risco da fatia: `MEDIUM`.** São 5 rotas novas consumidas e 2 requests. A fatia abre a classe
+"resposta que traz só o registro tocado quando a mutação muda outro registro". **Risco de acesso:
+`NENHUM`.** Nenhuma permissão, rota ou item de menu entra ou sai.
+
+### Seção operacional — leia antes do deploy
+
+1. **O faturamento ainda não conclui depois desta versão, e o motivo muda.** No que é do destinatário, hoje a nota para em
+   `Fiscal.DestinatarioSemEnderecoFiscal`. Com o endereço cadastrado por esta aba, passa a parar em
+   `Fiscal.DestinatarioSemMunicipioIbge` (`DestinatarioFiscalResolver.cs:184-187`). O motivo é que
+   `POST` e `PUT` do endereço não aceitam município (`EnderecoContatoRequests.cs:5-25`). O vínculo
+   é o `PATCH …/municipio`, com outra permissão, `PESSOAS_DADOS_FISCAIS_GERENCIAR`, e chega na
+   próxima fatia de Pessoa. Isso foi lido no C# do backend; não foi medido em execução. As barreiras anteriores ao destinatário (o endereço fiscal do emitente e a natureza de operação com CFOP mapeado) não foram medidas no banco de homologação.
+2. **São dois perfis para o faturamento passar.** Quem cadastra o endereço precisa de
+   `PESSOAS_CONSULTAR` e `PESSOAS_GERENCIAR`. Quem vincula o município vai precisar de
+   `PESSOAS_DADOS_FISCAIS_GERENCIAR`. Nesta versão, nada muda na concessão.
+3. **A aba (D102):**
+   - Ela só funciona na edição. Ao criar a Pessoa, mostra "Salve a pessoa para cadastrar
+     endereços" e não faz chamada nenhuma.
+   - O endereço que vale para a nota é o **principal**, de qualquer tipo. O tipo "Fiscal" não tem
+     efeito no backend (EP-4), e a aba diz isso (pergunta **B-35**).
+   - A cidade é texto livre, porque é o campo do backend. A UF é escolhida entre as 27 siglas. O
+     CEP é enviado só com dígitos.
+   - **A lista é relida depois de toda alteração**, inclusive quando o backend recusa. A resposta
+     do backend só traz o endereço tocado, e marcar ou excluir o principal muda outro registro
+     (EP-5/EP-6).
+   - Excluir é definitivo pela tela. Ao excluir o principal, a tela avisa que o backend escolhe
+     outro endereço como principal, sem ordem definida (**B-36**).
+   - Ao editar um endereço com município vinculado, a tela avisa em dois casos:
+     - a UF mudou: o vínculo será removido;
+     - a cidade mudou com a mesma UF: o vínculo antigo continua, porque o backend não o zera
+       (EP-2, **B-37**).
+   - O erro do backend aparece com código, status e trace. O client novo das rotas de endereço
+     preserva esses campos, e o `pessoasApi` das rotas de Pessoa não foi tocado.
+   - Quem só consulta vê a lista e o motivo, sem ações.
+4. **As 27 UFs mudaram de lugar.** Elas saíram de `features/faturamento` e foram para
+   `lib/constants/ufs.ts`, com reexport. O Faturamento não muda de comportamento.
+5. **Fora do escopo, nominalmente:**
+   - vincular município, backfill e busca de município;
+   - o bloco fiscal da Pessoa;
+   - os links `DestinatarioSem*` e abrir a Pessoa por id (**B-38**);
+   - o guard de contexto organizacional nas rotas de endereço, que o backend não chama (EP-1,
+     lido no C#, **B-39**);
+   - contatos, bloquear e desbloquear Pessoa (D53).
+
+### Testes e QA
+
+**Gate de campos de request.** `scripts/gate-contract-request-fields.mjs` passa a cobrir
+`AdicionarEnderecoPessoaRequest` e `AtualizarEnderecoPessoaRequest`, os dois em
+`RECORDS_ENVIO_INTEGRAL`:
+- `principal` omitido viraria `false` no backend.
+- O PUT grava o complemento normalizado, então omiti-lo apagaria o complemento já salvo.
+  Contrafactual medido: sem o conjunto, o gate sai 0 e só lista o campo como LACUNA.
+
+O lado backend vem do markdown, que bate com o C# (9/9 campos). Prova vermelha executada por
+mutação em espelho: retirados o `cep` do criar e o `principal` do atualizar, o gate sai 1 com
+`DEFAULT_SILENCIOSO` nos dois, pelo nome. Contra o HEAD da `b72`, em worktree, os casos existentes
+acusam igual. `gateContractRequestFields.test.ts`: 87/87 em duas execuções. As Sondas Q a U são
+novas, e os 7 testes novos falham contra o gate antigo.
+
+**Unit e componente**, com o `PessoaFormDialog` real e só o adapter do axios trocado:
+- `pessoaEnderecosPayload` (21 testes);
+- `PessoaEnderecosAC2AC7` (15 testes), sem aumentar o timeout.
+
+5 provas vermelhas executadas, cada uma com mutação real e restauração conferida com `cmp`:
+- AC-4: remendar o cache com a resposta → 6 falhas;
+- AC-5: aviso de principal → 1 falha;
+- AC-5: DELETE com corpo → 3 falhas;
+- AC-6: aviso sem vínculo → 1 falha;
+- AC-7: erro reduzido a `Error` → 7 falhas.
+
+**Varredura transversal:** medida pelo QA. São 22 arquivos e 272/272 testes, em duas execuções de um único `npx vitest run`. A lista é a união de `grep -rlF "features/pessoas"` em `tests/unit` e `tests/components`, dos basenames tocados (`pessoaEnderecosApi`, `PessoaFormDialog`, `pessoasSchemas`, `faturamentoSchemas`, `UFS_BRASIL`, `pessoaEnderecosLabels`), do teste do gate e dos testes de Faturamento que passam pelo reexport das UFs. Antes disso, o orquestrador rodou uma lista menor, de 16 arquivos, informada pelo nó de testes: 238/238, três vezes. typecheck e lint verdes. Os 11
+arquivos de produção são idênticos ao backup do builder.
+
+Fato de processo: a sessão foi encerrada no meio do builder. Ele foi retomado sobre o que estava na
+árvore, e o backup foi feito no fim. Durante os nós de gate e de testes, o classificador de
+segurança do modo automático ficou fora do ar. A varredura, o typecheck, o lint e o `cmp` foram
+rodados pelo orquestrador depois que ele voltou.
+
+**E2E:** spec novo `tests/e2e/v1.11.0a8b73-endereco-pessoa.spec.ts`, com 4 testes. A rota de endereços responde como servidor em memória, e toda escrita devolve de propósito um endereço diferente do GET seguinte.
+- (a) Criar pelo diálogo de Pessoa: o POST leva os 9 campos e o CEP só com dígitos, e a lista é relida.
+- (b) Marcar principal: POST sem corpo, e a marca muda de linha.
+- (c) Excluir o principal: aparece o aviso de promoção, sai o DELETE sem corpo, e o outro endereço vira principal.
+- (d) Trocar a UF de um endereço com município vinculado: aparece o aviso de remoção do vínculo.
+
+Com `b66-cliente-fornecedor` e o spec da `b71`, que usam as UFs movidas: 15/15 em duas execuções no servidor isolado da porta 3411, com o PID conferido e o servidor encerrado no fim. Uma tentativa anterior teve 3 falhas por locator da própria spec, corrigido antes do par oficial. A prova vermelha em (a), com `onSettled` removido do criar, deu "1 failed", e a restauração foi conferida com `cmp`.
+
+**QA:** aprovado na primeira passada (`qa-revisor`, Opus), com ressalvas.
+- Gates rodados pelo QA, todos verdes: source, typecheck, lint, backend-permissions, guard-permission-map, backend-contract-map, contract-request-fields, guid-references, mocks-isolation, validate-ci-gates, build e diff --check, inclusive nos arquivos novos.
+- Prova vermelha do AC-4 reexecutada pelo QA: remendar a lista com a resposta da mutação deu 6 falhas em 15, e a restauração foi conferida com `cmp`.
+- Regras do principal conferidas contra `Pessoa.cs:129-200` com um teste temporário, depois removido: o principal e o primeiro endereço ficam com o checkbox marcado e travado.
+- Corrigidos antes do commit: a contagem da varredura (QA-01), a condição do emitente e da natureza (QA-02) e a frase "Notas já emitidas não mudam", que não foi medida e saiu da tela (QA-03).
+- **Pendências não bloqueantes:**
+  - Depois de excluir, o foco cai no `BODY` em vez de voltar ao "Novo endereço" (QA-04, medido no jsdom).
+  - Faltam testes do checkbox travado e do retorno de foco (QA-05).
+  - Um comentário ainda cita a origem antiga das UFs, um export de texto não é usado, e o schema de Pessoas importa de `components` (QA-06).
+- O QA não reexecutou o E2E.
+
 # v1.11.0a8b72
 
 ## Naturezas de operação: cadastro, CFOP por âmbito e tipo de item, e natureza real na nota
