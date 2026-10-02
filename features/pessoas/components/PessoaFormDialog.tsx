@@ -17,7 +17,9 @@ import { criarPessoaSchema, atualizarPessoaSchema } from '@/features/pessoas/sch
 import { PessoaFormValues, PessoaResponse } from '@/features/pessoas/types/pessoas.types';
 import { fieldErrorMap, FieldErrors, textValue } from '@/features/pessoas/components/formUtils';
 import { PessoaEnderecosTab } from '@/features/pessoas/components/PessoaEnderecosTab';
+import { PessoaFiscalTab } from '@/features/pessoas/components/PessoaFiscalTab';
 import { PESSOA_ENDERECOS_ABA } from '@/features/pessoas/components/pessoaEnderecosLabels';
+import { PESSOA_FISCAL_ABA } from '@/features/pessoas/components/pessoaFiscalLabels';
 import { EntityStatus, TipoPessoa } from '@/types/erp';
 
 const tipoPessoaOptions = [
@@ -53,12 +55,17 @@ export const PessoaFormDialog = ({ visible, loading, record, onHide, onSubmit }:
     // O diálogo não conferia permissão (só abria por ação guardada); a aba de endereços recebe as de quem a monta (D102, emenda).
     const { hasPermission } = usePermissions();
 
+    // b75 (PF-4): o PATCH de dados fiscais relê a lista, e o `record` chega novo com o mesmo id. Reiniciar o formulário a
+    // cada `record` novo apagaria, em silêncio, o que foi digitado e ainda não salvo nas outras abas; só a troca de
+    // pessoa (id) ou a abertura reinicia. A aba "Dados fiscais" recarrega do `record` por conta própria.
+    const recordId = record?.id ?? null;
     useEffect(() => {
         if (visible) {
             setValues(buildInitialValues(record));
             setErrors({});
         }
-    }, [record, visible]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [recordId, visible]);
 
     const update = (name: keyof PessoaFormValues, value: unknown) => {
         setValues((current) => ({ ...current, [name]: value }));
@@ -137,7 +144,17 @@ export const PessoaFormDialog = ({ visible, loading, record, onHide, onSubmit }:
                     </div>
                 </TabPanel>
                 <TabPanel header={PESSOA_ENDERECOS_ABA.titulo}>
-                    <PessoaEnderecosTab pessoaId={record?.id ?? null} pessoaAtiva={!record || Number(record.status) === EntityStatus.Ativo} podeConsultar={hasPermission('PESSOAS_CONSULTAR')} podeGerenciar={hasPermission('PESSOAS_GERENCIAR')} />
+                    <PessoaEnderecosTab
+                        pessoaId={record?.id ?? null}
+                        pessoaAtiva={!record || Number(record.status) === EntityStatus.Ativo}
+                        podeConsultar={hasPermission('PESSOAS_CONSULTAR')}
+                        podeGerenciar={hasPermission('PESSOAS_GERENCIAR')}
+                        podeGerenciarFiscal={hasPermission('PESSOAS_DADOS_FISCAIS_GERENCIAR')}
+                        podeConsultarCadastrosFiscais={hasPermission('FISCAL_CADASTROS_CONSULTAR')}
+                    />
+                </TabPanel>
+                <TabPanel header={PESSOA_FISCAL_ABA.titulo}>
+                    <PessoaFiscalTab record={record ?? null} podeGerenciar={hasPermission('PESSOAS_DADOS_FISCAIS_GERENCIAR')} inscricaoEstadualDigitada={textValue(values.inscricaoEstadual)} />
                 </TabPanel>
                 <TabPanel header="LGPD e auditoria visual">
                     <Message severity="warn" className="w-full" text="Esta rotina manipula dados pessoais. Evite copiar documentos para campos de observação e não compartilhe prints com CPF/CNPJ sem necessidade operacional." />

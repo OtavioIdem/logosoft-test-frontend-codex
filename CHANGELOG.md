@@ -1,3 +1,43 @@
+# v1.11.0a8b75
+
+## Pessoa fiscal: município do endereço, dados fiscais e atalhos de correção
+
+O cadastro de Pessoas agora permite vincular o município oficial ao endereço pela busca filtrada pela
+UF e manter os dados fiscais do destinatário. O fluxo atende as pendências que impedem a emissão da
+nota e preserva o backend como autoridade fiscal: o frontend só apresenta o bloqueio e envia o
+contrato integral já documentado em `docs/fatias/v1.11.0a8b75-pessoa-fiscal.md` (D104).
+
+**Risco da fatia: `HIGH`** (PATCH de substituição integral de dados fiscais e vínculo de município).
+**Risco de acesso: `NENHUM`** — nenhuma permissão foi criada ou removida.
+
+### Seção operacional
+
+1. Para editar dados fiscais, conceda `PESSOAS_DADOS_FISCAIS_GERENCIAR` junto de
+   `PESSOAS_CONSULTAR` e `PESSOAS_GERENCIAR`.
+2. Para procurar e vincular municípios, conceda também `FISCAL_CADASTROS_CONSULTAR`. Sem ela, a
+   ação permanece visível porém indisponível, com o motivo; não existe digitação manual de código.
+3. O vínculo é feito na aba **Endereços**, por **Vincular município**, e usa a UF já cadastrada no
+   endereço. O município fiscal exigido na nota é o do endereço principal.
+4. A aba **Dados fiscais** sempre reenvia os oito campos do contrato. Quando município ou país já
+   existem no bloco fiscal e a tela não consegue reenviá-los por código, a gravação fica bloqueada
+   para não apagar dado já existente.
+5. Os erros `Fiscal.DestinatarioSemEnderecoFiscal`, `Fiscal.DestinatarioSemEnderecoPrincipal`,
+   `Fiscal.DestinatarioSemMunicipioIbge` e `Fiscal.DestinatarioSemIndicadorContribuinteIcms` passam
+   a orientar para a lista de Pessoas apenas para quem possui `PESSOAS_GERENCIAR`.
+
+### Cobertura
+
+- Unitário e componente cobrem o request integral de oito campos, o código IBGE de sete dígitos,
+  permissões S1/S2/S3, erro de backend e o termo da busca remota após debounce.
+- E2E mockado `tests/e2e/v1.11.0a8b75-pessoa-fiscal.spec.ts` percorre a tela real: vincula município
+  com o PATCH correto e salva um campo fiscal preservando os outros sete; em ambos os casos prova a
+  releitura pelo GET subsequente.
+
+### Fora do escopo
+
+- Backfill de municípios (B-41), abrir Pessoa por id no erro (B-38), edição de município/país já
+  existentes no bloco fiscal e as pendências de backend B-42/B-43.
+
 # v1.11.0a8b74
 
 ## ST com DIFAL no mesmo item vira aviso de cadastro da regra fiscal

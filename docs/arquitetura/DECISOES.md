@@ -2652,3 +2652,54 @@ Decisão:
 - Numeração: esta fatia é a `b74`, e o bloco fiscal da Pessoa (o conteúdo da `b61`) passa a `b75`. A
   ordem dos cadastros não muda; só o número (precedente da D67 e da D97).
 `accessRisk: NENHUM`. Reversível: sim.
+
+### D104 — `b75`: vínculo de município, bloco fiscal da Pessoa e links `DestinatarioSem*`
+
+Data: 2026-10-02. Rodada: inventário `16-pessoa-fiscal`, sem quarteto, porque D47 item 2, D49 item 2, D50, D52 e D53
+travam o desenho. A D103 renumerou a fatia para `b75`. Quem arbitrou: orquestrador.
+
+Decisão:
+- **Vínculo de município**, o mínimo que faz o destinatário passar.
+  - Cada endereço da aba Endereços (b73) ganha a ação "Vincular município".
+  - A ação usa `PATCH …/enderecos/{id}/municipio` e exige `PESSOAS_DADOS_FISCAIS_GERENCIAR`.
+  - O município sai de uma busca no servidor, com debounce (D52), filtrada pela UF do endereço, e o envio leva o
+    código IBGE de 7 dígitos.
+  - A busca exige `FISCAL_CADASTROS_CONSULTAR`. Sem ela, a ação fica indisponível com o motivo, e não há campo
+    de código livre.
+  - A tela continua mostrando "vinculado / não vinculado", porque não existe filtro por Id para mostrar o nome
+    (PF-15/16).
+  - Município inativo ou inexistente aparece pelo erro do backend.
+- **Backfill de municípios: fora.** Ele casa por texto, em lote, sem dry-run, e inclui Pessoas inativas
+  (**B-41**). Gatilho: o backend ganhar dry-run, ou o operador pedir carga em lote.
+- **Bloco fiscal.**
+  - Aba nova "Dados fiscais" no `PessoaFormDialog` (D49 item 2), com `PATCH /dados-fiscais` e
+    `PESSOAS_DADOS_FISCAIS_GERENCIAR`. Só funciona na edição.
+  - **Envia sempre os 8 campos, carregados do registro**, porque o PATCH substitui o bloco inteiro (PF-1).
+  - Os 11 campos fiscais do `PessoaResponse` passam a ser declarados e validados, com schema não estrito
+    (PF-3/PF-4). `createdAt`, que a UI lê e o backend não entrega, vira opcional (PF-3).
+  - "Contribuinte" com IE vazia mostra o motivo e orienta a gravar a IE antes, na aba "Documentos" (PF-2).
+    A tela não grava as duas coisas em sequência.
+- **Links `DestinatarioSem*` (D50).**
+  - O mapa da D50 ganha os códigos `DestinatarioSemEnderecoFiscal`, `DestinatarioSemEnderecoPrincipal`,
+    `DestinatarioSemMunicipioIbge` e `DestinatarioSemIndicadorContribuinteIcms`. São "as quatro" da D53.
+    `SemPessoaVinculada` não é alcançável.
+  - O link leva à lista `/pessoas`, sem id. O `pessoaId` só vem no texto do erro (PF-9, **B-38**), e extrair id
+    de texto viola a D50.
+  - O link só aparece para quem tem `PESSOAS_GERENCIAR`, porque só esse perfil abre o diálogo. O teste do
+    painel que exigia `null` para esses códigos muda de propósito.
+- **Permissões:** nenhuma regra de rota nem item de menu novo. As abas ficam dentro do diálogo de Pessoa, que já
+  exige `PESSOAS_GERENCIAR`. Completar o destinatário exige três permissões (`PESSOAS_GERENCIAR`,
+  `PESSOAS_DADOS_FISCAIS_GERENCIAR` e `FISCAL_CADASTROS_CONSULTAR`), e o CHANGELOG diz a ordem de concessão
+  (PF-11). `accessRisk: NENHUM`.
+- **Honestidade no CHANGELOG.** Pela leitura do C#, o destinatário passa no resolver depois da `b75`. O
+  Confirmar provavelmente ainda não conclui em dev, por razões do backend (lidas, não executadas):
+  - o leg 2 valida schema e o repositório tem 0 XSD (**B-42**, PF-19);
+  - o mock da SEFAZ devolve uma chave que o domínio recusa (**B-43**, PF-18).
+  - O estado do emitente, da natureza e da configuração fiscal em dev não foi medido.
+- **Numeração:** as 8 citações de "b74" para este conteúdo, em código, teste e script, passam para "b75" (PF-10).
+
+Reversível: sim.
+Emenda à D104 (2026-10-02, nó `design`): o `PessoaResponse` devolve `MunicipioIbgeId` e `PaisId` como Guid (`PessoaResponse.cs:22-23`), mas o PATCH recebe códigos (`MunicipioIbgeCodigo` e `PaisCodigoBacen`, em `PessoaRequests.cs:42-43`). Nenhuma busca filtra por Id, então a tela não consegue reenviar esses dois campos.
+A aba edita os outros 6. Os dois são enviados nulos só quando o registro também os tem nulos. Se o registro tiver qualquer um deles preenchido, o salvamento fica **bloqueado**, e o motivo aparece: salvar apagaria um dado que a tela não consegue reenviar. Nenhum dado é apagado pela tela.
+Foi descartada a opção do design, que salvava com aviso e apagava. Ela trocaria um dado gravado por um aviso, e esses dois campos não são lidos pelo `DestinatarioFiscalResolver` (o resolver lê o município do endereço). Como o frontend nunca os enviou, só carga externa os preenche.
+Pergunta **B-44**: o `PessoaResponse` pode devolver os códigos, ou as buscas podem ganhar filtro por Id?

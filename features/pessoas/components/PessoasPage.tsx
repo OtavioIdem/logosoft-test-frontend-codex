@@ -49,6 +49,9 @@ export const PessoasPage = () => {
 
     const records = useMemo(() => filterLocal(listQuery.data ?? [], localSearch), [listQuery.data, localSearch]);
     const visibleRecords = useMemo(() => records.slice(first, first + rows), [records, first, rows]);
+    // b75 (PF-4): `selected` é a foto da linha no clique. O diálogo recebe o registro VIVO da lista (relida depois de salvar
+    // os dados fiscais); a foto só vale se o registro sair da lista com o diálogo aberto, e ele não vira "Nova pessoa".
+    const dialogRecord = useMemo(() => (selected ? (listQuery.data ?? []).find((item) => item.id === selected.id) ?? selected : null), [selected, listQuery.data]);
 
     if (!hasPermission('PESSOAS_CONSULTAR')) {
         return <UnauthorizedState description="A rotina de Pessoas exige a permissão PESSOAS_CONSULTAR." />;
@@ -120,7 +123,7 @@ export const PessoasPage = () => {
                 </DataTableServer>
                 {!listQuery.isLoading && records.length === 0 ? <EmptyState title="Nenhuma pessoa" description="Crie um cadastro ou ajuste os filtros." /> : null}
             </Card>
-            <PessoaFormDialog visible={formVisible} record={selected} loading={saveMutation.isPending} onHide={() => setFormVisible(false)} onSubmit={save} />
+            <PessoaFormDialog visible={formVisible} record={dialogRecord}loading={saveMutation.isPending} onHide={() => setFormVisible(false)} onSubmit={save} />
             <ReasonDialog visible={Boolean(reasonRecord)} title="Motivo da inativação" confirmLabel="Inativar" loading={inativarMutation.isPending} onHide={() => setReasonRecord(null)} onConfirm={inativar} />
         </>
     );

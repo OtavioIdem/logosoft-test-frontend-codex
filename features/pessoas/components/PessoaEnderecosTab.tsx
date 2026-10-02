@@ -11,6 +11,7 @@ import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { PessoaEnderecoDialog } from '@/features/pessoas/components/PessoaEnderecoDialog';
+import { MunicipioEscolhido, PessoaMunicipioDialog } from '@/features/pessoas/components/PessoaMunicipioDialog';
 import {
     cidadeUfLabel,
     enderecoLinhaLabel,
@@ -31,6 +32,7 @@ import {
     TIPO_ENDERECO_DICA,
     tipoEnderecoLabel
 } from '@/features/pessoas/components/pessoaEnderecosLabels';
+import { PESSOA_MUNICIPIO_ACAO, PESSOA_MUNICIPIO_INDISPONIVEL, PESSOA_MUNICIPIO_TOAST } from '@/features/pessoas/components/pessoaFiscalLabels';
 import { usePessoaEnderecoMutations, usePessoaEnderecos } from '@/features/pessoas/hooks/usePessoaEnderecos';
 import { EnderecoPessoaFormValues, EnderecoPessoaResponse } from '@/features/pessoas/types/pessoaEnderecos.types';
 import { useAppToast } from '@/hooks/useAppToast';
@@ -44,15 +46,23 @@ type PessoaEnderecosTabProps = {
     /** Permissões de quem monta o diálogo (o `PessoaFormDialog` as lê com `usePermissions`). */
     podeConsultar: boolean;
     podeGerenciar: boolean;
+    /** `PESSOAS_DADOS_FISCAIS_GERENCIAR` (b75, D104): sem ela a ação "Vincular município" nem aparece. */
+    podeGerenciarFiscal?: boolean;
+    /** `FISCAL_CADASTROS_CONSULTAR`: a busca de município. Sem ela a ação fica indisponível, com o motivo, e não há campo de código livre. */
+    podeConsultarCadastrosFiscais?: boolean;
 };
 
 type DialogoEndereco = { endereco: EnderecoPessoaResponse | null; primeiro: boolean };
 type ErroAcao = { titulo: string; error: ApiError };
 
-export const PessoaEnderecosTab = ({ pessoaId, pessoaAtiva, podeConsultar, podeGerenciar }: PessoaEnderecosTabProps) => {
+const ufValida = (uf?: string | null) => /^[A-Za-z]{2}$/.test((uf ?? '').trim());
+
+export const PessoaEnderecosTab = ({ pessoaId, pessoaAtiva, podeConsultar, podeGerenciar, podeGerenciarFiscal = false, podeConsultarCadastrosFiscais = false }: PessoaEnderecosTabProps) => {
     const toast = useAppToast();
     const listQuery = usePessoaEnderecos(pessoaId, { enabled: podeConsultar });
-    const { salvarMutation, principalMutation, excluirMutation } = usePessoaEnderecoMutations(pessoaId);
+    const { salvarMutation, principalMutation, excluirMutation, vincularMunicipioMutation } = usePessoaEnderecoMutations(pessoaId);
+    const [vinculando, setVinculando] = useState<EnderecoPessoaResponse | null>(null);
+    const [erroVinculo, setErroVinculo] = useState<ApiError | null>(null);
     const [dialogo, setDialogo] = useState<DialogoEndereco | null>(null);
     const [erroDialogo, setErroDialogo] = useState<ApiError | null>(null);
     const [erroAcao, setErroAcao] = useState<ErroAcao | null>(null);
@@ -74,7 +84,7 @@ export const PessoaEnderecosTab = ({ pessoaId, pessoaAtiva, podeConsultar, podeG
 
     const enderecos = listQuery.data;
     const acoesDisponiveis = podeGerenciar && pessoaAtiva;
-    const ocupado = salvarMutation.isPending || principalMutation.isPending || excluirMutation.isPending;
+    const ocupado = salvarMutation.isPending || principalMutation.isPending || excluirMutation.isPending || vincularMunicipioMutation.isPending;
     const motivoIndisponivel = !podeGerenciar ? PESSOA_ENDERECOS_PERMISSAO.acaoSemGerenciar : !pessoaAtiva ? PESSOA_ENDERECOS_INDISPONIVEL.pessoaInativa : undefined;
 
     const falhar = (titulo: string, error: unknown) => {
@@ -114,6 +124,36 @@ export const PessoaEnderecosTab = ({ pessoaId, pessoaAtiva, podeConsultar, podeG
         }
     };
 
+    // b75 (D104): motivo de a ação "Vincular município" estar desabilitada, sempre visível no title.
+    const motivoVincular = (endereco: EnderecoPessoaResponse) =>
+        !podeConsultarCadastrosFiscais ? PESSOA_MUNICIPIO_INDISPONIVEL.semBusca : !pessoaAtiva ? PESSOA_ENDERECOS_INDISPONIVEL.pessoaInativa : !ufValida(endereco.uf) ? PESSOA_MUNICIPIO_INDISPONIVEL.semUf : undefined;
+
+    const abrirVinculo = (endereco: EnderecoPessoaResponse) => {
+        setErroVinculo(null);
+        setErroAcao(null);
+        setVinculando(endereco);
+    };
+
+    const fecharVinculo = () => {
+        setVinculando(null);
+        setErroVinculo(null);
+    };
+
+    // A mutation só resolve depois de reler a lista de endereços (`onSettled` aguarda a invalidação). O erro do backend
+    // (município inativo, inexistente, UF divergente, endereço removido) aparece no diálogo, com code/status/traceId.
+    const vincular = async (municipio: MunicipioEscolhido) => {
+        const endereco = vinculando;
+        if (!endereco) return;
+        setErroVinculo(null);
+        try {
+            await vincularMunicipioMutation.mutateAsync({ enderecoId: endereco.id, municipioIbgeCodigo: municipio.codigoIbge });
+            toast.success(PESSOA_MUNICIPIO_TOAST.vinculado(municipio.nome, municipio.ufSigla));
+            setVinculando(null);
+        } catch (error) {
+            setErroVinculo(mapApiError(error));
+        }
+    };
+
     const marcarPrincipal = async (endereco: EnderecoPessoaResponse) => {
         setErroAcao(null);
         setPrincipalEmAndamento(endereco.id);
@@ -149,6 +189,19 @@ export const PessoaEnderecosTab = ({ pessoaId, pessoaAtiva, podeConsultar, podeG
         return (
             <div className="flex gap-1 justify-content-end">
                 <Button type="button" icon="pi pi-pencil" text rounded size="small" aria-label={PESSOA_ENDERECO_ACOES.editarAria(linha)} title={motivoIndisponivel ?? PESSOA_ENDERECO_ACOES.editar} disabled={!acoesDisponiveis || ocupado} onClick={() => abrirEdicao(row)} />
+                {podeGerenciarFiscal ? (
+                    <Button
+                        type="button"
+                        icon={PESSOA_MUNICIPIO_ACAO.icone}
+                        text
+                        rounded
+                        size="small"
+                        aria-label={row.municipioIbgeId ? PESSOA_MUNICIPIO_ACAO.trocarAria(linha) : PESSOA_MUNICIPIO_ACAO.vincularAria(linha)}
+                        title={motivoVincular(row) ?? (row.municipioIbgeId ? PESSOA_MUNICIPIO_ACAO.trocar : PESSOA_MUNICIPIO_ACAO.vincular)}
+                        disabled={!acoesDisponiveis || ocupado || Boolean(motivoVincular(row))}
+                        onClick={() => abrirVinculo(row)}
+                    />
+                ) : null}
                 <Button
                     type="button"
                     icon={row.principal ? 'pi pi-star-fill' : 'pi pi-star'}
@@ -185,6 +238,7 @@ export const PessoaEnderecosTab = ({ pessoaId, pessoaAtiva, podeConsultar, podeG
             </div>
             {!podeGerenciar ? <Message severity="info" className="w-full mb-3" text={PESSOA_ENDERECOS_PERMISSAO.somenteLeitura} /> : null}
             {podeGerenciar && !pessoaAtiva ? <Message severity="warn" className="w-full mb-3" text={PESSOA_ENDERECOS_INDISPONIVEL.pessoaInativa} /> : null}
+            {podeGerenciarFiscal && !podeConsultarCadastrosFiscais ? <Message severity="info" className="w-full mb-3" text={PESSOA_MUNICIPIO_INDISPONIVEL.avisoTabelaSemBusca} /> : null}
 
             {erroAcao ? (
                 <div className="mb-3">
@@ -226,7 +280,7 @@ export const PessoaEnderecosTab = ({ pessoaId, pessoaAtiva, podeConsultar, podeG
                                 <Tag
                                     value={municipioFiscalLabel(row.municipioIbgeId)}
                                     severity={row.municipioIbgeId ? 'success' : 'warning'}
-                                    title={row.municipioIbgeId ? PESSOA_ENDERECO_MUNICIPIO_FISCAL.dicaVinculado : PESSOA_ENDERECO_MUNICIPIO_FISCAL.dicaNaoVinculado}
+                                    title={row.municipioIbgeId ? PESSOA_ENDERECO_MUNICIPIO_FISCAL.dicaVinculado : podeGerenciarFiscal ? PESSOA_ENDERECO_MUNICIPIO_FISCAL.dicaNaoVinculado : PESSOA_ENDERECO_MUNICIPIO_FISCAL.dicaNaoVinculadoSemPermissao}
                                 />
                             )}
                         />
@@ -239,6 +293,7 @@ export const PessoaEnderecosTab = ({ pessoaId, pessoaAtiva, podeConsultar, podeG
             ) : null}
 
             <PessoaEnderecoDialog visible={Boolean(dialogo)} endereco={dialogo?.endereco ?? null} primeiroEndereco={dialogo?.primeiro ?? false} loading={salvarMutation.isPending} error={erroDialogo} onHide={fecharDialogo} onSubmit={salvar} />
+            {vinculando ? <PessoaMunicipioDialog endereco={vinculando} loading={vincularMunicipioMutation.isPending} error={erroVinculo} onHide={fecharVinculo} onSubmit={vincular} /> : null}
             <ConfirmDialog
                 visible={Boolean(excluindo)}
                 onHide={() => setExcluindo(null)}

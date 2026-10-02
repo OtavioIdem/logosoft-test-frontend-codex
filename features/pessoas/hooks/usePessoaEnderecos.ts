@@ -5,6 +5,7 @@ import { pessoaEnderecosApi } from '@/features/pessoas/api/pessoaEnderecosApi';
 import { EnderecoPessoaFormValues } from '@/features/pessoas/types/pessoaEnderecos.types';
 
 type SalvarEnderecoPayload = { enderecoId?: string | null; values: EnderecoPessoaFormValues };
+type VincularMunicipioPayload = { enderecoId: string; municipioIbgeCodigo: string };
 
 // Uma chave por pessoa, sob o prefixo `['pessoas', ...]` (como as classificações). A invalidação das mutações de
 // Pessoa (`['pessoas']`) também a alcança, o que é inofensivo: só relê a lista de endereços.
@@ -42,5 +43,12 @@ export const usePessoaEnderecoMutations = (pessoaId?: string | null) => {
         onSettled: invalidate
     });
 
-    return { salvarMutation, principalMutation, excluirMutation, queryKey: pessoaEnderecosQueryKey(pessoaId) };
+    // b75 (D104): vincula o município do endereço pelo código IBGE. A resposta traz só o endereço tocado, então a lista
+    // é relida (e no erro também: endereço removido por outro usuário sai 404 `Recurso.NaoEncontrado`).
+    const vincularMunicipioMutation = useMutation({
+        mutationFn: ({ enderecoId, municipioIbgeCodigo }: VincularMunicipioPayload) => pessoaEnderecosApi.vincularMunicipio(pessoaId as string, enderecoId, { municipioIbgeCodigo }),
+        onSettled: invalidate
+    });
+
+    return { salvarMutation, principalMutation, excluirMutation, vincularMunicipioMutation, queryKey: pessoaEnderecosQueryKey(pessoaId) };
 };

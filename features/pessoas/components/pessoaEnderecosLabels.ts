@@ -7,6 +7,7 @@
 // indexado pelo valor numérico do C# e traz, no comentário, a linha de onde o valor veio
 // (`../New project 3/src`, lido em 2026-10-01).
 
+import { PESSOA_MUNICIPIO_TEXTOS_SUBSTITUTOS_B73 } from '@/features/pessoas/components/pessoaFiscalLabels';
 import { UFS_BRASIL } from '@/lib/constants/ufs';
 
 // ---------------------------------------------------------------------------------------------
@@ -111,7 +112,10 @@ export const PESSOA_ENDERECO_MUNICIPIO_FISCAL = {
     naoVinculado: 'Não vinculado',
     /** tooltip da Tag */
     dicaVinculado: 'Município fiscal vinculado a este endereço.',
-    dicaNaoVinculado: 'Este endereço ainda não tem município fiscal vinculado. A nota fiscal exige o vínculo, que não é feito por esta tela.'
+    // b75 (PF-17): o vínculo agora é feito pela ação "Vincular município"; os textos vêm de `pessoaFiscalLabels.ts`.
+    dicaNaoVinculado: PESSOA_MUNICIPIO_TEXTOS_SUBSTITUTOS_B73.dicaNaoVinculado,
+    /** sem PESSOAS_DADOS_FISCAIS_GERENCIAR a ação não aparece: o texto manda pedir a quem tem a permissão */
+    dicaNaoVinculadoSemPermissao: PESSOA_MUNICIPIO_TEXTOS_SUBSTITUTOS_B73.dicaNaoVinculadoSemPermissao
 } as const;
 
 export const municipioFiscalLabel = (municipioIbgeId?: string | null): string => (municipioIbgeId ? PESSOA_ENDERECO_MUNICIPIO_FISCAL.vinculado : PESSOA_ENDERECO_MUNICIPIO_FISCAL.naoVinculado);
@@ -208,7 +212,7 @@ export const PESSOA_ENDERECO_LIMITES = {
     numero: 30,
     complemento: 120,
     bairro: 120,
-    /** texto livre (PF-1): é o campo do backend; a busca de município é da b74 */
+    /** texto livre (PF-1): é o campo do backend; a busca de município é da b75 */
     cidade: 120,
     uf: 2,
     /** o backend exige 8 dígitos depois de remover a máscara; o campo aceita `00000-000` (9 caracteres) */
@@ -233,7 +237,7 @@ export const PESSOA_ENDERECO_CAMPOS = {
     principalHint: 'O principal é o endereço usado na nota fiscal. Só existe um por pessoa: marcar este rebaixa o anterior.',
     /** campo somente leitura na edição: quem lê é a Tag da tabela e esta linha do diálogo */
     municipioFiscal: 'Município fiscal',
-    municipioFiscalHint: 'O vínculo do município fiscal não é alterado por este cadastro.'
+    municipioFiscalHint: PESSOA_MUNICIPIO_TEXTOS_SUBSTITUTOS_B73.municipioFiscalHint
 } as const;
 
 /** Mensagens de validação do cliente (mesmos limites do backend). */

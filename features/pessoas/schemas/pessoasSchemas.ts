@@ -3,6 +3,7 @@ import { TipoPessoa } from '@/types/erp';
 import { isPotentialCpf, isPotentialCnpj, normalizeCnpj, normalizeCpf } from '@/lib/validators/documentos';
 import { UFS_BRASIL } from '@/lib/constants/ufs';
 import { PESSOA_ENDERECO_LIMITES, PESSOA_ENDERECO_VALIDACAO } from '@/features/pessoas/components/pessoaEnderecosLabels';
+import { INDICADOR_CONTRIBUINTE_ICMS_OPTIONS, PESSOA_FISCAL_LIMITES, PESSOA_FISCAL_VALIDACAO, REGIME_TRIBUTARIO_PARCEIRO_OPTIONS } from '@/features/pessoas/components/pessoaFiscalLabels';
 import { TipoEndereco } from '@/features/pessoas/types/pessoaEnderecos.types';
 
 const guid = z.string().uuid('Selecione um registro válido.');
@@ -89,7 +90,7 @@ export const inativarClassificacaoPessoaSchema = z.object({
 
 // Endereços da Pessoa (v1.11.0a8b73, D102). Limites e obrigatoriedade de `EnderecoContatoValidators.cs:5-33` e
 // `EnderecoPessoa.cs:11-26,129-186`. O Swagger declara tudo opcional; no C# sete dos nove campos são obrigatórios
-// (inventário §3.2). Request `.strict()`: não existe `municipioIbgeCodigo` aqui, que é do PATCH da b74.
+// (inventário §3.2). Request `.strict()`: não existe `municipioIbgeCodigo` aqui, que é do PATCH da b75.
 const ufsEndereco = new Set<string>(UFS_BRASIL);
 
 const textoEnderecoObrigatorio = (obrigatorio: string, limite: number, tamanho: string) =>
@@ -176,3 +177,93 @@ export const enderecoPessoaResponseSchema = z.object({
 });
 
 export const enderecosPessoaResponseSchema = z.array(enderecoPessoaResponseSchema);
+
+// Vínculo de município do endereço (v1.11.0a8b75, D104). `VincularMunicipioEnderecoPessoaRequest` (`EnderecoContatoRequests.cs:31`,
+// 1 campo). O C# aceita nulo/vazio para DESVINCULAR (`EnderecoContatoValidators.cs:41-44`), mas a b75 só vincula: o
+// código é obrigatório e tem 7 dígitos (`Length(7)` + `^[0-9]{7}$`). O código vem da busca, nunca digitado (D52).
+export const vincularMunicipioEnderecoPessoaSchema = z
+    .object({
+        municipioIbgeCodigo: z
+            .string({ required_error: PESSOA_FISCAL_VALIDACAO.municipioIbgeCodigoInvalido, invalid_type_error: PESSOA_FISCAL_VALIDACAO.municipioIbgeCodigoInvalido })
+            .trim()
+            .regex(/^[0-9]{7}$/, PESSOA_FISCAL_VALIDACAO.municipioIbgeCodigoInvalido)
+    })
+    .strict();
+
+// Bloco fiscal da Pessoa (v1.11.0a8b75, D104). `AtualizarDadosFiscaisPessoaRequest` (`PessoaRequests.cs:37-45`, 8
+// campos; validador em `PessoaValidators.cs:44-57`). O PATCH SUBSTITUI o bloco inteiro (PF-1): os 8 campos são
+// OBRIGATÓRIOS no schema, com `null` explícito para "não informado". Campo omitido reprova aqui, em vez de apagar o
+// valor gravado em silêncio. Request `.strict()`.
+const opcaoNumericaFiscal = (opcoes: { value: number }[]) =>
+    z
+        .union([z.number(), z.null()], { errorMap: () => ({ message: PESSOA_FISCAL_VALIDACAO.valorInvalido }) })
+        .refine((value) => value === null || opcoes.some((opcao) => opcao.value === value), PESSOA_FISCAL_VALIDACAO.valorInvalido);
+
+const textoFiscalNormalizado = z.union([z.string(), z.null()]).transform((value) => {
+    if (value === null) return null;
+    const normalizado = value.trim();
+    return normalizado.length ? normalizado : null;
+});
+
+const triEstadoFiscal = z.union([z.boolean(), z.null()], { errorMap: () => ({ message: PESSOA_FISCAL_VALIDACAO.valorInvalido }) });
+
+export const atualizarDadosFiscaisPessoaSchema = z
+    .object({
+        indicadorContribuinteIcms: opcaoNumericaFiscal(INDICADOR_CONTRIBUINTE_ICMS_OPTIONS),
+        inscricaoEstadualSt: textoFiscalNormalizado.refine((value) => value === null || value.length <= PESSOA_FISCAL_LIMITES.inscricaoEstadualSt, PESSOA_FISCAL_VALIDACAO.inscricaoEstadualStTamanho),
+        suframa: textoFiscalNormalizado.superRefine((value, ctx) => {
+            if (value === null) return;
+            if (!/^[0-9]+$/.test(value)) {
+                ctx.addIssue({ code: z.ZodIssueCode.custom, message: PESSOA_FISCAL_VALIDACAO.suframaSoDigitos });
+            } else if (value.length > PESSOA_FISCAL_LIMITES.suframa) {
+                ctx.addIssue({ code: z.ZodIssueCode.custom, message: PESSOA_FISCAL_VALIDACAO.suframaTamanho });
+            }
+        }),
+        regimeTributarioParceiro: opcaoNumericaFiscal(REGIME_TRIBUTARIO_PARCEIRO_OPTIONS),
+        // A aba só os envia nulos, e só quando o registro também os tem nulos (emenda da D104). O contrato aceita o código.
+        municipioIbgeCodigo: textoFiscalNormalizado.refine((value) => value === null || /^[0-9]{7}$/.test(value), PESSOA_FISCAL_VALIDACAO.municipioIbgeCodigoInvalido),
+        paisCodigoBacen: textoFiscalNormalizado.refine((value) => value === null || /^[0-9]{1,4}$/.test(value), PESSOA_FISCAL_VALIDACAO.paisCodigoBacenTamanho),
+        contribuinteIpi: triEstadoFiscal,
+        tomadorOrgaoPublico: triEstadoFiscal
+    })
+    .strict()
+    .superRefine((value, ctx) => {
+        // `PessoaDadosFiscaisResolver.cs:38-41`: com qualquer outro campo preenchido, o indicador é obrigatório. Tudo em
+        // branco é válido e LIMPA o bloco (`:31-36`). `false` conta como preenchido (`HasValue`, `:84-92`).
+        const outroPreenchido = [value.inscricaoEstadualSt, value.suframa, value.regimeTributarioParceiro, value.municipioIbgeCodigo, value.paisCodigoBacen, value.contribuinteIpi, value.tomadorOrgaoPublico].some((campo) => campo !== null);
+        if (value.indicadorContribuinteIcms === null && outroPreenchido) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['indicadorContribuinteIcms'], message: PESSOA_FISCAL_VALIDACAO.indicadorObrigatorio });
+        }
+    });
+
+// PessoaResponse (`PessoaResponse.cs:7-29`, 22 campos). Response NUNCA estrita: campo aditivo do backend não pode
+// quebrar a tela, e `.passthrough()` preserva o que o schema não conhece (a UI lê `createdAt` por `asRecord`). Os
+// enums chegam NUMÉRICOS (sem `JsonStringEnumConverter`); se vierem texto, o erro aparece, sem fallback silencioso.
+// `createdAt` não existe no record do C# e a UI o lê (PF-3): opcional.
+export const pessoaResponseSchema = z
+    .object({
+        id: z.string(),
+        empresaId: z.string(),
+        filialId: z.string().nullish(),
+        tipoPessoa: z.number(),
+        nomeRazaoSocial: z.string(),
+        nomeFantasia: z.string().nullish(),
+        documento: z.string(),
+        inscricaoEstadual: z.string().nullish(),
+        inscricaoMunicipal: z.string().nullish(),
+        observacao: z.string().nullish(),
+        status: z.number(),
+        createdAt: z.string().nullish(),
+        indicadorContribuinteIcms: z.number().nullish(),
+        indicadorIeDestinatario: z.number().nullish(),
+        inscricaoEstadualSt: z.string().nullish(),
+        suframa: z.string().nullish(),
+        regimeTributarioParceiro: z.number().nullish(),
+        municipioIbgeId: z.string().nullish(),
+        paisId: z.string().nullish(),
+        bloqueada: z.boolean().nullish(),
+        motivoBloqueio: z.string().nullish(),
+        contribuinteIpi: z.boolean().nullish(),
+        tomadorOrgaoPublico: z.boolean().nullish()
+    })
+    .passthrough();

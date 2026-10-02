@@ -59,7 +59,7 @@ describe('AC-1: request de endereço é estrito e leva exatamente os 9 campos', 
     it.each([
         ['criar', criarEnderecoPessoaSchema],
         ['atualizar', atualizarEnderecoPessoaSchema]
-    ])('schema de %s recusa campo desconhecido (municipioIbgeCodigo é do PATCH da b74)', (_nome, schema) => {
+    ])('schema de %s recusa campo desconhecido (municipioIbgeCodigo é do PATCH da b75)', (_nome, schema) => {
         const result = schema.safeParse({ ...formValido(), municipioIbgeCodigo: '3550308' });
         expect(result.success).toBe(false);
         if (!result.success) expect(result.error.issues.map((issue) => issue.code)).toContain('unrecognized_keys');

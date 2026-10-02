@@ -31,6 +31,12 @@ import { tmpdir } from 'os';
  *     do atualizar (NAO_ENVIADO, porque o PUT apaga o complemento); T é o contrafactual de S sem
  *     RECORDS_ENVIO_INTEGRAL (passaria verde como LACUNA); U roda a árvore de a3cf5e3 (b72, sem os schemas de
  *     endereço) sem ignorar nada (falha dura nominal).
+ *   - Sondas V–Z (v1.11.0a8b75, AC-7, D104, PF-1, PF-6): bloco fiscal da Pessoa e vínculo de município. V retira
+ *     inscricaoEstadualSt do dados-fiscais e W retira municipioIbgeCodigo do vínculo (NAO_ENVIADO nominal: o PATCH
+ *     substitui o bloco, e o vínculo nulo desvincula); X é o contrafactual do PF-6 (lido do markdown de 6 campos,
+ *     o schema correto reprovaria com DESCARTE de contribuinteIpi e tomadorOrgaoPublico); Y é o contrafactual de V
+ *     e W sem RECORDS_ENVIO_INTEGRAL (passariam verde como LACUNA); Z roda a árvore de da74da2 (b74) sem ignorar
+ *     nada (falha dura nominal) e ignorando os dois records novos (verde, igual ao gate da b74).
  *
  * O espelho deriva a lista de módulos do SCHEMA_TO_REQUEST_MAP do próprio gate (modulosDoGate).
  *
@@ -182,6 +188,10 @@ const RECORDS_NATUREZA = [
 /** v1.11.0a8b73 (D102): records de endereço da Pessoa, que não existem nas revisões antigas sondadas. */
 const RECORDS_ENDERECO_PESSOA = ['AdicionarEnderecoPessoaRequest', 'AtualizarEnderecoPessoaRequest'] as const;
 const REF_B72 = 'a3cf5e3'; // feat(release): v1.11.0a8b72 — pessoasSchemas.ts sem os schemas de endereço
+
+/** v1.11.0a8b75 (D104, AC-7): records fiscais da Pessoa, que não existem nas revisões antigas sondadas. */
+const RECORDS_FISCAL_PESSOA = ['AtualizarDadosFiscaisPessoaRequest', 'VincularMunicipioEnderecoPessoaRequest'] as const;
+const REF_B74 = 'da74da2'; // feat(release): v1.11.0a8b74 — pessoasSchemas.ts sem os schemas fiscais da Pessoa
 
 function montarEspelho(refSchemas: string, stripNewMapping?: boolean): string {
   const espelho = mkdtempSync(path.join(tmpdir(), 'gate-prova-request-'));
@@ -359,6 +369,48 @@ function removerCampoDoSchemaNoEspelho(espelho: string, modulo: string, nomeSche
   writeFileSync(arquivo, conteudo.substring(0, inicio) + blocoSemCampo + conteudo.substring(fim));
 }
 
+/**
+ * v1.11.0a8b75: como removerCampoDoSchemaNoEspelho, mas retira a propriedade inteira quando ela ocupa várias
+ * linhas (`municipioIbgeCodigo: z` seguido de `.string(...)`, `.trim()`, `.regex(...)`): a linha do campo e as
+ * seguintes com indentação maior. Lança se o campo não existir ou se continuar no bloco depois da remoção.
+ */
+function removerPropriedadeMultilinhaNoEspelho(espelho: string, modulo: string, nomeSchema: string, campo: string): void {
+  const gateDoEspelho = readFileSync(path.join(espelho, 'scripts', 'gate-contract-request-fields.mjs'), 'utf8');
+  const arquivo = path.join(espelho, arquivoDoModulo(gateDoEspelho, modulo));
+  const conteudo = readFileSync(arquivo, 'utf8');
+  const declaracao = new RegExp(`export const ${nomeSchema} = z\\s*\\.object\\(\\{`).exec(conteudo);
+  if (!declaracao) throw new Error(`Schema ${nomeSchema} não encontrado em ${arquivo}`);
+  const inicio = declaracao.index;
+  let fim = inicio + declaracao[0].length - 1;
+  for (let nivel = 0; fim < conteudo.length; fim++) {
+    if (conteudo[fim] === '{') nivel++;
+    if (conteudo[fim] === '}' && --nivel === 0) break;
+  }
+  const linhas = conteudo.substring(inicio, fim).split('\n');
+  const indentacao = (l: string) => l.length - l.trimStart().length;
+  const idx = linhas.findIndex((l) => new RegExp(`^[ \\t]*${campo}\\s*:`).test(l));
+  if (idx < 0) throw new Error(`Campo ${campo} não encontrado em ${nomeSchema}`);
+  let ate = idx + 1;
+  while (ate < linhas.length && linhas[ate].trim() !== '' && indentacao(linhas[ate]) > indentacao(linhas[idx])) ate++;
+  linhas.splice(idx, ate - idx);
+  const blocoSemCampo = linhas.join('\n');
+  if (new RegExp(`\\b${campo}\\s*:`).test(blocoSemCampo)) throw new Error(`Campo ${campo} continuou em ${nomeSchema}`);
+  writeFileSync(arquivo, conteudo.substring(0, inicio) + blocoSemCampo + conteudo.substring(fim));
+}
+
+/** Retira os records dados de um `new Set([...])` do gate no espelho; lança se algum não sair. */
+function retirarDoConjuntoDoGate(espelho: string, conjunto: string, records: readonly string[]): void {
+  const arquivoGate = path.join(espelho, 'scripts', 'gate-contract-request-fields.mjs');
+  const gate = readFileSync(arquivoGate, 'utf8');
+  const inicio = gate.indexOf(`const ${conjunto} = new Set([`);
+  if (inicio < 0) throw new Error(`${conjunto} não encontrado no gate`);
+  const fimConjunto = gate.indexOf(']);', inicio);
+  let bloco = gate.substring(inicio, fimConjunto);
+  for (const record of records) bloco = bloco.replace(`'${record}'`, '');
+  if (records.some((r) => bloco.includes(`'${r}'`))) throw new Error(`${records.join(', ')} não saíram de ${conjunto}`);
+  writeFileSync(arquivoGate, gate.substring(0, inicio) + bloco + gate.substring(fimConjunto));
+}
+
 describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', () => {
   let espelhoAntigo = '';
   let espelhoHoje = '';
@@ -409,6 +461,17 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
   let resultadoEnderecoAtualizarSemComplemento: Awaited<ReturnType<typeof executarGate>>;
   let resultadoEnderecoSemEnvioIntegral: Awaited<ReturnType<typeof executarGate>>;
   let resultadoB72SemIgnorar: Awaited<ReturnType<typeof executarGate>>;
+  let espelhoFiscalSemIeSt = '';
+  let espelhoVinculoSemMunicipio = '';
+  let espelhoFiscalSoMarkdown = '';
+  let espelhoFiscalSemEnvioIntegral = '';
+  let espelhoB74 = '';
+  let resultadoFiscalSemIeSt: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoVinculoSemMunicipio: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoFiscalSoMarkdown: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoFiscalSemEnvioIntegral: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoB74SemIgnorar: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoB74Ignorando: Awaited<ReturnType<typeof executarGate>>;
 
   beforeAll(() => {
     // Sonda A: árvore de 9fcda80 (contém os 15 defeitos)
@@ -417,7 +480,7 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
     // DefinirEnderecoFiscalRequest (b64), ConfigurarComercialClienteRequest e ConfigurarCompraFornecedorRequest (b66),
     // CriarClassificacaoPessoaRequest, AtualizarClassificacaoPessoaRequest, InativarClassificacaoPessoaRequest (b67) não existiam em 9fcda80.
     resultadoAntigo = executarGate(espelhoAntigo, {
-      GATE_RECORTES_IGNORADOS: ['DefinirEnderecoFiscalRequest', 'ConfigurarComercialClienteRequest', 'ConfigurarCompraFornecedorRequest', 'CriarClassificacaoPessoaRequest', 'AtualizarClassificacaoPessoaRequest', 'InativarClassificacaoPessoaRequest', ...RECORDS_NATUREZA, ...RECORDS_ENDERECO_PESSOA].join(',')
+      GATE_RECORTES_IGNORADOS: ['DefinirEnderecoFiscalRequest', 'ConfigurarComercialClienteRequest', 'ConfigurarCompraFornecedorRequest', 'CriarClassificacaoPessoaRequest', 'AtualizarClassificacaoPessoaRequest', 'InativarClassificacaoPessoaRequest', ...RECORDS_NATUREZA, ...RECORDS_ENDERECO_PESSOA, ...RECORDS_FISCAL_PESSOA].join(',')
     });
 
     // Sonda B: árvore de hoje (sem os 15 defeitos)
@@ -490,7 +553,8 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
     espelhoB70 = montarEspelho(REF_B70);
     // v1.11.0a8b72: a b70 não tem o arquivo de schemas de natureza (FILE_NOT_FOUND ignorado de propósito)
     // v1.11.0a8b73: nem os schemas de endereço da Pessoa (SCHEMA_NOT_FOUND ignorado de propósito)
-    resultadoB70 = executarGate(espelhoB70, { GATE_RECORTES_IGNORADOS: [...RECORDS_NATUREZA, ...RECORDS_ENDERECO_PESSOA].join(',') });
+    // v1.11.0a8b75: nem os schemas fiscais da Pessoa (SCHEMA_NOT_FOUND ignorado de propósito)
+    resultadoB70 = executarGate(espelhoB70, { GATE_RECORTES_IGNORADOS: [...RECORDS_NATUREZA, ...RECORDS_ENDERECO_PESSOA, ...RECORDS_FISCAL_PESSOA].join(',') });
 
     // AC-10 (b71, D97) — Sonda J: árvore de hoje sem `observacao` (string? anulável) em faturarPedidoVendaSchema
     espelhoFaturarSemObservacao = montarEspelho('HEAD-WORKING');
@@ -572,11 +636,39 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
     // AC-8 (b73) — Sonda U: árvore da b72 (sem os schemas de endereço) sem ignorar nada — falha dura nominal
     espelhoB72SemIgnorar = montarEspelho(REF_B72);
     resultadoB72SemIgnorar = executarGate(espelhoB72SemIgnorar);
-  }, 180_000);
+
+    // AC-7 (b75, D104, PF-1) — Sonda V: PATCH de dados fiscais sem `inscricaoEstadualSt` (string? anulável: o PATCH
+    // substitui o bloco, e o campo omitido apagaria a IE-ST gravada)
+    espelhoFiscalSemIeSt = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoFiscalSemIeSt, 'pessoas', 'atualizarDadosFiscaisPessoaSchema', 'inscricaoEstadualSt');
+    resultadoFiscalSemIeSt = executarGate(espelhoFiscalSemIeSt);
+
+    // AC-7 (b75, D104) — Sonda W: vínculo de município sem `municipioIbgeCodigo` (string?: nulo desvincula)
+    espelhoVinculoSemMunicipio = montarEspelho('HEAD-WORKING');
+    removerPropriedadeMultilinhaNoEspelho(espelhoVinculoSemMunicipio, 'pessoas', 'vincularMunicipioEnderecoPessoaSchema', 'municipioIbgeCodigo');
+    resultadoVinculoSemMunicipio = executarGate(espelhoVinculoSemMunicipio);
+
+    // AC-7 (b75, PF-6) — Sonda X (contrafactual): dados fiscais lido do markdown de 6 campos, árvore de hoje intacta
+    espelhoFiscalSoMarkdown = montarEspelho('HEAD-WORKING');
+    retirarDoConjuntoDoGate(espelhoFiscalSoMarkdown, 'RECORDS_DO_SNAPSHOT_CSHARP', ['AtualizarDadosFiscaisPessoaRequest']);
+    resultadoFiscalSoMarkdown = executarGate(espelhoFiscalSoMarkdown);
+
+    // AC-7 (b75) — Sonda Y (contrafactual de V e W): as duas mutações, sem os records em RECORDS_ENVIO_INTEGRAL
+    espelhoFiscalSemEnvioIntegral = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoFiscalSemEnvioIntegral, 'pessoas', 'atualizarDadosFiscaisPessoaSchema', 'inscricaoEstadualSt');
+    removerPropriedadeMultilinhaNoEspelho(espelhoFiscalSemEnvioIntegral, 'pessoas', 'vincularMunicipioEnderecoPessoaSchema', 'municipioIbgeCodigo');
+    retirarDoConjuntoDoGate(espelhoFiscalSemEnvioIntegral, 'RECORDS_ENVIO_INTEGRAL', RECORDS_FISCAL_PESSOA);
+    resultadoFiscalSemEnvioIntegral = executarGate(espelhoFiscalSemEnvioIntegral);
+
+    // AC-7 (b75) — Sonda Z: árvore da b74 (sem os schemas fiscais), sem ignorar nada e ignorando os dois records
+    espelhoB74 = montarEspelho(REF_B74);
+    resultadoB74SemIgnorar = executarGate(espelhoB74);
+    resultadoB74Ignorando = executarGate(espelhoB74, { GATE_RECORTES_IGNORADOS: RECORDS_FISCAL_PESSOA.join(',') });
+  }, 240_000);
 
   afterAll(() => {
     // Limpa espelhos
-    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoDefinirEnderecoFiscalComFantasma, espelhoDefinirEnderecoFiscalSemObrigatorio, espelhoComMapeamentoFake, espelhoClienteSemObrigatorio, espelhoClienteSemAnulavel, espelhoFornecedorSemAnulavel, espelhoClassificacaoPessoaSemAnulavel, espelhoClassificacaoPessoaSemObrigatorio, espelhoB70, espelhoFaturarSemObservacao, espelhoMapeamentoSemTipoItem, espelhoAtualizarSemCfops, espelhoCriarSemFilial, espelhoSemSnapshot, espelhoSoMarkdownSemTipoItem, espelhoB70SemIgnorar, espelhoEnderecoCriarSemCep, espelhoEnderecoAtualizarSemPrincipal, espelhoEnderecoAtualizarSemComplemento, espelhoEnderecoSemEnvioIntegral, espelhoB72SemIgnorar]) {
+    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoDefinirEnderecoFiscalComFantasma, espelhoDefinirEnderecoFiscalSemObrigatorio, espelhoComMapeamentoFake, espelhoClienteSemObrigatorio, espelhoClienteSemAnulavel, espelhoFornecedorSemAnulavel, espelhoClassificacaoPessoaSemAnulavel, espelhoClassificacaoPessoaSemObrigatorio, espelhoB70, espelhoFaturarSemObservacao, espelhoMapeamentoSemTipoItem, espelhoAtualizarSemCfops, espelhoCriarSemFilial, espelhoSemSnapshot, espelhoSoMarkdownSemTipoItem, espelhoB70SemIgnorar, espelhoEnderecoCriarSemCep, espelhoEnderecoAtualizarSemPrincipal, espelhoEnderecoAtualizarSemComplemento, espelhoEnderecoSemEnvioIntegral, espelhoB72SemIgnorar, espelhoFiscalSemIeSt, espelhoVinculoSemMunicipio, espelhoFiscalSoMarkdown, espelhoFiscalSemEnvioIntegral, espelhoB74]) {
       if (espelho && existsSync(espelho)) {
         try {
           rmSync(espelho, { recursive: true });
@@ -1177,6 +1269,134 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
       expect(saida).toContain('FALHA ESTRUTURAL');
       expect(saida).toContain('pessoas/criarEnderecoPessoaSchema → mapeado a AdicionarEnderecoPessoaRequest mas não existe no arquivo TS');
       expect(saida).toContain('pessoas/atualizarEnderecoPessoaSchema → mapeado a AtualizarEnderecoPessoaRequest mas não existe no arquivo TS');
+    });
+  });
+
+  describe('AC-7: v1.11.0a8b75 (D104, PF-1, PF-6) — dados fiscais da Pessoa e vínculo de município do endereço', () => {
+    const lerGate = () => readFileSync(path.join(raizDoProjeto, 'scripts', 'gate-contract-request-fields.mjs'), 'utf8');
+    const saidaDe = (r: Awaited<ReturnType<typeof executarGate>>) => r.stdout + r.stderr;
+    const blocoDoConjunto = (gate: string, conjunto: string) => {
+      const inicio = gate.indexOf(`const ${conjunto} = new Set([`);
+      expect(inicio).toBeGreaterThanOrEqual(0);
+      return gate.substring(inicio, gate.indexOf(']);', inicio));
+    };
+
+    /** Linhas entre o cabeçalho da severidade e o próximo cabeçalho. */
+    function secao(saida: string, cabecalho: 'DESCARTE' | 'NAO_ENVIADO'): string {
+      const linhas = saida.split('\n');
+      const inicio = linhas.findIndex((l) => l.includes(`${cabecalho} —`));
+      if (inicio < 0) return '';
+      const resto = linhas.slice(inicio + 1);
+      const fim = resto.findIndex((l) => /^(❌|📋|📊|✅|📌)/.test(l.trim()) && !/^❌\s+\w+\.\w+/.test(l.trim()));
+      return (fim < 0 ? resto : resto.slice(0, fim)).join('\n');
+    }
+
+    it('o gate mapeia os dois schemas aos records do C#, no módulo pessoas', () => {
+      const gate = lerGate();
+      expect(gate).toMatch(/atualizarDadosFiscaisPessoaSchema:\s*'AtualizarDadosFiscaisPessoaRequest'/);
+      expect(gate).toMatch(/vincularMunicipioEnderecoPessoaSchema:\s*'VincularMunicipioEnderecoPessoaRequest'/);
+    });
+
+    it('os dois records vêm do snapshot do C# (PF-6: o markdown tem 6 campos no dados-fiscais)', () => {
+      const bloco = blocoDoConjunto(lerGate(), 'RECORDS_DO_SNAPSHOT_CSHARP');
+      for (const record of RECORDS_FISCAL_PESSOA) expect(bloco).toContain(`'${record}'`);
+    });
+
+    it('os dois records são de envio integral (PF-1: o PATCH substitui o bloco; vínculo nulo desvincula)', () => {
+      const bloco = blocoDoConjunto(lerGate(), 'RECORDS_ENVIO_INTEGRAL');
+      for (const record of RECORDS_FISCAL_PESSOA) expect(bloco).toContain(`'${record}'`);
+    });
+
+    it('o snapshot do C# tem os 8 campos anuláveis do dados-fiscais e o campo anulável do vínculo, com a origem', () => {
+      const snapshot = JSON.parse(readFileSync(path.join(raizDoProjeto, 'scripts', 'backend-request-records.snapshot.json'), 'utf8'));
+      const campos = (record: string) =>
+        (snapshot.records[record].fields as { name: string; nullable: boolean }[]).map((f) => `${f.name}${f.nullable ? '?' : ''}`);
+      expect(campos('AtualizarDadosFiscaisPessoaRequest')).toEqual([
+        'indicadorContribuinteIcms?',
+        'inscricaoEstadualSt?',
+        'suframa?',
+        'regimeTributarioParceiro?',
+        'municipioIbgeCodigo?',
+        'paisCodigoBacen?',
+        'contribuinteIpi?',
+        'tomadorOrgaoPublico?'
+      ]);
+      expect(campos('VincularMunicipioEnderecoPessoaRequest')).toEqual(['municipioIbgeCodigo?']);
+      expect(snapshot.records.AtualizarDadosFiscaisPessoaRequest.origin.file).toBe('src/Erp.Application/Pessoas/Pessoas/PessoaRequests.cs');
+      expect(snapshot.records.VincularMunicipioEnderecoPessoaRequest.origin.file).toBe('src/Erp.Application/Pessoas/Pessoas/EnderecoContatoRequests.cs');
+    });
+
+    it('Sonda B (hoje): sai 0 e não acusa nenhum campo dos dois records', () => {
+      const saida = saidaDe(resultadoHoje);
+      expect(resultadoHoje.exitCode).toBe(0);
+      expect(saida).not.toContain('FALHA ESTRUTURAL');
+      expect(saida).not.toMatch(/(AtualizarDadosFiscaisPessoaRequest|VincularMunicipioEnderecoPessoaRequest)\./);
+    });
+
+    it('Sonda B (hoje): imprime a origem C# e a diferença para o markdown (PF-6)', () => {
+      const saida = saidaDe(resultadoHoje);
+      expect(saida).toMatch(/AtualizarDadosFiscaisPessoaRequest ← src\/Erp\.Application\/Pessoas\/Pessoas\/PessoaRequests\.cs:\d+ \(8 campos; markdown sem: contribuinteIpi, tomadorOrgaoPublico\)/);
+      expect(saida).toMatch(/VincularMunicipioEnderecoPessoaRequest ← src\/Erp\.Application\/Pessoas\/Pessoas\/EnderecoContatoRequests\.cs:\d+ \(1 campos; markdown igual, 1\/1\)/);
+    });
+
+    it('Sonda V: sem inscricaoEstadualSt em atualizarDadosFiscaisPessoaSchema — sai 1 e acusa só NAO_ENVIADO AtualizarDadosFiscaisPessoaRequest.inscricaoEstadualSt', () => {
+      expect(resultadoFiscalSemIeSt.exitCode).toBe(1);
+      expect(secao(saidaDe(resultadoFiscalSemIeSt), 'NAO_ENVIADO')).toContain('AtualizarDadosFiscaisPessoaRequest.inscricaoEstadualSt');
+      expect(Array.from(resultadoFiscalSemIeSt.nomesDivergencias)).toEqual(['AtualizarDadosFiscaisPessoaRequest.inscricaoEstadualSt']);
+    });
+
+    it('Sonda W: sem municipioIbgeCodigo em vincularMunicipioEnderecoPessoaSchema — sai 1 e acusa só NAO_ENVIADO VincularMunicipioEnderecoPessoaRequest.municipioIbgeCodigo', () => {
+      expect(resultadoVinculoSemMunicipio.exitCode).toBe(1);
+      expect(secao(saidaDe(resultadoVinculoSemMunicipio), 'NAO_ENVIADO')).toContain('VincularMunicipioEnderecoPessoaRequest.municipioIbgeCodigo');
+      expect(Array.from(resultadoVinculoSemMunicipio.nomesDivergencias)).toEqual(['VincularMunicipioEnderecoPessoaRequest.municipioIbgeCodigo']);
+      // O mesmo nome de campo no dados-fiscais não é acusado: a mutação ficou no record do vínculo
+      expect(resultadoVinculoSemMunicipio.nomesDivergencias.has('AtualizarDadosFiscaisPessoaRequest.municipioIbgeCodigo')).toBe(false);
+    });
+
+    it('Sonda X (contrafactual PF-6): lido do markdown, o schema correto reprova com DESCARTE de contribuinteIpi e tomadorOrgaoPublico', () => {
+      expect(resultadoFiscalSoMarkdown.exitCode).toBe(1);
+      const descarte = secao(saidaDe(resultadoFiscalSoMarkdown), 'DESCARTE');
+      expect(descarte).toContain('AtualizarDadosFiscaisPessoaRequest.contribuinteIpi');
+      expect(descarte).toContain('AtualizarDadosFiscaisPessoaRequest.tomadorOrgaoPublico');
+      expect(Array.from(resultadoFiscalSoMarkdown.nomesDivergencias).sort()).toEqual([
+        'AtualizarDadosFiscaisPessoaRequest.contribuinteIpi',
+        'AtualizarDadosFiscaisPessoaRequest.tomadorOrgaoPublico'
+      ]);
+    });
+
+    it('Sonda Y (contrafactual de V e W): fora de RECORDS_ENVIO_INTEGRAL, os dois campos retirados passariam verde como LACUNA', () => {
+      const saida = saidaDe(resultadoFiscalSemEnvioIntegral);
+      expect(resultadoFiscalSemEnvioIntegral.exitCode).toBe(0);
+      expect(resultadoFiscalSemEnvioIntegral.nomesDivergencias.size).toBe(0);
+      expect(saida).toContain('AtualizarDadosFiscaisPessoaRequest.inscricaoEstadualSt → ?');
+      expect(saida).toContain('VincularMunicipioEnderecoPessoaRequest.municipioIbgeCodigo → ?');
+    });
+
+    it('Sonda N (sem snapshot): os dois records reprovam como não encontrados, sem cair no markdown', () => {
+      const saida = saidaDe(resultadoSemSnapshot);
+      expect(resultadoSemSnapshot.exitCode).toBe(1);
+      for (const record of RECORDS_FISCAL_PESSOA) {
+        expect(saida).toMatch(new RegExp(`❌ ${record} → mapeado mas não encontrado no contrato \\(scripts/backend-request-records\\.snapshot\\.json`));
+      }
+    });
+
+    it('Sonda Z (b74, da74da2): schemas fiscais ausentes, sem recorte ignorado, é falha dura nominal pelos dois', () => {
+      const saida = saidaDe(resultadoB74SemIgnorar);
+      expect(resultadoB74SemIgnorar.exitCode).toBe(1);
+      expect(saida).toContain('FALHA ESTRUTURAL');
+      expect(saida).toContain('pessoas/atualizarDadosFiscaisPessoaSchema → mapeado a AtualizarDadosFiscaisPessoaRequest mas não existe no arquivo TS');
+      expect(saida).toContain('pessoas/vincularMunicipioEnderecoPessoaSchema → mapeado a VincularMunicipioEnderecoPessoaRequest mas não existe no arquivo TS');
+      expect(saida).toContain('📊 2 schema(s) estruturalmente quebrado(s).');
+    });
+
+    it('Sonda Z (b74, da74da2): ignorando os dois records, sai 0 com as mesmas 2 LACUNA de hoje e nada acusado', () => {
+      const saida = saidaDe(resultadoB74Ignorando);
+      expect(resultadoB74Ignorando.exitCode).toBe(0);
+      expect(saida).not.toContain('FALHA ESTRUTURAL');
+      expect(resultadoB74Ignorando.nomesDivergencias.size).toBe(0);
+      expect(saida).toMatch(/anuláveis sem destino na UI \(2\)/);
+      for (const nome of LACUNA_ESPERADOS_HOJE) expect(saida).toContain(nome);
+      for (const record of RECORDS_FISCAL_PESSOA) expect(saida).toContain(`⊘  ${record} (para sondagem histórica)`);
     });
   });
 });
