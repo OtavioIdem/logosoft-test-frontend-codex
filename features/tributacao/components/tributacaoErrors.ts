@@ -1,7 +1,8 @@
 import { ApiError } from '@/types/erp';
 
 /**
- * Catálogo dos 422 do motor de tributação.
+ * Catálogo dos erros do motor: chegam como 422 pelo simulador e como 400 pela nota (validar e calcular tributos).
+ * Trate pelo `codigo`, nunca pelo status.
  *
  * **Trate pelo `codigo`, nunca pelo texto** — a mensagem do backend é para humano e pode mudar; o código é
  * estável e é a única coisa que o contrato garante. E **nenhum destes devolve cálculo parcial**: quando o
@@ -56,6 +57,30 @@ export const TRIBUTACAO_ERROR_CATALOG: Record<string, TributacaoErrorInfo> = {
         titulo: 'Regra não parametriza este tributo',
         mensagem: 'A regra aplicável existe, mas não parametriza o tributo necessário para esta operação.',
         acao: 'Edite a regra e preencha o bloco do tributo que falta.'
+    },
+    FISCAL_TRIBUTACAO_ST_INCOMPATIVEL_COM_DIFAL: {
+        codigo: 'FISCAL_TRIBUTACAO_ST_INCOMPATIVEL_COM_DIFAL',
+        kind: 'cadastro',
+        titulo: 'Regra com substituição tributária em operação sujeita a DIFAL',
+        mensagem:
+            'O CST/CSOSN desta regra comporta substituição tributária, mas a operação é uma venda interestadual a '
+            + 'consumidor final não contribuinte, sujeita ao DIFAL. O DIFAL é recolhido pelo remetente como '
+            + 'contribuinte, e não por substituição.',
+        acao: 'Corrija o cadastro da regra fiscal: use um CST/CSOSN sem substituição tributária para esta operação.'
+    },
+    FISCAL_TRIBUTACAO_EMPRESA_NAO_ENCONTRADA: {
+        codigo: 'FISCAL_TRIBUTACAO_EMPRESA_NAO_ENCONTRADA',
+        kind: 'contexto',
+        titulo: 'Empresa não encontrada para o cálculo',
+        mensagem: 'A empresa informada na operação não foi encontrada no cadastro no momento do cálculo da tributação.',
+        acao: 'Confira a empresa selecionada no contexto e tente de novo. Se persistir, acione o suporte com o código e o trace.'
+    },
+    FISCAL_TRIBUTACAO_CONTRIBUINTE_IPI_DIVERGENTE: {
+        codigo: 'FISCAL_TRIBUTACAO_CONTRIBUINTE_IPI_DIVERGENTE',
+        kind: 'preenchimento',
+        titulo: 'Indicador de IPI diverge do cadastro da empresa',
+        mensagem: 'O indicador "Emitente é contribuinte do IPI" informado na simulação não é o mesmo do cadastro da empresa.',
+        acao: 'Ajuste o indicador "Emitente é contribuinte do IPI" para o que está no cadastro da empresa.'
     },
     FISCAL_TRIBUTACAO_FCP_NAO_DEFINIDO_PARA_UF: {
         codigo: 'FISCAL_TRIBUTACAO_FCP_NAO_DEFINIDO_PARA_UF',

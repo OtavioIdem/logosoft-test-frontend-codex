@@ -2624,3 +2624,31 @@ para `lib/` e `features/faturamento` reexporta de lá. Pessoas não importa de F
 import cruzado entre features de negócio. O diálogo de endereço fica aninhado, e não inline, para não haver
 dois "Salvar" dentro do diálogo de Pessoa. A aba recebe as permissões de quem a monta, porque o
 `PessoaFormDialog` não as confere.
+
+### D103 — `b74`: ST com DIFAL vira erro de cadastro no catálogo de tributação; Pessoa fiscal passa a `b75`
+
+Data: 2026-10-02. Origem: o plano do backend
+`../New project 3/docs/frontend/PLANO-FRONTEND-v1.23.4-g3-st-incompativel-com-difal.md` (commit `6bb6fc4`), pedido
+pelo usuário em 2026-10-01 ("pegue a nova implementação a respeito da parte fiscal"). Regime `correcao`: o
+backend já diagnosticou a mudança e o comportamento certo. Quem arbitrou: orquestrador.
+
+Decisão:
+- O `TRIBUTACAO_ERROR_CATALOG` ganha três códigos, e o teste de enumeração vai de 8 para 11:
+  - `FISCAL_TRIBUTACAO_ST_INCOMPATIVEL_COM_DIFAL`, `kind: 'cadastro'`, com o texto do plano do backend (§6.1);
+  - `FISCAL_TRIBUTACAO_EMPRESA_NAO_ENCONTRADA`, `kind: 'contexto'`: a empresa do corpo não existe no momento do
+    cálculo (`MotorTributarioExceptions.cs:130-143`);
+  - `FISCAL_TRIBUTACAO_CONTRIBUINTE_IPI_DIVERGENTE`, `kind: 'preenchimento'`: o indicador "emitente contribuinte
+    do IPI" do simulador diverge do cadastro da empresa (`TributacaoErrors.cs:122-130`).
+  Os dois últimos já faltavam antes da mudança do backend (§8 do plano dele).
+- O tratamento é pelo código, e não pelo status. O mesmo código chega como 422 pelo simulador e como 400 pela
+  nota, e o teste prova os dois. O comentário do topo do catálogo passa a dizer isso.
+- `describeTributacaoError`, `isCargaPendente` e `tributacaoErrorSeverity` não mudam.
+- Não entram: o painel com atalho para `/fiscal/regras` na nota (o plano do backend o chama de opcional) e
+  o checkbox do IPI.
+- O checkbox do IPI do simulador sempre envia `emitenteContribuinteIpi`, e o padrão é `false`. Isso falha
+  quando a empresa é contribuinte do IPI (leitura de código, não medido). O contrato do backend chama o campo
+  de obrigatório "de propósito" (`contrato-motor-tributacao-frontend.md:40`), mas o C# o declara `bool?` e
+  a mensagem do erro manda omiti-lo. Pergunta **B-40**: qual das duas vale. A UI espera a resposta.
+- Numeração: esta fatia é a `b74`, e o bloco fiscal da Pessoa (o conteúdo da `b61`) passa a `b75`. A
+  ordem dos cadastros não muda; só o número (precedente da D67 e da D97).
+`accessRisk: NENHUM`. Reversível: sim.
