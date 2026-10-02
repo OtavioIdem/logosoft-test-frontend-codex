@@ -644,22 +644,3 @@ export type ExcecaoFiscalNcmListQuery = ExcecaoFiscalListQuery & { ncmId?: Guid 
 
 export type ExcecaoFiscalListagemResponse = PagedResult<ExcecaoFiscalResumoResponse>;
 export type ExcecaoFiscalNcmListagemResponse = PagedResult<ExcecaoFiscalNcmResumoResponse>;
-
-/* ------------------------------------------------------------------------------------------------ */
-/* Cadastros fiscais consultados pelas telas (NCM/CFOP) — /api/fiscal/cadastros                       */
-/* ------------------------------------------------------------------------------------------------ */
-
-export type NcmResumoResponse = {
-    id: Guid;
-    codigo: string;
-    descricao: string;
-    ativo: boolean;
-};
-
-export type CfopResumoResponse = {
-    id: Guid;
-    codigo: string;
-    descricao: string;
-    tipo: TipoCfop | number;
-    ativo: boolean;
-};

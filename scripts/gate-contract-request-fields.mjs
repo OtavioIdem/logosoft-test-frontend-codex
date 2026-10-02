@@ -16,9 +16,20 @@
  *   - fornecedores: ConfigurarCompraFornecedorRequest (v1.11.0a8b66, AC-13)
  *   - faturamento: ConfirmarFaturamentoRequest (v1.11.0a8b71, D97, AC-10)
  *   - vendas: FaturarPedidoVendaRequest (v1.11.0a8b71, D97, AC-10)
+ *   - naturezasOperacao: CriarNaturezaOperacaoRequest, AtualizarNaturezaOperacaoRequest,
+ *     InativarNaturezaOperacaoRequest e o MapeamentoCfopRequest aninhado em `cfops`
+ *     (v1.11.0a8b72, D98, AC-11, NO-17)
+ *   - pessoas (endereço): AdicionarEnderecoPessoaRequest, AtualizarEnderecoPessoaRequest
+ *     (v1.11.0a8b73, D102, AC-8), lidos do markdown: §10 traz os 9 campos com a mesma nulabilidade do C#
+ *     (`EnderecoContatoRequests.cs:5-25`), e só `Complemento` é anulável. Não precisam do snapshot.
  *
  * Lado backend: os records são lidos do catálogo de payloads de
  * docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md (§10). Record mapeado e não encontrado lá reprova.
+ * Exceção (D83 estendida, v1.11.0a8b72, NO-4): os records de RECORDS_DO_SNAPSHOT_CSHARP vêm do
+ * snapshot gerado scripts/backend-request-records.snapshot.json, que tem precedência sobre o markdown.
+ * O markdown traz `MapeamentoCfopRequest(Ambito, CfopCodigo)`, sem `TipoItem`; o C# tem os três. O gate
+ * imprime a origem (arquivo:linha do C#) e a diferença para o markdown. Record desse conjunto ausente
+ * do snapshot reprova.
  *
  * Severidade NAO_ENVIADO (D97): nos records de RECORDS_ENVIO_INTEGRAL, campo anulável que a UI não
  * envia reprova, em vez de virar LACUNA informativa. É a classe do FT-1/FT-2: o tipo C# é anulável,
@@ -66,15 +77,52 @@ const SCHEMA_TO_REQUEST_MAP = {
   pessoas: {
     criarClassificacaoPessoaSchema: 'CriarClassificacaoPessoaRequest',
     atualizarClassificacaoPessoaSchema: 'AtualizarClassificacaoPessoaRequest',
-    inativarClassificacaoPessoaSchema: 'InativarClassificacaoPessoaRequest'
+    inativarClassificacaoPessoaSchema: 'InativarClassificacaoPessoaRequest',
+    // v1.11.0a8b73 (D102, AC-8): endereços da Pessoa. O PATCH de município (`VincularMunicipioEnderecoPessoaRequest`)
+    // é da b74 e não entra aqui.
+    criarEnderecoPessoaSchema: 'AdicionarEnderecoPessoaRequest',
+    atualizarEnderecoPessoaSchema: 'AtualizarEnderecoPessoaRequest'
   },
   faturamento: {
     confirmarFaturamentoSchema: 'ConfirmarFaturamentoRequest'
   },
   vendas: {
     faturarPedidoVendaSchema: 'FaturarPedidoVendaRequest'
+  },
+  naturezasOperacao: {
+    criarNaturezaOperacaoSchema: 'CriarNaturezaOperacaoRequest',
+    atualizarNaturezaOperacaoSchema: 'AtualizarNaturezaOperacaoRequest',
+    inativarNaturezaOperacaoSchema: 'InativarNaturezaOperacaoRequest',
+    // Item de `cfops` nos dois primeiros: o schema do item é comparado ao record aninhado.
+    mapeamentoCfopSchema: 'MapeamentoCfopRequest'
   }
 };
+
+/**
+ * Arquivo de schemas do módulo quando ele não segue `features/<modulo>/schemas/<modulo>Schemas.ts`.
+ * v1.11.0a8b72: os schemas de natureza vivem em `features/fiscal` (D91, D98), num arquivo próprio.
+ */
+const ARQUIVO_DE_SCHEMAS_DO_MODULO = {
+  naturezasOperacao: 'features/fiscal/schemas/naturezasOperacaoSchemas.ts'
+};
+
+function arquivoDeSchemas(moduleName) {
+  return ARQUIVO_DE_SCHEMAS_DO_MODULO[moduleName] || `features/${moduleName}/schemas/${moduleName}Schemas.ts`;
+}
+
+/**
+ * D83 estendida (v1.11.0a8b72, NO-4): records cujo lado backend vem do snapshot gerado a partir do C#,
+ * e não do markdown. O markdown de 2026-08-12 não tem `TipoItem` em `MapeamentoCfopRequest`; os três
+ * requests de natureza batem com o C# (13/13, 10/10, 1/1) e vêm do mesmo snapshot para que o conjunto
+ * de natureza tenha uma única origem.
+ */
+const RECORDS_DO_SNAPSHOT_CSHARP = new Set([
+  'CriarNaturezaOperacaoRequest',
+  'AtualizarNaturezaOperacaoRequest',
+  'InativarNaturezaOperacaoRequest',
+  'MapeamentoCfopRequest'
+]);
+const SNAPSHOT_REQUEST_PATH = 'scripts/backend-request-records.snapshot.json';
 
 /**
  * D97 (AC-10): records em que todo campo do contrato tem de ser enviado pela UI. Campo anulável
@@ -83,8 +131,34 @@ const SCHEMA_TO_REQUEST_MAP = {
  *     (GerarNotaFiscalPedidoVendaUseCase.cs:165-167, FT-2) e correlationId na transmissão
  *     (NotaFiscalValidators.cs:236-238, FT-1), embora os dois sejam anuláveis no record.
  *   - FaturarPedidoVendaRequest: três campos, todos oferecidos no diálogo.
+ *   - Criar/AtualizarNaturezaOperacaoRequest (v1.11.0a8b72, D98): `cfops` é anulável no C#, e `null`
+ *     preserva a lista no PUT enquanto `[]` apaga; omitir o campo é mandar `null` em silêncio, e a tela
+ *     de edição deixaria de gravar a grade sem erro. `filialId` e `observacao` são oferecidos no diálogo.
+ *   - MapeamentoCfopRequest (v1.11.0a8b72, NO-4): `tipoItem` é a 2ª dimensão da chave (âmbito × tipo
+ *     de item); omitido, todo mapeamento vira "qualquer item" e o PUT substitui a lista com a chave
+ *     achatada. É o campo que o markdown do contrato perdeu.
+ *   - InativarNaturezaOperacaoRequest: o único campo (`motivo`) é obrigatório, então entrar no conjunto
+ *     não muda o resultado de hoje; entra para que um campo anulável aditivo do backend neste request
+ *     reprove como NAO_ENVIADO e force a decisão, em vez de passar como LACUNA.
+ *   - Adicionar/AtualizarEnderecoPessoaRequest (v1.11.0a8b73, D102, AC-8): entram. O `principal` omitido
+ *     muda o comportamento, mas ele é `bool` não anulável no C#, então a omissão reprova como
+ *     DEFAULT_SILENCIOSO com ou sem este conjunto: o backend leria `false`, e o POST ignoraria o "principal"
+ *     marcado na tela (`Pessoa.cs:128-142`). O conjunto protege o outro campo, `complemento`, o único anulável.
+ *     O PUT grava `NormalizarOpcional(complemento)` (`EnderecoPessoa.cs:58`), então omiti-lo apaga em
+ *     silêncio o complemento já cadastrado. Também faz um campo anulável aditivo do backend nestes
+ *     records reprovar e forçar a decisão: o `municipioIbgeCodigo` é do PATCH da b74, e se ele aparecer
+ *     aqui, alguém tem de decidir.
  */
-const RECORDS_ENVIO_INTEGRAL = new Set(['ConfirmarFaturamentoRequest', 'FaturarPedidoVendaRequest']);
+const RECORDS_ENVIO_INTEGRAL = new Set([
+  'ConfirmarFaturamentoRequest',
+  'FaturarPedidoVendaRequest',
+  'CriarNaturezaOperacaoRequest',
+  'AtualizarNaturezaOperacaoRequest',
+  'InativarNaturezaOperacaoRequest',
+  'MapeamentoCfopRequest',
+  'AdicionarEnderecoPessoaRequest',
+  'AtualizarEnderecoPessoaRequest'
+]);
 
 /**
  * Campos que a UI deixa de enviar por decisão travada, nos records de RECORDS_ENVIO_INTEGRAL.
@@ -124,7 +198,15 @@ function loadRequestContractFromDocument(contractPath) {
     'AtualizarClassificacaoPessoaRequest',
     'InativarClassificacaoPessoaRequest',
     'ConfirmarFaturamentoRequest',
-    'FaturarPedidoVendaRequest'
+    'FaturarPedidoVendaRequest',
+    // v1.11.0a8b73 (D102): endereços da Pessoa, lidos do markdown (iguais ao C#, 9/9)
+    'AdicionarEnderecoPessoaRequest',
+    'AtualizarEnderecoPessoaRequest',
+    // v1.11.0a8b72: lidos do markdown só para imprimir a diferença para o snapshot do C#
+    'CriarNaturezaOperacaoRequest',
+    'AtualizarNaturezaOperacaoRequest',
+    'InativarNaturezaOperacaoRequest',
+    'MapeamentoCfopRequest'
   ];
 
   for (const recordName of recordNames) {
@@ -191,6 +273,114 @@ function loadRequestContractFromDocument(contractPath) {
 }
 
 /**
+ * D83 estendida (v1.11.0a8b72): lê os records de RECORDS_DO_SNAPSHOT_CSHARP do snapshot gerado.
+ * Snapshot ausente devolve {} e os records caem em RECORD_NOT_FOUND (reprova), nunca em lista vazia
+ * com aviso. Snapshot ilegível reprova.
+ */
+function loadRequestContractFromSnapshot(snapshotPath) {
+  if (!fs.existsSync(snapshotPath)) return { records: {}, backendCommit: null };
+  let snapshot;
+  try {
+    snapshot = JSON.parse(fs.readFileSync(snapshotPath, 'utf8'));
+  } catch (e) {
+    console.error(`❌ Snapshot ilegível: ${snapshotPath} (${e.message})`);
+    process.exit(1);
+  }
+  const records = {};
+  for (const recordName of RECORDS_DO_SNAPSHOT_CSHARP) {
+    const r = snapshot.records?.[recordName];
+    if (!r || !Array.isArray(r.fields) || r.fields.length === 0) continue;
+    records[recordName] = {
+      fields: r.fields.map((f) => ({ name: f.name, nullable: f.nullable === true })),
+      origin: r.origin ? `${r.origin.file}:${r.origin.line}` : '?'
+    };
+  }
+  return { records, backendCommit: snapshot.backendCommit || null };
+}
+
+/**
+ * Imprime a origem do lado backend lido do C#, com a diferença para o markdown (NO-4).
+ */
+function imprimirOrigemCsharp(snapshotCsharp, markdownContracts, recordsNoUniverso) {
+  const linhas = [];
+  for (const [recordName, r] of Object.entries(snapshotCsharp.records)) {
+    if (!recordsNoUniverso.has(recordName)) continue;
+    const md = markdownContracts[recordName];
+    let diferenca;
+    if (!md) {
+      diferenca = 'ausente do markdown';
+    } else {
+      const nomesMd = new Set(md.map((f) => f.name));
+      const nomesCs = r.fields.map((f) => f.name);
+      const semNoMd = nomesCs.filter((n) => !nomesMd.has(n));
+      const soNoMd = [...nomesMd].filter((n) => !nomesCs.includes(n));
+      diferenca =
+        semNoMd.length === 0 && soNoMd.length === 0
+          ? `markdown igual, ${nomesCs.length}/${nomesCs.length}`
+          : [semNoMd.length ? `markdown sem: ${semNoMd.join(', ')}` : '', soNoMd.length ? `só no markdown: ${soNoMd.join(', ')}` : '']
+              .filter(Boolean)
+              .join('; ');
+    }
+    linhas.push(`   ℹ️  ${recordName} ← ${r.origin} (${r.fields.length} campos; ${diferenca})`);
+  }
+  if (linhas.length === 0) return;
+  console.log(`🔎 Lado backend lido do C# (${SNAPSHOT_REQUEST_PATH}, backend ${snapshotCsharp.backendCommit || '?'}):`);
+  for (const linha of linhas) console.log(linha);
+  console.log('');
+}
+
+/**
+ * Devolve o texto com comentários, literais de string e todo conteúdo dentro de (), {} e [] trocados
+ * por espaço (quebras de linha preservadas), deixando visíveis só as chaves de nível zero.
+ */
+function somenteNivelZero(texto) {
+  let saida = '';
+  let profundidade = 0;
+  let i = 0;
+  const branco = (s) => s.replace(/[^\n]/g, ' ');
+  while (i < texto.length) {
+    const ch = texto[i];
+    const par = texto.substr(i, 2);
+    if (par === '//') {
+      const fim = texto.indexOf('\n', i);
+      const ate = fim < 0 ? texto.length : fim;
+      saida += branco(texto.substring(i, ate));
+      i = ate;
+      continue;
+    }
+    if (par === '/*') {
+      const fim = texto.indexOf('*/', i + 2);
+      const ate = fim < 0 ? texto.length : fim + 2;
+      saida += branco(texto.substring(i, ate));
+      i = ate;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      let j = i + 1;
+      while (j < texto.length && texto[j] !== ch) j += texto[j] === '\\' ? 2 : 1;
+      saida += branco(texto.substring(i, j + 1));
+      i = j + 1;
+      continue;
+    }
+    if (ch === '(' || ch === '{' || ch === '[') {
+      profundidade++;
+      saida += ' ';
+      i++;
+      continue;
+    }
+    if (ch === ')' || ch === '}' || ch === ']') {
+      profundidade = Math.max(0, profundidade - 1);
+      saida += ' ';
+      i++;
+      continue;
+    }
+    saida += profundidade === 0 || ch === '\n' ? ch : ' ';
+    i++;
+  }
+  return saida;
+}
+
+/**
  * Extrai campos de um schema Zod de um arquivo TypeScript.
  * Detecta `fieldName:` ou `fieldName,` em linhas indentadas do objeto.
  */
@@ -244,7 +434,10 @@ function extractZodSchemaFields(fileContent, schemaName, visitados = new Set()) 
 
   if (!foundFirstBrace || braceCount !== 0) return null;
 
-  const schemaBlock = fileContent.substring(blockStart + 1, idx);
+  // v1.11.0a8b72: só as chaves de nível zero do objeto são campos do request. Conteúdo aninhado
+  // (`z.string({ required_error: ... })`), strings e comentários viram espaço antes da busca; sem isso
+  // `required_error`/`invalid_type_error` saíam como DESCARTE nos schemas de natureza.
+  const schemaBlock = somenteNivelZero(fileContent.substring(blockStart + 1, idx));
 
   // Extrai campos: procura por `fieldName:` ou `fieldName,` (referência)
   // Padrão 1: `fieldName: ...` (declaração inline)
@@ -474,7 +667,17 @@ function main() {
 
   // Carrega contrato
   const contractPath = path.join(ROOT, 'docs', 'BACKEND-ESTADO-ATUAL-E-CONTRATO.md');
-  const BACKEND_CONTRACTS = loadRequestContractFromDocument(contractPath);
+  const MARKDOWN_CONTRACTS = loadRequestContractFromDocument(contractPath);
+  const BACKEND_CONTRACTS = { ...MARKDOWN_CONTRACTS };
+  for (const recordName of RECORDS_DO_SNAPSHOT_CSHARP) delete BACKEND_CONTRACTS[recordName];
+  const snapshotCsharp = loadRequestContractFromSnapshot(path.join(ROOT, SNAPSHOT_REQUEST_PATH));
+  for (const [recordName, r] of Object.entries(snapshotCsharp.records)) {
+    BACKEND_CONTRACTS[recordName] = r.fields;
+  }
+  const recordsNoUniverso = new Set(
+    modules.flatMap((m) => Object.values(SCHEMA_TO_REQUEST_MAP[m])).filter((r) => !ignoredRecords.has(r))
+  );
+  imprimirOrigemCsharp(snapshotCsharp, MARKDOWN_CONTRACTS, recordsNoUniverso);
 
   validateExceptionsCeiling(allowlist);
 
@@ -493,17 +696,15 @@ function main() {
   }
 
   for (const moduleName of modules) {
-    const schemaFile = path.join(
-      ROOT,
-      'features',
-      moduleName,
-      'schemas',
-      `${moduleName}Schemas.ts`
-    );
+    const schemaFile = path.join(ROOT, arquivoDeSchemas(moduleName));
 
     if (!fs.existsSync(schemaFile)) {
-      console.error(`❌ Arquivo não encontrado: ${schemaFile}`);
-      process.exit(1);
+      // v1.11.0a8b72: arquivo ausente vira FILE_NOT_FOUND por schema do módulo. Continua falha dura,
+      // salvo quando o record está em GATE_RECORTES_IGNORADOS (sondagem de revisão anterior ao módulo).
+      for (const [schemaName, recordName] of Object.entries(SCHEMA_TO_REQUEST_MAP[moduleName])) {
+        allMissingSchemas.push({ moduleName, schemaName, recordName, type: 'FILE_NOT_FOUND', arquivo: arquivoDeSchemas(moduleName) });
+      }
+      continue;
     }
 
     const content = fs.readFileSync(schemaFile, 'utf8');
@@ -533,8 +734,13 @@ function main() {
     for (const missing of criticalMissing) {
       if (missing.type === 'SCHEMA_NOT_FOUND') {
         console.error(`   ❌ ${missing.moduleName}/${missing.schemaName} → mapeado a ${missing.recordName} mas não existe no arquivo TS`);
+      } else if (missing.type === 'FILE_NOT_FOUND') {
+        console.error(`   ❌ ${missing.moduleName}/${missing.schemaName} → mapeado a ${missing.recordName}, e o arquivo ${missing.arquivo} não existe`);
       } else {
-        console.error(`   ❌ ${missing.recordName} → mapeado mas não encontrado no contrato (docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md)`);
+        const fonte = RECORDS_DO_SNAPSHOT_CSHARP.has(missing.recordName)
+          ? `${SNAPSHOT_REQUEST_PATH}; regenere com node scripts/generate-backend-request-records-snapshot.mjs`
+          : 'docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md';
+        console.error(`   ❌ ${missing.recordName} → mapeado mas não encontrado no contrato (${fonte})`);
       }
     }
     console.error('');

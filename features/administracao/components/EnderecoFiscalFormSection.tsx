@@ -59,7 +59,7 @@ const toCampos = (enderecoFiscal?: EnderecoFiscalResponse | null): EnderecoFisca
  * A busca de município traz só a primeira página do catálogo (D52). Ao editar um endereço já
  * gravado, o município vinculado pode não estar nela — sem este merge o campo apareceria vazio e o
  * operador salvaria por cima de um vínculo que continuava lá (mesmo risco do NcmSelect/CfopSelect em
- * features/tributacao/components/CadastroFiscalSelects.tsx). Recebe uma lista de extras (resolvido
+ * features/fiscal/components/CadastroFiscalSelects.tsx). Recebe uma lista de extras (resolvido
  * pelo backend, e/ou o que o operador acabou de escolher — C5, v1.11.0a8b64 Bloco C) e injeta os que
  * ainda não estão nas opções da busca corrente, sem duplicar entre si.
  */

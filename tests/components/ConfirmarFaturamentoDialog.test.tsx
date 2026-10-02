@@ -7,6 +7,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { ConfirmarFaturamentoDialog } from '@/features/faturamento/components/FaturamentoDialogs';
 import { faturamentoApi } from '@/features/faturamento/api/faturamentoApi';
 import { NATUREZA_OPERACAO_FIELD } from '@/features/fiscal/components/fiscalLabels';
+import { NATUREZA_OPERACAO_FIELD_VAZIO } from '@/features/fiscal/components/naturezasOperacaoLabels';
 import { FATURAMENTO_CONFIRMAR } from '@/features/faturamento/components/faturamentoLabels';
 import { httpClient } from '@/lib/http/httpClient';
 import type { ConfirmarFaturamentoRequestValues } from '@/features/faturamento/types/faturamento.types';
@@ -64,7 +65,24 @@ const naturezaDevolucaoId = '55555555-5555-5555-5555-555555555555';
 type Capturado = { method?: string; url?: string; params?: Record<string, unknown>; body: Record<string, unknown> };
 type RespostaConfirmar = 'rede' | 400 | 200;
 
-const naturezaItem = (id: string, codigo: string, descricao: string) => ({ id, empresaId, filialId: null, codigo, descricao, ativa: true, cfopDentroEstado: '5102' });
+// Os 15 campos de `NaturezaOperacaoResponse` (b72, D98): o schema de resposta exige todos, com `cfops`.
+const naturezaItem = (id: string, codigo: string, descricao: string) => ({
+    id,
+    empresaId,
+    filialId: null,
+    codigo,
+    descricao,
+    tipoDocumento: 1,
+    tipoOperacao: 1,
+    finalidade: 1,
+    indicadorPresencaComprador: 1,
+    indicadorConsumidorFinal: false,
+    movimentaEstoque: true,
+    geraFinanceiro: true,
+    observacao: null,
+    ativa: true,
+    cfops: [{ ambito: 1, cfopId: 'cccccccc-cccc-cccc-cccc-cccccccccccc', cfopCodigo: '5102', tipoItem: null }]
+});
 
 const faturamentoResposta = { id: faturamentoId, empresaId, pedidoVendaId: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', etapa: 5, valorTotal: 100, legs: [] };
 
@@ -207,7 +225,8 @@ describe('ConfirmarFaturamentoDialog — b71 (D91, D92, D94)', () => {
         naturezas = [];
         renderDialog();
 
-        expect(await screen.findByText(`${FATURAMENTO_CONFIRMAR.indisponivelPrefixo} ${NATUREZA_OPERACAO_FIELD.vazio}`)).toBeInTheDocument();
+        // D100 (b72): com FISCAL_CADASTROS_CONSULTAR, o vazio usa o texto com permissão (o cadastro agora tem tela).
+        expect(await screen.findByText(`${FATURAMENTO_CONFIRMAR.indisponivelPrefixo} ${NATUREZA_OPERACAO_FIELD_VAZIO.comPermissao}`)).toBeInTheDocument();
         expect(confirmarButton()).toBeDisabled();
         expect(screen.queryByRole('combobox', { name: 'natureza de operação' })).not.toBeInTheDocument();
         expect(postsConfirmar()).toHaveLength(0);

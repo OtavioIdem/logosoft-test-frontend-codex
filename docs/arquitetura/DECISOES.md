@@ -2497,3 +2497,130 @@ Os campos que a UI não envia por decisão travada (`cfopPadrao`, D94; `certific
 ficam em `FORA_DA_UI_POR_DECISAO`, no próprio gate: são impressos com a Dn e não reprovam, e uma
 entrada órfã (campo que sumiu do record) reprova. O lado backend vem do markdown §10 do contrato,
 que bate com o C# nos dois records (12/12 e 3/3), então a D83 não foi necessária.
+
+### D98 — `b72`: a manutenção de naturezas sobre o client único da `b71`
+
+Data: 2026-09-30. Rodada: inventário `14-naturezas-operacao`, sem quarteto: D47–D53 já travam o
+desenho (a `b59` da D53 renumerada como `b72` pela D97). Arbitrado pelo orquestrador.
+Decisão:
+- Rota `/fiscal/naturezas-operacao`, item plano no grupo Fiscal (D49), no precedente de
+  `/fiscal/series`. A regra de rota e o item de menu pedem `FISCAL_CADASTROS_CONSULTAR` ou
+  `FISCAL_CADASTROS_GERENCIAR`, e o pai do grupo Fiscal recebe as duas na mesma edição (NO-6). A
+  rota `/fiscal/cadastros` do catálogo do backend nomeia o recurso, e não uma tela que exista.
+- Um client só: o `naturezasOperacaoApi` da `b71` ganha o schema de resposta completo (15 campos,
+  com `cfops`, não estrito) e a escrita (criar, atualizar, inativar, resolver CFOP). O combo do
+  Faturamento continua na mesma chave raiz, e a mutação a invalida (NO-1, NO-2).
+- Lista paginada no servidor e só com `empresaId` resolvido (classe D82/D88). Filtro de situação
+  "Ativas" (`somenteAtivas=true`) ou "Todas", porque o servidor não filtra só inativas (NO-3).
+- Sem Reativar: não há rota (NO-15). O diálogo de inativar diz que a inativação é definitiva pela
+  tela. Motivo obrigatório com no máximo 400 caracteres no cliente, porque a auditoria grava o
+  texto numa coluna de 500 (NO-9). Pergunta ao backend: **B-31** (reativação e teto do motivo).
+- Enums numéricos, com rótulos em `naturezasOperacaoLabels.ts`. A natureza aceita os 6 tipos de
+  documento (NO-16). `FinalidadeNaturezaOperacao` passa a ser lido de `features/fiscal`.
+- Mapeamento de CFOP em grade `âmbito × tipo de item`, com `tipoItem` nulo lido como "qualquer
+  item". A UI impede chave repetida, porque o backend aceita e a última vence em silêncio. O PUT
+  envia sempre a lista completa, carregada da resposta, e nunca `null` por omissão (`null`
+  preserva, `[]` apaga, lista substitui). A busca de CFOP da linha filtra pelo âmbito da linha e
+  pelo tipo (entrada/saída) da natureza, o que o endpoint de CFOP já aceita (NO-10). É guia de
+  busca: o backend não impõe o tipo, e isso vai como pergunta **B-32**.
+- Erro: `FISCAL_CADASTROS_NATUREZA_CODIGO_DUPLICADO` vai para o campo Código. O resto sai pelo
+  `ApiErrorPanel` com o texto do backend, porque quase tudo chega como `FISCAL_CADASTROS_VALIDACAO`
+  (NO-8).
+- Filial: a coluna Filial aparece na lista. Quem não alcança a filial da natureza recebe o 404 do
+  backend no painel de erro (NO-7, não medido em execução). Pergunta ao backend: **B-33**.
+`accessRisk: NENHUM`. A fatia só dá acesso novo: ninguém perde tela nem ação. A seção operacional
+diz que nenhum grupo concede `FISCAL_CADASTROS_*` hoje (medido por `psql`, inventário 14).
+Reversível: sim. Quem arbitrou: orquestrador.
+
+### D99 — `b72` cumpre a D47 item 3 e a D52: a busca de CFOP muda para `features/fiscal`
+
+Data: 2026-09-30. Decisão: `CadastroFiscalSelects.tsx` e as buscas de NCM/CFOP vão de
+`features/tributacao` para `features/fiscal`, com debounce, estado de erro visível e Zod não
+estrito na resposta (D51 item 4). `CfopResumoResponse` passa a declarar `ambito` e `tipo` (NO-11).
+Tributação importa de lá, sem terceira busca, e as `queryKey` dos consumidores atuais não mudam de
+forma sem que todos os consumidores mudem juntos (NO-12).
+Reversível: sim. Quem arbitrou: orquestrador, cumprindo D47/D52/D53.
+
+### D100 — DIV-2 fecha na `b72`: Nova nota e Gerar NF usam o `NaturezaOperacaoField`
+
+Data: 2026-09-30. Decisão: os dois campos desabilitados de natureza (`FiscalActionDialogs.tsx:142`
+e `:203`, NO-13) viram o `NaturezaOperacaoField` da D91, que envia o id. As dicas que dizem "ainda
+não oferece a seleção" saem. O vazio do campo deixa de dizer que o cadastro não tem tela e passa a
+levar a `/fiscal/naturezas-operacao` quem tem uma das permissões de cadastro. O E2E da `b71` que
+assere o texto antigo muda junto. O Gerar NF segue a regra da emenda da D91: sem natureza, não
+envia. Fecha a dívida registrada na emenda da D91.
+Reversível: sim. Quem arbitrou: orquestrador, cumprindo D51 item 1.
+
+### D101 — link de `CfopSemMapeamentoParaAmbito` onde o erro de fato aparece
+
+Data: 2026-09-30. Decisão: o mapa da D50 ganha a entrada de `CfopSemMapeamentoParaAmbito`, com
+link para `/fiscal/naturezas-operacao` (a lista, sem `id`: a nota não expõe a natureza, NO-14,
+pergunta **B-34**). Como o erro não sai do `validar`, o link aparece onde ele sai: Adicionar item
+e Gerar NF do Fiscal, e o resultado do Confirmar Faturamento, pelo mesmo helper de
+`features/fiscal`, e só para quem tem uma das permissões de cadastro. O teste do painel D50, que
+hoje exige o mapa com 1 entrada, muda de propósito.
+Reversível: sim. Quem arbitrou: orquestrador, cumprindo D50 item 3.
+Emenda à D98 (2026-09-30, nó `design`):
+- Filtro de tipo na busca de CFOP da grade: `Venda` (1) filtra `Saída`; `Compra` (2) filtra
+  `Entrada`; os outros 7 valores de `TipoOperacaoFiscal` (`EnumsFiscal.cs:13-23`) não filtram
+  tipo, porque devolução, remessa, transferência e bonificação existem dos dois lados. Só o âmbito
+  filtra sempre. Conservador de propósito: filtro errado esconde o CFOP certo, filtro ausente só
+  mostra mais opções. Revisita junto da B-32.
+- Sessão só com `FISCAL_CADASTROS_GERENCIAR` (S3): alcança rota e item, e a página mostra o
+  `UnauthorizedState`, porque listar e buscar CFOP exigem `CONSULTAR` (`NaturezasOperacaoController.cs:42,76,129`).
+  É o comportamento de Séries fiscais, e o AC-3 do plano foi corrigido para dizer isso.
+- Refinos aceitos do design sobre o precedente de Séries: vazio e erro são estados separados, e o
+  sucesso mostra `Toast`. A lista filtra só por empresa: o filtro de filial não entra, porque a
+  listagem não aceita `filialId`. A coluna Filial mostra a informação. Natureza inativa fica sem ação na linha.
+Emenda à D98 (2026-09-30, nó `gate_estrutural`): o gate de campos de request cobre os requests de
+natureza (Criar, Atualizar, Inativar e o `MapeamentoCfopRequest` aninhado), e os quatro entram em
+`RECORDS_ENVIO_INTEGRAL`: `cfops` e `tipoItem` são anuláveis no C#, e omitir equivale a mandar
+`null` em silêncio. O markdown do contrato não traz `TipoItem` (NO-4), então esses records vêm de
+um snapshot gerado do C# (`scripts/backend-request-records.snapshot.json`, gerado por
+`scripts/generate-backend-request-records-snapshot.mjs`). É a D83 estendida ao lado request: o CI
+não lê o backend em execução. Sem o snapshot, o gate falha duro e não volta ao markdown em silêncio.
+Prova vermelha executada por mutação: sem `tipoItem`, e sem `cfops` no PUT, o gate acusa cada um
+pelo nome (`NAO_ENVIADO`). Pendente, e depende do usuário porque muda hook e política: incluir o
+snapshot novo em `generated_only` e no hook que nega escrita à mão.
+
+### D102 — `b73`: endereços da Pessoa como aba, sem município
+
+Data: 2026-10-01. Rodada: inventário `15-endereco-pessoa`, sem quarteto, porque D47 item 2, D49 item 2,
+D52 e D53 já travam o desenho. Quem arbitrou: orquestrador.
+Decisão:
+- Aba "Endereços" no `PessoaFormDialog` (D49 item 2), com as 5 rotas: listar, criar, editar, marcar
+  principal e excluir. Não entram rota, item de menu nem permissão nova. Ler exige `PESSOAS_CONSULTAR`
+  e escrever exige `PESSOAS_GERENCIAR`.
+- A aba só funciona na edição (PF-3), porque as rotas exigem `pessoaId`. Ao criar uma Pessoa, a aba
+  aparece com o texto "salve a pessoa para cadastrar endereços".
+- Os 9 campos de escrita do contrato. A cidade é texto livre, obrigatório e de até 120 caracteres (PF-1):
+  é o campo do backend, e a D52 vale para a **busca** de município, que é da `b74`. O vínculo aparece
+  como "Município fiscal: vinculado / não vinculado", sem prometer versão.
+- A UF é um combo estático com as 27 siglas (D52). Não usa o catálogo do servidor, que exigiria
+  `FISCAL_CADASTROS_CONSULTAR`, fora do perfil de Pessoas (EP-14).
+- Quem vale para a nota é o endereço ativo e **principal**, de qualquer tipo. O tipo "Fiscal" não tem
+  efeito (EP-4), e a aba diz isso (pergunta **B-35**).
+- Depois de toda mutação, a lista é lida de novo, porque a resposta só traz o endereço tocado e o
+  principal muda em outro registro (EP-5/EP-6). Ao excluir o principal, a tela avisa que o backend
+  escolhe outro endereço como principal (sem ordem definida, **B-36**). A exclusão é definitiva pela
+  tela, porque não há rota de reativar.
+- Edição com UF trocada, quando há município vinculado: a tela avisa que o vínculo será removido.
+  Edição com cidade trocada e a mesma UF: a tela avisa que o vínculo antigo continua, porque o backend
+  não o zera (EP-2, **B-37**).
+- O client de Pessoas preserva `code`, `status`, `traceId` e `validationErrors` nas rotas de endereço
+  (EP-8, a classe da b69), e o diálogo mostra o `ApiErrorPanel`.
+- Os links `DestinatarioSem*` ficam na `b74` (PF-2), junto do link para a Pessoa por id: `/pessoas` não
+  abre uma Pessoa por id, e o erro só traz o `pessoaId` no texto (EP-12, **B-38**).
+- As rotas de endereço não chamam o guard de contexto organizacional (EP-1, lido no C#, não medido).
+  A UI não muda por isso. Pergunta **B-39**.
+- O gate de campos de request cobre os requests de criar e editar endereço, sem `municipioIbgeCodigo`,
+  que é do `PATCH` da `b74`.
+`accessRisk: NENHUM`. Honestidade obrigatória no CHANGELOG (PF-5): depois da `b73`, o faturamento
+falha em `DestinatarioSemMunicipioIbge`. Vincular o município exige `PESSOAS_DADOS_FISCAIS_GERENCIAR`
+e chega na `b74`, o que dá dois perfis (PF-4).
+Reversível: sim.
+Emenda à D102 (2026-10-01, nó `design`): `UFS_BRASIL` (27 siglas, `faturamentoSchemas.ts:25`, b71) muda
+para `lib/` e `features/faturamento` reexporta de lá. Pessoas não importa de Faturamento: seria o primeiro
+import cruzado entre features de negócio. O diálogo de endereço fica aninhado, e não inline, para não haver
+dois "Salvar" dentro do diálogo de Pessoa. A aba recebe as permissões de quem a monta, porque o
+`PessoaFormDialog` não as confere.

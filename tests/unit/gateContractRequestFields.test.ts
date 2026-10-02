@@ -21,6 +21,16 @@ import { tmpdir } from 'os';
  *   - Sonda H: remove motivo obrigatório de inativarClassificacaoPessoaSchema (DEFAULT_SILENCIOSO) — AC-11
  *   - Sonda I: schemas da b70 (9713de4) — acusa NAO_ENVIADO naturezaOperacaoId e correlationId do Confirmar (AC-10, D97)
  *   - Sonda J: remove observacao anulável de faturarPedidoVendaSchema (NAO_ENVIADO) — AC-10, D97
+ *   - Sondas K–P (v1.11.0a8b72, AC-11, D98, NO-4, NO-17): requests de natureza e o MapeamentoCfopRequest
+ *     aninhado. K retira tipoItem do item da grade, L retira cfops do PUT, M retira filialId do POST
+ *     (todos NAO_ENVIADO nominais); N apaga o snapshot do C# (falha dura, sem cair no markdown); O é o
+ *     contrafactual do NO-4 (lido do markdown, o tipoItem retirado passaria verde); P roda a b70 sem
+ *     ignorar natureza (arquivo ausente é falha dura).
+ *   - Sondas Q–U (v1.11.0a8b73, AC-8, D102): requests de endereço da Pessoa. Q retira cep do criar e R retira
+ *     principal do atualizar (DEFAULT_SILENCIOSO nominal, cada um só no próprio record); S retira complemento
+ *     do atualizar (NAO_ENVIADO, porque o PUT apaga o complemento); T é o contrafactual de S sem
+ *     RECORDS_ENVIO_INTEGRAL (passaria verde como LACUNA); U roda a árvore de a3cf5e3 (b72, sem os schemas de
+ *     endereço) sem ignorar nada (falha dura nominal).
  *
  * O espelho deriva a lista de módulos do SCHEMA_TO_REQUEST_MAP do próprio gate (modulosDoGate).
  *
@@ -147,6 +157,32 @@ function modulosDoGate(gateContent: string): string[] {
   return modulos;
 }
 
+/**
+ * Caminho do arquivo de schemas do módulo, derivado do `ARQUIVO_DE_SCHEMAS_DO_MODULO` do gate
+ * (v1.11.0a8b72: natureza vive em `features/fiscal/schemas/naturezasOperacaoSchemas.ts`).
+ */
+function arquivoDoModulo(gateContent: string, modulo: string): string {
+  const inicio = gateContent.indexOf('const ARQUIVO_DE_SCHEMAS_DO_MODULO = {');
+  if (inicio >= 0) {
+    const bloco = gateContent.substring(inicio, gateContent.indexOf('\n};', inicio));
+    const m = new RegExp(`^ {2}${modulo}:\\s*'([^']+)'`, 'm').exec(bloco);
+    if (m) return m[1];
+  }
+  return `features/${modulo}/schemas/${modulo}Schemas.ts`;
+}
+
+/** v1.11.0a8b72: records de natureza, que não existem nas revisões antigas sondadas. */
+const RECORDS_NATUREZA = [
+  'CriarNaturezaOperacaoRequest',
+  'AtualizarNaturezaOperacaoRequest',
+  'InativarNaturezaOperacaoRequest',
+  'MapeamentoCfopRequest'
+] as const;
+
+/** v1.11.0a8b73 (D102): records de endereço da Pessoa, que não existem nas revisões antigas sondadas. */
+const RECORDS_ENDERECO_PESSOA = ['AdicionarEnderecoPessoaRequest', 'AtualizarEnderecoPessoaRequest'] as const;
+const REF_B72 = 'a3cf5e3'; // feat(release): v1.11.0a8b72 — pessoasSchemas.ts sem os schemas de endereço
+
 function montarEspelho(refSchemas: string, stripNewMapping?: boolean): string {
   const espelho = mkdtempSync(path.join(tmpdir(), 'gate-prova-request-'));
 
@@ -155,7 +191,7 @@ function montarEspelho(refSchemas: string, stripNewMapping?: boolean): string {
   let gateContent = readFileSync(gateSource, 'utf8');
 
   // Estrutura mínima: scripts, docs e um diretório de schemas por módulo do gate
-  const dirs = ['scripts', 'docs', ...modulosDoGate(gateContent).map((m) => `features/${m}/schemas`)];
+  const dirs = ['scripts', 'docs', ...modulosDoGate(gateContent).map((m) => path.dirname(arquivoDoModulo(gateContent, m)))];
   for (const dir of dirs) {
     const fullPath = path.join(espelho, dir);
     if (!existsSync(fullPath)) {
@@ -185,29 +221,35 @@ function montarEspelho(refSchemas: string, stripNewMapping?: boolean): string {
   const contratoDest = path.join(espelho, 'docs', 'BACKEND-ESTADO-ATUAL-E-CONTRATO.md');
   writeFileSync(contratoDest, readFileSync(contratoSource, 'utf8'));
 
+  // v1.11.0a8b72 (D83 estendida): snapshot do C# dos requests de natureza, da árvore atual
+  const snapshotRel = path.join('scripts', 'backend-request-records.snapshot.json');
+  writeFileSync(path.join(espelho, snapshotRel), readFileSync(path.join(raizDoProjeto, snapshotRel), 'utf8'));
+
   // Copia schemas (da árvore especificada)
   const modulos = modulosDoGate(gateContent);
   for (const modulo of modulos) {
+    const relativo = arquivoDoModulo(gateContent, modulo);
     let conteudo: string;
 
     if (refSchemas === 'HEAD-WORKING') {
       // Lê do disco (working directory)
-      const source = path.join(raizDoProjeto, 'features', modulo, 'schemas', `${modulo}Schemas.ts`);
-      conteudo = readFileSync(source, 'utf8');
+      conteudo = readFileSync(path.join(raizDoProjeto, relativo), 'utf8');
     } else {
       // Usa git show para trazer versão específica
-      const output = spawnSync('git', ['show', `${refSchemas}:features/${modulo}/schemas/${modulo}Schemas.ts`], {
+      const output = spawnSync('git', ['show', `${refSchemas}:${relativo}`], {
         cwd: raizDoProjeto,
         encoding: 'utf8'
       });
       if (output.status !== 0) {
+        // Arquivo posterior à revisão sondada: não entra no espelho, e o gate o acusa como
+        // FILE_NOT_FOUND (falha dura, salvo recorte em GATE_RECORTES_IGNORADOS). Outro erro do git lança.
+        if (/does not exist in|exists on disk, but not in/.test(output.stderr)) continue;
         throw new Error(`Falha ao extrair schemas de ${refSchemas}: ${output.stderr}`);
       }
       conteudo = output.stdout;
     }
 
-    const dest = path.join(espelho, 'features', modulo, 'schemas', `${modulo}Schemas.ts`);
-    writeFileSync(dest, conteudo);
+    writeFileSync(path.join(espelho, relativo), conteudo);
   }
 
   return espelho;
@@ -293,13 +335,21 @@ function injetarCampoFantasma(conteudo: string, nomeSchema: string): string {
  * fique verde por não ter removido nada.
  */
 function removerCampoDoSchemaNoEspelho(espelho: string, modulo: string, nomeSchema: string, campo: string): void {
-  const arquivo = path.join(espelho, 'features', modulo, 'schemas', `${modulo}Schemas.ts`);
+  const gateDoEspelho = readFileSync(path.join(espelho, 'scripts', 'gate-contract-request-fields.mjs'), 'utf8');
+  const arquivo = path.join(espelho, arquivoDoModulo(gateDoEspelho, modulo));
   const conteudo = readFileSync(arquivo, 'utf8');
-  const inicio = conteudo.indexOf(`export const ${nomeSchema} = z.object({`);
-  if (inicio < 0) {
-    throw new Error(`Schema ${nomeSchema} não encontrado em ${modulo}Schemas.ts`);
+  // Aceita `z.object({` na mesma linha ou `z\n    .object({` (v1.11.0a8b72, schemas de natureza)
+  const declaracao = new RegExp(`export const ${nomeSchema} = z\\s*\\.object\\(\\{`).exec(conteudo);
+  if (!declaracao) {
+    throw new Error(`Schema ${nomeSchema} não encontrado em ${arquivo}`);
   }
-  const fim = conteudo.indexOf('});', inicio);
+  const inicio = declaracao.index;
+  // Fim: a `}` que fecha o objeto (contagem de chaves), e não o primeiro `});` do arquivo
+  let fim = inicio + declaracao[0].length - 1;
+  for (let nivel = 0; fim < conteudo.length; fim++) {
+    if (conteudo[fim] === '{') nivel++;
+    if (conteudo[fim] === '}' && --nivel === 0) break;
+  }
   const bloco = conteudo.substring(inicio, fim);
   const linhaDoCampo = new RegExp(`\\r?\\n[ \\t]*${campo}\\s*:[^\\r\\n]*`);
   if (!linhaDoCampo.test(bloco)) {
@@ -337,6 +387,28 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
   let espelhoFaturarSemObservacao = '';
   let resultadoB70: Awaited<ReturnType<typeof executarGate>>;
   let resultadoFaturarSemObservacao: Awaited<ReturnType<typeof executarGate>>;
+  let espelhoMapeamentoSemTipoItem = '';
+  let espelhoAtualizarSemCfops = '';
+  let espelhoCriarSemFilial = '';
+  let espelhoSemSnapshot = '';
+  let espelhoSoMarkdownSemTipoItem = '';
+  let espelhoB70SemIgnorar = '';
+  let resultadoMapeamentoSemTipoItem: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoAtualizarSemCfops: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoCriarSemFilial: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoSemSnapshot: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoSoMarkdownSemTipoItem: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoB70SemIgnorar: Awaited<ReturnType<typeof executarGate>>;
+  let espelhoEnderecoCriarSemCep = '';
+  let espelhoEnderecoAtualizarSemPrincipal = '';
+  let espelhoEnderecoAtualizarSemComplemento = '';
+  let espelhoEnderecoSemEnvioIntegral = '';
+  let espelhoB72SemIgnorar = '';
+  let resultadoEnderecoCriarSemCep: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoEnderecoAtualizarSemPrincipal: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoEnderecoAtualizarSemComplemento: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoEnderecoSemEnvioIntegral: Awaited<ReturnType<typeof executarGate>>;
+  let resultadoB72SemIgnorar: Awaited<ReturnType<typeof executarGate>>;
 
   beforeAll(() => {
     // Sonda A: árvore de 9fcda80 (contém os 15 defeitos)
@@ -345,7 +417,7 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
     // DefinirEnderecoFiscalRequest (b64), ConfigurarComercialClienteRequest e ConfigurarCompraFornecedorRequest (b66),
     // CriarClassificacaoPessoaRequest, AtualizarClassificacaoPessoaRequest, InativarClassificacaoPessoaRequest (b67) não existiam em 9fcda80.
     resultadoAntigo = executarGate(espelhoAntigo, {
-      GATE_RECORTES_IGNORADOS: 'DefinirEnderecoFiscalRequest,ConfigurarComercialClienteRequest,ConfigurarCompraFornecedorRequest,CriarClassificacaoPessoaRequest,AtualizarClassificacaoPessoaRequest,InativarClassificacaoPessoaRequest'
+      GATE_RECORTES_IGNORADOS: ['DefinirEnderecoFiscalRequest', 'ConfigurarComercialClienteRequest', 'ConfigurarCompraFornecedorRequest', 'CriarClassificacaoPessoaRequest', 'AtualizarClassificacaoPessoaRequest', 'InativarClassificacaoPessoaRequest', ...RECORDS_NATUREZA, ...RECORDS_ENDERECO_PESSOA].join(',')
     });
 
     // Sonda B: árvore de hoje (sem os 15 defeitos)
@@ -416,17 +488,95 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
 
     // AC-10 (b71, D97) — Sonda I: schemas da b70 com o gate e o contrato de hoje → NAO_ENVIADO nominal
     espelhoB70 = montarEspelho(REF_B70);
-    resultadoB70 = executarGate(espelhoB70);
+    // v1.11.0a8b72: a b70 não tem o arquivo de schemas de natureza (FILE_NOT_FOUND ignorado de propósito)
+    // v1.11.0a8b73: nem os schemas de endereço da Pessoa (SCHEMA_NOT_FOUND ignorado de propósito)
+    resultadoB70 = executarGate(espelhoB70, { GATE_RECORTES_IGNORADOS: [...RECORDS_NATUREZA, ...RECORDS_ENDERECO_PESSOA].join(',') });
 
     // AC-10 (b71, D97) — Sonda J: árvore de hoje sem `observacao` (string? anulável) em faturarPedidoVendaSchema
     espelhoFaturarSemObservacao = montarEspelho('HEAD-WORKING');
     removerCampoDoSchemaNoEspelho(espelhoFaturarSemObservacao, 'vendas', 'faturarPedidoVendaSchema', 'observacao');
     resultadoFaturarSemObservacao = executarGate(espelhoFaturarSemObservacao);
-  }, 120_000);
+
+    // AC-11 (b72, D98, NO-4) — Sonda K: sem `tipoItem` no item da grade (MapeamentoCfopRequest)
+    espelhoMapeamentoSemTipoItem = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoMapeamentoSemTipoItem, 'naturezasOperacao', 'mapeamentoCfopSchema', 'tipoItem');
+    resultadoMapeamentoSemTipoItem = executarGate(espelhoMapeamentoSemTipoItem);
+
+    // AC-11 (b72, D98) — Sonda L: PUT sem `cfops` (null em silêncio preserva a grade)
+    espelhoAtualizarSemCfops = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoAtualizarSemCfops, 'naturezasOperacao', 'atualizarNaturezaOperacaoSchema', 'cfops');
+    resultadoAtualizarSemCfops = executarGate(espelhoAtualizarSemCfops);
+
+    // AC-11 (b72) — Sonda M: POST sem `filialId` (Guid? anulável)
+    espelhoCriarSemFilial = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoCriarSemFilial, 'naturezasOperacao', 'criarNaturezaOperacaoSchema', 'filialId');
+    resultadoCriarSemFilial = executarGate(espelhoCriarSemFilial);
+
+    // AC-11 (b72, D83 estendida) — Sonda N: sem o snapshot do C#, os 4 records reprovam (nada de cair no markdown)
+    espelhoSemSnapshot = montarEspelho('HEAD-WORKING');
+    rmSync(path.join(espelhoSemSnapshot, 'scripts', 'backend-request-records.snapshot.json'));
+    resultadoSemSnapshot = executarGate(espelhoSemSnapshot);
+
+    // AC-11 (b72, NO-4) — Sonda O (contrafactual): se o MapeamentoCfopRequest viesse do markdown, o tipoItem
+    // retirado passaria verde. Documenta por que o lado backend desse record vem do C#.
+    espelhoSoMarkdownSemTipoItem = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoSoMarkdownSemTipoItem, 'naturezasOperacao', 'mapeamentoCfopSchema', 'tipoItem');
+    const gateSoMarkdown = path.join(espelhoSoMarkdownSemTipoItem, 'scripts', 'gate-contract-request-fields.mjs');
+    const gateOriginal = readFileSync(gateSoMarkdown, 'utf8');
+    const inicioSnapshot = gateOriginal.indexOf('const RECORDS_DO_SNAPSHOT_CSHARP = new Set([');
+    const fimSnapshot = gateOriginal.indexOf(']);', inicioSnapshot);
+    const gateSemMapeamentoNoSnapshot =
+      inicioSnapshot < 0
+        ? gateOriginal
+        : gateOriginal.substring(0, inicioSnapshot) +
+          gateOriginal.substring(inicioSnapshot, fimSnapshot).replace("'MapeamentoCfopRequest'", '') +
+          gateOriginal.substring(fimSnapshot);
+    if (gateSemMapeamentoNoSnapshot === gateOriginal) throw new Error('Sonda O: MapeamentoCfopRequest não saiu de RECORDS_DO_SNAPSHOT_CSHARP');
+    writeFileSync(gateSoMarkdown, gateSemMapeamentoNoSnapshot);
+    resultadoSoMarkdownSemTipoItem = executarGate(espelhoSoMarkdownSemTipoItem);
+
+    // AC-11 (b72) — Sonda P: b70 sem ignorar natureza — o arquivo ausente é falha dura, não verde
+    espelhoB70SemIgnorar = montarEspelho(REF_B70);
+    resultadoB70SemIgnorar = executarGate(espelhoB70SemIgnorar);
+
+    // AC-8 (b73, D102) — Sonda Q: POST de endereço sem `cep` (string obrigatória)
+    espelhoEnderecoCriarSemCep = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoEnderecoCriarSemCep, 'pessoas', 'criarEnderecoPessoaSchema', 'cep');
+    resultadoEnderecoCriarSemCep = executarGate(espelhoEnderecoCriarSemCep);
+
+    // AC-8 (b73, D102) — Sonda R: PUT de endereço sem `principal` (bool não anulável: o backend leria false)
+    espelhoEnderecoAtualizarSemPrincipal = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoEnderecoAtualizarSemPrincipal, 'pessoas', 'atualizarEnderecoPessoaSchema', 'principal');
+    resultadoEnderecoAtualizarSemPrincipal = executarGate(espelhoEnderecoAtualizarSemPrincipal);
+
+    // AC-8 (b73, D102) — Sonda S: PUT de endereço sem `complemento` (string? anulável: o PUT o apagaria)
+    espelhoEnderecoAtualizarSemComplemento = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoEnderecoAtualizarSemComplemento, 'pessoas', 'atualizarEnderecoPessoaSchema', 'complemento');
+    resultadoEnderecoAtualizarSemComplemento = executarGate(espelhoEnderecoAtualizarSemComplemento);
+
+    // AC-8 (b73) — Sonda T (contrafactual de S): sem os records de endereço em RECORDS_ENVIO_INTEGRAL, passaria verde
+    espelhoEnderecoSemEnvioIntegral = montarEspelho('HEAD-WORKING');
+    removerCampoDoSchemaNoEspelho(espelhoEnderecoSemEnvioIntegral, 'pessoas', 'atualizarEnderecoPessoaSchema', 'complemento');
+    const gateSemEnvioIntegral = path.join(espelhoEnderecoSemEnvioIntegral, 'scripts', 'gate-contract-request-fields.mjs');
+    const gateComEnvioIntegral = readFileSync(gateSemEnvioIntegral, 'utf8');
+    const inicioEnvio = gateComEnvioIntegral.indexOf('const RECORDS_ENVIO_INTEGRAL = new Set([');
+    const fimEnvio = gateComEnvioIntegral.indexOf(']);', inicioEnvio);
+    let blocoEnvio = gateComEnvioIntegral.substring(inicioEnvio, fimEnvio);
+    for (const record of RECORDS_ENDERECO_PESSOA) blocoEnvio = blocoEnvio.replace(`'${record}'`, '');
+    if (inicioEnvio < 0 || RECORDS_ENDERECO_PESSOA.some((r) => blocoEnvio.includes(r))) {
+      throw new Error('Sonda T: os records de endereço não saíram de RECORDS_ENVIO_INTEGRAL');
+    }
+    writeFileSync(gateSemEnvioIntegral, gateComEnvioIntegral.substring(0, inicioEnvio) + blocoEnvio + gateComEnvioIntegral.substring(fimEnvio));
+    resultadoEnderecoSemEnvioIntegral = executarGate(espelhoEnderecoSemEnvioIntegral);
+
+    // AC-8 (b73) — Sonda U: árvore da b72 (sem os schemas de endereço) sem ignorar nada — falha dura nominal
+    espelhoB72SemIgnorar = montarEspelho(REF_B72);
+    resultadoB72SemIgnorar = executarGate(espelhoB72SemIgnorar);
+  }, 180_000);
 
   afterAll(() => {
     // Limpa espelhos
-    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoDefinirEnderecoFiscalComFantasma, espelhoDefinirEnderecoFiscalSemObrigatorio, espelhoComMapeamentoFake, espelhoClienteSemObrigatorio, espelhoClienteSemAnulavel, espelhoFornecedorSemAnulavel, espelhoClassificacaoPessoaSemAnulavel, espelhoClassificacaoPessoaSemObrigatorio, espelhoB70, espelhoFaturarSemObservacao]) {
+    for (const espelho of [espelhoAntigo, espelhoHoje, espelhoComFantasma, espelhoDefinirEnderecoFiscalComFantasma, espelhoDefinirEnderecoFiscalSemObrigatorio, espelhoComMapeamentoFake, espelhoClienteSemObrigatorio, espelhoClienteSemAnulavel, espelhoFornecedorSemAnulavel, espelhoClassificacaoPessoaSemAnulavel, espelhoClassificacaoPessoaSemObrigatorio, espelhoB70, espelhoFaturarSemObservacao, espelhoMapeamentoSemTipoItem, espelhoAtualizarSemCfops, espelhoCriarSemFilial, espelhoSemSnapshot, espelhoSoMarkdownSemTipoItem, espelhoB70SemIgnorar, espelhoEnderecoCriarSemCep, espelhoEnderecoAtualizarSemPrincipal, espelhoEnderecoAtualizarSemComplemento, espelhoEnderecoSemEnvioIntegral, espelhoB72SemIgnorar]) {
       if (espelho && existsSync(espelho)) {
         try {
           rmSync(espelho, { recursive: true });
@@ -860,6 +1010,173 @@ describe('Gate de campos em request — prova durável (v1.11.0a8b58.c3, D19)', 
       expect(resultadoFaturarSemObservacao.exitCode).toBe(1);
       expect(resultadoFaturarSemObservacao.nomesDivergencias.has('FaturarPedidoVendaRequest.observacao')).toBe(true);
       expect(secaoNaoEnviado(saida)).toContain('FaturarPedidoVendaRequest.observacao');
+    });
+  });
+
+  describe('AC-11: v1.11.0a8b72 (D98, NO-4, NO-17) — requests de natureza e MapeamentoCfopRequest aninhado', () => {
+    const lerGate = () => readFileSync(path.join(raizDoProjeto, 'scripts', 'gate-contract-request-fields.mjs'), 'utf8');
+    const saidaDe = (r: Awaited<ReturnType<typeof executarGate>>) => r.stdout + r.stderr;
+
+    /** Linhas entre o cabeçalho NAO_ENVIADO e o próximo cabeçalho. */
+    function secaoNaoEnviado(saida: string): string {
+      const linhas = saida.split('\n');
+      const inicio = linhas.findIndex((l) => l.includes('NAO_ENVIADO —'));
+      if (inicio < 0) return '';
+      const resto = linhas.slice(inicio + 1);
+      const fim = resto.findIndex((l) => /^(❌|📋|📊|✅|📌)/.test(l.trim()) && !/^❌\s+\w+\.\w+/.test(l.trim()));
+      return (fim < 0 ? resto : resto.slice(0, fim)).join('\n');
+    }
+
+    it('o gate mapeia os quatro schemas aos records, incluindo o item aninhado da grade', () => {
+      const gate = lerGate();
+      expect(gate).toMatch(/criarNaturezaOperacaoSchema:\s*'CriarNaturezaOperacaoRequest'/);
+      expect(gate).toMatch(/atualizarNaturezaOperacaoSchema:\s*'AtualizarNaturezaOperacaoRequest'/);
+      expect(gate).toMatch(/inativarNaturezaOperacaoSchema:\s*'InativarNaturezaOperacaoRequest'/);
+      expect(gate).toMatch(/mapeamentoCfopSchema:\s*'MapeamentoCfopRequest'/);
+      expect(arquivoDoModulo(gate, 'naturezasOperacao')).toBe('features/fiscal/schemas/naturezasOperacaoSchemas.ts');
+    });
+
+    it('os quatro records são de envio integral (D98: o PUT substitui a lista)', () => {
+      const gate = lerGate();
+      const inicio = gate.indexOf('const RECORDS_ENVIO_INTEGRAL = new Set([');
+      const bloco = gate.substring(inicio, gate.indexOf(']);', inicio));
+      for (const record of RECORDS_NATUREZA) expect(bloco).toContain(`'${record}'`);
+    });
+
+    it('o snapshot do C# tem os quatro records, com tipoItem anulável no mapeamento e cfops anulável no PUT', () => {
+      const snapshot = JSON.parse(readFileSync(path.join(raizDoProjeto, 'scripts', 'backend-request-records.snapshot.json'), 'utf8'));
+      const campos = (record: string) =>
+        (snapshot.records[record].fields as { name: string; nullable: boolean }[]).map((f) => `${f.name}${f.nullable ? '?' : ''}`);
+      expect(campos('MapeamentoCfopRequest')).toEqual(['ambito', 'cfopCodigo', 'tipoItem?']);
+      expect(campos('AtualizarNaturezaOperacaoRequest')).toContain('cfops?');
+      expect(campos('CriarNaturezaOperacaoRequest')).toEqual(expect.arrayContaining(['empresaId', 'filialId?', 'codigo', 'observacao?', 'cfops?']));
+      expect(campos('CriarNaturezaOperacaoRequest')).toHaveLength(13);
+      expect(campos('AtualizarNaturezaOperacaoRequest')).toHaveLength(10);
+      expect(campos('InativarNaturezaOperacaoRequest')).toEqual(['motivo']);
+    });
+
+    it('Sonda B (hoje): sai 0 e não acusa nenhum campo de natureza', () => {
+      const saida = saidaDe(resultadoHoje);
+      expect(resultadoHoje.exitCode).toBe(0);
+      expect(saida).not.toContain('FALHA ESTRUTURAL');
+      expect(saida).not.toMatch(/❌\s+(CriarNaturezaOperacaoRequest|AtualizarNaturezaOperacaoRequest|InativarNaturezaOperacaoRequest|MapeamentoCfopRequest)\./);
+    });
+
+    it('Sonda B (hoje): chave aninhada do Zod (required_error, invalid_type_error) não vira campo do request', () => {
+      const saida = saidaDe(resultadoHoje);
+      expect(saida).not.toMatch(/\.required_error|\.invalid_type_error/);
+    });
+
+    it('Sonda B (hoje): imprime a origem C# do mapeamento e a diferença para o markdown (NO-4)', () => {
+      const saida = saidaDe(resultadoHoje);
+      expect(saida).toMatch(/MapeamentoCfopRequest ← src\/Erp\.Application\/Fiscal\/Cadastros\/NaturezaOperacao\/NaturezaOperacaoContracts\.cs:\d+ \(3 campos; markdown sem: tipoItem\)/);
+      expect(saida).toMatch(/AtualizarNaturezaOperacaoRequest ← \S+NaturezaOperacaoContracts\.cs:\d+ \(10 campos; markdown igual, 10\/10\)/);
+    });
+
+    it('Sonda K: sem tipoItem em mapeamentoCfopSchema — sai 1 e acusa NAO_ENVIADO MapeamentoCfopRequest.tipoItem', () => {
+      expect(resultadoMapeamentoSemTipoItem.exitCode).toBe(1);
+      expect(resultadoMapeamentoSemTipoItem.nomesDivergencias.has('MapeamentoCfopRequest.tipoItem')).toBe(true);
+      expect(secaoNaoEnviado(saidaDe(resultadoMapeamentoSemTipoItem))).toContain('MapeamentoCfopRequest.tipoItem');
+    });
+
+    it('Sonda L: sem cfops em atualizarNaturezaOperacaoSchema — acusa NAO_ENVIADO AtualizarNaturezaOperacaoRequest.cfops, e não o do POST', () => {
+      expect(resultadoAtualizarSemCfops.exitCode).toBe(1);
+      expect(resultadoAtualizarSemCfops.nomesDivergencias.has('AtualizarNaturezaOperacaoRequest.cfops')).toBe(true);
+      expect(secaoNaoEnviado(saidaDe(resultadoAtualizarSemCfops))).toContain('AtualizarNaturezaOperacaoRequest.cfops');
+      expect(resultadoAtualizarSemCfops.nomesDivergencias.has('CriarNaturezaOperacaoRequest.cfops')).toBe(false);
+    });
+
+    it('Sonda M: sem filialId em criarNaturezaOperacaoSchema — acusa NAO_ENVIADO CriarNaturezaOperacaoRequest.filialId', () => {
+      expect(resultadoCriarSemFilial.exitCode).toBe(1);
+      expect(secaoNaoEnviado(saidaDe(resultadoCriarSemFilial))).toContain('CriarNaturezaOperacaoRequest.filialId');
+    });
+
+    it('Sonda N: sem o snapshot do C#, os quatro records reprovam como não encontrados (sem cair no markdown)', () => {
+      const saida = saidaDe(resultadoSemSnapshot);
+      expect(resultadoSemSnapshot.exitCode).toBe(1);
+      expect(saida).toContain('FALHA ESTRUTURAL');
+      for (const record of RECORDS_NATUREZA) {
+        expect(saida).toMatch(new RegExp(`❌ ${record} → mapeado mas não encontrado no contrato \\(scripts/backend-request-records\\.snapshot\\.json`));
+      }
+    });
+
+    it('Sonda O (contrafactual NO-4): com o mapeamento lido do markdown, o tipoItem retirado passaria verde', () => {
+      expect(resultadoSoMarkdownSemTipoItem.nomesDivergencias.has('MapeamentoCfopRequest.tipoItem')).toBe(false);
+      expect(resultadoSoMarkdownSemTipoItem.exitCode).toBe(0);
+    });
+
+    it('Sonda P (b70): arquivo de natureza ausente, sem recorte ignorado, é falha dura nominal', () => {
+      const saida = saidaDe(resultadoB70SemIgnorar);
+      expect(resultadoB70SemIgnorar.exitCode).toBe(1);
+      expect(saida).toContain('FALHA ESTRUTURAL');
+      expect(saida).toContain('naturezasOperacao/mapeamentoCfopSchema → mapeado a MapeamentoCfopRequest, e o arquivo features/fiscal/schemas/naturezasOperacaoSchemas.ts não existe');
+    });
+  });
+
+  describe('AC-8: v1.11.0a8b73 (D102) — requests de endereço da Pessoa', () => {
+    const lerGate = () => readFileSync(path.join(raizDoProjeto, 'scripts', 'gate-contract-request-fields.mjs'), 'utf8');
+    const saidaDe = (r: Awaited<ReturnType<typeof executarGate>>) => r.stdout + r.stderr;
+
+    /** Linhas entre o cabeçalho da severidade e o próximo cabeçalho. */
+    function secao(saida: string, cabecalho: 'DEFAULT_SILENCIOSO' | 'NAO_ENVIADO'): string {
+      const linhas = saida.split('\n');
+      const inicio = linhas.findIndex((l) => l.includes(`${cabecalho} —`));
+      if (inicio < 0) return '';
+      const resto = linhas.slice(inicio + 1);
+      const fim = resto.findIndex((l) => /^(❌|📋|📊|✅|📌)/.test(l.trim()) && !/^❌\s+\w+\.\w+/.test(l.trim()));
+      return (fim < 0 ? resto : resto.slice(0, fim)).join('\n');
+    }
+
+    it('o gate mapeia os dois schemas de endereço aos records do C#, no módulo pessoas', () => {
+      const gate = lerGate();
+      expect(gate).toMatch(/criarEnderecoPessoaSchema:\s*'AdicionarEnderecoPessoaRequest'/);
+      expect(gate).toMatch(/atualizarEnderecoPessoaSchema:\s*'AtualizarEnderecoPessoaRequest'/);
+      expect(arquivoDoModulo(gate, 'pessoas')).toBe('features/pessoas/schemas/pessoasSchemas.ts');
+    });
+
+    it('os dois records são de envio integral (o PUT apaga o complemento omitido)', () => {
+      const gate = lerGate();
+      const inicio = gate.indexOf('const RECORDS_ENVIO_INTEGRAL = new Set([');
+      const bloco = gate.substring(inicio, gate.indexOf(']);', inicio));
+      for (const record of RECORDS_ENDERECO_PESSOA) expect(bloco).toContain(`'${record}'`);
+    });
+
+    it('Sonda B (hoje): sai 0 e não acusa nenhum campo de endereço', () => {
+      const saida = saidaDe(resultadoHoje);
+      expect(resultadoHoje.exitCode).toBe(0);
+      expect(saida).not.toContain('FALHA ESTRUTURAL');
+      expect(saida).not.toMatch(/(AdicionarEnderecoPessoaRequest|AtualizarEnderecoPessoaRequest)\./);
+    });
+
+    it('Sonda Q: sem cep em criarEnderecoPessoaSchema — sai 1 e acusa DEFAULT_SILENCIOSO AdicionarEnderecoPessoaRequest.cep, e não o do PUT', () => {
+      expect(resultadoEnderecoCriarSemCep.exitCode).toBe(1);
+      expect(secao(saidaDe(resultadoEnderecoCriarSemCep), 'DEFAULT_SILENCIOSO')).toContain('AdicionarEnderecoPessoaRequest.cep');
+      expect(resultadoEnderecoCriarSemCep.nomesDivergencias.has('AtualizarEnderecoPessoaRequest.cep')).toBe(false);
+    });
+
+    it('Sonda R: sem principal em atualizarEnderecoPessoaSchema — sai 1 e acusa DEFAULT_SILENCIOSO AtualizarEnderecoPessoaRequest.principal, e não o do POST', () => {
+      expect(resultadoEnderecoAtualizarSemPrincipal.exitCode).toBe(1);
+      expect(secao(saidaDe(resultadoEnderecoAtualizarSemPrincipal), 'DEFAULT_SILENCIOSO')).toContain('AtualizarEnderecoPessoaRequest.principal');
+      expect(resultadoEnderecoAtualizarSemPrincipal.nomesDivergencias.has('AdicionarEnderecoPessoaRequest.principal')).toBe(false);
+    });
+
+    it('Sonda S: sem complemento em atualizarEnderecoPessoaSchema — sai 1 e acusa NAO_ENVIADO AtualizarEnderecoPessoaRequest.complemento', () => {
+      expect(resultadoEnderecoAtualizarSemComplemento.exitCode).toBe(1);
+      expect(secao(saidaDe(resultadoEnderecoAtualizarSemComplemento), 'NAO_ENVIADO')).toContain('AtualizarEnderecoPessoaRequest.complemento');
+    });
+
+    it('Sonda T (contrafactual de S): fora de RECORDS_ENVIO_INTEGRAL, o complemento retirado passaria verde como LACUNA', () => {
+      expect(resultadoEnderecoSemEnvioIntegral.exitCode).toBe(0);
+      expect(resultadoEnderecoSemEnvioIntegral.nomesDivergencias.has('AtualizarEnderecoPessoaRequest.complemento')).toBe(false);
+      expect(saidaDe(resultadoEnderecoSemEnvioIntegral)).toContain('AtualizarEnderecoPessoaRequest.complemento → ?');
+    });
+
+    it('Sonda U (b72): schemas de endereço ausentes, sem recorte ignorado, é falha dura nominal', () => {
+      const saida = saidaDe(resultadoB72SemIgnorar);
+      expect(resultadoB72SemIgnorar.exitCode).toBe(1);
+      expect(saida).toContain('FALHA ESTRUTURAL');
+      expect(saida).toContain('pessoas/criarEnderecoPessoaSchema → mapeado a AdicionarEnderecoPessoaRequest mas não existe no arquivo TS');
+      expect(saida).toContain('pessoas/atualizarEnderecoPessoaSchema → mapeado a AtualizarEnderecoPessoaRequest mas não existe no arquivo TS');
     });
   });
 });

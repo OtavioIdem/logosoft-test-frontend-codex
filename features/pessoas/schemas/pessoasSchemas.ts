@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { TipoPessoa } from '@/types/erp';
 import { isPotentialCpf, isPotentialCnpj, normalizeCnpj, normalizeCpf } from '@/lib/validators/documentos';
+import { UFS_BRASIL } from '@/lib/constants/ufs';
+import { PESSOA_ENDERECO_LIMITES, PESSOA_ENDERECO_VALIDACAO } from '@/features/pessoas/components/pessoaEnderecosLabels';
+import { TipoEndereco } from '@/features/pessoas/types/pessoaEnderecos.types';
 
 const guid = z.string().uuid('Selecione um registro válido.');
 const optionalGuid = z.union([guid, z.null()]).optional();
@@ -83,3 +86,93 @@ export const inativarClassificacaoPessoaSchema = z.object({
     empresaId: guid,
     motivo: classificacaoPessoaMotivoSchema
 });
+
+// Endereços da Pessoa (v1.11.0a8b73, D102). Limites e obrigatoriedade de `EnderecoContatoValidators.cs:5-33` e
+// `EnderecoPessoa.cs:11-26,129-186`. O Swagger declara tudo opcional; no C# sete dos nove campos são obrigatórios
+// (inventário §3.2). Request `.strict()`: não existe `municipioIbgeCodigo` aqui, que é do PATCH da b74.
+const ufsEndereco = new Set<string>(UFS_BRASIL);
+
+const textoEnderecoObrigatorio = (obrigatorio: string, limite: number, tamanho: string) =>
+    z.string({ required_error: obrigatorio, invalid_type_error: obrigatorio }).trim().min(1, obrigatorio).max(limite, tamanho);
+
+const tipoEnderecoSchema = z.nativeEnum(TipoEndereco, { errorMap: () => ({ message: PESSOA_ENDERECO_VALIDACAO.tipoInvalido }) });
+const logradouroEnderecoSchema = textoEnderecoObrigatorio(PESSOA_ENDERECO_VALIDACAO.logradouroObrigatorio, PESSOA_ENDERECO_LIMITES.logradouro, PESSOA_ENDERECO_VALIDACAO.logradouroTamanho);
+const numeroEnderecoSchema = textoEnderecoObrigatorio(PESSOA_ENDERECO_VALIDACAO.numeroObrigatorio, PESSOA_ENDERECO_LIMITES.numero, PESSOA_ENDERECO_VALIDACAO.numeroTamanho);
+const complementoEnderecoSchema = z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((value) => {
+        if (value === null || value === undefined) return null;
+        const normalizado = value.trim();
+        return normalizado.length ? normalizado : null;
+    })
+    .refine((value) => value === null || value.length <= PESSOA_ENDERECO_LIMITES.complemento, PESSOA_ENDERECO_VALIDACAO.complementoTamanho);
+const bairroEnderecoSchema = textoEnderecoObrigatorio(PESSOA_ENDERECO_VALIDACAO.bairroObrigatorio, PESSOA_ENDERECO_LIMITES.bairro, PESSOA_ENDERECO_VALIDACAO.bairroTamanho);
+const cidadeEnderecoSchema = textoEnderecoObrigatorio(PESSOA_ENDERECO_VALIDACAO.cidadeObrigatoria, PESSOA_ENDERECO_LIMITES.cidade, PESSOA_ENDERECO_VALIDACAO.cidadeTamanho);
+const ufEnderecoSchema = z
+    .string({ required_error: PESSOA_ENDERECO_VALIDACAO.ufObrigatoria, invalid_type_error: PESSOA_ENDERECO_VALIDACAO.ufObrigatoria })
+    .trim()
+    .min(1, PESSOA_ENDERECO_VALIDACAO.ufObrigatoria)
+    .transform((value) => value.toUpperCase())
+    .refine((value) => ufsEndereco.has(value), PESSOA_ENDERECO_VALIDACAO.ufInvalida);
+// O backend remove o que não é dígito e exige 8 (`EnderecoPessoa.cs:177-187`); o request leva só os dígitos.
+const cepEnderecoSchema = z
+    .string({ required_error: PESSOA_ENDERECO_VALIDACAO.cepObrigatorio, invalid_type_error: PESSOA_ENDERECO_VALIDACAO.cepObrigatorio })
+    .transform((value) => value.replace(/\D/g, ''))
+    .superRefine((value, ctx) => {
+        if (value.length === 0) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: PESSOA_ENDERECO_VALIDACAO.cepObrigatorio });
+        } else if (value.length !== PESSOA_ENDERECO_LIMITES.cepDigitos) {
+            ctx.addIssue({ code: z.ZodIssueCode.custom, message: PESSOA_ENDERECO_VALIDACAO.cepInvalido });
+        }
+    });
+
+// AdicionarEnderecoPessoaRequest (`EnderecoContatoRequests.cs:5-14`, 9 campos).
+export const criarEnderecoPessoaSchema = z
+    .object({
+        tipo: tipoEnderecoSchema,
+        logradouro: logradouroEnderecoSchema,
+        numero: numeroEnderecoSchema,
+        complemento: complementoEnderecoSchema,
+        bairro: bairroEnderecoSchema,
+        cidade: cidadeEnderecoSchema,
+        uf: ufEnderecoSchema,
+        cep: cepEnderecoSchema,
+        principal: z.boolean()
+    })
+    .strict();
+
+// AtualizarEnderecoPessoaRequest (`EnderecoContatoRequests.cs:16-25`, os mesmos 9 campos).
+export const atualizarEnderecoPessoaSchema = z
+    .object({
+        tipo: tipoEnderecoSchema,
+        logradouro: logradouroEnderecoSchema,
+        numero: numeroEnderecoSchema,
+        complemento: complementoEnderecoSchema,
+        bairro: bairroEnderecoSchema,
+        cidade: cidadeEnderecoSchema,
+        uf: ufEnderecoSchema,
+        cep: cepEnderecoSchema,
+        principal: z.boolean()
+    })
+    .strict();
+
+// EnderecoPessoaResponse (`EnderecoContatoResponse.cs:6-19`, 13 campos). Response nunca é estrita: campo aditivo do
+// backend não pode quebrar a aba. `tipo` é numérico (EP-10); se a API passar a devolver texto, o erro aparece, sem
+// fallback silencioso.
+export const enderecoPessoaResponseSchema = z.object({
+    id: z.string(),
+    pessoaId: z.string(),
+    tipo: z.number(),
+    logradouro: z.string(),
+    numero: z.string(),
+    complemento: z.string().nullable().optional(),
+    bairro: z.string(),
+    cidade: z.string(),
+    uf: z.string(),
+    cep: z.string(),
+    principal: z.boolean(),
+    status: z.number(),
+    municipioIbgeId: z.string().nullable().optional()
+});
+
+export const enderecosPessoaResponseSchema = z.array(enderecoPessoaResponseSchema);

@@ -1,3 +1,218 @@
+# v1.11.0a8b73
+
+## Endereços da Pessoa: aba no cadastro, principal visível e lista sempre relida
+
+Quem cadastra Pessoas passa a manter os endereços dela numa aba nova do diálogo de Pessoa:
+listar, criar, editar, marcar principal e excluir. A aba diz qual endereço vai para a nota, o
+principal, e mostra se ele tem município fiscal vinculado. O inventário está em
+`docs/arquitetura/debate/15-inventario-endereco-pessoa.md` (EP-1 a EP-19), a decisão é a D102, com
+emenda, em `docs/arquitetura/DECISOES.md`, e o plano em `docs/fatias/v1.11.0a8b73-endereco-pessoa.md`.
+Não houve quarteto de arquitetura, porque D47 item 2, D49 item 2, D52 e D53 já travavam o desenho.
+É a `b60` da D53, renumerada pela D97.
+
+**Risco da fatia: `MEDIUM`.** São 5 rotas novas consumidas e 2 requests. A fatia abre a classe
+"resposta que traz só o registro tocado quando a mutação muda outro registro". **Risco de acesso:
+`NENHUM`.** Nenhuma permissão, rota ou item de menu entra ou sai.
+
+### Seção operacional — leia antes do deploy
+
+1. **O faturamento ainda não conclui depois desta versão, e o motivo muda.** No que é do destinatário, hoje a nota para em
+   `Fiscal.DestinatarioSemEnderecoFiscal`. Com o endereço cadastrado por esta aba, passa a parar em
+   `Fiscal.DestinatarioSemMunicipioIbge` (`DestinatarioFiscalResolver.cs:184-187`). O motivo é que
+   `POST` e `PUT` do endereço não aceitam município (`EnderecoContatoRequests.cs:5-25`). O vínculo
+   é o `PATCH …/municipio`, com outra permissão, `PESSOAS_DADOS_FISCAIS_GERENCIAR`, e chega na
+   próxima fatia de Pessoa. Isso foi lido no C# do backend; não foi medido em execução. As barreiras anteriores ao destinatário (o endereço fiscal do emitente e a natureza de operação com CFOP mapeado) não foram medidas no banco de homologação.
+2. **São dois perfis para o faturamento passar.** Quem cadastra o endereço precisa de
+   `PESSOAS_CONSULTAR` e `PESSOAS_GERENCIAR`. Quem vincula o município vai precisar de
+   `PESSOAS_DADOS_FISCAIS_GERENCIAR`. Nesta versão, nada muda na concessão.
+3. **A aba (D102):**
+   - Ela só funciona na edição. Ao criar a Pessoa, mostra "Salve a pessoa para cadastrar
+     endereços" e não faz chamada nenhuma.
+   - O endereço que vale para a nota é o **principal**, de qualquer tipo. O tipo "Fiscal" não tem
+     efeito no backend (EP-4), e a aba diz isso (pergunta **B-35**).
+   - A cidade é texto livre, porque é o campo do backend. A UF é escolhida entre as 27 siglas. O
+     CEP é enviado só com dígitos.
+   - **A lista é relida depois de toda alteração**, inclusive quando o backend recusa. A resposta
+     do backend só traz o endereço tocado, e marcar ou excluir o principal muda outro registro
+     (EP-5/EP-6).
+   - Excluir é definitivo pela tela. Ao excluir o principal, a tela avisa que o backend escolhe
+     outro endereço como principal, sem ordem definida (**B-36**).
+   - Ao editar um endereço com município vinculado, a tela avisa em dois casos:
+     - a UF mudou: o vínculo será removido;
+     - a cidade mudou com a mesma UF: o vínculo antigo continua, porque o backend não o zera
+       (EP-2, **B-37**).
+   - O erro do backend aparece com código, status e trace. O client novo das rotas de endereço
+     preserva esses campos, e o `pessoasApi` das rotas de Pessoa não foi tocado.
+   - Quem só consulta vê a lista e o motivo, sem ações.
+4. **As 27 UFs mudaram de lugar.** Elas saíram de `features/faturamento` e foram para
+   `lib/constants/ufs.ts`, com reexport. O Faturamento não muda de comportamento.
+5. **Fora do escopo, nominalmente:**
+   - vincular município, backfill e busca de município;
+   - o bloco fiscal da Pessoa;
+   - os links `DestinatarioSem*` e abrir a Pessoa por id (**B-38**);
+   - o guard de contexto organizacional nas rotas de endereço, que o backend não chama (EP-1,
+     lido no C#, **B-39**);
+   - contatos, bloquear e desbloquear Pessoa (D53).
+
+### Testes e QA
+
+**Gate de campos de request.** `scripts/gate-contract-request-fields.mjs` passa a cobrir
+`AdicionarEnderecoPessoaRequest` e `AtualizarEnderecoPessoaRequest`, os dois em
+`RECORDS_ENVIO_INTEGRAL`:
+- `principal` omitido viraria `false` no backend.
+- O PUT grava o complemento normalizado, então omiti-lo apagaria o complemento já salvo.
+  Contrafactual medido: sem o conjunto, o gate sai 0 e só lista o campo como LACUNA.
+
+O lado backend vem do markdown, que bate com o C# (9/9 campos). Prova vermelha executada por
+mutação em espelho: retirados o `cep` do criar e o `principal` do atualizar, o gate sai 1 com
+`DEFAULT_SILENCIOSO` nos dois, pelo nome. Contra o HEAD da `b72`, em worktree, os casos existentes
+acusam igual. `gateContractRequestFields.test.ts`: 87/87 em duas execuções. As Sondas Q a U são
+novas, e os 7 testes novos falham contra o gate antigo.
+
+**Unit e componente**, com o `PessoaFormDialog` real e só o adapter do axios trocado:
+- `pessoaEnderecosPayload` (21 testes);
+- `PessoaEnderecosAC2AC7` (15 testes), sem aumentar o timeout.
+
+5 provas vermelhas executadas, cada uma com mutação real e restauração conferida com `cmp`:
+- AC-4: remendar o cache com a resposta → 6 falhas;
+- AC-5: aviso de principal → 1 falha;
+- AC-5: DELETE com corpo → 3 falhas;
+- AC-6: aviso sem vínculo → 1 falha;
+- AC-7: erro reduzido a `Error` → 7 falhas.
+
+**Varredura transversal:** medida pelo QA. São 22 arquivos e 272/272 testes, em duas execuções de um único `npx vitest run`. A lista é a união de `grep -rlF "features/pessoas"` em `tests/unit` e `tests/components`, dos basenames tocados (`pessoaEnderecosApi`, `PessoaFormDialog`, `pessoasSchemas`, `faturamentoSchemas`, `UFS_BRASIL`, `pessoaEnderecosLabels`), do teste do gate e dos testes de Faturamento que passam pelo reexport das UFs. Antes disso, o orquestrador rodou uma lista menor, de 16 arquivos, informada pelo nó de testes: 238/238, três vezes. typecheck e lint verdes. Os 11
+arquivos de produção são idênticos ao backup do builder.
+
+Fato de processo: a sessão foi encerrada no meio do builder. Ele foi retomado sobre o que estava na
+árvore, e o backup foi feito no fim. Durante os nós de gate e de testes, o classificador de
+segurança do modo automático ficou fora do ar. A varredura, o typecheck, o lint e o `cmp` foram
+rodados pelo orquestrador depois que ele voltou.
+
+**E2E:** spec novo `tests/e2e/v1.11.0a8b73-endereco-pessoa.spec.ts`, com 4 testes. A rota de endereços responde como servidor em memória, e toda escrita devolve de propósito um endereço diferente do GET seguinte.
+- (a) Criar pelo diálogo de Pessoa: o POST leva os 9 campos e o CEP só com dígitos, e a lista é relida.
+- (b) Marcar principal: POST sem corpo, e a marca muda de linha.
+- (c) Excluir o principal: aparece o aviso de promoção, sai o DELETE sem corpo, e o outro endereço vira principal.
+- (d) Trocar a UF de um endereço com município vinculado: aparece o aviso de remoção do vínculo.
+
+Com `b66-cliente-fornecedor` e o spec da `b71`, que usam as UFs movidas: 15/15 em duas execuções no servidor isolado da porta 3411, com o PID conferido e o servidor encerrado no fim. Uma tentativa anterior teve 3 falhas por locator da própria spec, corrigido antes do par oficial. A prova vermelha em (a), com `onSettled` removido do criar, deu "1 failed", e a restauração foi conferida com `cmp`.
+
+**QA:** aprovado na primeira passada (`qa-revisor`, Opus), com ressalvas.
+- Gates rodados pelo QA, todos verdes: source, typecheck, lint, backend-permissions, guard-permission-map, backend-contract-map, contract-request-fields, guid-references, mocks-isolation, validate-ci-gates, build e diff --check, inclusive nos arquivos novos.
+- Prova vermelha do AC-4 reexecutada pelo QA: remendar a lista com a resposta da mutação deu 6 falhas em 15, e a restauração foi conferida com `cmp`.
+- Regras do principal conferidas contra `Pessoa.cs:129-200` com um teste temporário, depois removido: o principal e o primeiro endereço ficam com o checkbox marcado e travado.
+- Corrigidos antes do commit: a contagem da varredura (QA-01), a condição do emitente e da natureza (QA-02) e a frase "Notas já emitidas não mudam", que não foi medida e saiu da tela (QA-03).
+- **Pendências não bloqueantes:**
+  - Depois de excluir, o foco cai no `BODY` em vez de voltar ao "Novo endereço" (QA-04, medido no jsdom).
+  - Faltam testes do checkbox travado e do retorno de foco (QA-05).
+  - Um comentário ainda cita a origem antiga das UFs, um export de texto não é usado, e o schema de Pessoas importa de `components` (QA-06).
+- O QA não reexecutou o E2E.
+
+# v1.11.0a8b72
+
+## Naturezas de operação: cadastro, CFOP por âmbito e tipo de item, e natureza real na nota
+
+Quem cuida do fiscal cadastra e mantém as naturezas de operação da empresa em
+`/fiscal/naturezas-operacao` (criar, editar, inativar) e diz qual CFOP vale para cada âmbito e tipo
+de item. Nova nota e Gerar NF passam a escolher a natureza de verdade, e o erro de CFOP sem
+mapeamento leva à tela que resolve. Inventário em
+`docs/arquitetura/debate/14-inventario-naturezas-operacao.md` (NO-1 a NO-17), decisões D98–D101
+(`docs/arquitetura/DECISOES.md`, com as emendas da D98), plano em
+`docs/fatias/v1.11.0a8b72-naturezas-operacao.md`. Sem quarteto de arquitetura: o desenho já estava
+travado pela D47–D53 (a `b59` da D53, renumerada pela D97).
+
+**Risco da fatia: `HIGH`** (3 requests novos e a resposta completa de natureza; permissão nova na
+rota e no menu; a busca de CFOP/NCM muda de módulo; a classe "lista de substituição completa", em
+que omitir um item apaga o mapeamento). **Risco de acesso: `NENHUM`** — a fatia só dá acesso novo.
+
+### Seção operacional — leia antes do deploy
+
+1. **Conceda as permissões antes de esperar ver a tela.** Nenhum grupo concede
+   `FISCAL_CADASTROS_CONSULTAR` nem `FISCAL_CADASTROS_GERENCIAR` hoje (medido por `psql` no
+   `logosoft-postgres`, inventário 14). Ordem de concessão: `FISCAL_CADASTROS_CONSULTAR` a quem
+   consulta; `FISCAL_CADASTROS_CONSULTAR` **e** `FISCAL_CADASTROS_GERENCIAR` a quem mantém. Só
+   `GERENCIAR`, sem `CONSULTAR`, abre a tela em "sem autorização" (listar e buscar CFOP exigem
+   consultar; mesmo comportamento de Séries fiscais). Quem tem só `FISCAL_CONSULTAR` continua sem o
+   item. Ninguém perde tela nem ação.
+2. **O faturamento e a nota ainda não concluem de ponta a ponta.** Com natureza cadastrada e CFOP
+   mapeado, a falha seguinte é o endereço fiscal do destinatário (FT-21,
+   `DestinatarioFiscalResolver.cs:157-186`), que vem na `b73` (endereço de Pessoa) e na `b74`
+   (bloco fiscal de Pessoa e links `DestinatarioSem*`). O banco de homologação tinha 0 naturezas, 0
+   mapeamentos e 64 CFOPs (medido por `psql`).
+3. **A tela (D98):**
+   - Lista paginada no servidor, só com empresa resolvida; filtro Situação "Ativas" (padrão) ou
+     "Todas", porque o servidor não filtra só inativas. Coluna Filial pelo nome, nunca GUID.
+   - Criar e editar num diálogo só. O código (até 40, sem espaço, maiúsculo no servidor) fica só
+     leitura na edição e não vai no PUT. Código duplicado aparece no campo Código; o resto dos
+     erros sai pelo painel de erro com o texto do backend, porque quase tudo chega como
+     `FISCAL_CADASTROS_VALIDACAO`.
+   - Grade de CFOP por âmbito × tipo de item ("Qualquer item" = `tipoItem` nulo). A tela impede
+     combinação repetida: o backend aceitaria e a última venceria em silêncio. A busca de CFOP de cada
+     linha filtra pelo âmbito da linha; Venda filtra CFOP de saída e Compra de entrada; os demais
+     tipos de operação não filtram tipo (emenda da D98). O backend não impõe o tipo: **B-32**.
+   - **A edição sempre reenvia a lista completa de CFOPs.** No backend, `null` preserva, `[]` apaga e
+     uma lista substitui. O client da `b71` descartava 9 dos 15 campos da natureza no parse,
+     inclusive `cfops` (NO-1); agora a resposta é lida inteira, e um formulário de edição sobre o
+     client antigo teria apagado os mapeamentos ao salvar.
+   - Inativar pede motivo de 1 a 400 caracteres e diz que é definitivo pela tela: não existe rota de
+     reativar (**B-31**), e a auditoria grava o motivo numa coluna de 500. Natureza inativa fica sem
+     ação na linha.
+   - Quem não alcança a filial da natureza recebe o 404 do backend no painel (NO-7, lido no C#, não
+     medido em execução): **B-33**.
+4. **A busca de CFOP e NCM mudou de módulo (D99, cumpre a D47 item 3 e a D52).**
+   `CadastroFiscalSelects` saiu de `features/tributacao` para `features/fiscal`, com espera entre a
+   digitação e a busca, erro visível com "Tentar novamente" e leitura validada. Regras fiscais,
+   Exceções e Itens tributáveis importam de lá; o comportamento para o operador não muda.
+5. **Natureza real na nota (D100).** Nova nota e Gerar NF usam o mesmo seletor do Confirmar
+   Faturamento, só com naturezas ativas da empresa, e o Gerar NF não envia sem natureza, com o motivo
+   visível (mesma regra da emenda da D91). Os textos "ainda não oferece a seleção" e "ainda não tem
+   tela" saíram. Sem natureza cadastrada, o seletor leva à tela nova quem tem permissão de cadastro.
+6. **Link de correção (D101).** O erro `CfopSemMapeamentoParaAmbito` mostra "Cadastrar natureza de
+   operação" em Adicionar item, Gerar NF e no erro 400 do Confirmar Faturamento, só a quem tem uma
+   das permissões de cadastro, pelo código do erro (D50). O link leva à lista, e não à natureza
+   certa, porque a nota não expõe a natureza (**B-34**). O resultado 200 do Confirmar com etapa em
+   erro não traz o código, então ali não há link.
+7. **Fora do escopo, nominalmente:** reativar natureza (B-31), recusar natureza inativa na derivação
+   (B-7), filtro por filial (B-33), link com a natureza certa (B-34), corrigir o `CONTRATO-API` e o
+   `GAP` do backend (`empresaId` opcional, contagem 0/5) e regenerar o `BACKEND-ESTADO` com `TipoItem`
+   (artefatos gerados no backend), endereço de Pessoa (`b73`), bloco fiscal de Pessoa (`b74`), os
+   outros endpoints de cadastros fiscais (D53). Pendente de decisão do usuário: incluir o snapshot
+   novo `scripts/backend-request-records.snapshot.json` na política `generated_only` e no hook.
+
+### Testes e QA
+
+**Gate de campos de request cobre natureza (emenda da D98, D83 estendida).**
+`scripts/gate-contract-request-fields.mjs` passa a cobrir Criar, Atualizar e Inativar natureza e o
+`MapeamentoCfopRequest` aninhado, os quatro em `RECORDS_ENVIO_INTEGRAL`. O markdown do contrato não
+traz `TipoItem` no mapeamento (NO-4), então esses records vêm de um snapshot gerado do C#
+(`scripts/generate-backend-request-records-snapshot.mjs` → `scripts/backend-request-records.snapshot.json`,
+backend `0387e44`); sem o snapshot, falha dura. Prova vermelha executada por mutação: sem
+`tipoItem` no mapeamento e sem `cfops` no PUT, o gate sai 1 e acusa `NAO_ENVIADO` pelo nome. Contra
+o HEAD `48eb7ff` e a `b70` (`9713de4`), em worktree, os casos de Confirmar e Faturar acusam igual.
+`gateContractRequestFields.test.ts`: 79/79 em duas execuções (Sondas K a P novas).
+
+**Unit e componente**, com componentes reais e request capturado (só o adapter do axios trocado):
+`naturezasOperacaoPayload` (35), `NaturezasOperacaoPage` (15), `useNaturezasOperacao` (8),
+`CadastroFiscalSelects` (6), `FiscalActionDialogsNatureza` (11), `AppMenuNaturezasOperacao` (10),
+`naturezasOperacaoRegressaoTextual` (4), mais o AC-10 no `FaturamentoConfirmarResultado`. Os 6
+vermelhos esperados pela mudança (mapa D50 com 2 entradas, fixture de natureza com 15 campos, pai
+Fiscal com +2 permissões, menu de 84 para 85 itens) foram atualizados pela razão certa. 11 provas
+vermelhas executadas (AC-5 x3, AC-6 x2, AC-7 x3, AC-9 x3), cada uma com mutação real e restauração
+por `cp` conferida com `cmp`. **Varredura transversal:** 54 arquivos, 517/517 em duas execuções
+seguidas, num único `npx vitest run` sobre a lista de `grep -rlF` pelos 33 arquivos tocados. Uma
+execução anterior teve 5 estouros de 5000 ms sob carga (3 no teste novo da página e 2 testes da
+`b71`), sem falha de asserção. Diferente da `b71`, aqui **o timeout foi aumentado**: `vi.setConfig({ testTimeout: 30_000 })` em `tests/components/NaturezasOperacaoPage.test.tsx` e `tests/components/FiscalActionDialogsNatureza.test.tsx`, com `userEvent.setup({ delay: null })`. O custo é a digitação sob a carga da varredura, não a primeira montagem. Medição do QA, com o reporter json na varredura inteira: sem o override, a página teve 1 estouro em 2 rodadas, e com ele os testes mais lentos levaram de 5,6 a 7,3 s; `FiscalActionDialogsNatureza` chegou a 4,99 s com override e 3,8 s sem, com 0 estouros. O risco aceito é que o limite de 30 s esconda lentidão futura desses dois arquivos.
+
+**E2E:** spec novo `tests/e2e/v1.11.0a8b72-naturezas-operacao.spec.ts` (6 testes: criar pelo menu com 2 linhas de CFOP e body capturado item a item; editar só a descrição reenviando os 3 mapeamentos; inativar com motivo e 204; S1 com Nova natureza desabilitado e sem Editar/Inativar; S4 sem o item e com a rota negada, com controle positivo em Notas fiscais; empresa com 0 naturezas e filtro Ativas com o próximo passo), mais o spec da `b71` ajustado ao texto novo do vazio (e com o link D100 afirmado), `fiscal-impostos` e `b66-cliente-fornecedor`: 22/22 em duas execuções no servidor isolado da porta 3411, com o PID conferido e o servidor encerrado no fim. A primeira execução teve 2 falhas por locator do teste (o nome acessível do link de menu inclui o glifo do ícone), corrigido antes do par oficial. 3 provas vermelhas executadas (`tipoItem` sempre nulo; edição carregando só parte dos mapeamentos; PUT sem o último mapeamento), cada uma com "1 failed" e restauração conferida com `cmp`. Os 32 arquivos de produção seguem idênticos ao backup do builder.
+
+Fato de processo: sem quarteto de arquitetura, porque a D53 já travava o desenho; o orquestrador arbitrou as pendências do inventário (D98–D101) e as duas do design (emenda da D98). Todos os nós de teste e o QA rodaram com Opus.
+
+**QA:** aprovado na segunda passada (`qa-revisor`, Opus). A primeira bloqueou por três achados, nenhum em produção: QA-01, este CHANGELOG omitia o aumento de timeout; QA-02, o AC-3 do plano dizia S1 sem o botão Nova natureza, e a tela o mostra desabilitado; QA-03, um comentário de aquecimento dado como falso, que o próprio QA reconheceu como leitura truncada (o `beforeAll` monta a página). Os dois primeiros foram corrigidos e o comentário foi reescrito.
+- **Gates** rodados pelo QA, todos verdes: source, typecheck, lint, backend-permissions, guard-permission-map, backend-contract-map, contract-request-fields, guid-references, mocks-isolation, validate-ci-gates, build (rota `/fiscal/naturezas-operacao`) e diff --check.
+- **Varredura:** 54 arquivos, 517/517, duas vezes em cada passada.
+- **E2E da b72:** 6/6 duas vezes na porta 3411, PID conferido.
+- **Provas vermelhas reexecutadas pelo QA** para o AC-6 (lista parcial e PUT sem `cfops`), com `cp` e `cmp`. O extrator do gate foi comparado com o do HEAD sobre a mesma árvore: os 15 schemas antigos extraem igual.
+- **Não verificado:** Nova nota, Gerar NF e o link D101 numa tela real (só teste de componente); o gerador do snapshot contra o C#; as medições por `psql`.
+- **Pendências não bloqueantes:** comentário com o caminho antigo dos selects em `EnderecoFiscalFormSection.tsx:62` (corrigir na `b73`); o schema da busca de CFOP/NCM exige `page`/`pageSize`/`totalPages` que o select não usa.
 # v1.11.0a8b71
 
 ## Faturamento honesto e corrigível: envia o que o backend exige, mostra o resultado real e não cria faturamento duplicado

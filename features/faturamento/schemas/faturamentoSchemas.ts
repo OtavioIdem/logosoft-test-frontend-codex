@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { isValidGuid } from '@/lib/http/requestUtils';
+import { UFS_BRASIL } from '@/lib/constants/ufs';
 import { AcaoRetomadaReversaoLeg, LegIntegracaoFaturamento, TipoDocumentoFiscal } from '@/features/faturamento/types/faturamento.types';
 
 const requiredGuid = (label: string) => z.string().trim().refine(isValidGuid, `${label} deve ser selecionado corretamente.`);
@@ -22,7 +23,8 @@ export const prepararFaturamentoSchema = z.object({
 
 // D94: a UF continua texto, validada contra as 27 siglas. A UF útil é a que tem endpoint SEFAZ configurado,
 // e nenhuma rota a lista (B-28); o backend só confere o tamanho (`FaturamentoValidators.cs:19`).
-export const UFS_BRASIL = ['AC', 'AL', 'AM', 'AP', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MG', 'MS', 'MT', 'PA', 'PB', 'PE', 'PI', 'PR', 'RJ', 'RN', 'RO', 'RR', 'RS', 'SC', 'SE', 'SP', 'TO'] as const;
+// b73 (emenda da D102): a lista mora em `lib/constants/ufs.ts`; o reexport mantém o import de quem já usa daqui.
+export { UFS_BRASIL };
 const ufsBrasil = new Set<string>(UFS_BRASIL);
 
 const ufAutorizadoraSchema = z

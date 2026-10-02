@@ -12,10 +12,13 @@ import { classNames } from 'primereact/utils';
 import { CpfCnpjInput } from '@/components/forms/CpfCnpjInput';
 import { EmpresaFilialFields } from '@/components/forms/EmpresaFilialFields';
 import { FieldError } from '@/components/forms/FieldError';
+import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { criarPessoaSchema, atualizarPessoaSchema } from '@/features/pessoas/schemas/pessoasSchemas';
 import { PessoaFormValues, PessoaResponse } from '@/features/pessoas/types/pessoas.types';
 import { fieldErrorMap, FieldErrors, textValue } from '@/features/pessoas/components/formUtils';
-import { TipoPessoa } from '@/types/erp';
+import { PessoaEnderecosTab } from '@/features/pessoas/components/PessoaEnderecosTab';
+import { PESSOA_ENDERECOS_ABA } from '@/features/pessoas/components/pessoaEnderecosLabels';
+import { EntityStatus, TipoPessoa } from '@/types/erp';
 
 const tipoPessoaOptions = [
     { label: 'Pessoa física', value: TipoPessoa.Fisica },
@@ -47,6 +50,8 @@ const buildInitialValues = (record?: PessoaResponse | null): PessoaFormValues =>
 export const PessoaFormDialog = ({ visible, loading, record, onHide, onSubmit }: { visible: boolean; loading?: boolean; record?: PessoaResponse | null; onHide: () => void; onSubmit: (values: PessoaFormValues) => Promise<void> }) => {
     const [values, setValues] = useState<PessoaFormValues>(() => buildInitialValues(record));
     const [errors, setErrors] = useState<FieldErrors>({});
+    // O diálogo não conferia permissão (só abria por ação guardada); a aba de endereços recebe as de quem a monta (D102, emenda).
+    const { hasPermission } = usePermissions();
 
     useEffect(() => {
         if (visible) {
@@ -130,6 +135,9 @@ export const PessoaFormDialog = ({ visible, loading, record, onHide, onSubmit }:
                             <FieldError message={errors.observacao} />
                         </div>
                     </div>
+                </TabPanel>
+                <TabPanel header={PESSOA_ENDERECOS_ABA.titulo}>
+                    <PessoaEnderecosTab pessoaId={record?.id ?? null} pessoaAtiva={!record || Number(record.status) === EntityStatus.Ativo} podeConsultar={hasPermission('PESSOAS_CONSULTAR')} podeGerenciar={hasPermission('PESSOAS_GERENCIAR')} />
                 </TabPanel>
                 <TabPanel header="LGPD e auditoria visual">
                     <Message severity="warn" className="w-full" text="Esta rotina manipula dados pessoais. Evite copiar documentos para campos de observação e não compartilhe prints com CPF/CNPJ sem necessidade operacional." />
