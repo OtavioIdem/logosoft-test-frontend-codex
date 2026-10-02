@@ -22,6 +22,9 @@
  *   - pessoas (endereço): AdicionarEnderecoPessoaRequest, AtualizarEnderecoPessoaRequest
  *     (v1.11.0a8b73, D102, AC-8), lidos do markdown: §10 traz os 9 campos com a mesma nulabilidade do C#
  *     (`EnderecoContatoRequests.cs:5-25`), e só `Complemento` é anulável. Não precisam do snapshot.
+ *   - pessoas (fiscal): AtualizarDadosFiscaisPessoaRequest, VincularMunicipioEnderecoPessoaRequest
+ *     (v1.11.0a8b75, D104, AC-7), lidos do snapshot do C#: o markdown traz o dados-fiscais com 6 campos e o
+ *     C# com 8 (PF-6).
  *
  * Lado backend: os records são lidos do catálogo de payloads de
  * docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md (§10). Record mapeado e não encontrado lá reprova.
@@ -78,10 +81,12 @@ const SCHEMA_TO_REQUEST_MAP = {
     criarClassificacaoPessoaSchema: 'CriarClassificacaoPessoaRequest',
     atualizarClassificacaoPessoaSchema: 'AtualizarClassificacaoPessoaRequest',
     inativarClassificacaoPessoaSchema: 'InativarClassificacaoPessoaRequest',
-    // v1.11.0a8b73 (D102, AC-8): endereços da Pessoa. O PATCH de município (`VincularMunicipioEnderecoPessoaRequest`)
-    // é da b74 e não entra aqui.
+    // v1.11.0a8b73 (D102, AC-8): endereços da Pessoa.
     criarEnderecoPessoaSchema: 'AdicionarEnderecoPessoaRequest',
-    atualizarEnderecoPessoaSchema: 'AtualizarEnderecoPessoaRequest'
+    atualizarEnderecoPessoaSchema: 'AtualizarEnderecoPessoaRequest',
+    // v1.11.0a8b75 (D104, AC-7): bloco fiscal da Pessoa e o vínculo de município do endereço.
+    atualizarDadosFiscaisPessoaSchema: 'AtualizarDadosFiscaisPessoaRequest',
+    vincularMunicipioEnderecoPessoaSchema: 'VincularMunicipioEnderecoPessoaRequest'
   },
   faturamento: {
     confirmarFaturamentoSchema: 'ConfirmarFaturamentoRequest'
@@ -115,12 +120,19 @@ function arquivoDeSchemas(moduleName) {
  * e não do markdown. O markdown de 2026-08-12 não tem `TipoItem` em `MapeamentoCfopRequest`; os três
  * requests de natureza batem com o C# (13/13, 10/10, 1/1) e vêm do mesmo snapshot para que o conjunto
  * de natureza tenha uma única origem.
+ * v1.11.0a8b75 (D104, AC-7, PF-6): `AtualizarDadosFiscaisPessoaRequest` tem 8 campos no C#
+ * (`PessoaRequests.cs:37-45`) e 6 no markdown, que não traz `ContribuinteIpi` nem `TomadorOrgaoPublico`.
+ * Lido do markdown, o schema correto reprovaria com 2 DESCARTE, e um schema sem esses campos passaria
+ * verde apagando-os. `VincularMunicipioEnderecoPessoaRequest` (`EnderecoContatoRequests.cs:31`) bate com o
+ * markdown (1/1) e vem do mesmo snapshot para que o recorte fiscal da Pessoa tenha uma única origem.
  */
 const RECORDS_DO_SNAPSHOT_CSHARP = new Set([
   'CriarNaturezaOperacaoRequest',
   'AtualizarNaturezaOperacaoRequest',
   'InativarNaturezaOperacaoRequest',
-  'MapeamentoCfopRequest'
+  'MapeamentoCfopRequest',
+  'AtualizarDadosFiscaisPessoaRequest',
+  'VincularMunicipioEnderecoPessoaRequest'
 ]);
 const SNAPSHOT_REQUEST_PATH = 'scripts/backend-request-records.snapshot.json';
 
@@ -146,8 +158,19 @@ const SNAPSHOT_REQUEST_PATH = 'scripts/backend-request-records.snapshot.json';
  *     marcado na tela (`Pessoa.cs:128-142`). O conjunto protege o outro campo, `complemento`, o único anulável.
  *     O PUT grava `NormalizarOpcional(complemento)` (`EnderecoPessoa.cs:58`), então omiti-lo apaga em
  *     silêncio o complemento já cadastrado. Também faz um campo anulável aditivo do backend nestes
- *     records reprovar e forçar a decisão: o `municipioIbgeCodigo` é do PATCH da b74, e se ele aparecer
+ *     records reprovar e forçar a decisão: o `municipioIbgeCodigo` é do PATCH da b75, e se ele aparecer
  *     aqui, alguém tem de decidir.
+ *   - AtualizarDadosFiscaisPessoaRequest (v1.11.0a8b75, D104, AC-7, PF-1): entra. O PATCH SUBSTITUI o bloco
+ *     fiscal inteiro: `PessoaDadosFiscaisResolver.cs:31-36` trata corpo em branco como "limpar",
+ *     `DadosFiscaisPessoa.Criar` reconstrói o bloco só com o que veio e `Pessoa.DefinirDadosFiscais`
+ *     sobrescreve todos os campos (`Pessoa.cs:118-126`). Os 8 campos são anuláveis no C#, então fora deste
+ *     conjunto um campo omitido passaria como LACUNA, e cada PATCH da aba apagaria em silêncio o valor gravado
+ *     dele. Campo omitido e `null` são o mesmo para o backend: a UI tem de mandar os 8, com `null` explícito.
+ *   - VincularMunicipioEnderecoPessoaRequest (v1.11.0a8b75, D104, AC-7): entra. O único campo,
+ *     `municipioIbgeCodigo`, é `string?`, e nulo ou vazio DESVINCULA o município do endereço
+ *     (`EnderecoContatoValidators.cs:35-46`). Fora deste conjunto, um schema que deixasse de mandá-lo passaria
+ *     verde como LACUNA, e o PATCH "vincular" viraria "desvincular". Também faz um campo anulável aditivo do
+ *     backend neste record reprovar e forçar a decisão.
  */
 const RECORDS_ENVIO_INTEGRAL = new Set([
   'ConfirmarFaturamentoRequest',
@@ -157,7 +180,9 @@ const RECORDS_ENVIO_INTEGRAL = new Set([
   'InativarNaturezaOperacaoRequest',
   'MapeamentoCfopRequest',
   'AdicionarEnderecoPessoaRequest',
-  'AtualizarEnderecoPessoaRequest'
+  'AtualizarEnderecoPessoaRequest',
+  'AtualizarDadosFiscaisPessoaRequest',
+  'VincularMunicipioEnderecoPessoaRequest'
 ]);
 
 /**
@@ -202,6 +227,9 @@ function loadRequestContractFromDocument(contractPath) {
     // v1.11.0a8b73 (D102): endereços da Pessoa, lidos do markdown (iguais ao C#, 9/9)
     'AdicionarEnderecoPessoaRequest',
     'AtualizarEnderecoPessoaRequest',
+    // v1.11.0a8b75 (PF-6): lidos do markdown só para imprimir a diferença para o snapshot do C#
+    'AtualizarDadosFiscaisPessoaRequest',
+    'VincularMunicipioEnderecoPessoaRequest',
     // v1.11.0a8b72: lidos do markdown só para imprimir a diferença para o snapshot do C#
     'CriarNaturezaOperacaoRequest',
     'AtualizarNaturezaOperacaoRequest',

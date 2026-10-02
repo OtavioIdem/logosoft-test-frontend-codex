@@ -3,20 +3,50 @@ import { describeTributacaoError, isCargaPendente, TRIBUTACAO_ERROR_CATALOG, tri
 import { mapTributacaoApiError } from '@/features/tributacao/api/tributacaoApi';
 import { findRoutePermissionRule } from '@/lib/security/routePermissions';
 
-describe('catálogo de erros 422 do motor de tributação', () => {
-    it('cobre os oito códigos estáveis do contrato', () => {
+describe('catálogo de erros do motor de tributação', () => {
+    it('cobre os onze códigos estáveis do contrato', () => {
         expect(Object.keys(TRIBUTACAO_ERROR_CATALOG).sort()).toEqual(
             [
                 'FISCAL_TRIBUTACAO_ALIQUOTA_INTERESTADUAL_NAO_ENCONTRADA',
+                'FISCAL_TRIBUTACAO_CONTRIBUINTE_IPI_DIVERGENTE',
+                'FISCAL_TRIBUTACAO_EMPRESA_NAO_ENCONTRADA',
                 'FISCAL_TRIBUTACAO_FCP_NAO_DEFINIDO_PARA_UF',
                 'FISCAL_TRIBUTACAO_ITEM_INVALIDO',
                 'FISCAL_TRIBUTACAO_OPERACAO_SEM_REGRA_FISCAL',
                 'FISCAL_TRIBUTACAO_REGRA_AMBIGUA',
                 'FISCAL_TRIBUTACAO_REGRA_FORA_DE_VIGENCIA',
                 'FISCAL_TRIBUTACAO_REGRA_INCOMPLETA',
+                'FISCAL_TRIBUTACAO_ST_INCOMPATIVEL_COM_DIFAL',
                 'FISCAL_TRIBUTACAO_TETO_INSS_NAO_DEFINIDO'
             ].sort()
         );
+    });
+
+    // b74 (D103, AC-2): o mesmo código chega como 422 pelo simulador e como 400 pela nota. O tratamento é pelo código.
+    it.each([422, 400])('trata ST incompatível com DIFAL como erro de cadastro da regra, por código (HTTP %i)', (status) => {
+        const erro = { code: 'FISCAL_TRIBUTACAO_ST_INCOMPATIVEL_COM_DIFAL', status, message: 'texto livre' };
+
+        expect(describeTributacaoError(erro)?.kind).toBe('cadastro');
+        expect(describeTributacaoError(erro)?.acao).toMatch(/Corrija o cadastro da regra fiscal/);
+        expect(isCargaPendente(erro)).toBe(false);
+        expect(tributacaoErrorSeverity(erro)).toBe('warn');
+    });
+
+    // b74 (D103, AC-3): os dois códigos que já faltavam antes da mudança do backend.
+    it('trata empresa não encontrada como aviso de contexto, sem ser carga', () => {
+        const erro = { code: 'FISCAL_TRIBUTACAO_EMPRESA_NAO_ENCONTRADA', status: 422, message: 'texto livre' };
+
+        expect(describeTributacaoError(erro)?.kind).toBe('contexto');
+        expect(tributacaoErrorSeverity(erro)).toBe('warn');
+        expect(isCargaPendente(erro)).toBe(false);
+    });
+
+    it('trata IPI divergente como erro de preenchimento, sem ser carga', () => {
+        const erro = { code: 'FISCAL_TRIBUTACAO_CONTRIBUINTE_IPI_DIVERGENTE', status: 422, message: 'texto livre' };
+
+        expect(describeTributacaoError(erro)?.kind).toBe('preenchimento');
+        expect(tributacaoErrorSeverity(erro)).toBe('error');
+        expect(isCargaPendente(erro)).toBe(false);
     });
 
     it('resolve pelo código, não pelo texto da mensagem do backend', () => {

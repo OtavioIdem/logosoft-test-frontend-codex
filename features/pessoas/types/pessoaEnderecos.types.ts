@@ -28,8 +28,13 @@ export type EnderecoPessoaResponse = {
     cep: string;
     principal: boolean;
     status: EntityStatus;
-    /** nulo até o vínculo de município (b74); a tela só diz "vinculado" ou "não vinculado" */
+    /** nulo até o vínculo de município (b75); a tela só diz "vinculado" ou "não vinculado" */
     municipioIbgeId: Guid | null;
+};
+
+/** `VincularMunicipioEnderecoPessoaRequest`, `EnderecoContatoRequests.cs:31` (1 campo): código IBGE de 7 dígitos. */
+export type VincularMunicipioEnderecoPessoaRequest = {
+    municipioIbgeCodigo: string;
 };
 
 /** `AdicionarEnderecoPessoaRequest` e `AtualizarEnderecoPessoaRequest` (`EnderecoContatoRequests.cs:5-25`): os mesmos 9 campos. */

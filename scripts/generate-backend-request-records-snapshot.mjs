@@ -31,7 +31,12 @@ const RECORDS_TO_EXTRACT = {
   CriarNaturezaOperacaoRequest: { module: 'naturezasOperacao', dir: 'src/Erp.Application/Fiscal/Cadastros/NaturezaOperacao' },
   AtualizarNaturezaOperacaoRequest: { module: 'naturezasOperacao', dir: 'src/Erp.Application/Fiscal/Cadastros/NaturezaOperacao' },
   InativarNaturezaOperacaoRequest: { module: 'naturezasOperacao', dir: 'src/Erp.Application/Fiscal/Cadastros/NaturezaOperacao' },
-  MapeamentoCfopRequest: { module: 'naturezasOperacao', dir: 'src/Erp.Application/Fiscal/Cadastros/NaturezaOperacao' }
+  MapeamentoCfopRequest: { module: 'naturezasOperacao', dir: 'src/Erp.Application/Fiscal/Cadastros/NaturezaOperacao' },
+  // v1.11.0a8b75 (D104, AC-7, PF-6): o markdown traz o dados-fiscais com 6 campos; o C# tem 8
+  // (`ContribuinteIpi`, `TomadorOrgaoPublico`, v1.22.0/G2). O vínculo de município vem do mesmo snapshot
+  // para que o recorte fiscal da Pessoa tenha uma única origem.
+  AtualizarDadosFiscaisPessoaRequest: { module: 'pessoas', dir: 'src/Erp.Application/Pessoas/Pessoas' },
+  VincularMunicipioEnderecoPessoaRequest: { module: 'pessoas', dir: 'src/Erp.Application/Pessoas/Pessoas' }
 };
 
 /** Divide a lista de parâmetros por vírgula de nível zero (ignora vírgulas dentro de <>, () e []). */

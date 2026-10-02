@@ -1,3 +1,123 @@
+# v1.11.0a8b75
+
+## Pessoa fiscal: município do endereço, dados fiscais e atalhos de correção
+
+O cadastro de Pessoas agora permite vincular o município oficial ao endereço pela busca filtrada pela
+UF e manter os dados fiscais do destinatário. O fluxo atende as pendências que impedem a emissão da
+nota e preserva o backend como autoridade fiscal: o frontend só apresenta o bloqueio e envia o
+contrato integral já documentado em `docs/fatias/v1.11.0a8b75-pessoa-fiscal.md` (D104).
+
+**Risco da fatia: `HIGH`** (PATCH de substituição integral de dados fiscais e vínculo de município).
+**Risco de acesso: `NENHUM`** — nenhuma permissão foi criada ou removida.
+
+### Seção operacional
+
+1. Para editar dados fiscais, conceda `PESSOAS_DADOS_FISCAIS_GERENCIAR` junto de
+   `PESSOAS_CONSULTAR` e `PESSOAS_GERENCIAR`.
+2. Para procurar e vincular municípios, conceda também `FISCAL_CADASTROS_CONSULTAR`. Sem ela, a
+   ação permanece visível porém indisponível, com o motivo; não existe digitação manual de código.
+3. O vínculo é feito na aba **Endereços**, por **Vincular município**, e usa a UF já cadastrada no
+   endereço. O município fiscal exigido na nota é o do endereço principal.
+4. A aba **Dados fiscais** sempre reenvia os oito campos do contrato. Quando município ou país já
+   existem no bloco fiscal e a tela não consegue reenviá-los por código, a gravação fica bloqueada
+   para não apagar dado já existente.
+5. Os erros `Fiscal.DestinatarioSemEnderecoFiscal`, `Fiscal.DestinatarioSemEnderecoPrincipal`,
+   `Fiscal.DestinatarioSemMunicipioIbge` e `Fiscal.DestinatarioSemIndicadorContribuinteIcms` passam
+   a orientar para a lista de Pessoas apenas para quem possui `PESSOAS_GERENCIAR`.
+
+### Cobertura
+
+- Unitário e componente cobrem o request integral de oito campos, o código IBGE de sete dígitos,
+  permissões S1/S2/S3, erro de backend e o termo da busca remota após debounce.
+- E2E mockado `tests/e2e/v1.11.0a8b75-pessoa-fiscal.spec.ts` percorre a tela real: vincula município
+  com o PATCH correto e salva um campo fiscal preservando os outros sete; em ambos os casos prova a
+  releitura pelo GET subsequente.
+
+### Fora do escopo
+
+- Backfill de municípios (B-41), abrir Pessoa por id no erro (B-38), edição de município/país já
+  existentes no bloco fiscal e as pendências de backend B-42/B-43.
+
+# v1.11.0a8b74
+
+## ST com DIFAL no mesmo item vira aviso de cadastro da regra fiscal
+
+O backend (v1.23.4/G3, branch `fix/v1.23.4-g3-st-e-difal-no-mesmo-item`) passou a recusar ICMS-ST e
+DIFAL no mesmo item com o código `FISCAL_TRIBUTACAO_ST_INCOMPATIVEL_COM_DIFAL`, em vez de calcular
+os dois. A combinação não tem base legal: a venda interestadual a consumidor final não contribuinte
+paga DIFAL pelo remetente, como contribuinte, e não por substituição. Até aqui, esse erro aparecia
+como vermelho genérico. Agora aparece como aviso de cadastro, com a ação "Corrija o cadastro da
+regra fiscal", e nenhum total. O pedido veio do plano escrito pelo backend
+(`../New project 3/docs/frontend/PLANO-FRONTEND-v1.23.4-g3-st-incompativel-com-difal.md`, commit
+`6bb6fc4`). A decisão é a D103 e o plano está em `docs/fatias/v1.11.0a8b74-st-difal-tributacao.md`.
+
+**Risco da fatia: `LOW`** (regime `correcao`). Só o catálogo de erros muda: nenhum request,
+response, rota ou permissão. **Risco de acesso: `NENHUM`.**
+
+### Seção operacional
+
+1. **Três códigos entram no catálogo** (`features/tributacao/components/tributacaoErrors.ts`), que
+   passa de 8 para 11:
+   - `FISCAL_TRIBUTACAO_ST_INCOMPATIVEL_COM_DIFAL`: erro de cadastro (aviso), com os textos do plano
+     do backend;
+   - `FISCAL_TRIBUTACAO_EMPRESA_NAO_ENCONTRADA`: erro de contexto (aviso). Já faltava antes desta
+     versão;
+   - `FISCAL_TRIBUTACAO_CONTRIBUINTE_IPI_DIVERGENTE`: erro de preenchimento (erro). Já faltava antes
+     desta versão.
+2. **O tratamento é pelo código, nunca pelo status.** O mesmo código chega como 422 pelo simulador
+   e como 400 pela nota (validar e calcular tributos). O comentário do catálogo passa a dizer isso.
+3. **Na nota fiscal**, o código continua no tratamento genérico de erro, com mensagem e código
+   visíveis. O plano do backend chama esse comportamento de aceitável. O atalho para
+   `/fiscal/regras` é opcional e ficou de fora.
+4. **Pergunta ao backend B-40.** O simulador sempre envia `emitenteContribuinteIpi`, por um checkbox
+   que começa desmarcado. Se a empresa for contribuinte do IPI, a simulação falha com
+   `CONTRIBUINTE_IPI_DIVERGENTE` (leitura de código, não medido). O contrato do backend chama o
+   campo de obrigatório "de propósito", mas o C# o declara anulável e a mensagem do erro manda
+   omiti-lo. A tela não muda até a resposta.
+5. **Numeração.** Esta é a `b74`. O bloco fiscal da Pessoa, previsto na D97 como `b74`, passa a
+   ser a `b75`. A ordem dos cadastros não muda.
+
+### Testes e QA
+
+`tests/unit/tributacaoErrors.test.ts`:
+- a enumeração passa a cobrir os 11 códigos;
+- ST com DIFAL é testado com 422 e com 400: `kind` cadastro, `warn`, não é carga, ação "Corrija o
+  cadastro da regra fiscal";
+- empresa não encontrada sai como `warn`, e IPI divergente sai como `error`.
+
+`tests/components/SimuladorTributacaoPage.test.tsx` (novo) monta a página real, com hook, client
+e `httpClient`, trocando só o adapter do axios:
+- simula SP→MG a consumidor final não contribuinte e recebe o 422;
+- afirma título, mensagem e ação do catálogo como aviso (e não como erro), a mensagem do servidor
+  como detalhe e nenhum total;
+- um caso de controle com código fora do catálogo prova que as asserções discriminam.
+
+O tempo-limite não foi aumentado: o padrão de 5 s continua, e o teste usa `userEvent.setup({ delay: null })`. O QA mediu o caso mais lento de cada execução entre 1,8 e 3,2 s, em 3 execuções de `npx vitest run tests/unit/tributacaoErrors.test.ts tests/components/SimuladorTributacaoPage.test.tsx --reporter=verbose` nesta máquina. A folga sob a carga do CI não foi medida.
+
+Três provas vermelhas executadas, cada uma com mutação real em `tributacaoErrors.ts` e restauração
+conferida com `cmp`:
+- `kind` de ST com DIFAL trocado: 3 falhas;
+- entrada de ST com DIFAL removida: 4 falhas;
+- `kind` dos dois códigos antigos trocado: 2 falhas.
+
+**Varredura transversal:** `grep -rlF` por `tributacaoErrors`, `SimuladorTributacaoPage` e
+`describeTributacaoError` em `tests/unit` e `tests/components` acha só esses 2 arquivos: 15/15, duas
+vezes. typecheck e lint verdes.
+
+**Pendência de UX registrada:** o `ApiErrorPanel` mostra a mensagem do servidor sempre em
+vermelho, abaixo do aviso amarelo do catálogo. Isso já valia para todos os erros de cadastro do
+motor e não vem desta versão.
+
+**QA:** aprovado na segunda passada (`qa-revisor`, Opus).
+- A primeira passada bloqueou por um único achado (QA-01): este CHANGELOG afirmava que o caso mais lento levava cerca de 1 s, e a medição deu de 1,8 a 3,2 s. A frase foi trocada pela medição.
+- Gates rodados pelo QA, todos verdes: source, typecheck, lint, backend-permissions, guard-permission-map, backend-contract-map, contract-request-fields, mocks-isolation, validate-ci-gates, `validate:fiscal:production`, build e diff --check.
+- Os textos de ST com DIFAL foram comparados campo a campo com o §6.1 do plano do backend: 5 de 5 idênticos.
+- As 3 provas vermelhas foram reexecutadas pelo QA, com as mesmas contagens.
+- **Pendências não bloqueantes:**
+  - QA-02: comentários do catálogo desatualizados (o `kind` `contexto` e o "só os 422").
+  - QA-03: o teste de componente não afirma o trace.
+  - QA-04: no C#, empresa não encontrada é defeito de integração, mapeado aqui como `contexto`.
+
 # v1.11.0a8b73
 
 ## Endereços da Pessoa: aba no cadastro, principal visível e lista sempre relida

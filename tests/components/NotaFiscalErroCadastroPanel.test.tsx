@@ -12,6 +12,7 @@ vi.mock('@/features/auth/hooks/usePermissions', () => ({ usePermissions: vi.fn()
 const usePermissoes = vi.mocked(usePermissions) as any;
 const codigoSerie = 'Fiscal.SerieFiscalNaoCadastradaParaContexto';
 const codigoCfop = 'Fiscal.CfopSemMapeamentoParaAmbito';
+const codigosDestinatario = ['Fiscal.DestinatarioSemEnderecoFiscal', 'Fiscal.DestinatarioSemEnderecoPrincipal', 'Fiscal.DestinatarioSemMunicipioIbge', 'Fiscal.DestinatarioSemIndicadorContribuinteIcms'];
 
 afterEach(() => vi.clearAllMocks());
 
@@ -41,11 +42,15 @@ describe('NotaFiscalErroCadastroPanel — AC-16', () => {
     });
 
     it('o mapa é indexado exclusivamente pelo código, não pelo texto da mensagem', () => {
-        // D101 (b72): o mapa ganha, de propósito, a entrada de CFOP sem mapeamento. As `DestinatarioSem*` seguem fora até a b74.
-        expect(Object.keys(fiscalErrosCadastroMap)).toEqual([codigoSerie, codigoCfop]);
+        // D101 (b72) e D104 (b75): o mapa tem a série, o CFOP sem mapeamento e as quatro `DestinatarioSem*`, que levam à
+        // LISTA de Pessoas, só para PESSOAS_GERENCIAR. `DestinatarioSemPessoaVinculada` não é alcançável e fica fora.
+        expect(Object.keys(fiscalErrosCadastroMap)).toEqual([codigoSerie, codigoCfop, ...codigosDestinatario]);
         expect(resolveFiscalErroCadastroLink(codigoSerie)).toMatchObject({ href: '/fiscal/series' });
         expect(resolveFiscalErroCadastroLink(codigoCfop)).toMatchObject({ href: '/fiscal/naturezas-operacao', anyOf: ['FISCAL_CADASTROS_CONSULTAR', 'FISCAL_CADASTROS_GERENCIAR'] });
-        expect(resolveFiscalErroCadastroLink('Fiscal.DestinatarioSemEnderecoFiscal')).toBeNull();
+        for (const codigo of codigosDestinatario) {
+            expect(resolveFiscalErroCadastroLink(codigo)).toMatchObject({ href: '/pessoas', anyOf: ['PESSOAS_GERENCIAR'] });
+        }
+        expect(resolveFiscalErroCadastroLink('Fiscal.DestinatarioSemPessoaVinculada')).toBeNull();
         expect(resolveFiscalErroCadastroLink('Não há série 7 ativa para a filial.')).toBeNull();
     });
 });

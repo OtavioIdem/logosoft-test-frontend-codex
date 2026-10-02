@@ -2,8 +2,14 @@ import { ZodError } from 'zod';
 import { httpClient } from '@/lib/http/httpClient';
 import { mapApiError } from '@/lib/http/apiError';
 import { sanitizePayload } from '@/lib/http/requestUtils';
-import { atualizarEnderecoPessoaSchema, criarEnderecoPessoaSchema, enderecoPessoaResponseSchema, enderecosPessoaResponseSchema } from '@/features/pessoas/schemas/pessoasSchemas';
-import { AtualizarEnderecoPessoaRequest, CriarEnderecoPessoaRequest, EnderecoPessoaResponse } from '@/features/pessoas/types/pessoaEnderecos.types';
+import {
+    atualizarEnderecoPessoaSchema,
+    criarEnderecoPessoaSchema,
+    enderecoPessoaResponseSchema,
+    enderecosPessoaResponseSchema,
+    vincularMunicipioEnderecoPessoaSchema
+} from '@/features/pessoas/schemas/pessoasSchemas';
+import { AtualizarEnderecoPessoaRequest, CriarEnderecoPessoaRequest, EnderecoPessoaResponse, VincularMunicipioEnderecoPessoaRequest } from '@/features/pessoas/types/pessoaEnderecos.types';
 
 type Schema<T> = { parse: (value: unknown) => T };
 
@@ -56,6 +62,7 @@ const basePath = (pessoaId: string) => `/api/pessoas/${pessoaId}/enderecos`;
 
 export const buildCriarEnderecoPessoaPayload = (values: unknown): CriarEnderecoPessoaRequest => parseSchema(criarEnderecoPessoaSchema, values);
 export const buildAtualizarEnderecoPessoaPayload = (values: unknown): AtualizarEnderecoPessoaRequest => parseSchema(atualizarEnderecoPessoaSchema, values);
+export const buildVincularMunicipioEnderecoPessoaPayload = (values: unknown): VincularMunicipioEnderecoPessoaRequest => parseSchema(vincularMunicipioEnderecoPessoaSchema, values);
 
 export const pessoaEnderecosApi = {
     /** `GET /api/pessoas/{id}/enderecos`: só endereços ativos, sem paginação (`PessoasController.cs:108-119`). */
@@ -85,6 +92,18 @@ export const pessoaEnderecosApi = {
     async definirPrincipal(pessoaId: string, enderecoId: string) {
         return runRequest(async () => {
             const response = await httpClient.post<unknown>(`${basePath(pessoaId)}/${enderecoId}/principal`);
+            return toEndereco(parseResposta(() => enderecoPessoaResponseSchema.parse(response.data)));
+        });
+    },
+    /**
+     * `PATCH /api/pessoas/{id}/enderecos/{enderecoId}/municipio` -> 200 com o endereço tocado (`PessoasController.cs:179-190`),
+     * `PESSOAS_DADOS_FISCAIS_GERENCIAR`. Corpo: só `municipioIbgeCodigo` (7 dígitos). Município inexistente ou inativo ->
+     * 400 (`FISCAL_CADASTROS_MUNICIPIO_NAO_ENCONTRADO` / `_INATIVO`, PF-5); UF diferente da do endereço -> 400 `PESSOAS_VALIDACAO`.
+     */
+    async vincularMunicipio(pessoaId: string, enderecoId: string, values: unknown) {
+        const payload = buildVincularMunicipioEnderecoPessoaPayload(values);
+        return runRequest(async () => {
+            const response = await httpClient.patch<unknown>(`${basePath(pessoaId)}/${enderecoId}/municipio`, payload);
             return toEndereco(parseResposta(() => enderecoPessoaResponseSchema.parse(response.data)));
         });
     },
