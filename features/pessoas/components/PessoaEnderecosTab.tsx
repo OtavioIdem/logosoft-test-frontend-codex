@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Column } from 'primereact/column';
 import { ConfirmDialog } from 'primereact/confirmdialog';
@@ -68,6 +68,18 @@ export const PessoaEnderecosTab = ({ pessoaId, pessoaAtiva, podeConsultar, podeG
     const [erroAcao, setErroAcao] = useState<ErroAcao | null>(null);
     const [excluindo, setExcluindo] = useState<EnderecoPessoaResponse | null>(null);
     const [principalEmAndamento, setPrincipalEmAndamento] = useState<string | null>(null);
+    const novoEnderecoRef = useRef<Button>(null);
+    const [focarNovoEndereco, setFocarNovoEndereco] = useState(false);
+    const salvandoOuExcluindo = salvarMutation.isPending || principalMutation.isPending || excluirMutation.isPending || vincularMunicipioMutation.isPending;
+
+    // QA-04 (b73): depois de excluir, o PrimeReact devolve o foco ao botão da linha que sumiu e ele cai no BODY. O foco
+    // vai para "Novo endereço", e só quando o botão voltou a ficar habilitado (a mutação terminou e a lista foi relida).
+    useEffect(() => {
+        if (!focarNovoEndereco || salvandoOuExcluindo || excluindo) return;
+        // No PrimeReact 10.2 a ref do `Button` é o próprio `<button>` (`combinedRefs`), embora o `d.ts` a tipe como `Button`.
+        (novoEnderecoRef.current as unknown as HTMLButtonElement | null)?.focus();
+        setFocarNovoEndereco(false);
+    }, [focarNovoEndereco, salvandoOuExcluindo, excluindo]);
 
     if (!pessoaId) {
         return (
@@ -175,13 +187,14 @@ export const PessoaEnderecosTab = ({ pessoaId, pessoaAtiva, podeConsultar, podeG
         try {
             await excluirMutation.mutateAsync(endereco.id);
             toast.success(endereco.principal && havia > 1 ? PESSOA_ENDERECOS_TOAST.excluidoPromovido : PESSOA_ENDERECOS_TOAST.excluido);
+            setFocarNovoEndereco(true);
         } catch (error) {
             falhar(PESSOA_ENDERECOS_ERRO.tituloExcluir, error);
         }
     };
 
     const novoEndereco = (
-        <Button type="button" label={PESSOA_ENDERECOS_ABA.novoEndereco} icon="pi pi-plus" size="small" disabled={!acoesDisponiveis || !enderecos || ocupado} title={motivoIndisponivel} onClick={abrirCriacao} />
+        <Button ref={novoEnderecoRef} type="button" label={PESSOA_ENDERECOS_ABA.novoEndereco} icon="pi pi-plus" size="small" disabled={!acoesDisponiveis || !enderecos || ocupado} title={motivoIndisponivel} onClick={abrirCriacao} />
     );
 
     const acoes = (row: EnderecoPessoaResponse) => {

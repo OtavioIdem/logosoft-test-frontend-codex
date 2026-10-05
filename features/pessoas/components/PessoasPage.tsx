@@ -123,7 +123,7 @@ export const PessoasPage = () => {
                 </DataTableServer>
                 {!listQuery.isLoading && records.length === 0 ? <EmptyState title="Nenhuma pessoa" description="Crie um cadastro ou ajuste os filtros." /> : null}
             </Card>
-            <PessoaFormDialog visible={formVisible} record={dialogRecord}loading={saveMutation.isPending} onHide={() => setFormVisible(false)} onSubmit={save} />
+            <PessoaFormDialog visible={formVisible} record={dialogRecord} loading={saveMutation.isPending} onHide={() => setFormVisible(false)} onSubmit={save} />
             <ReasonDialog visible={Boolean(reasonRecord)} title="Motivo da inativação" confirmLabel="Inativar" loading={inativarMutation.isPending} onHide={() => setReasonRecord(null)} onConfirm={inativar} />
         </>
     );

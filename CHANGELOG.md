@@ -1,3 +1,58 @@
+# v1.11.0a8b75.c1
+
+## Dívidas de QA da b73, b74 e b75: foco depois de excluir endereço, testes do principal e comentários corrigidos
+
+É uma corretiva sem decisão nova. Ela paga o que os QAs da `b73` (QA-04 a QA-06) e da `b74` (QA-02 e QA-03) deixaram
+como pendência não bloqueante, mais um ajuste cosmético da `b75`. O plano está em
+`docs/fatias/v1.11.0a8b75.c1-dividas-qa.md`.
+
+**Risco: `LOW`** (regime `correcao`). Nenhum request, response, rota ou permissão muda. **Risco de acesso: `NENHUM`.**
+
+### Seção operacional
+
+1. **Foco depois de excluir um endereço (QA-04 da b73).** Na aba Endereços da Pessoa, depois de excluir um endereço, o
+   foco ia para o `<body>`, porque o PrimeReact o devolve ao botão da linha que sumiu. Agora o foco vai para "Novo
+   endereço" assim que a lista termina de recarregar. Medido só no jsdom: na versão anterior, `activeElement` ficou no `<body>` de 0 a 1000 ms (sonda do QA). O navegador real não foi verificado.
+2. **Resíduos de texto e código (QA-06 da b73, QA-02 da b74):**
+   - o comentário de origem das UFs passa a citar `lib/constants/ufs.ts`;
+   - o export `PESSOA_ENDERECO_PRINCIPAL_ACAO`, que nada usava, saiu;
+   - os comentários do catálogo de erros de tributação passam a dizer que os códigos chegam como 422 no simulador e como
+     400 na nota, e que o `kind` `contexto` cobre também a empresa não encontrada;
+   - nenhuma função mudou.
+3. **Mantido por decisão:** `pessoasSchemas.ts` continua importando limites e textos de `components/*Labels.ts`. São
+   constantes puras, e mudar isso não altera nada para quem usa a tela.
+4. **Cosmético (b75):** um espaço que faltava em `PessoasPage.tsx:126`.
+
+### Testes e QA
+
+- **`tests/components/PessoaEnderecosAC2AC7.test.tsx`** ganha 5 testes (QA-05 da b73):
+  - o checkbox "Endereço principal" fica marcado e travado ao editar o principal e ao criar o primeiro endereço;
+  - o mesmo checkbox fica habilitado ao editar um endereço que não é o principal;
+  - o foco vai para "Novo endereço" depois de excluir e depois de cancelar o diálogo.
+- **Prova vermelha executada.** Com a versão anterior de `PessoaEnderecosTab.tsx`, o teste do foco depois de excluir
+  falha. Pela sonda do QA, o `activeElement` fica no `<body>` no primeiro segundo. A restauração foi feita por `cp` e conferida com `cmp`. O teste de cancelar também
+  passa na versão anterior, porque quem devolve esse foco é o `Dialog`: ele protege contra regressão, mas não prova esta
+  correção.
+- **`tests/components/SimuladorTributacaoPage.test.tsx`** passa a afirmar `Trace: trace-st-difal` (QA-03 da b74). Essa
+  asserção não teve prova vermelha executada.
+- **Varredura transversal:** a lista vem de `grep -rlF` em `tests/unit` e `tests/components` por `PessoaEnderecosTab`,
+  `pessoaEnderecosLabels`, `tributacaoErrors` e `features/pessoas`. São 22 arquivos e 325/325 testes, em duas execuções.
+  typecheck e lint estão verdes.
+- **Resultado inexplicado medido (QA-01), em duas ocorrências distintas:**
+  - QA, 1 de 10 execuções da varredura: `tests/components/PessoaFiscalAC2AC5.test.tsx` (b75) falhou no nível do arquivo, com 314 passados e 11 pulados. A pilha não foi capturada, então a causa dessa ocorrência não está provada.
+  - Orquestrador, 1 de 5 execuções com log completo: o processo filho do vitest morreu (`Error: Worker exited unexpectedly`, em `tinypool/dist/index.js:118`) durante `tests/components/ClientesPageAC2AC4.test.tsx` (b66). Foram 319 testes verdes, 6 não contados e nenhuma falha de asserção. Esse arquivo não renderiza código desta versão: `PessoaEnderecosTab` só é usado por `PessoaFormDialog`, e nenhum dos dois aparece em `features/clientes` nem no teste.
+  - As quedas atingiram arquivos diferentes, e somando as duas séries a varredura ficou verde em 13 de 15 execuções. Os `AggregateError` de XHR no stderr aparecem em todas as execuções, inclusive nas verdes, e em testes antigos: é ruído anterior a esta versão.
+  - Conclusão, por inferência e não por prova: instabilidade do pool de workers nesta máquina, no mesmo sentido da regra de não rodar a suíte completa aqui. A folga no CI não foi medida.
+
+**QA:** aprovado na terceira passada (`qa-revisor`, Opus).
+- A primeira passada bloqueou o resultado inexplicado (QA-01) até alguém medir.
+- A segunda bloqueou porque este CHANGELOG atribuía a queda de worker ao arquivo errado (QA-07): o orquestrador tinha lido o nome do arquivo no stderr, e não na linha de conclusão. O parágrafo foi reescrito com as duas ocorrências separadas.
+- Gates rodados pelo QA, todos verdes: source, typecheck, lint, backend-permissions, guard-permission-map, backend-contract-map, contract-request-fields, mocks-isolation, validate-ci-gates, build e diff --check.
+- O QA reexecutou a prova vermelha do foco e mediu o `activeElement` com uma sonda.
+- **Pendências não bloqueantes:**
+  - `PessoaEnderecosTab.tsx:73` repete a expressão de `ocupado` (QA-03);
+  - o comentário de `tributacaoErrors.ts:112-113` cita dois 400 na mesma frase (QA-05).
+
 # v1.11.0a8b75
 
 ## Pessoa fiscal: município do endereço, dados fiscais e atalhos de correção
