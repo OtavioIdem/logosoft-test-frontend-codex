@@ -6,6 +6,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { PessoaFormDialog } from '@/features/pessoas/components/PessoaFormDialog';
 import {
     PESSOA_ENDERECO_AVISOS,
+    PESSOA_ENDERECO_CAMPOS,
     PESSOA_ENDERECO_EXCLUIR_DIALOG,
     PESSOA_ENDERECO_PRINCIPAL,
     PESSOA_ENDERECOS_ABA,
@@ -361,6 +362,84 @@ describe('AC-5: principal, endereço da nota, marcar principal e excluir', () =>
         await waitFor(() => expect(screen.queryByRole('cell', { name: 'Rua Beta, 20' })).not.toBeInTheDocument());
         expect(escritas()).toEqual([{ method: 'delete', url: `${base}/${idBeta}`, data: undefined }]);
         expect(toast.success).toHaveBeenCalledWith(PESSOA_ENDERECOS_TOAST.excluido);
+    });
+});
+
+describe('QA-05 (b73): checkbox do principal e foco depois de excluir ou cancelar', () => {
+    const checkboxPrincipal = (dialogo: HTMLElement) => within(dialogo).getByLabelText(PESSOA_ENDERECO_CAMPOS.principal);
+    const botaoNovo = () => screen.getByRole('button', { name: PESSOA_ENDERECOS_ABA.novoEndereco });
+
+    it('editar o principal: checkbox marcado e desabilitado, com a dica do único principal', async () => {
+        const user = userEvent.setup({ delay: null });
+        renderDialogo();
+        abrirAba();
+        await tabela();
+        await user.click(screen.getByRole('button', { name: 'Editar endereço Rua Alfa, 10' }));
+        const dialogo = await dialogoEndereco('Editar endereço');
+        const checkbox = checkboxPrincipal(dialogo);
+        expect(checkbox).toBeChecked();
+        expect(checkbox).toBeDisabled();
+        expect(within(dialogo).getByText(PESSOA_ENDERECO_PRINCIPAL.unicoPrincipalDica)).toBeInTheDocument();
+    });
+
+    it('editar endereço que não é o principal: checkbox desmarcado e habilitado', async () => {
+        const user = userEvent.setup({ delay: null });
+        renderDialogo();
+        abrirAba();
+        await tabela();
+        await user.click(screen.getByRole('button', { name: 'Editar endereço Rua Beta, 20' }));
+        const dialogo = await dialogoEndereco('Editar endereço');
+        const checkbox = checkboxPrincipal(dialogo);
+        expect(checkbox).not.toBeChecked();
+        expect(checkbox).toBeEnabled();
+        expect(within(dialogo).getByText(PESSOA_ENDERECO_CAMPOS.principalHint)).toBeInTheDocument();
+    });
+
+    it('criar o primeiro endereço: checkbox marcado e desabilitado, com a dica de que o primeiro vira principal', async () => {
+        const user = userEvent.setup({ delay: null });
+        servidor = [];
+        renderDialogo();
+        abrirAba();
+        await waitFor(() => expect(listagens()).toHaveLength(1));
+        await waitFor(() => expect(botaoNovo()).toBeEnabled());
+        await user.click(botaoNovo());
+        const dialogo = await dialogoEndereco('Novo endereço');
+        const checkbox = checkboxPrincipal(dialogo);
+        expect(checkbox).toBeChecked();
+        expect(checkbox).toBeDisabled();
+        expect(within(dialogo).getByText(PESSOA_ENDERECO_PRINCIPAL.primeiroEhPrincipal)).toBeInTheDocument();
+    });
+
+    it('QA-04: depois de excluir, o foco vai para "Novo endereço" (e não cai no BODY)', async () => {
+        const user = userEvent.setup({ delay: null });
+        renderDialogo();
+        abrirAba();
+        await tabela();
+        aposMutacao = [alfa()];
+
+        await user.click(screen.getByRole('button', { name: 'Excluir endereço Rua Beta, 20' }));
+        const confirmar = await screen.findByRole('dialog', { name: PESSOA_ENDERECO_EXCLUIR_DIALOG.titulo('Rua Beta, 20') });
+        await user.click(within(confirmar).getByRole('button', { name: PESSOA_ENDERECO_EXCLUIR_DIALOG.confirmLabel }));
+        await waitFor(() => expect(screen.queryByRole('cell', { name: 'Rua Beta, 20' })).not.toBeInTheDocument());
+
+        const botao = botaoNovo();
+        await waitFor(() => expect(document.activeElement).toBe(botao));
+        expect(botao).toBeEnabled();
+    });
+
+    it('cancelar o diálogo aninhado de endereço: o foco volta ao "Novo endereço"', async () => {
+        const user = userEvent.setup({ delay: null });
+        renderDialogo();
+        abrirAba();
+        await tabela();
+        const botao = botaoNovo();
+        await user.click(botao);
+        const dialogo = await dialogoEndereco('Novo endereço');
+        await user.click(within(dialogo).getByRole('button', { name: 'Cancelar' }));
+        await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Novo endereço' })).not.toBeInTheDocument());
+
+        await waitFor(() => expect(document.activeElement).toBe(botao));
+        expect(escritas()).toHaveLength(0);
     });
 });
 

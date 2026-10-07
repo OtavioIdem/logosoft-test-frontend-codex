@@ -2,7 +2,6 @@ import { ApiError } from '@/types/erp';
 
 /**
  * Catálogo dos erros do motor: chegam como 422 pelo simulador e como 400 pela nota (validar e calcular tributos).
- * Trate pelo `codigo`, nunca pelo status.
  *
  * **Trate pelo `codigo`, nunca pelo texto** — a mensagem do backend é para humano e pode mudar; o código é
  * estável e é a única coisa que o contrato garante. E **nenhum destes devolve cálculo parcial**: quando o
@@ -16,7 +15,7 @@ export type TributacaoErrorKind =
     | 'carga'
     /** Preenchimento do próprio documento simulado. */
     | 'preenchimento'
-    /** Escopo organizacional: a empresa/filial do corpo não pertence ao usuário autenticado (400 do contrato). */
+    /** Contexto organizacional: a empresa ou filial do corpo não pertence ao usuário, ou não foi encontrada no momento do cálculo. */
     | 'contexto';
 
 export type TributacaoErrorInfo = {
@@ -111,7 +110,7 @@ export const TRIBUTACAO_ERROR_CATALOG: Record<string, TributacaoErrorInfo> = {
 
 /**
  * O 400 do contrato é escopo organizacional: empresa/filial fora do contexto do usuário autenticado. Não tem
- * `codigo` — o catálogo cobre só os 422 —, então o identificador abaixo é do frontend, como o da validação
+ * `codigo` — o catálogo cobre os erros do motor (422 no simulador, 400 na nota) —, então o identificador abaixo é do frontend, como o da validação
  * local, e nunca deve ser confundido com código estável do backend.
  */
 export const TRIBUTACAO_CONTEXTO_ORGANIZACIONAL: TributacaoErrorInfo = {

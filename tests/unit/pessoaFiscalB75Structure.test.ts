@@ -23,7 +23,9 @@ const FORA_DA_VARREDURA: Record<string, string> = {
 const listar = (pasta: string): string[] =>
     readdirSync(pasta).flatMap((nome) => {
         const caminho = join(pasta, nome);
-        if (nome === 'node_modules' || nome.startsWith('.')) return [];
+        // Este fixture é criado/removido por `guidReferenceAudit.test.ts`; a suíte roda arquivos em paralelo.
+        // Ele não faz parte da árvore de produção que este gate deve auditar.
+        if (nome === 'node_modules' || nome.startsWith('.') || nome === '__guid_reference_audit_fixture__') return [];
         return statSync(caminho).isDirectory() ? listar(caminho) : EXTENSOES.test(nome) ? [caminho] : [];
     });
 

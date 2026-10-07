@@ -104,6 +104,8 @@ describe('AC-4: simulador recebe 422 de ST incompatível com DIFAL', () => {
         // A mensagem do servidor continua visível como detalhe técnico, com código e status.
         expect(screen.getByText(MENSAGEM_SERVIDOR)).toBeInTheDocument();
         expect(screen.getByText(/Código: FISCAL_TRIBUTACAO_ST_INCOMPATIVEL_COM_DIFAL/)).toHaveTextContent('HTTP 422');
+        // QA-03 (b74, D103): o traceId do servidor chega ao painel, para o suporte achar a chamada.
+        expect(screen.getByText(/Código: FISCAL_TRIBUTACAO_ST_INCOMPATIVEL_COM_DIFAL/)).toHaveTextContent('Trace: trace-st-difal');
 
         // Nenhum total: o resultado não aparece e o aviso de "nenhum total" está presente.
         expect(screen.getByText(/Nenhum total é exibido quando o cálculo falha/)).toBeInTheDocument();

@@ -41,8 +41,7 @@ export const TIPO_ENDERECO_DICA = 'O tipo é só uma classificação. O endereç
 // ---------------------------------------------------------------------------------------------
 
 /**
- * As 27 UFs já existem em `UFS_BRASIL` (`features/faturamento/schemas/faturamentoSchemas.ts:25`, b71): reuso, não
- * cópia. Não usa o catálogo do servidor, que exigiria `FISCAL_CADASTROS_CONSULTAR`, fora do perfil de Pessoas
+ * As 27 UFs já existem em `UFS_BRASIL` (`lib/constants/ufs.ts`): reuso, não cópia. Não usa o catálogo do servidor, que exigiria `FISCAL_CADASTROS_CONSULTAR`, fora do perfil de Pessoas
  * (EP-14). O backend só confere 2 letras (EP-9); a conferência contra as 27 é do schema do cliente.
  */
 export const UF_ENDERECO_OPTIONS: { label: string; value: string }[] = UFS_BRASIL.map((uf) => ({ label: uf, value: uf }));
@@ -269,17 +268,6 @@ export const PESSOA_ENDERECO_AVISOS = {
     cidadeTrocadaMesmaUfComVinculo: 'A cidade foi alterada, mas o município fiscal vinculado continua o antigo: o sistema não atualiza o vínculo ao mudar só a cidade. Confira o vínculo antes de usar este endereço na nota.',
     /** sem vínculo: nenhum aviso (AC-6) */
     nenhum: ''
-} as const;
-
-// ---------------------------------------------------------------------------------------------
-// Marcar principal (sem diálogo: a ação é reversível marcando outro; confirma só pela Tag e pelo toast)
-// ---------------------------------------------------------------------------------------------
-
-export const PESSOA_ENDERECO_PRINCIPAL_ACAO = {
-    /** title do botão em linha */
-    titulo: 'Marcar como principal',
-    /** efeito mostrado no tooltip: o outro principal deixa de ser */
-    efeito: 'O endereço principal atual deixa de ser o usado na nota fiscal.'
 } as const;
 
 // ---------------------------------------------------------------------------------------------

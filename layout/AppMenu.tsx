@@ -89,8 +89,6 @@ const AppMenu = () => {
                     { label: 'Locais de estoque', icon: 'pi pi-fw pi-warehouse', to: '/estoque/locais', anyPermissions: ['ESTOQUE_CONSULTAR', 'LOCAIS_ESTOQUE_GERENCIAR'] },
                     { label: 'Saldos', icon: 'pi pi-fw pi-database', to: '/estoque/saldos', permission: 'ESTOQUE_CONSULTAR' },
                     { label: 'Movimentos', icon: 'pi pi-fw pi-list', to: '/estoque/movimentos', permission: 'ESTOQUE_CONSULTAR' },
-                    { label: 'Entradas', icon: 'pi pi-fw pi-arrow-circle-down', to: '/estoque/entradas', permission: 'ESTOQUE_MOVIMENTAR' },
-                    { label: 'Saídas', icon: 'pi pi-fw pi-arrow-circle-up', to: '/estoque/saidas', permission: 'ESTOQUE_MOVIMENTAR' },
                     { label: 'Transferências', icon: 'pi pi-fw pi-send', to: '/estoque/transferencias', permission: 'ESTOQUE_MOVIMENTAR' },
                     { label: 'Ajustes', icon: 'pi pi-fw pi-sliders-h', to: '/estoque/ajustes', permission: 'ESTOQUE_MOVIMENTAR' },
                     { label: 'Reservas', icon: 'pi pi-fw pi-bookmark', to: '/estoque/reservas', anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_RESERVAR'] },
@@ -112,8 +110,7 @@ const AppMenu = () => {
                 items: [
                     { label: 'Contas a receber', icon: 'pi pi-fw pi-arrow-down-left', to: '/financeiro/contas-receber', anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_RECEBER'] },
                     { label: 'Contas a pagar', icon: 'pi pi-fw pi-arrow-up-right', to: '/financeiro/contas-pagar', anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_PAGAR'] },
-                    { label: 'Fluxo de caixa', icon: 'pi pi-fw pi-chart-line', to: '/financeiro/fluxo-caixa', permission: 'FINANCEIRO_CONSULTAR' },
-                    { label: 'Financeiro avançado', icon: 'pi pi-fw pi-money-bill', to: '/financeiro/avancado', anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_GERENCIAR', 'FINANCEIRO_FLUXO_CAIXA_CONSULTAR'] },
+                    { label: 'Fluxo de caixa', icon: 'pi pi-fw pi-chart-line', to: '/financeiro/fluxo-caixa', permission: 'FINANCEIRO_FLUXO_CAIXA_CONSULTAR' },
                     { label: 'Formas de pagamento', icon: 'pi pi-fw pi-credit-card', to: '/financeiro/formas-pagamento', anyPermissions: ['FINANCEIRO_CONSULTAR', 'FORMAS_PAGAMENTO_GERENCIAR'] },
                     { label: 'Condições de pagamento', icon: 'pi pi-fw pi-calendar-plus', to: '/financeiro/condicoes-pagamento', anyPermissions: ['FINANCEIRO_CONSULTAR', 'CONDICOES_PAGAMENTO_GERENCIAR'] }
                 ]
