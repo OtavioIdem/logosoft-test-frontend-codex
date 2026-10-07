@@ -22,17 +22,17 @@ describe('Financeiro avançado — estrutura e scaffold', () => {
         const idxGen = rotas.indexOf("pattern: /^\\/financeiro(?:");
         expect(idxAvancado).toBeGreaterThan(-1);
         expect(idxAvancado).toBeLessThan(idxGen);
-        expect(read('layout/AppMenu.tsx')).toContain("to: '/financeiro/avancado'");
+        expect(read('layout/AppMenu.tsx')).not.toContain("to: '/financeiro/avancado'");
         expect(read('app/(main)/financeiro/avancado/page.tsx')).toContain('FinanceiroAvancadoPage');
     });
 
-    it('página tem abas receber/pagar/fluxo com permissões de baixa corretas', () => {
+    it('página preserva as abas receber/pagar com permissões de baixa corretas, sem fluxo de caixa', () => {
         const page = read('features/financeiro-avancado/components/FinanceiroAvancadoPage.tsx');
         expect(page).toContain('tipo="receber"');
         expect(page).toContain('baixarPermission="FINANCEIRO_RECEBER"');
         expect(page).toContain('tipo="pagar"');
         expect(page).toContain('baixarPermission="FINANCEIRO_PAGAR"');
-        expect(page).toContain('FluxoCaixaTab');
+        expect(page).not.toContain('FluxoCaixaTab');
     });
 
     it('baixa/estorno informam contabilização automática do backend', () => {

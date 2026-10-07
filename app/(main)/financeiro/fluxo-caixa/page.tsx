@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation';
+import { FluxoCaixaPage } from '@/features/financeiro/components/FluxoCaixaPage';
 
 export default function Page() {
-    redirect('/financeiro/avancado');
+    return <FluxoCaixaPage />;
 }

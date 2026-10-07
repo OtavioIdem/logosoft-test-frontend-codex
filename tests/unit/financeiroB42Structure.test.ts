@@ -20,17 +20,17 @@ describe('financeiro gerencial B42', () => {
         expect(dialogs).toContain('gerarMovimentoCaixa');
     });
 
-    it('expõe fluxo de caixa como página real protegida por FINANCEIRO_CONSULTAR', () => {
+    it('expõe fluxo de caixa como página real protegida por FINANCEIRO_FLUXO_CAIXA_CONSULTAR', () => {
         const page = read('app/(main)/financeiro/fluxo-caixa/page.tsx');
         const component = read('features/financeiro/components/FluxoCaixaPage.tsx');
         const menu = read('layout/AppMenu.tsx');
         const routePermissions = read('lib/security/routePermissions.ts');
         const api = read('features/financeiro/api/financeiroApi.ts');
 
-        expect(page).toContain("redirect('/financeiro/avancado')");
-        expect(component).toContain('Financeiro avançado');
+        expect(page).toContain('FluxoCaixaPage');
+        expect(component).toContain('FluxoCaixaTab');
         expect(menu).toContain('/financeiro/fluxo-caixa');
-        expect(routePermissions).toContain('^\\/financeiro\\/fluxo-caixa');
+        expect(routePermissions).toContain("FINANCEIRO_FLUXO_CAIXA_CONSULTAR'], description: 'Fluxo de caixa'");
         expect(api).not.toContain('/api/financeiro/fluxo-caixa');
     });
 
