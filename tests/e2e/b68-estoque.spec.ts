@@ -172,7 +172,7 @@ test.describe('b68 — Estoque: abas, rotas e permissões', () => {
         await expect(historicoTab).toHaveAttribute('aria-selected', 'true');
     });
 
-    test('AC-5: com só ESTOQUE_MOVIMENTAR, botão Entrada fica visível', async ({ page }) => {
+    test('AC-5: com só ESTOQUE_MOVIMENTAR, confirmação de entrada fica disponível', async ({ page }) => {
         await writeSession(page, {
             permissions: ['ESTOQUE_MOVIMENTAR'],
             name: 'Operador de entrada',
@@ -182,9 +182,9 @@ test.describe('b68 — Estoque: abas, rotas e permissões', () => {
         await installEstoqueRoutes(page);
         await page.goto('/estoque/entradas');
 
-        const botaoEntrada = page.getByRole('button', { name: /registrar entrada/i });
-        // Botão deve estar presente (PermissionGuard desabilita, não esconde)
-        await expect(botaoEntrada).not.toBeDisabled();
+        const confirmarEntrada = page.getByRole('button', { name: /^confirmar$/i });
+        // A entrada agora é um formulário embutido; sem a permissão, a aba mostra somente o aviso.
+        await expect(confirmarEntrada).not.toBeDisabled();
     });
 
     test('AC-8: /estoque/saldos com ESTOQUE_CONSULTAR abre sem bloqueio', async ({ page }) => {
