@@ -457,7 +457,7 @@ export const MenuFixtureFRulePrecedence = () => {
   });
 
   describe('AC-1: parser enumera todo universo', () => {
-    it('parser deve enumerar 85 itens do AppMenu.tsx atual', () => {
+    it('parser deve enumerar 82 itens do AppMenu.tsx atual', () => {
       const appMenuSource = readFileSync(
         join(root, 'layout/AppMenu.tsx'),
         'utf8'
@@ -474,8 +474,10 @@ export const MenuFixtureFRulePrecedence = () => {
       expect(result.hierarchy.length).toBeGreaterThan(0);
       // b62: -1 "Bloqueios" removido — o item apontava para /estoque/bloqueios que só faz redirect('/estoque/avancado')
       // b67: +1 "Classificações de pessoa" adicionado (D68) em Cadastros > /pessoas/classificacoes
-      // b72: +1 "Naturezas de operação" adicionado (D98) em Fiscal > /fiscal/naturezas-operacao
-      expect(itemsWithTo).toBe(85);
+      // b72: +1 "Naturezas de operação" adicionado (D98) em Fiscal > /fiscal/naturezas-operacao.
+      // PR #39: -2 "Entradas" e "Saídas" (absorvidas por Movimentos) e -1 "Financeiro avançado"
+      // (absorvido pela página de Fluxo de caixa), reduzindo a contagem para 82.
+      expect(itemsWithTo).toBe(82);
       // O item novo, pelo nome: um único item com a rota, no grupo Fiscal, com as duas permissões do filho.
       const itemNovo = result.hierarchy.filter((item: any) => item.rota === '/fiscal/naturezas-operacao');
       expect(itemNovo).toHaveLength(1);
