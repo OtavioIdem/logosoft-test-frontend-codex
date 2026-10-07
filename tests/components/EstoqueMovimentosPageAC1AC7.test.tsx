@@ -77,7 +77,7 @@ vi.mock('@/features/produtos/hooks/useProdutosResources', () => ({
 }));
 
 vi.mock('@/features/estoque/components/MovimentoEstoqueFormDialog', () => ({
-    MovimentoEstoqueFormDialog: () => null
+    MovimentoEstoqueFormDialog: ({ embedded, kind }: { embedded?: boolean; kind: string }) => embedded ? <div data-testid={`movimento-form-${kind}`}>Cadastro de {kind}</div> : null
 }));
 
 const api = vi.mocked(estoqueApi);
@@ -118,6 +118,7 @@ describe('EstoqueMovimentosPage — v1.11.0a8b68', () => {
 
             const entradaTab = screen.getByRole('tab', { name: /^Entrada$/i });
             expect(entradaTab).toHaveAttribute('aria-selected', 'true');
+            expect(screen.getByTestId('movimento-form-entrada')).toBeInTheDocument();
         });
 
         it('/estoque/saidas abre com aba Saída ativa', () => {
@@ -131,6 +132,7 @@ describe('EstoqueMovimentosPage — v1.11.0a8b68', () => {
 
             const saidaTab = screen.getByRole('tab', { name: /^Saída$/i });
             expect(saidaTab).toHaveAttribute('aria-selected', 'true');
+            expect(screen.getByTestId('movimento-form-saida')).toBeInTheDocument();
         });
 
         it('/estoque/movimentos abre com aba Histórico ativa', () => {
@@ -163,7 +165,7 @@ describe('EstoqueMovimentosPage — v1.11.0a8b68', () => {
             expect(screen.getByText(/ESTOQUE_CONSULTAR/i)).toBeInTheDocument();
         });
 
-        it('com só ESTOQUE_CONSULTAR: botões de Entrada e Saída estão desabilitados', () => {
+        it('com só ESTOQUE_CONSULTAR: cadastro de Entrada fica bloqueado', () => {
             permsState.perms = ['ESTOQUE_CONSULTAR'];
             const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
             render(
@@ -174,9 +176,7 @@ describe('EstoqueMovimentosPage — v1.11.0a8b68', () => {
 
             // Página carrega normalmente
             expect(screen.getByText(/Movimentos de estoque/i)).toBeInTheDocument();
-            // Mas o botão de registrar entrada está desabilitado (PermissionGuard mode="disable")
-            const botaoEntrada = screen.getByRole('button', { name: /registrar entrada/i });
-            expect(botaoEntrada).toBeDisabled();
+            expect(screen.getByText(/não pode registrá-la sem a permissão ESTOQUE_MOVIMENTAR/i)).toBeInTheDocument();
         });
 
         it('sem permissões de estoque: página bloqueia com UnauthorizedState', () => {

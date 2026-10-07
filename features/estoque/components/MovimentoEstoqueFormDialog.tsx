@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from 'primereact/button';
+import { Card } from 'primereact/card';
 import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { InputTextarea } from 'primereact/inputtextarea';
@@ -21,7 +22,7 @@ type MovimentoKind = 'entrada' | 'saida' | 'ajuste';
 
 const buildInitialValues = (kind: MovimentoKind): MovimentoEstoqueFormValues => ({ empresaId: '', filialId: null, produtoId: '', localEstoqueId: '', quantidade: kind === 'ajuste' ? undefined : 0, quantidadeContada: kind === 'ajuste' ? 0 : undefined, origemModulo: 'ESTOQUE', origemId: null, documento: null, motivo: '' });
 
-export const MovimentoEstoqueFormDialog = ({ visible, kind, loading, onHide, onSubmit }: { visible: boolean; kind: MovimentoKind; loading?: boolean; onHide: () => void; onSubmit: (values: MovimentoEstoqueFormValues) => Promise<void> }) => {
+export const MovimentoEstoqueFormDialog = ({ visible, kind, loading, onHide, onSubmit, embedded = false }: { visible: boolean; kind: MovimentoKind; loading?: boolean; onHide: () => void; onSubmit: (values: MovimentoEstoqueFormValues) => Promise<void>; embedded?: boolean }) => {
     const [values, setValues] = useState<MovimentoEstoqueFormValues>(() => buildInitialValues(kind));
     const [errors, setErrors] = useState<FieldErrors>({});
 
@@ -56,22 +57,31 @@ export const MovimentoEstoqueFormDialog = ({ visible, kind, loading, onHide, onS
             return;
         }
         await onSubmit(parsed.data as MovimentoEstoqueFormValues);
+        if (embedded) {
+            setValues(buildInitialValues(kind));
+            setErrors({});
+        }
     };
 
     const title = kind === 'entrada' ? 'Registrar entrada' : kind === 'saida' ? 'Registrar saída' : 'Registrar ajuste';
 
-    return (
-        <Dialog header={title} visible={visible} modal style={{ width: 'min(64rem, 96vw)' }} onHide={onHide} footer={<div className="flex justify-content-end gap-2"><Button label="Cancelar" icon="pi pi-times" severity="secondary" outlined disabled={loading} onClick={onHide} /><Button label="Confirmar" icon="pi pi-check" loading={loading} onClick={submit} /></div>}>
+    const fields = (
             <FormGrid>
                 <EmpresaFilialFields empresaId={empresaId} filialId={filialId} empresaError={errors.empresaId} filialError={errors.filialId} onEmpresaChange={(value) => update('empresaId', value)} onFilialChange={(value) => update('filialId', value)} />
                 {!empresaId ? <div className="col-12"><Message severity="info" className="w-full" text="Selecione a empresa para carregar os produtos e locais de estoque disponíveis." /></div> : null}
                 <div className="field col-12 md:col-6"><label htmlFor="produtoId" className="font-medium">Produto *</label><EntitySelect id="produtoId" entityName="produto" value={textValue(values.produtoId) || null} options={produtoOptions(produtos)} loading={produtosQuery.isFetching} disabled={!empresaId} onChange={(value) => update('produtoId', value)} /><FieldError message={errors.produtoId} /></div>
                 <div className="field col-12 md:col-6"><label htmlFor="localEstoqueId" className="font-medium">Local de estoque *</label><EntitySelect id="localEstoqueId" entityName="local" value={textValue(values.localEstoqueId) || null} options={localOptions(locais)} loading={locaisQuery.isFetching} disabled={!empresaId} onChange={(value) => update('localEstoqueId', value)} /><FieldError message={errors.localEstoqueId} /></div>
                 <div className="field col-12 md:col-4"><label htmlFor="quantidade" className="font-medium">{kind === 'ajuste' ? 'Quantidade contada *' : 'Quantidade *'}</label><QuantityInput id="quantidade" value={kind === 'ajuste' ? Number(values.quantidadeContada ?? 0) : Number(values.quantidade ?? 0)} onChange={(value) => update(kind === 'ajuste' ? 'quantidadeContada' : 'quantidade', value ?? 0)} /><FieldError message={kind === 'ajuste' ? errors.quantidadeContada : errors.quantidade} /></div>
-                <div className="field col-12 md:col-4"><label htmlFor="origemModulo" className="font-medium">Origem *</label><InputText id="origemModulo" value={textValue(values.origemModulo)} onChange={(event) => update('origemModulo', event.target.value)} /><FieldError message={errors.origemModulo} /></div>
+                <div className="field col-12 md:col-4"><label htmlFor="origemModulo" className="font-medium">Módulo de origem *</label><InputText id="origemModulo" value={textValue(values.origemModulo)} onChange={(event) => update('origemModulo', event.target.value)} /><small className="text-color-secondary">Identifica o módulo que gerou a movimentação; o local é selecionado no campo “Local de estoque”.</small><FieldError message={errors.origemModulo} /></div>
                 <div className="field col-12 md:col-4"><label htmlFor="documento" className="font-medium">Documento</label><InputText id="documento" value={textValue(values.documento)} onChange={(event) => update('documento', event.target.value)} /><FieldError message={errors.documento} /></div>
                 <div className="field col-12"><label htmlFor="motivo" className="font-medium">Motivo *</label><InputTextarea id="motivo" value={textValue(values.motivo)} rows={3} autoResize onChange={(event) => update('motivo', event.target.value)} /><FieldError message={errors.motivo} /></div>
             </FormGrid>
-        </Dialog>
     );
+    const confirm = <Button label="Confirmar" icon="pi pi-check" loading={loading} onClick={submit} />;
+
+    if (embedded) {
+        return <Card>{fields}<div className="flex justify-content-end mt-3">{confirm}</div></Card>;
+    }
+
+    return <Dialog header={title} visible={visible} modal style={{ width: 'min(64rem, 96vw)' }} onHide={onHide} footer={<div className="flex justify-content-end gap-2"><Button label="Cancelar" icon="pi pi-times" severity="secondary" outlined disabled={loading} onClick={onHide} />{confirm}</div>}>{fields}</Dialog>;
 };
