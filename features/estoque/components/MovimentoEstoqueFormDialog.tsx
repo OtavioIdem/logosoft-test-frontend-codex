@@ -17,13 +17,15 @@ import { FieldErrors, fieldErrorMap, localOptions, produtoOptions, textValue } f
 import { useLocaisEstoque } from '@/features/estoque/hooks/useEstoqueResources';
 import { MovimentoEstoqueFormValues } from '@/features/estoque/types/estoque.types';
 import { useProdutos } from '@/features/produtos/hooks/useProdutosResources';
+import { useOrganizationalContext } from '@/hooks/useOrganizationalContext';
 
 type MovimentoKind = 'entrada' | 'saida' | 'ajuste';
 
-const buildInitialValues = (kind: MovimentoKind): MovimentoEstoqueFormValues => ({ empresaId: '', filialId: null, produtoId: '', localEstoqueId: '', quantidade: kind === 'ajuste' ? undefined : 0, quantidadeContada: kind === 'ajuste' ? 0 : undefined, origemModulo: 'ESTOQUE', origemId: null, documento: null, motivo: '' });
+const buildInitialValues = (kind: MovimentoKind, empresaId: string | null, filialId: string | null): MovimentoEstoqueFormValues => ({ empresaId: empresaId ?? '', filialId, produtoId: '', localEstoqueId: '', quantidade: kind === 'ajuste' ? undefined : 0, quantidadeContada: kind === 'ajuste' ? 0 : undefined, origemModulo: 'ESTOQUE', origemId: null, documento: null, motivo: '' });
 
 export const MovimentoEstoqueFormDialog = ({ visible, kind, loading, onHide, onSubmit, embedded = false }: { visible: boolean; kind: MovimentoKind; loading?: boolean; onHide: () => void; onSubmit: (values: MovimentoEstoqueFormValues) => Promise<void>; embedded?: boolean }) => {
-    const [values, setValues] = useState<MovimentoEstoqueFormValues>(() => buildInitialValues(kind));
+    const context = useOrganizationalContext();
+    const [values, setValues] = useState<MovimentoEstoqueFormValues>(() => buildInitialValues(kind, context.snapshot.empresaId, context.snapshot.filialId));
     const [errors, setErrors] = useState<FieldErrors>({});
 
     // Produto e Local são carregados pela empresa/filial selecionada no próprio modal — o backend só
@@ -39,10 +41,10 @@ export const MovimentoEstoqueFormDialog = ({ visible, kind, loading, onHide, onS
 
     useEffect(() => {
         if (visible) {
-            setValues(buildInitialValues(kind));
+            setValues(buildInitialValues(kind, context.snapshot.empresaId, context.snapshot.filialId));
             setErrors({});
         }
-    }, [kind, visible]);
+    }, [context.snapshot.empresaId, context.snapshot.filialId, kind, visible]);
 
     const update = (name: keyof MovimentoEstoqueFormValues, value: unknown) => {
         setValues((current) => ({ ...current, [name]: value }));
@@ -58,7 +60,7 @@ export const MovimentoEstoqueFormDialog = ({ visible, kind, loading, onHide, onS
         }
         await onSubmit(parsed.data as MovimentoEstoqueFormValues);
         if (embedded) {
-            setValues(buildInitialValues(kind));
+            setValues(buildInitialValues(kind, context.snapshot.empresaId, context.snapshot.filialId));
             setErrors({});
         }
     };
@@ -67,8 +69,8 @@ export const MovimentoEstoqueFormDialog = ({ visible, kind, loading, onHide, onS
 
     const fields = (
             <FormGrid>
-                <EmpresaFilialFields empresaId={empresaId} filialId={filialId} empresaError={errors.empresaId} filialError={errors.filialId} onEmpresaChange={(value) => update('empresaId', value)} onFilialChange={(value) => update('filialId', value)} />
                 {!empresaId ? <div className="col-12"><Message severity="info" className="w-full" text="Selecione a empresa para carregar os produtos e locais de estoque disponíveis." /></div> : null}
+                <EmpresaFilialFields empresaId={empresaId} filialId={filialId} empresaError={errors.empresaId} filialError={errors.filialId} onEmpresaChange={(value) => update('empresaId', value)} onFilialChange={(value) => update('filialId', value)} />
                 <div className="field col-12 md:col-6"><label htmlFor="produtoId" className="font-medium">Produto *</label><EntitySelect id="produtoId" entityName="produto" value={textValue(values.produtoId) || null} options={produtoOptions(produtos)} loading={produtosQuery.isFetching} disabled={!empresaId} onChange={(value) => update('produtoId', value)} /><FieldError message={errors.produtoId} /></div>
                 <div className="field col-12 md:col-6"><label htmlFor="localEstoqueId" className="font-medium">Local de estoque *</label><EntitySelect id="localEstoqueId" entityName="local" value={textValue(values.localEstoqueId) || null} options={localOptions(locais)} loading={locaisQuery.isFetching} disabled={!empresaId} onChange={(value) => update('localEstoqueId', value)} /><FieldError message={errors.localEstoqueId} /></div>
                 <div className="field col-12 md:col-4"><label htmlFor="quantidade" className="font-medium">{kind === 'ajuste' ? 'Quantidade contada *' : 'Quantidade *'}</label><QuantityInput id="quantidade" value={kind === 'ajuste' ? Number(values.quantidadeContada ?? 0) : Number(values.quantidade ?? 0)} onChange={(value) => update(kind === 'ajuste' ? 'quantidadeContada' : 'quantidade', value ?? 0)} /><FieldError message={kind === 'ajuste' ? errors.quantidadeContada : errors.quantidade} /></div>
