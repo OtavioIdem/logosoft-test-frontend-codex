@@ -28,3 +28,18 @@ export const GERAR_NF_PEDIDO_VENDA = {
     efeito:
         'Gera a nota fiscal em rascunho a partir do pedido. Depois disso, o módulo Faturamento não consegue faturar este pedido: a nota já existe para a origem e não é reaproveitada.'
 } as const;
+
+// ---------------------------------------------------------------------------------------------
+// Ambiente fiscal
+// ---------------------------------------------------------------------------------------------
+// O backend expõe TipoAmbienteFiscal (enum de domínio), não o tpAmb do XML:
+// 1 = Homologação e 2 = Produção. Não usar os códigos de fio aqui.
+export const ambienteFiscalLabel = (ambiente?: number | null) => {
+    const labels: Record<number, string> = {
+        1: 'Homologação',
+        2: 'Produção'
+    };
+
+    if (ambiente === null || ambiente === undefined) return 'Não informado';
+    return labels[Number(ambiente)] ?? `Não mapeado (${ambiente})`;
+};

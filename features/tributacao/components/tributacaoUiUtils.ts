@@ -40,7 +40,8 @@ export const regimeTributarioOptions: SelectOption<number>[] = [
 export const crtOptions: SelectOption<number>[] = [
     { label: '1 — Simples Nacional', value: Crt.SimplesNacional },
     { label: '2 — Simples Nacional, excesso de sublimite', value: Crt.SimplesNacionalExcessoSublimite },
-    { label: '3 — Regime normal', value: Crt.RegimeNormal }
+    { label: '3 — Regime normal', value: Crt.RegimeNormal },
+    { label: '4 — Microempreendedor Individual (MEI)', value: Crt.MicroempreendedorIndividual }
 ];
 
 export const indicadorContribuinteOptions: SelectOption<number>[] = [
@@ -53,7 +54,9 @@ export const finalidadeOptions: SelectOption<number>[] = [
     { label: 'Normal', value: FinalidadeNaturezaOperacao.Normal },
     { label: 'Complementar', value: FinalidadeNaturezaOperacao.Complementar },
     { label: 'Ajuste', value: FinalidadeNaturezaOperacao.Ajuste },
-    { label: 'Devolução', value: FinalidadeNaturezaOperacao.Devolucao }
+    { label: 'Devolução', value: FinalidadeNaturezaOperacao.Devolucao },
+    { label: 'Nota de crédito', value: FinalidadeNaturezaOperacao.NotaDeCredito },
+    { label: 'Nota de débito', value: FinalidadeNaturezaOperacao.NotaDeDebito }
 ];
 
 export const naturezaTomadorOptions: SelectOption<number>[] = [
@@ -186,7 +189,8 @@ export const modalidadeBaseIcmsStOptions: SelectOption<number>[] = [
     { label: 'Preço tabelado', value: ModalidadeBaseCalculoIcmsSt.PrecoTabelado },
     { label: 'Lista negativa', value: ModalidadeBaseCalculoIcmsSt.ListaNegativa },
     { label: 'Lista positiva', value: ModalidadeBaseCalculoIcmsSt.ListaPositiva },
-    { label: 'Lista neutra', value: ModalidadeBaseCalculoIcmsSt.ListaNeutra }
+    { label: 'Lista neutra', value: ModalidadeBaseCalculoIcmsSt.ListaNeutra },
+    { label: 'Valor da operação', value: ModalidadeBaseCalculoIcmsSt.ValorOperacao }
 ];
 
 export const regimePisCofinsOptions: SelectOption<number>[] = [
@@ -220,7 +224,7 @@ export const consumidorFinalCuringaOptions: SelectOption<boolean | null>[] = [
 
 const labelDe = <T extends string | number>(options: SelectOption<T>[], value: T | null | undefined, fallback = '-') => {
     if (value === null || value === undefined) return fallback;
-    return options.find((option) => option.value === value)?.label ?? String(value);
+    return options.find((option) => option.value === value)?.label ?? `Não mapeado (${String(value)})`;
 };
 
 export const tipoOperacaoLabel = (value?: number | null) => labelDe(tipoOperacaoOptions, value ?? null);

@@ -219,6 +219,8 @@ export type AcoesResumoFiscalResponse = {
     podeGerarXmlEnvio: boolean;
     podeAssinarXmlEnvio: boolean;
     podeTransmitirSefaz: boolean;
+    // Campo aditivo do resumo K2c: somente o backend decide quando a nota pode reabrir.
+    podeReabrir?: boolean;
     podeGerarDanfe: boolean;
     podeBaixarEstoque: boolean;
     podeGerarContaReceber: boolean;
@@ -394,26 +396,29 @@ export type ArmazenarXmlNotaFiscalRequest = {
 
 export type GerarXmlEnvioNotaFiscalRequest = {
     armazenarXml: boolean;
-    validarSchema: boolean;
+    // K7: mantido até a remoção do contrato pelo backend; NF-e/NFC-e o ignoram.
+    validarSchema?: boolean;
     schemaSetName?: string | null;
 };
 
 export type AssinarXmlNotaFiscalRequest = {
     certificateThumbprint?: string | null;
-    xmlEnvio?: string | null;
     armazenarXmlAssinado: boolean;
-    validarSchemaAntesAssinatura: boolean;
+    validarSchemaAntesAssinatura?: boolean;
     schemaSetName?: string | null;
 };
 
 export type TransmitirNotaFiscalSefazRequest = {
     ufAutorizadora: string;
     servico: TipoServicoTransmissaoFiscal | number;
-    xmlEnvioAssinado?: string | null;
-    validarSchemaAntesTransmissao: boolean;
+    validarSchemaAntesTransmissao?: boolean;
     schemaSetName?: string | null;
     // NotaFiscalValidators.cs:238 -- CorrelationId obrigatório na transmissão (D43, F2.6)
     correlationId: string;
+};
+
+export type ReabrirNotaFiscalRequest = {
+    motivo: string;
 };
 
 export type ReprocessarNotaFiscalSefazRequest = TransmitirNotaFiscalSefazRequest & {

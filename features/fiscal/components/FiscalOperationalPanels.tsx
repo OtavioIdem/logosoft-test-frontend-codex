@@ -21,6 +21,7 @@ import {
     tipoContingenciaFiscalLabel,
     tipoDocumentoAuxiliarFiscalLabel
 } from '@/features/fiscal/components/fiscalUiUtils';
+import { ambienteFiscalLabel } from '@/features/fiscal/components/fiscalLabels';
 
 export const statusIntegracaoLabel = (status?: number | null) => {
     const labels: Record<number, string> = {
@@ -68,7 +69,7 @@ export const StatusServicoResultPanel = ({ result }: { result: StatusServicoSefa
         <div className="grid">
             <div className="col-12 md:col-3"><span className="text-color-secondary text-sm">UF</span><div className="font-medium">{result.ufAutorizadora}</div></div>
             <div className="col-12 md:col-3"><span className="text-color-secondary text-sm">Código</span><div className="font-medium">{result.codigoStatus ?? '-'}</div></div>
-            <div className="col-12 md:col-3"><span className="text-color-secondary text-sm">Ambiente</span><div className="font-medium">{result.ambiente}</div></div>
+            <div className="col-12 md:col-3"><span className="text-color-secondary text-sm">Ambiente</span><div className="font-medium">{ambienteFiscalLabel(result.ambiente)}</div></div>
             <div className="col-12 md:col-3"><span className="text-color-secondary text-sm">Consultado em</span><div className="font-medium">{formatFiscalDate(result.consultadoEm)}</div></div>
             <div className="col-12"><span className="text-color-secondary text-sm">Motivo</span><div className="font-medium">{result.motivo ?? '-'}</div></div>
         </div>

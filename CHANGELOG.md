@@ -1,3 +1,83 @@
+# v1.11.0a8b76
+
+## Fiscal v1.24 (P1): pipeline XML sem opções mortas, reabrir nota, ambiente e enums por rótulo
+
+O frontend acompanha o contrato fiscal v1.24-p1 do backend nas ações AJ-05, AJ-06, AJ-08, AJ-12, AJ-16 a AJ-19. O
+plano está em `docs/fatias/v1.11.0a8b76-fiscal-v124-validacoes.md`. Os inventários que sustentam a fatia são os
+`17`, `18` e `20` de `docs/arquitetura/debate/`.
+
+**Risco: `CRITICAL`** (toca geração, assinatura, transmissão e reprocessamento de NF-e). **Risco de acesso: `NENHUM`**:
+o botão novo usa `FISCAL_GERENCIAR`, que já existe, e nenhum guard antigo mudou.
+
+### Seção operacional
+
+1. **Reabrir nota (AJ-12).** O detalhe da nota ganha "Reabrir nota", com motivo obrigatório de 15 a 400 caracteres,
+   enviado para `POST /api/fiscal/notas-fiscais/{id}/reabrir`. O botão só fica habilitado quando o resumo operacional
+   traz `podeReabrir = true`; a tela não decide sozinha. Quem já tem `FISCAL_GERENCIAR` passa a ver o botão — não há
+   permissão nova a conceder.
+   - O botão lê só o resumo operacional, não o workflow. Na leitura do backend em `1fa1bfd` não há ação "reabrir" em
+     `ProximasAcoes`; se ela passar a existir, a tela precisa rotear por `resolveFiscalWorkflowActionState` (QA-4).
+   - No backend, `PodeReabrir` está em `NotaFiscalResponse.cs:148` e só fica verdadeiro com a nota em `Validada` ou
+     `Assinada` (`FiscalResumoOperacionalMapper.cs:51`).
+2. **Itens só editáveis em Rascunho (K2).** Depois de validada, a nota só volta a aceitar edição de itens pela reabertura.
+   - A regra espelha `NotaFiscal.GarantirConteudoAlteravel` (`Erp.Domain/Fiscal/NotaFiscal.cs:810`, que aceita só
+     Rascunho, INV-NFE-001), lida no backend em `1fa1bfd`.
+   - O botão "Imposto" segue a mesma regra.
+3. **Pipeline XML (AJ-16 a AJ-19).** Gerar, assinar, transmitir e reprocessar deixam de exibir e de enviar
+   "Validar schema" e o campo de XML colado à mão: o backend valida sempre e usa o XML armazenado. Os campos continuam
+   opcionais no tipo enquanto o backend ainda os declarar.
+4. **Armazenar XML** não oferece mais o tipo "Envio"; o XML de envio só nasce no pipeline. O padrão passa a ser "Autorizado".
+5. **Ambiente por rótulo (AJ-05).** Status SEFAZ e observabilidade mostram Homologação/Produção a partir do enum de
+   domínio (1/2), nunca o número nem o `tpAmb`.
+6. **CST monofásico (AJ-08).** O erro `FISCAL_TRIBUTACAO_CST_MONOFASICO_NAO_SUPORTADO` vira orientação acionável, com
+   atalho para Regras fiscais (ou o texto de quem pedir, sem permissão de regras).
+7. **Enums novos (AJ-06).** CRT 4 (MEI), finalidades 5/6 (nota de crédito e de débito) e modalidade de base do ICMS-ST 7
+   (valor da operação) ganham rótulo e opção nos selects. Valor que a tela ainda não conhece aparece como
+   "Não mapeado (n)" e não some do select ao editar (Empresa, Natureza e Ambiente). O inventário K3 conferiu 7 enums e
+   34 valores contra o C# do backend, sem nenhum faltando ou sobrando.
+8. **AJ-06 parcial, de propósito (D105).**
+   - A mensagem de coerência CRT × regime continua no toast, não junto do campo de regime. O backend a devolve como
+     `ADMINISTRACAO_VALIDACAO`, sem código próprio nem campo, e casar o texto seria frágil. A pergunta ao backend é a **B-45**.
+   - O fallback "não mapeado" nos outros 7 selects (Regra fiscal, Simulador, Pessoa fiscal) fica para a `.c1`.
+
+### Testes e QA
+
+- Testes novos ou alterados em 19 arquivos. Três são novos: `tests/components/FiscalXmlPipelineDialogs.test.tsx`,
+  `NotaFiscalDetalhePageReabrir.test.tsx` e `NotaFiscalDetalhePageEditarItens.test.tsx`.
+- **Motivo em Item e Imposto (R2 da segunda passada do QA):**
+  - os dois botões, desabilitados fora de Rascunho, passam a mostrar no `title` o motivo
+    `MOTIVO_EDICAO_ITENS_INDISPONIVEL`, ou a permissão que falta;
+  - tem 3 casos unitários e 2 de página;
+  - **prova vermelha:** sem o `title` no botão Item, o caso Validada falha nominalmente;
+  - a produção foi restaurada e conferida por sha256.
+- **Habilitação do Reabrir (QA-1 da primeira passada do QA):**
+  - a regra saiu para `resolveReabrirNotaActionState` (`fiscalUiUtils.ts`);
+  - tem 4 casos unitários e 5 de página renderizada, inclusive a sessão sem `FISCAL_GERENCIAR`;
+  - **prova vermelha executada:** com `habilitada: true` e sem `!habilitada` no botão, 6 testes falham nominalmente;
+  - a produção foi restaurada por cópia e conferida por `cmp` e sha256;
+  - a remoção do `PermissionGuard` não teve prova vermelha própria.
+- **E2E isolado sobre a árvore final:**
+  - porta 3411, servidor do próprio diretório conferido por `netstat` e pela linha de comando do processo;
+  - 10 specs: fiscal, fiscal-impostos, fiscal-series, fiscal-transmissao, naturezas, pessoa fiscal, faturamento,
+    fluxos críticos, cadastros e campo-decimal-pt-br;
+  - 38/38 nas duas execuções;
+  - nenhuma spec E2E cobre o Reabrir nem o bloqueio de Item e Imposto fora de Rascunho; essa cobertura é de componente.
+- `npm run build` com exit 0.
+- **Varredura transversal:**
+  - a lista vem de `grep -rlE` em `tests/unit` e `tests/components`, com o padrão formado pelos nomes base dos 19
+    arquivos de `features/` no diff, somado aos 3 testes novos;
+  - são 38 arquivos;
+  - verde em 2 de 4 execuções, todas sem carga concorrente;
+  - as falhas são sempre `Test timed out in 5000ms`, nunca de asserção, e só em `FaturamentoConfirmarResultado.test.tsx`
+    e `SimuladorTributacaoPage.test.tsx`.
+- **Resultado medido, anterior a esta versão:**
+  - na `origin/main` (`7957785`, sem a b76), em worktree separada, o mesmo lote (35 arquivos, sem os 3 novos) falhou
+    em 2 de 3 execuções, nos mesmos dois arquivos e pelo mesmo timeout;
+  - isolados, os dois passam 5 de 5 na árvore da b76, com 1,4 a 3,0 s por teste;
+  - conclusão: o orçamento de 5 s desses dois arquivos estoura sob paralelismo nesta máquina, e a b76 não causou isso;
+  - dívida para o `engenheiro-testes`: rever o orçamento de tempo desses dois arquivos.
+- typecheck verde (`npx tsc --noEmit -p .`, exit 0).
+
 # v1.11.0a8b75.c1
 
 ## Dívidas de QA da b73, b74 e b75: foco depois de excluir endereço, testes do principal e comentários corrigidos

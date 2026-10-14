@@ -6,7 +6,7 @@ export const regimeTributarioLabel = (value: unknown) => {
         [RegimeTributario.LucroPresumido]: 'Lucro presumido',
         [RegimeTributario.LucroReal]: 'Lucro real'
     };
-    return map[Number(value)] ?? String(value);
+    return map[Number(value)] ?? `Não mapeado (${String(value)})`;
 };
 
 export const regimeTributarioOptions = [
@@ -15,23 +15,25 @@ export const regimeTributarioOptions = [
     { label: 'Lucro real', value: RegimeTributario.LucroReal }
 ];
 
-// Crt não tem zero (1, 2, 3) — o sentinel `''` representa "não informado" e vira `null` no schema
+// Crt não tem zero (1, 2, 3, 4) — o sentinel `''` representa "não informado" e vira `null` no schema
 // (administracaoSchemas.ts), nunca `Crt.SimplesNacional` por ser a primeira opção da lista.
 export const crtLabel = (value: unknown) => {
     if (value === null || value === undefined || value === '') return 'Não informado';
     const map: Record<number, string> = {
         [Crt.SimplesNacional]: 'Simples Nacional',
         [Crt.SimplesNacionalExcessoSublimite]: 'Simples Nacional — excesso de sublimite',
-        [Crt.RegimeNormal]: 'Regime normal'
+        [Crt.RegimeNormal]: 'Regime normal',
+        [Crt.MicroempreendedorIndividual]: 'Microempreendedor Individual (MEI)'
     };
-    return map[Number(value)] ?? String(value);
+    return map[Number(value)] ?? `Não mapeado (${String(value)})`;
 };
 
 export const crtOptions = [
     { label: 'Não informado', value: '' },
     { label: 'Simples Nacional', value: Crt.SimplesNacional },
     { label: 'Simples Nacional — excesso de sublimite', value: Crt.SimplesNacionalExcessoSublimite },
-    { label: 'Regime normal', value: Crt.RegimeNormal }
+    { label: 'Regime normal', value: Crt.RegimeNormal },
+    { label: 'Microempreendedor Individual (MEI)', value: Crt.MicroempreendedorIndividual }
 ];
 
 // Sentinel de `contribuinteIpiPatch` (administracaoPageConfig.ts) — `''` não gera chave no PUT

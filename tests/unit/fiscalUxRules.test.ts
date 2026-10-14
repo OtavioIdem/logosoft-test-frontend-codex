@@ -5,6 +5,8 @@ import {
     formatoDocumentoAuxiliarFiscalLabel,
     fiscalActionDisabledReason,
     fiscalOrigemContextLabel,
+    MOTIVO_EDICAO_ITENS_INDISPONIVEL,
+    notaEditarItensDisabledReason,
     fiscalReferenceContextLabel,
     maskFiscalSensitiveText,
     tipoContingenciaFiscalLabel,
@@ -21,9 +23,10 @@ import {
     resetFiltrosFiscaisPorEmpresa,
     resetFiltrosFiscaisPorFilial,
     resolveFiscalWorkflowActionState,
+    resolveReabrirNotaActionState,
     statusNotaFiscalLabel
 } from '@/features/fiscal/components/fiscalUiUtils';
-import { NotaFiscalResponse } from '@/features/fiscal/types/fiscal.types';
+import { NotaFiscalResponse, ResumoOperacionalNotaFiscalResponse } from '@/features/fiscal/types/fiscal.types';
 
 const baseNota: NotaFiscalResponse = {
     id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
@@ -69,6 +72,11 @@ describe('regras visuais fiscais', () => {
         const nota = { ...baseNota, valorProdutos: 100, valorTotal: 100, itens: [{ id: 'i1', sequencia: 1, codigoItem: 'P001', descricao: 'Produto', unidadeComercial: 'UN', quantidade: 1, valorUnitario: 100, valorBruto: 100, valorDesconto: 0, valorTotal: 100 } as never] };
         expect(notaPodeValidar(nota)).toBe(true);
         expect(notaPodeTransmitir(nota)).toBe(false);
+    });
+
+    it('K2: bloqueia a edição após validar; a correção passa pela reabertura autorizada pelo backend', () => {
+        const validada = { ...baseNota, statusFiscal: StatusNotaFiscal.Validada };
+        expect(notaPodeEditarItens(validada)).toBe(false);
     });
 
     it('habilita cancelamento, CC-e e DANFE somente para nota autorizada', () => {
@@ -183,5 +191,91 @@ describe('regras visuais fiscais', () => {
         expect(masked).not.toContain('CNPJ');
         expect(masked).not.toContain('12345678000199');
         expect(masked).not.toContain('<total>');
+    });
+});
+
+// Reabertura (fatia v1.11.0a8b76, AC-4): o botão "Reabrir nota" só habilita quando o backend manda `acoes.podeReabrir === true`.
+// A tela não calcula nada localmente; ausência do campo (aditivo opcional) ou resumo ausente contam como bloqueio.
+const MOTIVO_REABERTURA_INDISPONIVEL = 'A reabertura não está disponível para esta nota conforme o resumo operacional retornado pelo backend.';
+const MOTIVO_REABERTURA_AGUARDANDO = 'Aguardando o resumo operacional da nota para liberar a reabertura.';
+
+const resumoComAcoes = (acoesExtras: { podeReabrir?: boolean } = {}): ResumoOperacionalNotaFiscalResponse => ({
+    notaFiscalId: baseNota.id,
+    empresaId: baseNota.empresaId,
+    filialId: null,
+    tipoDocumento: TipoDocumentoFiscal.NFe,
+    serie: '1',
+    numero: '1001',
+    statusFiscal: StatusNotaFiscal.Validada,
+    origem: OrigemNotaFiscal.Manual,
+    origemId: null,
+    possuiXmlEnvio: false,
+    possuiXmlAutorizado: false,
+    possuiDanfe: false,
+    acoes: {
+        podeValidar: false,
+        podeGerarXmlEnvio: false,
+        podeAssinarXmlEnvio: false,
+        podeTransmitirSefaz: false,
+        podeGerarDanfe: false,
+        podeBaixarEstoque: false,
+        podeGerarContaReceber: false,
+        podeCancelar: false,
+        podeEmitirCartaCorrecao: false,
+        ...acoesExtras
+    }
+});
+
+describe('AC-4 (v1.11.0a8b76): reabertura de nota depende só de acoes.podeReabrir do resumo operacional', () => {
+    it('habilita a reabertura quando o backend devolve podeReabrir = true', () => {
+        const state = resolveReabrirNotaActionState(resumoComAcoes({ podeReabrir: true }));
+
+        expect(state.habilitada).toBe(true);
+        expect(state.acao).toBeNull();
+        expect(state.fonte).toBe('fallback');
+    });
+
+    it('desabilita a reabertura com o motivo do resumo quando podeReabrir = false', () => {
+        const state = resolveReabrirNotaActionState(resumoComAcoes({ podeReabrir: false }));
+
+        expect(state.habilitada).toBe(false);
+        expect(state.motivoBloqueio).toBe(MOTIVO_REABERTURA_INDISPONIVEL);
+        expect(fiscalActionDisabledReason(false, state)).toBe(MOTIVO_REABERTURA_INDISPONIVEL);
+    });
+
+    it('desabilita a reabertura quando o campo podeReabrir está ausente no resumo (aditivo opcional)', () => {
+        const state = resolveReabrirNotaActionState(resumoComAcoes());
+
+        expect(state.habilitada).toBe(false);
+        expect(state.motivoBloqueio).toBe(MOTIVO_REABERTURA_INDISPONIVEL);
+    });
+
+    it('desabilita a reabertura quando o resumo é undefined ou null, com motivo de espera', () => {
+        for (const resumo of [undefined, null]) {
+            const state = resolveReabrirNotaActionState(resumo);
+
+            expect(state.habilitada).toBe(false);
+            expect(state.motivoBloqueio).toBe(MOTIVO_REABERTURA_AGUARDANDO);
+            expect(fiscalActionDisabledReason(false, state)).toBe(MOTIVO_REABERTURA_AGUARDANDO);
+        }
+    });
+});
+
+describe('R2 (v1.11.0a8b76): motivo de bloqueio da edição de itens e impostos', () => {
+    it('informa a permissão exigida quando a sessão não tem FISCAL_GERENCIAR, mesmo com nota Validada', () => {
+        const validada = { ...baseNota, statusFiscal: StatusNotaFiscal.Validada };
+
+        expect(notaEditarItensDisabledReason(true, validada, 'FISCAL_GERENCIAR')).toBe('Permissão necessária: FISCAL_GERENCIAR.');
+        expect(notaEditarItensDisabledReason(true, baseNota, 'FISCAL_GERENCIAR')).toBe('Permissão necessária: FISCAL_GERENCIAR.');
+    });
+
+    it('devolve o motivo de Rascunho quando a nota está Validada e a sessão tem permissão', () => {
+        const validada = { ...baseNota, statusFiscal: StatusNotaFiscal.Validada };
+
+        expect(notaEditarItensDisabledReason(false, validada, 'FISCAL_GERENCIAR')).toBe(MOTIVO_EDICAO_ITENS_INDISPONIVEL);
+    });
+
+    it('não devolve motivo quando a nota está em Rascunho e a sessão tem permissão', () => {
+        expect(notaEditarItensDisabledReason(false, baseNota, 'FISCAL_GERENCIAR')).toBeUndefined();
     });
 });

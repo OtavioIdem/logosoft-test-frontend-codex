@@ -3,15 +3,20 @@ import { describe, expect, it } from 'vitest';
 import {
     buildAdicionarImpostoNotaFiscalPayload,
     buildAdicionarItemNotaFiscalPayload,
+    buildArmazenarXmlNotaFiscalPayload,
+    buildAssinarXmlEnvioPayload,
     buildCriarNotaFiscalPayload,
     buildDefinirValoresAcessoriosPayload,
     buildGerarNotaFiscalPedidoVendaPayload,
     buildExportarNotasFiscaisCsvQueryParams,
+    buildGerarXmlEnvioPayload,
     buildInutilizarNumeracaoPayload,
+    buildReabrirNotaFiscalPayload,
+    buildReprocessarSefazPayload,
     buildStatusServicoPayload,
     buildTransmitirSefazPayload
 } from '@/features/fiscal/api/fiscalApi';
-import { OrigemNotaFiscal, TipoDocumentoFiscal, TipoOperacaoFiscal, TipoServicoTransmissaoFiscal } from '@/types/erp';
+import { OrigemNotaFiscal, TipoDocumentoFiscal, TipoOperacaoFiscal, TipoServicoTransmissaoFiscal, TipoXmlFiscal } from '@/types/erp';
 
 const empresaId = '11111111-1111-1111-1111-111111111111';
 const filialId = '22222222-2222-2222-2222-222222222222';
@@ -176,7 +181,7 @@ describe('payloads fiscais', () => {
     // AC-2 (v1.11.0a8b57): correlationId da transmissão vira requiredText (NotaFiscalValidators.cs:238) --
     // antes '' virava null e passava; agora recusa. Caso reescrito, não apagado (D43).
     it('recusa correlationId vazio, em branco, nulo, ausente ou acima de 120 na transmissão SEFAZ; aceita até 120 com trim', () => {
-        const base = { ufAutorizadora: 'sp', servico: TipoServicoTransmissaoFiscal.Autorizacao, xmlEnvioAssinado: '', validarSchemaAntesTransmissao: false, schemaSetName: 'NFe-4.00' };
+        const base = { ufAutorizadora: 'sp', servico: TipoServicoTransmissaoFiscal.Autorizacao, validarSchemaAntesTransmissao: false, schemaSetName: 'NFe-4.00' };
 
         expect(() => buildTransmitirSefazPayload({ ...base, correlationId: '' })).toThrow('Informe o correlation ID da transmissão.');
         expect(() => buildTransmitirSefazPayload({ ...base, correlationId: '   ' })).toThrow('Informe o correlation ID da transmissão.');
@@ -186,13 +191,68 @@ describe('payloads fiscais', () => {
 
         expect(buildTransmitirSefazPayload({ ...base, correlationId: 'a'.repeat(120) })).toMatchObject({
             ufAutorizadora: 'SP',
-            xmlEnvioAssinado: null,
             correlationId: 'a'.repeat(120)
         });
 
         expect(buildTransmitirSefazPayload({ ...base, correlationId: '  front-transmitir-20260916-abc123  ' })).toMatchObject({
             correlationId: 'front-transmitir-20260916-abc123'
         });
+    });
+
+    it('AJ-16: assinatura, transmissão e reprocessamento descartam XML livre e usam somente o pipeline vigente', () => {
+        const assinatura = buildAssinarXmlEnvioPayload({
+            certificateThumbprint: '',
+            xmlEnvio: 'conteudo-externo-nao-autorizado',
+            armazenarXmlAssinado: true,
+            validarSchemaAntesAssinatura: false,
+            schemaSetName: 'NFe-4.00'
+        });
+        const transmissao = buildTransmitirSefazPayload({
+            ufAutorizadora: 'SP',
+            servico: TipoServicoTransmissaoFiscal.Autorizacao,
+            xmlEnvioAssinado: 'conteudo-externo-nao-autorizado',
+            validarSchemaAntesTransmissao: false,
+            schemaSetName: 'NFe-4.00',
+            correlationId: 'front-transmitir-pipeline'
+        });
+        const reprocessamento = buildReprocessarSefazPayload({
+            ufAutorizadora: 'SP',
+            servico: TipoServicoTransmissaoFiscal.Autorizacao,
+            xmlEnvioAssinado: 'conteudo-externo-nao-autorizado',
+            validarSchemaAntesTransmissao: false,
+            schemaSetName: 'NFe-4.00',
+            logIntegracaoFiscalId: '66666666-6666-6666-6666-666666666666',
+            correlationIdOriginal: 'front-transmitir-original',
+            correlationId: 'front-reprocessar-pipeline',
+            motivo: 'Reprocessamento pelo pipeline oficial.'
+        });
+
+        expect(assinatura).not.toHaveProperty('xmlEnvio');
+        expect(transmissao).not.toHaveProperty('xmlEnvioAssinado');
+        expect(reprocessamento).not.toHaveProperty('xmlEnvioAssinado');
+    });
+
+    it('AJ-19: geração, assinatura, transmissão e reprocessamento não enviam os bools de schema ignorados pelo backend', () => {
+        const geracao = buildGerarXmlEnvioPayload({ armazenarXml: true, schemaSetName: 'NFe-4.00' });
+        const assinatura = buildAssinarXmlEnvioPayload({ certificateThumbprint: '', armazenarXmlAssinado: true, schemaSetName: 'NFe-4.00' });
+        const transmissao = buildTransmitirSefazPayload({ ufAutorizadora: 'SP', servico: TipoServicoTransmissaoFiscal.Autorizacao, schemaSetName: 'NFe-4.00', correlationId: 'front-transmitir-k7' });
+        const reprocessamento = buildReprocessarSefazPayload({ ufAutorizadora: 'SP', servico: TipoServicoTransmissaoFiscal.Autorizacao, schemaSetName: 'NFe-4.00', logIntegracaoFiscalId: '66666666-6666-6666-6666-666666666666', correlationIdOriginal: 'front-transmitir-original', correlationId: 'front-reprocessar-k7', motivo: 'Reprocessamento pelo pipeline oficial.' });
+
+        expect(geracao).not.toHaveProperty('validarSchema');
+        expect(assinatura).not.toHaveProperty('validarSchemaAntesAssinatura');
+        expect(transmissao).not.toHaveProperty('validarSchemaAntesTransmissao');
+        expect(reprocessamento).not.toHaveProperty('validarSchemaAntesTransmissao');
+    });
+
+    it('AJ-17: armazenamento manual rejeita XML de envio e inicia em tipo permitido', () => {
+        expect(buildArmazenarXmlNotaFiscalPayload({ conteudoXml: '<xml />' })).toMatchObject({ tipo: TipoXmlFiscal.Autorizado });
+        expect(() => buildArmazenarXmlNotaFiscalPayload({ tipo: TipoXmlFiscal.Envio, conteudoXml: '<xml />' })).toThrow('O XML de envio é gerado exclusivamente pelo pipeline fiscal.');
+    });
+
+    it('AJ-12: reabertura exige motivo auditável de 15 a 400 caracteres e normaliza espaços', () => {
+        expect(buildReabrirNotaFiscalPayload({ motivo: '  Correção da classificação fiscal.  ' })).toEqual({ motivo: 'Correção da classificação fiscal.' });
+        expect(() => buildReabrirNotaFiscalPayload({ motivo: 'x'.repeat(14) })).toThrow('Informe um motivo com pelo menos 15 caracteres.');
+        expect(() => buildReabrirNotaFiscalPayload({ motivo: 'x'.repeat(401) })).toThrow('Informe no máximo 400 caracteres.');
     });
 
     // AC-2: correlationIdSchema (:13) não muda -- reprocessar continua recusando vazio (é requiredText desde antes) e

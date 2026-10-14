@@ -33,6 +33,7 @@ import {
     ImpostoNotaFiscalDialog,
     ItemNotaFiscalDialog,
     RegistrarRejeicaoDialog,
+    ReabrirNotaFiscalDialog,
     ReprocessarSefazDialog,
     TransmitirSefazDialog,
     ValoresAcessoriosDialog,
@@ -52,6 +53,7 @@ import {
     notaPodeCartaCorrecao,
     notaPodeDefinirValoresAcessorios,
     notaPodeEditarItens,
+    notaEditarItensDisabledReason,
     fiscalActionDisabledReason,
     notaPodeBaixarEstoque,
     notaPodeGerarContaReceber,
@@ -63,6 +65,7 @@ import {
     notaPodeTransmitir,
     notaPodeValidar,
     resolveFiscalWorkflowActionState,
+    resolveReabrirNotaActionState,
     statusNotaFiscalLabel,
     statusNotaFiscalTagValue,
     tipoDocumentoFiscalLabel,
@@ -121,7 +124,8 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
             contingencia: resolveFiscalWorkflowActionState(workflow, ['HABILITAR_CONTINGENCIA', 'CONTINGENCIA', 'AVALIAR_CONTINGENCIA'], notaPodeHabilitarContingencia(nota, workflow)),
             baixarEstoque: resolveFiscalWorkflowActionState(workflow, ['BAIXAR_ESTOQUE'], notaPodeBaixarEstoque(resumo)),
             gerarFinanceiro: resolveFiscalWorkflowActionState(workflow, ['GERAR_CONTA_RECEBER', 'FINANCEIRO'], notaPodeGerarContaReceber(resumo)),
-            danfe: resolveFiscalWorkflowActionState(workflow, ['GERAR_DANFE', 'DANFE'], notaPodeGerarDanfe(nota, resumo))
+            danfe: resolveFiscalWorkflowActionState(workflow, ['GERAR_DANFE', 'DANFE'], notaPodeGerarDanfe(nota, resumo)),
+            reabrir: resolveReabrirNotaActionState(resumo)
         }),
         [nota, resumo, workflow]
     );
@@ -168,6 +172,7 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
 
     const gerarXml = (values: unknown) => run('XML fiscal', async () => setUltimoXml(await mutations.gerarXmlMutation.mutateAsync({ id: notaId, values })), 'XML de envio gerado.');
     const assinarXml = (values: unknown) => run('Assinatura XML', async () => setUltimoXml(await mutations.assinarXmlMutation.mutateAsync({ id: notaId, values })), 'XML de envio assinado.');
+    const reabrir = (motivo: string) => run('Reabertura da nota', () => mutations.reabrirMutation.mutateAsync({ id: notaId, values: { motivo } }), 'Nota reaberta para correção.');
     const transmitir = (values: unknown) => runRetornoSefaz('Transmissão SEFAZ', () => mutations.transmitirMutation.mutateAsync({ id: notaId, values }), 'Retorno da transmissão recebido.', setUltimaTransmissao);
     const reprocessar = (values: unknown) => runRetornoSefaz('Reprocessamento SEFAZ', () => mutations.reprocessarMutation.mutateAsync({ id: notaId, values }), 'Reprocessamento concluído.', setUltimaTransmissao);
     const consultarProtocolo = (values: unknown) => runRetornoSefaz('Consulta protocolo', () => mutations.consultarProtocoloMutation.mutateAsync({ id: notaId, values }), 'Consulta realizada.', setUltimaConsulta);
@@ -197,8 +202,8 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
         <div className="flex gap-2 flex-wrap justify-content-end">
             <Button label="Voltar" icon="pi pi-arrow-left" severity="secondary" outlined onClick={() => router.push('/fiscal/notas')} />
             <Button label="Atualizar" icon="pi pi-refresh" outlined onClick={() => { notaQuery.refetch(); resumoQuery.refetch(); workflowQuery.refetch(); integracoesQuery.refetch(); }} loading={notaQuery.isFetching || resumoQuery.isFetching || workflowQuery.isFetching || integracoesQuery.isFetching} />
-            <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Item" icon="pi pi-plus" disabled={disabled || !notaPodeEditarItens(nota)} onClick={() => setDialog('item')} />}</PermissionGuard>
-            <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Imposto" icon="pi pi-percentage" disabled={disabled || !notaPodeEditarItens(nota)} onClick={() => setDialog('imposto')} />}</PermissionGuard>
+            <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Item" icon="pi pi-plus" disabled={disabled || !notaPodeEditarItens(nota)} title={notaEditarItensDisabledReason(disabled, nota, 'FISCAL_GERENCIAR')} onClick={() => setDialog('item')} />}</PermissionGuard>
+            <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Imposto" icon="pi pi-percentage" disabled={disabled || !notaPodeEditarItens(nota)} title={notaEditarItensDisabledReason(disabled, nota, 'FISCAL_GERENCIAR')} onClick={() => setDialog('imposto')} />}</PermissionGuard>
             <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Valores acessórios" icon="pi pi-wallet" outlined disabled={disabled || !notaPodeDefinirValoresAcessorios(nota)} title={disabled ? 'Permissão necessária: FISCAL_GERENCIAR.' : motivoValoresAcessoriosIndisponivel(nota) ?? undefined} onClick={() => setDialog('valoresAcessorios')} />}</PermissionGuard>
             <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Validar" icon="pi pi-check-circle" severity="success" disabled={disabled || !actionStates.validar.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.validar, 'FISCAL_GERENCIAR')} loading={mutations.validarMutation.isPending} onClick={validar} />}</PermissionGuard>
             <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Gerar XML" icon="pi pi-code" disabled={disabled || !actionStates.gerarXml.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.gerarXml, 'FISCAL_GERENCIAR')} onClick={() => setDialog('gerarXml')} />}</PermissionGuard>
@@ -260,6 +265,7 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
                             <Card title="Ações autorizadas" className="mb-3">
                                 <div className="flex flex-column gap-2">
                                     <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Armazenar XML" icon="pi pi-save" outlined disabled={disabled} onClick={() => setDialog('armazenarXml')} />}</PermissionGuard>
+                                    <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Reabrir nota" icon="pi pi-lock-open" severity="warning" outlined disabled={disabled || !actionStates.reabrir.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.reabrir, 'FISCAL_GERENCIAR')} onClick={() => setDialog('reabrir')} />}</PermissionGuard>
                                     <PermissionGuard permission="FISCAL_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Registrar rejeição" icon="pi pi-exclamation-triangle" outlined disabled={disabled || !actionStates.registrarRejeicao.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.registrarRejeicao, 'FISCAL_GERENCIAR')} onClick={() => setDialog('rejeicao')} />}</PermissionGuard>
                                     <PermissionGuard permission="FISCAL_CANCELAR" mode="disable">{({ disabled }) => <Button label="Cancelar local" icon="pi pi-ban" severity="danger" outlined disabled={disabled || !actionStates.cancelar.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.cancelar, 'FISCAL_CANCELAR')} onClick={() => setDialog('cancelarLocal')} />}</PermissionGuard>
                                     <PermissionGuard permission="FISCAL_CANCELAR" mode="disable">{({ disabled }) => <Button label="Cancelar SEFAZ" icon="pi pi-cloud-upload" severity="danger" disabled={disabled || !actionStates.cancelar.habilitada} title={fiscalActionDisabledReason(disabled, actionStates.cancelar, 'FISCAL_CANCELAR')} onClick={() => setDialog('cancelarSefaz')} />}</PermissionGuard>
@@ -355,6 +361,7 @@ export const NotaFiscalDetalhePage = ({ notaId }: { notaId: string }) => {
                     <XmlPipelineDialog mode="assinar" visible={dialog === 'assinarXml'} loading={mutations.assinarXmlMutation.isPending} onHide={() => setDialog(null)} onSubmit={assinarXml} />
                     <TransmitirSefazDialog visible={dialog === 'transmitir'} loading={mutations.transmitirMutation.isPending} onHide={() => setDialog(null)} onSubmit={transmitir} />
                     <ArmazenarXmlDialog visible={dialog === 'armazenarXml'} loading={mutations.armazenarXmlMutation.isPending} onHide={() => setDialog(null)} onSubmit={(values) => run('XML fiscal', () => mutations.armazenarXmlMutation.mutateAsync({ id: notaId, values }), 'XML armazenado.')} />
+                    <ReabrirNotaFiscalDialog visible={dialog === 'reabrir'} loading={mutations.reabrirMutation.isPending} onHide={() => setDialog(null)} onSubmit={reabrir} />
                     <RegistrarRejeicaoDialog visible={dialog === 'rejeicao'} loading={mutations.registrarRejeicaoMutation.isPending} onHide={() => setDialog(null)} onSubmit={(values) => run('Rejeição fiscal', () => mutations.registrarRejeicaoMutation.mutateAsync({ id: notaId, values }), 'Rejeição registrada.')} />
                     <CancelarNotaLocalDialog visible={dialog === 'cancelarLocal'} loading={mutations.cancelarMutation.isPending} onHide={() => setDialog(null)} onSubmit={(values) => run('Cancelamento fiscal', () => mutations.cancelarMutation.mutateAsync({ id: notaId, values }), 'Nota cancelada localmente.')} />
                     <CancelarNotaSefazDialog visible={dialog === 'cancelarSefaz'} loading={mutations.cancelarSefazMutation.isPending} onHide={() => setDialog(null)} onSubmit={(values) => run('Cancelamento SEFAZ', () => mutations.cancelarSefazMutation.mutateAsync({ id: notaId, values }), 'Retorno de cancelamento recebido.')} />

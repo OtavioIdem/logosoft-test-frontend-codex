@@ -1,7 +1,9 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { TransmitirSefazDialog } from '@/features/fiscal/components/FiscalActionDialogs';
+
+afterEach(cleanup);
 
 // AC-3 (v1.11.0a8b57): Correlation ID somente leitura, com prefixo fixo, gerado a cada abertura do diálogo.
 const campoPorRotulo = (rotulo: string) => {

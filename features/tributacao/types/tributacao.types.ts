@@ -28,7 +28,8 @@ export enum RegimeTributario {
 export enum Crt {
     SimplesNacional = 1,
     SimplesNacionalExcessoSublimite = 2,
-    RegimeNormal = 3
+    RegimeNormal = 3,
+    MicroempreendedorIndividual = 4
 }
 
 export enum IndicadorContribuinteIcms {
@@ -57,7 +58,9 @@ export enum FinalidadeNaturezaOperacao {
     Normal = 1,
     Complementar = 2,
     Ajuste = 3,
-    Devolucao = 4
+    Devolucao = 4,
+    NotaDeCredito = 5,
+    NotaDeDebito = 6
 }
 
 export enum NaturezaTomadorServico {
@@ -80,7 +83,8 @@ export enum ModalidadeBaseCalculoIcmsSt {
     PrecoTabelado = 3,
     ListaNegativa = 4,
     ListaPositiva = 5,
-    ListaNeutra = 6
+    ListaNeutra = 6,
+    ValorOperacao = 7
 }
 
 export enum RegimePisCofins {

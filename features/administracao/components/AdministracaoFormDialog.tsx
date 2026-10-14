@@ -15,7 +15,7 @@ import { EmpresaSelect } from '@/components/forms/EmpresaSelect';
 import { FilialSelect } from '@/components/forms/FilialSelect';
 import { SetorSelect } from '@/components/forms/SetorSelect';
 import { FieldError } from '@/components/forms/FieldError';
-import { AdministracaoFieldConfig } from '@/features/administracao/components/administracaoPageConfig';
+import { AdministracaoFieldConfig, AdministracaoFieldOption } from '@/features/administracao/components/administracaoPageConfig';
 import { AdministracaoFormValues } from '@/features/administracao/types/administracao.types';
 
 type AdministracaoFormDialogProps = {
@@ -39,6 +39,14 @@ type FieldErrors = Record<string, string | undefined>;
 
 const getStringValue = (value: unknown) => (typeof value === 'string' ? value : value === null || value === undefined ? '' : String(value));
 const getNumberValue = (value: unknown) => (typeof value === 'number' ? value : value === null || value === undefined || value === '' ? null : Number(value));
+const isSelectValue = (value: unknown): value is number | string => (typeof value === 'number' && Number.isFinite(value)) || typeof value === 'string';
+const selectOptionsWithCurrentValue = (options: AdministracaoFieldOption[], value: unknown): AdministracaoFieldOption[] => {
+    if (!isSelectValue(value) || value === '' || options.some((option) => option.value === value)) {
+        return options;
+    }
+
+    return [...options, { label: `Não mapeado (${String(value)})`, value }];
+};
 
 const buildInitialValues = (fields: AdministracaoFieldConfig[], record?: Record<string, unknown> | null) =>
     fields.reduce<AdministracaoFormValues>((acc, field) => {
@@ -142,7 +150,7 @@ export const AdministracaoFormDialog = ({ visible, loading, title, fields, schem
         }
 
         if (field.kind === 'select') {
-            return <Dropdown id={field.name} value={value ?? null} options={field.options ?? []} className={commonClassName} disabled={disabled} onChange={(event) => updateField(field.name, event.value)} />;
+            return <Dropdown id={field.name} value={value ?? null} options={selectOptionsWithCurrentValue(field.options ?? [], value)} className={commonClassName} disabled={disabled} onChange={(event) => updateField(field.name, event.value)} />;
         }
 
         if (field.kind === 'guid' && field.name === 'empresaId') {

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { buildAtualizarCargoPayload, buildAtualizarEmpresaPayload, buildCriarCargoPayload, buildCriarEmpresaPayload, buildCriarSetorPayload, buildDefinirEnderecoFiscalPayload } from '@/features/administracao/api/administracaoApi';
-import { RegimeTributario } from '@/features/administracao/types/administracao.types';
+import { crtLabel, crtOptions } from '@/features/administracao/components/administracaoLabels';
+import { criarEmpresaSchema, atualizarEmpresaSchema } from '@/features/administracao/schemas/administracaoSchemas';
+import { Crt, RegimeTributario } from '@/features/administracao/types/administracao.types';
 
 const empresaId = '11111111-1111-1111-1111-111111111111';
 const filialId = '22222222-2222-2222-2222-222222222222';
@@ -65,6 +67,34 @@ describe('administracao payload builders', () => {
         expect(payload.regimeTributario).toBe(RegimeTributario.LucroPresumido);
         expect(payload).toHaveProperty('crt');
         expect(payload.crt).toBe(null);
+    });
+
+    it('AJ-06: expõe e aceita CRT 4, sem mascarar valor não mapeado', () => {
+        expect(crtOptions).toContainEqual({ label: 'Microempreendedor Individual (MEI)', value: Crt.MicroempreendedorIndividual });
+        expect(crtLabel(Crt.MicroempreendedorIndividual)).toBe('Microempreendedor Individual (MEI)');
+        expect(crtLabel(99)).toBe('Não mapeado (99)');
+
+        const criar = criarEmpresaSchema.safeParse({
+            razaoSocial: 'Empresa MEI',
+            nomeFantasia: '',
+            documento: '12345678901',
+            inscricaoEstadual: '',
+            inscricaoMunicipal: '',
+            regimeTributario: RegimeTributario.SimplesNacional,
+            crt: Crt.MicroempreendedorIndividual,
+            contribuinteIpi: false
+        });
+        const atualizar = atualizarEmpresaSchema.safeParse({
+            razaoSocial: 'Empresa MEI',
+            nomeFantasia: '',
+            inscricaoEstadual: '',
+            inscricaoMunicipal: '',
+            regimeTributario: RegimeTributario.SimplesNacional,
+            crt: Crt.MicroempreendedorIndividual
+        });
+
+        expect(criar.success).toBe(true);
+        expect(atualizar.success).toBe(true);
     });
 
     // AC-1: Gravar endereço fiscal de empresa envia os seis obrigatórios preenchidos

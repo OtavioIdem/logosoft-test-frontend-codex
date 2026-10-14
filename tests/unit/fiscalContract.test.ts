@@ -232,6 +232,7 @@ describe('contratos fiscais frontend/backend', () => {
                 podeGerarXmlEnvio: false,
                 podeAssinarXmlEnvio: false,
                 podeTransmitirSefaz: false,
+                podeReabrir: false,
                 podeGerarDanfe: true,
                 podeBaixarEstoque: true,
                 podeGerarContaReceber: false,
@@ -291,6 +292,7 @@ describe('contratos fiscais frontend/backend', () => {
         } satisfies WorkflowOperacionalNotaFiscalResponse;
 
         expect(resumo.acoes.podeGerarDanfe).toBe(true);
+        expect(resumo.acoes.podeReabrir).toBe(false);
         expect(resolveFiscalWorkflowActionState(workflow, ['GERAR_DANFE'], true)).toMatchObject({ habilitada: true });
         expect(resolveFiscalWorkflowActionState(workflow, ['GERAR_CONTA_RECEBER'], true)).toMatchObject({ habilitada: false, motivoBloqueio: 'Conta a receber já gerada.' });
     });

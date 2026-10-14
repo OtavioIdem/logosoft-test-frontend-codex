@@ -318,6 +318,19 @@ describe('AC-4: criar e editar', () => {
         expect(put.body).not.toHaveProperty('empresaId');
         expect(put.body).not.toHaveProperty('filialId');
     });
+
+    it('AJ-06: finalidade desconhecida do registro editado continua visível no select', async () => {
+        const user = userEvent.setup({ delay: null });
+        naturezasNaLista = [{ ...naturezaCarregada(), finalidade: 99 }];
+        renderPagina();
+        await screen.findByRole('cell', { name: 'VENDA' });
+
+        await user.click(screen.getByRole('button', { name: 'Editar' }));
+        const dialog = await dialogo('Editar natureza de operação VENDA');
+        const finalidade = within(dialog).getByRole('combobox', { name: 'Finalidade' });
+
+        expect((within(finalidade).getByRole('option', { name: 'Não mapeado (99)' }) as HTMLOptionElement).selected).toBe(true);
+    });
 });
 
 describe('AC-5: grade de CFOP', () => {

@@ -9,7 +9,7 @@ import {
 } from '@/features/fiscal/schemas/naturezasOperacaoSchemas';
 import { buildAtualizarNaturezaOperacaoPayload, buildCriarNaturezaOperacaoPayload, naturezasOperacaoApi, NaturezasOperacaoEmpresaObrigatoriaError } from '@/features/fiscal/api/naturezasOperacaoApi';
 import { cfopsDasLinhas, linhasDaNatureza, tipoCfopDaOperacao } from '@/features/fiscal/components/naturezasOperacaoUtils';
-import { NATUREZA_CFOP_GRADE, NATUREZA_OPERACAO_INATIVAR_DIALOG } from '@/features/fiscal/components/naturezasOperacaoLabels';
+import { FINALIDADE_NATUREZA_OPTIONS, NATUREZA_CFOP_GRADE, NATUREZA_OPERACAO_INATIVAR_DIALOG, finalidadeNaturezaLabel } from '@/features/fiscal/components/naturezasOperacaoLabels';
 import { httpClient } from '@/lib/http/httpClient';
 
 // b72 (D98, AC-1): contrato dos requests e da resposta de natureza de operação. `.strict()` só no request;
@@ -135,6 +135,22 @@ describe('AC-1: requests de natureza são .strict() e têm o número exato de ca
         expect(longo.success ? null : longo.error.issues[0].message).toBe(NATUREZA_OPERACAO_INATIVAR_DIALOG.motivoTamanho);
         expect(inativarNaturezaOperacaoSchema.parse({ motivo: 'M'.repeat(400) }).motivo).toHaveLength(400);
         expect(inativarNaturezaOperacaoSchema.parse({ motivo: '  natureza substituída  ' })).toEqual({ motivo: 'natureza substituída' });
+    });
+});
+
+describe('AJ-06: finalidades de nota de crédito e débito', () => {
+    it.each([
+        [5, 'Nota de crédito'],
+        [6, 'Nota de débito']
+    ])('expõe a finalidade %i e o schema a aceita', (finalidade, label) => {
+        expect(FINALIDADE_NATUREZA_OPTIONS).toContainEqual({ label, value: finalidade });
+        expect(finalidadeNaturezaLabel(finalidade)).toBe(label);
+        expect(criarNaturezaOperacaoSchema.safeParse({ ...criarValido, finalidade }).success).toBe(true);
+        expect(atualizarNaturezaOperacaoSchema.safeParse({ ...comum, finalidade }).success).toBe(true);
+    });
+
+    it('mantém valor desconhecido explícito na listagem', () => {
+        expect(finalidadeNaturezaLabel(99)).toBe('Não mapeado (99)');
     });
 });
 

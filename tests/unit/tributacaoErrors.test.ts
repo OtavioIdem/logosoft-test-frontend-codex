@@ -4,11 +4,12 @@ import { mapTributacaoApiError } from '@/features/tributacao/api/tributacaoApi';
 import { findRoutePermissionRule } from '@/lib/security/routePermissions';
 
 describe('catálogo de erros do motor de tributação', () => {
-    it('cobre os onze códigos estáveis do contrato', () => {
+    it('cobre os doze códigos estáveis do contrato', () => {
         expect(Object.keys(TRIBUTACAO_ERROR_CATALOG).sort()).toEqual(
             [
                 'FISCAL_TRIBUTACAO_ALIQUOTA_INTERESTADUAL_NAO_ENCONTRADA',
                 'FISCAL_TRIBUTACAO_CONTRIBUINTE_IPI_DIVERGENTE',
+                'FISCAL_TRIBUTACAO_CST_MONOFASICO_NAO_SUPORTADO',
                 'FISCAL_TRIBUTACAO_EMPRESA_NAO_ENCONTRADA',
                 'FISCAL_TRIBUTACAO_FCP_NAO_DEFINIDO_PARA_UF',
                 'FISCAL_TRIBUTACAO_ITEM_INVALIDO',
@@ -28,6 +29,15 @@ describe('catálogo de erros do motor de tributação', () => {
 
         expect(describeTributacaoError(erro)?.kind).toBe('cadastro');
         expect(describeTributacaoError(erro)?.acao).toMatch(/Corrija o cadastro da regra fiscal/);
+        expect(isCargaPendente(erro)).toBe(false);
+        expect(tributacaoErrorSeverity(erro)).toBe('warn');
+    });
+
+    it.each([422, 400])('trata CST monofásico não suportado como erro de cadastro, por código (HTTP %i)', (status) => {
+        const erro = { code: 'FISCAL_TRIBUTACAO_CST_MONOFASICO_NAO_SUPORTADO', status, message: 'texto livre' };
+
+        expect(describeTributacaoError(erro)?.kind).toBe('cadastro');
+        expect(describeTributacaoError(erro)?.acao).toMatch(/regra ou da exceção fiscal/);
         expect(isCargaPendente(erro)).toBe(false);
         expect(tributacaoErrorSeverity(erro)).toBe('warn');
     });

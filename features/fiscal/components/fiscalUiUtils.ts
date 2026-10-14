@@ -204,7 +204,23 @@ export const fiscalActionDisabledReason = (permissionDisabled: boolean, actionSt
     return actionState.habilitada ? undefined : actionState.motivoBloqueio ?? 'Ação indisponível no workflow operacional atual.';
 };
 
-export const notaPodeEditarItens = (nota?: NotaFiscalResponse | null) => [StatusNotaFiscal.Rascunho, StatusNotaFiscal.Validada].includes(Number(nota?.statusFiscal));
+// K2/INV-NFE-001: após validar, apenas a reabertura autorizada pelo backend devolve a nota a Rascunho.
+export const notaPodeEditarItens = (nota?: NotaFiscalResponse | null) => Number(nota?.statusFiscal) === StatusNotaFiscal.Rascunho;
+
+export const MOTIVO_EDICAO_ITENS_INDISPONIVEL = "Itens e impostos só podem ser alterados com a nota em Rascunho. Use 'Reabrir nota' quando o backend liberar.";
+
+export const notaEditarItensDisabledReason = (permissionDisabled: boolean, nota?: NotaFiscalResponse | null, permissao?: string) => {
+    if (permissionDisabled) return permissao ? `Permissão necessária: ${permissao}.` : 'Permissão necessária para executar esta ação.';
+    return notaPodeEditarItens(nota) ? undefined : MOTIVO_EDICAO_ITENS_INDISPONIVEL;
+};
+
+// Reabertura: habilitada só quando o resumo operacional do backend sinaliza `podeReabrir === true`.
+export const resolveReabrirNotaActionState = (resumo?: ResumoOperacionalNotaFiscalResponse | null) => ({
+    habilitada: resumo?.acoes?.podeReabrir === true,
+    motivoBloqueio: resumo ? 'A reabertura não está disponível para esta nota conforme o resumo operacional retornado pelo backend.' : 'Aguardando o resumo operacional da nota para liberar a reabertura.',
+    acao: null,
+    fonte: 'fallback' as const
+});
 
 // D33: valores acessórios só em Rascunho -- o motor de tributação só recalcula nesse status
 export const notaPodeDefinirValoresAcessorios = (nota?: NotaFiscalResponse | null) => Number(nota?.statusFiscal) === StatusNotaFiscal.Rascunho;
