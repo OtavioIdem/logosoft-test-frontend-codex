@@ -20,6 +20,7 @@ import { useFiscalMutations, useHistoricoContingenciaFiscal, useHistoricoStatusS
 import { ContingenciaFiscalResponse, LogIntegracaoFiscalResponse, StatusServicoSefazResponse } from '@/features/fiscal/types/fiscal.types';
 import { formatFiscalDate, gerarCorrelationId, maskFiscalSensitiveText, tipoDocumentoFiscalOptions } from '@/features/fiscal/components/fiscalUiUtils';
 import { ContingenciaResultPanel } from '@/features/fiscal/components/FiscalOperationalPanels';
+import { ambienteFiscalLabel } from '@/features/fiscal/components/fiscalLabels';
 import { mapApiError } from '@/lib/http/apiError';
 import { ApiError, TipoContingenciaFiscal, TipoDocumentoFiscal } from '@/types/erp';
 
@@ -87,7 +88,7 @@ const StatusServicoResult = ({ result }: { result: StatusServicoSefazResponse })
         <div className="grid">
             <div className="col-12 md:col-3"><span className="text-color-secondary text-sm">UF</span><div className="font-medium">{result.ufAutorizadora}</div></div>
             <div className="col-12 md:col-3"><span className="text-color-secondary text-sm">Código</span><div className="font-medium">{result.codigoStatus ?? '-'}</div></div>
-            <div className="col-12 md:col-3"><span className="text-color-secondary text-sm">Ambiente</span><div className="font-medium">{result.ambiente}</div></div>
+            <div className="col-12 md:col-3"><span className="text-color-secondary text-sm">Ambiente</span><div className="font-medium">{ambienteFiscalLabel(result.ambiente)}</div></div>
             <div className="col-12 md:col-3"><span className="text-color-secondary text-sm">Consultado em</span><div className="font-medium">{formatFiscalDate(result.consultadoEm)}</div></div>
             <div className="col-12"><span className="text-color-secondary text-sm">Motivo</span><div className="font-medium">{result.motivo ?? '-'}</div></div>
         </div>

@@ -93,7 +93,31 @@ describe('FiscalOperationalPanels', () => {
 
         expect(screen.getByText('Serviço indisponível')).toBeInTheDocument();
         expect(screen.getByText('Reprocessar')).toBeInTheDocument();
+        expect(screen.getByText('Homologação')).toBeInTheDocument();
         expect(screen.getByText('Contingência permitida')).toBeInTheDocument();
         expect(screen.getByText('Operacional interna')).toBeInTheDocument();
+    });
+
+    it('traduz o enum de ambiente do domínio sem assumir o tpAmb do XML', () => {
+        render(
+            <StatusServicoResultPanel
+                result={{
+                    empresaId: '11111111-1111-1111-1111-111111111111',
+                    filialId: null,
+                    tipoDocumento: TipoDocumentoFiscal.NFe,
+                    ambiente: 2,
+                    ufAutorizadora: 'SP',
+                    comunicacaoOk: true,
+                    disponivel: true,
+                    codigoStatus: '107',
+                    motivo: 'Serviço em operação',
+                    deveReprocessar: false,
+                    consultadoEm: '2026-05-25T14:00:00+00:00',
+                    alertas: []
+                }}
+            />
+        );
+
+        expect(screen.getByText('Produção')).toBeInTheDocument();
     });
 });

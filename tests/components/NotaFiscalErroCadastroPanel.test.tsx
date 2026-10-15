@@ -1,7 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NotaFiscalErroCadastroPanel } from '@/features/fiscal/components/NotaFiscalErroCadastroPanel';
-import { fiscalErrosCadastroMap, resolveFiscalErroCadastroLink } from '@/features/fiscal/components/fiscalErrosCadastro';
+import {
+    FISCAL_ERRO_CADASTRO_CST_MONOFASICO_CODE,
+    fiscalErrosCadastroMap,
+    resolveFiscalErroCadastroLink
+} from '@/features/fiscal/components/fiscalErrosCadastro';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
 
 vi.mock('next/link', () => ({ default: ({ href, children }: any) => <a href={href}>{children}</a> }));
@@ -14,7 +18,10 @@ const codigoSerie = 'Fiscal.SerieFiscalNaoCadastradaParaContexto';
 const codigoCfop = 'Fiscal.CfopSemMapeamentoParaAmbito';
 const codigosDestinatario = ['Fiscal.DestinatarioSemEnderecoFiscal', 'Fiscal.DestinatarioSemEnderecoPrincipal', 'Fiscal.DestinatarioSemMunicipioIbge', 'Fiscal.DestinatarioSemIndicadorContribuinteIcms'];
 
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+});
 
 describe('NotaFiscalErroCadastroPanel — AC-16', () => {
     it('abre somente para o código D50, preserva a mensagem do backend e fornece link a quem pode cadastrar', () => {
@@ -42,11 +49,12 @@ describe('NotaFiscalErroCadastroPanel — AC-16', () => {
     });
 
     it('o mapa é indexado exclusivamente pelo código, não pelo texto da mensagem', () => {
-        // D101 (b72) e D104 (b75): o mapa tem a série, o CFOP sem mapeamento e as quatro `DestinatarioSem*`, que levam à
-        // LISTA de Pessoas, só para PESSOAS_GERENCIAR. `DestinatarioSemPessoaVinculada` não é alcançável e fica fora.
-        expect(Object.keys(fiscalErrosCadastroMap)).toEqual([codigoSerie, codigoCfop, ...codigosDestinatario]);
+        // D101 (b72), D104 (b75) e K4: o mapa tem série, CFOP, CST monofásico e as quatro `DestinatarioSem*`.
+        // `DestinatarioSemPessoaVinculada` não é alcançável e fica fora.
+        expect(Object.keys(fiscalErrosCadastroMap)).toEqual([codigoSerie, codigoCfop, FISCAL_ERRO_CADASTRO_CST_MONOFASICO_CODE, ...codigosDestinatario]);
         expect(resolveFiscalErroCadastroLink(codigoSerie)).toMatchObject({ href: '/fiscal/series' });
         expect(resolveFiscalErroCadastroLink(codigoCfop)).toMatchObject({ href: '/fiscal/naturezas-operacao', anyOf: ['FISCAL_CADASTROS_CONSULTAR', 'FISCAL_CADASTROS_GERENCIAR'] });
+        expect(resolveFiscalErroCadastroLink(FISCAL_ERRO_CADASTRO_CST_MONOFASICO_CODE)).toMatchObject({ href: '/fiscal/regras', anyOf: ['FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR'] });
         for (const codigo of codigosDestinatario) {
             expect(resolveFiscalErroCadastroLink(codigo)).toMatchObject({ href: '/pessoas', anyOf: ['PESSOAS_GERENCIAR'] });
         }

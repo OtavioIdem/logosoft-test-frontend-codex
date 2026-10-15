@@ -1,4 +1,5 @@
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const read = (path: string) => readFileSync(path, 'utf8');
@@ -64,23 +65,21 @@ describe('AC-9: guard e texto do botão Reprocessar (textual/contagem)', () => {
 
     it('o endpoint reprocessar-sefaz aparece exatamente 1 vez em features/, app/, lib/, layout/, components/', () => {
         const roots = ['features', 'app', 'lib', 'layout', 'components'];
-        const { execSync } = require('node:child_process') as typeof import('node:child_process');
-        let total = 0;
-        for (const root of roots) {
-            try {
-                const output = execSync(`grep -rn "/reprocessar-sefaz\\b" ${root}`, { encoding: 'utf8' });
-                total += output.split('\n').filter((line) => line.trim() !== '').length;
-            } catch {
-                // grep sai com código 1 quando não encontra nada no diretório -- conta 0 e segue
-            }
-        }
+        const contarOcorrencias = (directory: string): number => readdirSync(directory, { withFileTypes: true }).reduce((total, entry) => {
+            const path = join(directory, entry.name);
+            if (entry.isDirectory()) return total + contarOcorrencias(path);
+            if (!/\.(ts|tsx)$/.test(entry.name)) return total;
+            return total + (readFileSync(path, 'utf8').match(/\/reprocessar-sefaz\b/g) ?? []).length;
+        }, 0);
+        const total = roots.reduce((acumulado, root) => acumulado + contarOcorrencias(root), 0);
         expect(total).toBe(1);
     });
 });
 
 // AC-10 (v1.11.0a8b57): transmitir, reprocessar e consultar protocolo trocam onSuccess por
-// onSettled: (_r, _e, v) => invalidateNota(v.id); as demais mutações fiscais ficam como estavam (D37).
-describe('AC-10: onSettled nominal nas três mutações de transmissão', () => {
+// onSettled: (_r, _e, v) => invalidateNota(v.id). AJ-12 acrescenta a reabertura pela mesma regra,
+// pois o resumo operacional precisa ser recarregado inclusive após falha.
+describe('AC-10: onSettled nominal nas mutações de transmissão e reabertura', () => {
     const source = read('features/fiscal/hooks/useFiscalResources.ts');
 
     it('transmitirMutation usa onSettled com invalidateNota(variables.id), sem onSuccess', () => {
@@ -101,8 +100,14 @@ describe('AC-10: onSettled nominal nas três mutações de transmissão', () => 
         );
     });
 
-    it('exatamente 5 mutações usam onSettled (as 2 de D37 + as 3 desta fatia); demais seguem onSuccess', () => {
-        expect((source.match(/onSettled:/g) ?? []).length).toBe(5);
+    it('reabrirMutation usa onSettled com invalidateNota(variables.id), sem onSuccess', () => {
+        expect(source).toContain(
+            "const reabrirMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.reabrir(id, values), onSettled: (_nota, _error, variables) => invalidateNota(variables.id) });"
+        );
+    });
+
+    it('exatamente 6 mutações usam onSettled (as 2 de D37, 3 de transmissão e a reabertura); demais seguem onSuccess', () => {
+        expect((source.match(/onSettled:/g) ?? []).length).toBe(6);
         // demais mutações que tocam nota (criarNota, gerarNotaPedido, adicionarItem, armazenarXml, validar,
         // gerarXml, assinarXml, habilitarContingencia, registrarRejeicao, cancelar, cancelarSefaz,
         // cartaCorrecao, gerarDanfe, baixarEstoque, gerarContaReceber) continuam com onSuccess

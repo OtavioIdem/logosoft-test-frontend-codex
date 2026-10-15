@@ -35,6 +35,7 @@ export type FiscalErroCadastroLink = {
 
 export const FISCAL_ERRO_CADASTRO_SERIE_CODE = 'Fiscal.SerieFiscalNaoCadastradaParaContexto';
 export const FISCAL_ERRO_CADASTRO_CFOP_CODE = 'Fiscal.CfopSemMapeamentoParaAmbito';
+export const FISCAL_ERRO_CADASTRO_CST_MONOFASICO_CODE = 'FISCAL_TRIBUTACAO_CST_MONOFASICO_NAO_SUPORTADO';
 
 export const fiscalErrosCadastroMap: Record<string, FiscalErroCadastroLink> = {
     [FISCAL_ERRO_CADASTRO_SERIE_CODE]: {
@@ -50,6 +51,13 @@ export const fiscalErrosCadastroMap: Record<string, FiscalErroCadastroLink> = {
         titulo: NATUREZA_OPERACAO_LINK.tituloCfopSemMapeamento,
         rotuloLink: NATUREZA_OPERACAO_LINK.cadastrar,
         semPermissaoTexto: NATUREZA_OPERACAO_LINK.semPermissaoTexto
+    },
+    [FISCAL_ERRO_CADASTRO_CST_MONOFASICO_CODE]: {
+        href: '/fiscal/regras',
+        anyOf: ['FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR'],
+        titulo: 'CST monofásico ainda não suportado no cálculo',
+        rotuloLink: 'Abrir regras fiscais',
+        semPermissaoTexto: 'Peça a alguém com permissão de regras fiscais para ajustar o CST da regra ou da exceção fiscal.'
     },
     [FISCAL_ERRO_DESTINATARIO_SEM_ENDERECO_FISCAL_CODE]: {
         href: '/pessoas',

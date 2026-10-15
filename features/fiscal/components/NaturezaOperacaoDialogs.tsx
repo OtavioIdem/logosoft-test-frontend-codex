@@ -184,6 +184,13 @@ export const NaturezaOperacaoDialog = ({
     const temRepetida = repetidas.size > 0;
     const desabilitado = Boolean(loading) || inativa;
     const tipoCfop = tipoCfopDaOperacao(values.tipoOperacao);
+    const finalidadeOptions = useMemo(() => {
+        if (values.finalidade === null || FINALIDADE_NATUREZA_OPTIONS.some((option) => option.value === values.finalidade)) {
+            return FINALIDADE_NATUREZA_OPTIONS;
+        }
+
+        return [...FINALIDADE_NATUREZA_OPTIONS, { label: `Não mapeado (${String(values.finalidade)})`, value: values.finalidade }];
+    }, [values.finalidade]);
 
     const codigoDuplicado = error?.code === NATUREZA_CODIGO_DUPLICADO.codigoDoErro;
     const erroGeral = error && !codigoDuplicado ? error : null;
@@ -296,7 +303,7 @@ export const NaturezaOperacaoDialog = ({
                         <Dropdown inputId="naturezaTipoOperacao" value={values.tipoOperacao} options={TIPO_OPERACAO_NATUREZA_OPTIONS} placeholder="Selecione" disabled={desabilitado} className={classNames({ 'p-invalid': erros.campos.tipoOperacao })} onChange={(event) => atualizar('tipoOperacao', event.value ?? null)} />
                     </Campo>
                     <Campo htmlFor="naturezaFinalidade" label={NATUREZA_OPERACAO_CAMPOS.finalidade} erro={erros.campos.finalidade}>
-                        <Dropdown inputId="naturezaFinalidade" value={values.finalidade} options={FINALIDADE_NATUREZA_OPTIONS} placeholder="Selecione" disabled={desabilitado} className={classNames({ 'p-invalid': erros.campos.finalidade })} onChange={(event) => atualizar('finalidade', event.value ?? null)} />
+                        <Dropdown inputId="naturezaFinalidade" value={values.finalidade} options={finalidadeOptions} placeholder="Selecione" disabled={desabilitado} className={classNames({ 'p-invalid': erros.campos.finalidade })} onChange={(event) => atualizar('finalidade', event.value ?? null)} />
                     </Campo>
                     <Campo htmlFor="naturezaPresenca" label={NATUREZA_OPERACAO_CAMPOS.indicadorPresencaComprador} hint={NATUREZA_OPERACAO_CAMPOS.indicadorPresencaCompradorHint} erro={erros.campos.indicadorPresencaComprador}>
                         <Dropdown inputId="naturezaPresenca" value={values.indicadorPresencaComprador} options={INDICADOR_PRESENCA_COMPRADOR_OPTIONS} placeholder="Selecione" disabled={desabilitado} className={classNames({ 'p-invalid': erros.campos.indicadorPresencaComprador })} onChange={(event) => atualizar('indicadorPresencaComprador', event.value ?? null)} />

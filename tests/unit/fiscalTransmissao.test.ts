@@ -33,7 +33,6 @@ describe('AC-1: tipos de transmissão SEFAZ', () => {
         const request: TransmitirNotaFiscalSefazRequest = {
             ufAutorizadora: 'SP',
             servico: TipoServicoTransmissaoFiscal.Autorizacao,
-            xmlEnvioAssinado: null,
             validarSchemaAntesTransmissao: true,
             schemaSetName: null,
             correlationId: 'front-transmitir-20260916-abc123'
@@ -47,7 +46,6 @@ describe('AC-1: tipos de transmissão SEFAZ', () => {
         const _semCorrelationId: TransmitirNotaFiscalSefazRequest = {
             ufAutorizadora: 'SP',
             servico: TipoServicoTransmissaoFiscal.Autorizacao,
-            xmlEnvioAssinado: null,
             validarSchemaAntesTransmissao: true,
             schemaSetName: null
         };
@@ -59,7 +57,6 @@ describe('AC-1: tipos de transmissão SEFAZ', () => {
         const request: ReprocessarNotaFiscalSefazRequest = {
             ufAutorizadora: 'SP',
             servico: TipoServicoTransmissaoFiscal.Autorizacao,
-            xmlEnvioAssinado: null,
             validarSchemaAntesTransmissao: true,
             schemaSetName: null,
             correlationId: 'front-reprocessar-20260916-abc123',

@@ -89,23 +89,21 @@ export const definirValoresAcessoriosNotaFiscalSchema = z.object({
 
 export const gerarXmlEnvioSchema = z.object({
     armazenarXml: z.boolean(),
-    validarSchema: z.boolean(),
+    validarSchema: z.boolean().optional(),
     schemaSetName: schemaSetNameSchema
 });
 
 export const assinarXmlEnvioSchema = z.object({
     certificateThumbprint: z.preprocess((value) => (typeof value === 'string' && value.trim() === '' ? null : value), z.string().trim().max(120).nullable().optional()),
-    xmlEnvio: z.preprocess((value) => (typeof value === 'string' && value.trim() === '' ? null : value), xmlSchema.nullable().optional()),
     armazenarXmlAssinado: z.boolean(),
-    validarSchemaAntesAssinatura: z.boolean(),
+    validarSchemaAntesAssinatura: z.boolean().optional(),
     schemaSetName: schemaSetNameSchema
 });
 
 export const transmitirNotaFiscalSefazSchema = z.object({
     ufAutorizadora: ufSchema,
     servico: z.coerce.number().refine((value) => Object.values(TipoServicoTransmissaoFiscal).includes(value as TipoServicoTransmissaoFiscal), 'Serviço SEFAZ inválido.'),
-    xmlEnvioAssinado: z.preprocess((value) => (typeof value === 'string' && value.trim() === '' ? null : value), xmlSchema.nullable().optional()),
-    validarSchemaAntesTransmissao: z.boolean(),
+    validarSchemaAntesTransmissao: z.boolean().optional(),
     schemaSetName: schemaSetNameSchema,
     // NotaFiscalValidators.cs:238 -- CorrelationId obrigatório na transmissão (D43, F2.6)
     correlationId: requiredText('Informe o correlation ID da transmissão.', 120)
@@ -229,8 +227,12 @@ export const exportarNotasFiscaisCsvSchema = z.object({
 });
 
 export const armazenarXmlNotaFiscalSchema = z.object({
-    tipo: z.coerce.number().default(TipoXmlFiscal.Envio),
+    tipo: z.coerce.number().default(TipoXmlFiscal.Autorizado).refine((value) => value !== TipoXmlFiscal.Envio, 'O XML de envio é gerado exclusivamente pelo pipeline fiscal.'),
     conteudoXml: requiredXmlSchema,
     protocolo: z.preprocess((value) => (typeof value === 'string' && value.trim() === '' ? null : value), z.string().trim().max(80).nullable().optional()),
     chaveAcesso: z.preprocess((value) => (typeof value === 'string' && value.trim() === '' ? null : value), z.string().trim().max(80).nullable().optional())
 });
+
+export const reabrirNotaFiscalSchema = z.object({
+    motivo: z.string().trim().min(15, 'Informe um motivo com pelo menos 15 caracteres.').max(400, 'Informe no máximo 400 caracteres.')
+}).strict();

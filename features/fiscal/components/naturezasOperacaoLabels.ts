@@ -34,12 +34,14 @@ export const TIPO_OPERACAO_NATUREZA_OPTIONS: { label: string; value: number }[] 
     { label: 'Outro', value: 99 } // Outro = 99 (:23)
 ];
 
-/** `FinalidadeNaturezaOperacao`, `Erp.Domain/Fiscal/Cadastros/EnumsCadastrosFiscais.cs:36-42`. */
+/** `FinalidadeNaturezaOperacao`, `Erp.Domain/Fiscal/Cadastros/EnumsCadastrosFiscais.cs`. */
 export const FINALIDADE_NATUREZA_OPTIONS: { label: string; value: number }[] = [
     { label: 'Normal', value: 1 }, // Normal = 1 (:38)
     { label: 'Complementar', value: 2 }, // Complementar = 2 (:39)
-    { label: 'Ajuste', value: 3 }, // Ajuste = 3 (:40)
-    { label: 'Devolução', value: 4 } // Devolucao = 4 (:41)
+    { label: 'Ajuste', value: 3 }, // Ajuste = 3
+    { label: 'Devolução', value: 4 }, // Devolucao = 4
+    { label: 'Nota de crédito', value: 5 }, // NotaDeCredito = 5
+    { label: 'Nota de débito', value: 6 } // NotaDeDebito = 6
 ];
 
 /** `IndicadorPresencaComprador` (indPres da NF-e), `EnumsCadastrosFiscais.cs:47-55` (7 valores; 6 e 7 não existem). */
@@ -74,7 +76,7 @@ export const TIPO_ITEM_CFOP_OPTIONS: { label: string; value: number | null }[] =
 
 const rotuloPorValor = (options: { label: string; value: number | null }[], value: number | null | undefined, vazio: string): string => {
     if (value === null || value === undefined) return vazio;
-    return options.find((option) => option.value === value)?.label ?? `Valor ${value}`;
+    return options.find((option) => option.value === value)?.label ?? `Não mapeado (${value})`;
 };
 
 export const tipoDocumentoNaturezaLabel = (value?: number | null): string => rotuloPorValor(TIPO_DOCUMENTO_NATUREZA_OPTIONS, value, '-');

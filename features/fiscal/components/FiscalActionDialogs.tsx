@@ -27,7 +27,7 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { usePedidosVenda } from '@/features/vendas/hooks/useVendasResources';
 import { PedidoVendaResponse } from '@/features/vendas/types/vendas.types';
 import { ApiError, FormatoDocumentoAuxiliarFiscal, OrigemNotaFiscal, StatusPedidoVenda, TipoContingenciaFiscal, TipoDocumentoFiscal, TipoOperacaoFiscal, TipoServicoTransmissaoFiscal, TipoXmlFiscal } from '@/types/erp';
-import { adicionarImpostoNotaFiscalSchema, definirValoresAcessoriosNotaFiscalSchema } from '@/features/fiscal/schemas/fiscalSchemas';
+import { adicionarImpostoNotaFiscalSchema, definirValoresAcessoriosNotaFiscalSchema, reabrirNotaFiscalSchema } from '@/features/fiscal/schemas/fiscalSchemas';
 import { ItemNotaFiscalResponse, NotaFiscalResponse } from '@/features/fiscal/types/fiscal.types';
 import { gerarCorrelationId, maskFiscalSensitiveText, servicoTransmissaoFiscalOptions, tipoDocumentoFiscalOptions, tipoOperacaoFiscalOptions } from '@/features/fiscal/components/fiscalUiUtils';
 import { GERAR_NF_PEDIDO_VENDA } from '@/features/fiscal/components/fiscalLabels';
@@ -450,23 +450,20 @@ export const ValoresAcessoriosDialog = ({
 };
 
 export const XmlPipelineDialog = ({ visible, loading, onHide, onSubmit, mode }: BaseDialogProps<Record<string, unknown>> & { mode: 'gerar' | 'assinar' }) => {
-    const [values, setValues] = useState({ armazenarXml: true, validarSchema: false, armazenarXmlAssinado: true, validarSchemaAntesAssinatura: false, schemaSetName: 'NFe-4.00', certificateThumbprint: '', xmlEnvio: '' });
+    const [values, setValues] = useState({ armazenarXml: true, armazenarXmlAssinado: true, schemaSetName: 'NFe-4.00', certificateThumbprint: '' });
     const isAssinar = mode === 'assinar';
     return (
         <Dialog header={isAssinar ? 'Assinar XML de envio' : 'Gerar XML de envio'} visible={visible} modal style={{ width: 'min(48rem, 96vw)' }} onHide={onHide} footer={footer('xml-pipeline-form', loading, onHide, isAssinar ? 'Assinar XML' : 'Gerar XML')}>
-            <form id="xml-pipeline-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(isAssinar ? { certificateThumbprint: values.certificateThumbprint, xmlEnvio: values.xmlEnvio, armazenarXmlAssinado: values.armazenarXmlAssinado, validarSchemaAntesAssinatura: values.validarSchemaAntesAssinatura, schemaSetName: values.schemaSetName } : { armazenarXml: values.armazenarXml, validarSchema: values.validarSchema, schemaSetName: values.schemaSetName }); }}>
+            <form id="xml-pipeline-form" className="grid formgrid p-fluid" onSubmit={(event) => { event.preventDefault(); onSubmit(isAssinar ? { certificateThumbprint: values.certificateThumbprint, armazenarXmlAssinado: values.armazenarXmlAssinado, schemaSetName: values.schemaSetName } : { armazenarXml: values.armazenarXml, schemaSetName: values.schemaSetName }); }}>
                 <Field label="Schema set"><InputText value={values.schemaSetName} onChange={(e) => setValues((v) => ({ ...v, schemaSetName: e.target.value }))} /></Field>
                 {isAssinar ? (
                     <>
                         <Field label="Thumbprint certificado"><InputText value={values.certificateThumbprint} onChange={(e) => setValues((v) => ({ ...v, certificateThumbprint: e.target.value }))} placeholder="Vazio usa configuração do backend" /></Field>
                         <div className="field col-12 flex align-items-center gap-2"><Checkbox inputId="armazenarXmlAssinado" checked={values.armazenarXmlAssinado} onChange={(e) => setValues((v) => ({ ...v, armazenarXmlAssinado: Boolean(e.checked) }))} /><label htmlFor="armazenarXmlAssinado">Armazenar XML assinado</label></div>
-                        <div className="field col-12 flex align-items-center gap-2"><Checkbox inputId="validarSchemaAntesAssinatura" checked={values.validarSchemaAntesAssinatura} onChange={(e) => setValues((v) => ({ ...v, validarSchemaAntesAssinatura: Boolean(e.checked) }))} /><label htmlFor="validarSchemaAntesAssinatura">Validar schema antes da assinatura</label></div>
-                        <TextAreaField label="XML envio opcional" value={values.xmlEnvio} rows={8} onChange={(xmlEnvio) => setValues((v) => ({ ...v, xmlEnvio }))} hint="Se ficar vazio, o backend buscará o último XML de envio armazenado." />
                     </>
                 ) : (
                     <>
                         <div className="field col-12 flex align-items-center gap-2"><Checkbox inputId="armazenarXml" checked={values.armazenarXml} onChange={(e) => setValues((v) => ({ ...v, armazenarXml: Boolean(e.checked) }))} /><label htmlFor="armazenarXml">Armazenar XML de envio</label></div>
-                        <div className="field col-12 flex align-items-center gap-2"><Checkbox inputId="validarSchema" checked={values.validarSchema} onChange={(e) => setValues((v) => ({ ...v, validarSchema: Boolean(e.checked) }))} /><label htmlFor="validarSchema">Validar schema agora</label></div>
                     </>
                 )}
                 <button type="submit" className="hidden" />
@@ -476,7 +473,7 @@ export const XmlPipelineDialog = ({ visible, loading, onHide, onSubmit, mode }: 
 };
 
 export const TransmitirSefazDialog = ({ visible, loading, onHide, onSubmit }: BaseDialogProps<Record<string, unknown>>) => {
-    const [values, setValues] = useState({ ufAutorizadora: 'SP', servico: TipoServicoTransmissaoFiscal.Autorizacao, xmlEnvioAssinado: '', validarSchemaAntesTransmissao: false, schemaSetName: 'NFe-4.00', correlationId: gerarCorrelationId('transmitir') });
+    const [values, setValues] = useState({ ufAutorizadora: 'SP', servico: TipoServicoTransmissaoFiscal.Autorizacao, schemaSetName: 'NFe-4.00', correlationId: gerarCorrelationId('transmitir') });
     useEffect(() => { if (visible) setValues((v) => ({ ...v, correlationId: gerarCorrelationId('transmitir') })); }, [visible]);
     return (
         <Dialog header="Transmitir para SEFAZ / ambiente configurado" visible={visible} modal style={{ width: 'min(52rem, 96vw)' }} onHide={onHide} footer={footer('transmitir-sefaz-form', loading, onHide, 'Transmitir')}>
@@ -485,8 +482,6 @@ export const TransmitirSefazDialog = ({ visible, loading, onHide, onSubmit }: Ba
                 <Field label="Serviço"><Dropdown value={values.servico} options={servicoTransmissaoFiscalOptions} onChange={(e) => setValues((v) => ({ ...v, servico: e.value }))} /></Field>
                 <Field label="Schema set"><InputText value={values.schemaSetName} onChange={(e) => setValues((v) => ({ ...v, schemaSetName: e.target.value }))} /></Field>
                 <Field label="Correlation ID" hint="Gerado automaticamente a cada abertura deste diálogo; identifica esta tentativa de transmissão perante a SEFAZ."><InputText value={values.correlationId} readOnly /></Field>
-                <div className="field col-12 flex align-items-center gap-2"><Checkbox inputId="validarSchemaAntesTransmissao" checked={values.validarSchemaAntesTransmissao} onChange={(e) => setValues((v) => ({ ...v, validarSchemaAntesTransmissao: Boolean(e.checked) }))} /><label htmlFor="validarSchemaAntesTransmissao">Validar schema antes da transmissão</label></div>
-                <TextAreaField label="XML assinado opcional" value={values.xmlEnvioAssinado} rows={8} onChange={(xmlEnvioAssinado) => setValues((v) => ({ ...v, xmlEnvioAssinado }))} hint="Se ficar vazio, o backend buscará o XML de envio armazenado." />
                 <button type="submit" className="hidden" />
             </form>
         </Dialog>
@@ -557,9 +552,8 @@ export const RegistrarRejeicaoDialog = ({ visible, loading, onHide, onSubmit }: 
 };
 
 export const ArmazenarXmlDialog = ({ visible, loading, onHide, onSubmit }: BaseDialogProps<Record<string, unknown>>) => {
-    const [values, setValues] = useState({ tipo: TipoXmlFiscal.Envio, conteudoXml: '', protocolo: '', chaveAcesso: '' });
+    const [values, setValues] = useState({ tipo: TipoXmlFiscal.Autorizado, conteudoXml: '', protocolo: '', chaveAcesso: '' });
     const tipoOptions = [
-        { label: 'Envio', value: TipoXmlFiscal.Envio },
         { label: 'Autorizado', value: TipoXmlFiscal.Autorizado },
         { label: 'Cancelamento', value: TipoXmlFiscal.Cancelamento },
         { label: 'Carta de correção', value: TipoXmlFiscal.CartaCorrecao },
@@ -574,6 +568,53 @@ export const ArmazenarXmlDialog = ({ visible, loading, onHide, onSubmit }: BaseD
                 <Field label="Chave de acesso"><InputText value={values.chaveAcesso} onChange={(e) => setValues((v) => ({ ...v, chaveAcesso: e.target.value }))} /></Field>
                 <TextAreaField label="Conteúdo XML" value={values.conteudoXml} rows={10} onChange={(conteudoXml) => setValues((v) => ({ ...v, conteudoXml }))} hint="XML fiscal é dado operacional sensível; não é salvo em localStorage/sessionStorage." />
                 <button type="submit" className="hidden" />
+            </form>
+        </Dialog>
+    );
+};
+
+export const ReabrirNotaFiscalDialog = ({ visible, loading, onHide, onSubmit }: BaseDialogProps<string>) => {
+    const [motivo, setMotivo] = useState('');
+    const [erro, setErro] = useState<string | undefined>();
+
+    useEffect(() => {
+        if (visible) {
+            setMotivo('');
+            setErro(undefined);
+        }
+    }, [visible]);
+
+    const confirmar = (event: React.FormEvent) => {
+        event.preventDefault();
+        const parsed = reabrirNotaFiscalSchema.safeParse({ motivo });
+        if (!parsed.success) {
+            setErro(parsed.error.issues[0]?.message);
+            return;
+        }
+        setErro(undefined);
+        onSubmit(parsed.data.motivo);
+    };
+
+    return (
+        <Dialog
+            header="Reabrir nota fiscal"
+            visible={visible}
+            modal
+            style={{ width: 'min(36rem, 96vw)' }}
+            onHide={onHide}
+            footer={
+                <div className="flex justify-content-end gap-2">
+                    <Button type="button" label="Cancelar" icon="pi pi-times" text onClick={onHide} disabled={loading} />
+                    <Button label="Reabrir nota" icon="pi pi-lock-open" severity="warning" type="submit" form="reabrir-nota-form" loading={loading} disabled={!motivo.trim()} />
+                </div>
+            }
+        >
+            <Message severity="warn" className="w-full mb-3" text="A nota retornará ao fluxo de rascunho conforme as regras do backend. A operação será registrada com o motivo informado." />
+            {erro ? <Message severity="error" className="w-full mb-3" text={erro} /> : null}
+            <form id="reabrir-nota-form" className="p-fluid" onSubmit={confirmar}>
+                <label htmlFor="motivoReabrirNota" className="block font-medium mb-2">Motivo obrigatório</label>
+                <InputTextarea id="motivoReabrirNota" value={motivo} onChange={(event) => setMotivo(event.target.value)} rows={5} maxLength={400} className={classNames({ 'p-invalid': Boolean(erro) })} autoFocus />
+                <small className="text-color-secondary block mt-2">Informe entre 15 e 400 caracteres. O motivo será enviado para auditoria.</small>
             </form>
         </Dialog>
     );
@@ -595,7 +636,7 @@ export const DanfeDialog = ({ visible, loading, onHide, onSubmit }: BaseDialogPr
 
 
 export const ReprocessarSefazDialog = ({ visible, loading, onHide, onSubmit, logIntegracaoFiscalId, correlationIdOriginal, mensagemFalha, payloadResumo }: BaseDialogProps<Record<string, unknown>> & { logIntegracaoFiscalId?: string | null; correlationIdOriginal?: string | null; mensagemFalha?: string | null; payloadResumo?: string | null }) => {
-    const [values, setValues] = useState({ ufAutorizadora: 'SP', servico: TipoServicoTransmissaoFiscal.Autorizacao, xmlEnvioAssinado: '', validarSchemaAntesTransmissao: false, schemaSetName: 'NFe-4.00', logIntegracaoFiscalId: logIntegracaoFiscalId ?? '', correlationIdOriginal: correlationIdOriginal ?? '', correlationId: gerarCorrelationId('reprocessamento'), motivo: '' });
+    const [values, setValues] = useState({ ufAutorizadora: 'SP', servico: TipoServicoTransmissaoFiscal.Autorizacao, schemaSetName: 'NFe-4.00', logIntegracaoFiscalId: logIntegracaoFiscalId ?? '', correlationIdOriginal: correlationIdOriginal ?? '', correlationId: gerarCorrelationId('reprocessamento'), motivo: '' });
     useEffect(() => {
         if (visible) setValues((v) => ({ ...v, logIntegracaoFiscalId: logIntegracaoFiscalId ?? '', correlationIdOriginal: correlationIdOriginal ?? '', correlationId: gerarCorrelationId('reprocessamento') }));
     }, [visible, logIntegracaoFiscalId, correlationIdOriginal]);
@@ -613,9 +654,7 @@ export const ReprocessarSefazDialog = ({ visible, loading, onHide, onSubmit, log
                 <Field label="Schema set"><InputText value={values.schemaSetName} onChange={(e) => setValues((v) => ({ ...v, schemaSetName: e.target.value }))} /></Field>
                 <Field label="Correlation ID original" hint="Preenchido automaticamente ao selecionar um log reprocessável; edite somente se o backend solicitar reprocessamento por correlation ID."><InputText value={values.correlationIdOriginal} disabled={Boolean(correlationIdOriginal)} onChange={(e) => setValues((v) => ({ ...v, correlationIdOriginal: e.target.value }))} /></Field>
                 <Field label="Novo correlation ID"><InputText value={values.correlationId} onChange={(e) => setValues((v) => ({ ...v, correlationId: e.target.value }))} /></Field>
-                <div className="field col-12 flex align-items-center gap-2"><Checkbox inputId="validarSchemaReprocessar" checked={values.validarSchemaAntesTransmissao} onChange={(e) => setValues((v) => ({ ...v, validarSchemaAntesTransmissao: Boolean(e.checked) }))} /><label htmlFor="validarSchemaReprocessar">Validar schema antes da transmissão</label></div>
                 <TextAreaField label="Motivo" value={values.motivo} onChange={(motivo) => setValues((v) => ({ ...v, motivo }))} />
-                <TextAreaField label="XML assinado opcional" value={values.xmlEnvioAssinado} rows={8} onChange={(xmlEnvioAssinado) => setValues((v) => ({ ...v, xmlEnvioAssinado }))} />
                 <button type="submit" className="hidden" />
             </form>
         </Dialog>

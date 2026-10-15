@@ -12,7 +12,8 @@ export enum RegimeTributario {
     LucroReal = 2
 }
 
-// Crt( SimplesNacional = 1, SimplesNacionalExcessoSublimite = 2, RegimeNormal = 3 ) — contrato
+// Crt( SimplesNacional = 1, SimplesNacionalExcessoSublimite = 2, RegimeNormal = 3,
+// MicroempreendedorIndividual = 4 ) — contrato
 // docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md:3364. Ao contrário de RegimeTributario, NÃO começa em
 // zero: não usar índice de option/array como valor. Anulável (`Crt?`) em Criar/AtualizarEmpresaRequest
 // e trafega como número no wire, pela mesma ausência de JsonStringEnumConverter no backend
@@ -20,7 +21,8 @@ export enum RegimeTributario {
 export enum Crt {
     SimplesNacional = 1,
     SimplesNacionalExcessoSublimite = 2,
-    RegimeNormal = 3
+    RegimeNormal = 3,
+    MicroempreendedorIndividual = 4
 }
 
 export type AdministracaoListQuery = {

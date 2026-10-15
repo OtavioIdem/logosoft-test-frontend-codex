@@ -22,6 +22,7 @@ import {
     gerarXmlEnvioSchema,
     inutilizarNumeracaoSefazSchema,
     registrarRejeicaoNotaFiscalSchema,
+    reabrirNotaFiscalSchema,
     reprocessarNotaFiscalSefazSchema,
     statusServicoSefazSchema,
     transmitirNotaFiscalSefazSchema
@@ -62,6 +63,7 @@ import {
     NotaFiscalXmlPipelineResponse,
     ObservabilidadeFiscalResponse,
     RegistrarRejeicaoNotaFiscalRequest,
+    ReabrirNotaFiscalRequest,
     ReprocessarNotaFiscalSefazRequest,
     ResumoOperacionalNotaFiscalResponse,
     StatusServicoSefazRequest,
@@ -270,6 +272,7 @@ export const buildStatusServicoPayload = (values: unknown): StatusServicoSefazRe
 export const buildAvaliarContingenciaPayload = (values: unknown): AvaliarContingenciaFiscalRequest => parseSchema(avaliarContingenciaFiscalSchema, values);
 export const buildHabilitarContingenciaPayload = (values: unknown): HabilitarContingenciaNotaFiscalRequest => parseSchema(contingenciaFiscalSchema.omit({ empresaId: true, filialId: true, tipoDocumento: true }), values);
 export const buildRegistrarRejeicaoPayload = (values: unknown): RegistrarRejeicaoNotaFiscalRequest => parseSchema(registrarRejeicaoNotaFiscalSchema, values);
+export const buildReabrirNotaFiscalPayload = (values: unknown): ReabrirNotaFiscalRequest => parseSchema(reabrirNotaFiscalSchema, values);
 export const buildCancelarNotaFiscalPayload = (values: unknown): CancelarNotaFiscalRequest => parseSchema(cancelarNotaFiscalSchema, values);
 export const buildCancelarNotaFiscalSefazPayload = (values: unknown): CancelarNotaFiscalSefazRequest => parseSchema(cancelarNotaFiscalSefazSchema, values);
 export const buildEmitirCartaCorrecaoPayload = (values: unknown): EmitirCartaCorrecaoSefazRequest => parseSchema(emitirCartaCorrecaoSefazSchema, values);
@@ -414,6 +417,13 @@ export const fiscalApi = {
     async validar(id: string) {
         return runFiscalRequest(async () => {
             const response = await httpClient.post<NotaFiscalResponse>(`/api/fiscal/notas-fiscais/${id}/validar`);
+            return response.data;
+        });
+    },
+    async reabrir(id: string, values: unknown) {
+        const payload = buildReabrirNotaFiscalPayload(values);
+        return runFiscalRequest(async () => {
+            const response = await httpClient.post<NotaFiscalResponse>(`/api/fiscal/notas-fiscais/${id}/reabrir`, payload);
             return response.data;
         });
     },

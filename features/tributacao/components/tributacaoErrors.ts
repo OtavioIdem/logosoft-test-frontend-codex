@@ -67,6 +67,13 @@ export const TRIBUTACAO_ERROR_CATALOG: Record<string, TributacaoErrorInfo> = {
             + 'contribuinte, e não por substituição.',
         acao: 'Corrija o cadastro da regra fiscal: use um CST/CSOSN sem substituição tributária para esta operação.'
     },
+    FISCAL_TRIBUTACAO_CST_MONOFASICO_NAO_SUPORTADO: {
+        codigo: 'FISCAL_TRIBUTACAO_CST_MONOFASICO_NAO_SUPORTADO',
+        kind: 'cadastro',
+        titulo: 'CST monofásico ainda não suportado no cálculo',
+        mensagem: 'A regra ou exceção fiscal usa um CST de ICMS monofásico de combustíveis que o motor ainda não calcula.',
+        acao: 'Ajuste o CST da regra ou da exceção fiscal. Os códigos oficiais continuam disponíveis, mas não podem ser usados no cálculo até a fatia de combustível.'
+    },
     FISCAL_TRIBUTACAO_EMPRESA_NAO_ENCONTRADA: {
         codigo: 'FISCAL_TRIBUTACAO_EMPRESA_NAO_ENCONTRADA',
         kind: 'contexto',

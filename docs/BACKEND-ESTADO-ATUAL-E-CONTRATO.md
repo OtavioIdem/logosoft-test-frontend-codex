@@ -421,6 +421,7 @@ POST /api/fiscal/notas-fiscais/{id}/impostos        ⚠ imposto DIGITADO (ver av
 
 ── emissão ─────────────────────────────────────────────────────────────
 POST /api/fiscal/notas-fiscais/{id}/validar             → Validada
+POST /api/fiscal/notas-fiscais/{id}/reabrir             → Rascunho     [FISCAL_GERENCIAR]
 POST /api/fiscal/notas-fiscais/{id}/gerar-xml-envio
 POST /api/fiscal/notas-fiscais/{id}/assinar-xml-envio   → Assinada     [FISCAL_EMITIR]
 POST /api/fiscal/notas-fiscais/{id}/transmitir-sefaz    → Transmitida/Autorizada/Rejeitada
@@ -1459,6 +1460,7 @@ Gerado do código; a ordem é a dos arquivos.
 | `POST` | `/{id:guid}/impostos` | `FiscalGerenciar` | `AdicionarImposto(Guid id, [FromBody] AdicionarImpostoNotaFiscalRequest request)` |
 | `POST` | `/{id:guid}/xmls` | `FiscalGerenciar` | `ArmazenarXml(Guid id, [FromBody] ArmazenarXmlNotaFiscalRequest request)` |
 | `POST` | `/{id:guid}/validar` | `FiscalGerenciar` | `Validar(Guid id)` |
+| `POST` | `/{id:guid}/reabrir` | `FiscalGerenciar` | `Reabrir(Guid id, [FromBody] ReabrirNotaFiscalRequest request)` |
 | `POST` | `/{id:guid}/gerar-xml-envio` | `FiscalGerenciar` | `GerarXmlEnvio(Guid id, [FromBody] GerarXmlEnvioNotaFiscalRequest request)` |
 | `POST` | `/{id:guid}/assinar-xml-envio` | `FiscalEmitir` | `AssinarXmlEnvio(Guid id, [FromBody] AssinarXmlNotaFiscalRequest request)` |
 | `POST` | `/{id:guid}/transmitir-sefaz` | `FiscalEmitir` | `TransmitirSefaz(Guid id, [FromBody] TransmitirNotaFiscalSefazRequest request)` |

@@ -89,6 +89,7 @@ export const useFiscalMutations = () => {
     const definirValoresAcessoriosMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.definirValoresAcessorios(id, values), onSettled: (_nota, _error, variables) => invalidateNota(variables.id) });
     const armazenarXmlMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.armazenarXml(id, values), onSuccess: (nota) => invalidateNota(nota.id) });
     const validarMutation = useMutation({ mutationFn: (id: string) => fiscalApi.validar(id), onSuccess: (nota) => invalidateNota(nota.id) });
+    const reabrirMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.reabrir(id, values), onSettled: (_nota, _error, variables) => invalidateNota(variables.id) });
     const gerarXmlMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.gerarXmlEnvio(id, values), onSuccess: (result) => invalidateNota(result.notaFiscalId) });
     const assinarXmlMutation = useMutation({ mutationFn: ({ id, values }: { id: string; values: unknown }) => fiscalApi.assinarXmlEnvio(id, values), onSuccess: (result) => invalidateNota(result.notaFiscalId) });
     // D37/D43 P-4: transmitir, reprocessar e consultar protocolo reconsultam também no erro (onSettled)
@@ -123,6 +124,7 @@ export const useFiscalMutations = () => {
         definirValoresAcessoriosMutation,
         armazenarXmlMutation,
         validarMutation,
+        reabrirMutation,
         gerarXmlMutation,
         assinarXmlMutation,
         transmitirMutation,

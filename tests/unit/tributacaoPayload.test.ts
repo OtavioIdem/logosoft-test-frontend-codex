@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { buildAtualizarRegraFiscalPayload, buildCriarExcecaoFiscalNcmPayload, buildCriarExcecaoFiscalPayload, buildCriarRegraFiscalPayload, buildSimularTributacaoPayload } from '@/features/tributacao/api/tributacaoApi';
+import { crtOptions, finalidadeOptions, modalidadeBaseIcmsStOptions } from '@/features/tributacao/components/tributacaoUiUtils';
 import { criarExcecaoFiscalSchema, simularTributacaoSchema, toDateOnly } from '@/features/tributacao/schemas/tributacaoSchemas';
-import { IndicadorContribuinteIcms, ModalidadeBaseCalculoIcms, ModalidadeBaseCalculoIcmsSt, RegimeTributario, TipoCalculoPisCofins, TipoCfop, TipoItemSped } from '@/features/tributacao/types/tributacao.types';
+import { Crt, FinalidadeNaturezaOperacao, IndicadorContribuinteIcms, ModalidadeBaseCalculoIcms, ModalidadeBaseCalculoIcmsSt, RegimeTributario, TipoCalculoPisCofins, TipoCfop, TipoItemSped } from '@/features/tributacao/types/tributacao.types';
 
 const empresaId = '11111111-1111-1111-1111-111111111111';
 const filialId = '22222222-2222-2222-2222-222222222222';
@@ -86,6 +87,14 @@ const regraBase = {
 };
 
 describe('payload de simulação de tributação', () => {
+    it('AJ-06: mantém CRT MEI e finalidades de crédito/débito disponíveis nos seletores', () => {
+        expect(crtOptions).toContainEqual({ label: '4 — Microempreendedor Individual (MEI)', value: Crt.MicroempreendedorIndividual });
+        expect(finalidadeOptions).toEqual(expect.arrayContaining([
+            { label: 'Nota de crédito', value: FinalidadeNaturezaOperacao.NotaDeCredito },
+            { label: 'Nota de débito', value: FinalidadeNaturezaOperacao.NotaDeDebito }
+        ]));
+    });
+
     it('normaliza UF, mantém o valor do produto informado e envia acessórias como totais do documento', () => {
         const payload = buildSimularTributacaoPayload(documentoBase);
 
@@ -141,6 +150,18 @@ describe('payload de simulação de tributação', () => {
 });
 
 describe('payload de regra fiscal', () => {
+    it('AJ-06: expõe e aceita modalidade ST 7 (valor da operação)', () => {
+        expect(modalidadeBaseIcmsStOptions).toContainEqual({ label: 'Valor da operação', value: ModalidadeBaseCalculoIcmsSt.ValorOperacao });
+
+        const resultado = buildCriarRegraFiscalPayload({
+            ...regraBase,
+            empresaId,
+            icms: { ...blocoIcms, modalidadeBaseCalculoSt: ModalidadeBaseCalculoIcmsSt.ValorOperacao }
+        });
+
+        expect(resultado.icms?.modalidadeBaseCalculoSt).toBe(ModalidadeBaseCalculoIcmsSt.ValorOperacao);
+    });
+
     it('preserva null como curinga na chave de resolução', () => {
         const payload = buildCriarRegraFiscalPayload({ ...regraBase, empresaId, filialId: '' });
 

@@ -2703,3 +2703,30 @@ Emenda à D104 (2026-10-02, nó `design`): o `PessoaResponse` devolve `Municipio
 A aba edita os outros 6. Os dois são enviados nulos só quando o registro também os tem nulos. Se o registro tiver qualquer um deles preenchido, o salvamento fica **bloqueado**, e o motivo aparece: salvar apagaria um dado que a tela não consegue reenviar. Nenhum dado é apagado pela tela.
 Foi descartada a opção do design, que salvava com aviso e apagava. Ela trocaria um dado gravado por um aviso, e esses dois campos não são lidos pelo `DestinatarioFiscalResolver` (o resolver lê o município do endereço). Como o frontend nunca os enviou, só carga externa os preenche.
 Pergunta **B-44**: o `PessoaResponse` pode devolver os códigos, ou as buscas podem ganhar filtro por Id?
+
+### D105 — `b76`: fiscal v1.24-p1 entra com os enums do AJ-06; coerência de CRT no campo fica para o backend
+
+Contexto: o inventário K3 (`docs/arquitetura/debate/20-inventario-enums-crt.md`) fechou os valores sem divergência.
+Foram conferidos 7 enums e 34 valores contra o C#. Também ficou provado que a regra de coerência CRT × regime
+volta como `ADMINISTRACAO_VALIDACAO`, sem código próprio nem campo (`Errors = null`, `Empresa.cs:167`).
+
+- **Entra na `b76`:** valores novos, rótulos, opções de select e o fallback "Não mapeado (n)" nos pontos de leitura
+  de Empresa (Regime, CRT), Natureza (Finalidade) e Ambiente.
+- **Não entra (K3-1):** a mensagem de coerência junto do campo de regime. Há duas vias, e as duas foram descartadas:
+  - casar o código genérico poria no campo de regime qualquer erro de validação da Empresa;
+  - casar o texto da mensagem quebra na primeira revisão de texto do backend.
+
+  Por isso a mensagem continua no toast. Pergunta **B-45**: a coerência CRT × regime pode ganhar código próprio
+  e o campo no corpo do erro?
+- **Dívida para a `.c1` (K3-2, K3-3, K3-8):**
+  - fallback "não mapeado" nos 7 selects restantes (Regra fiscal ×3, Simulador ×3, Pessoa fiscal ×1);
+  - `regimeTributarioParceiroLabel`;
+  - mensagem própria no `crtSchema`.
+
+  Hoje nenhum desses selects recebe valor desconhecido, porque o K3 conferiu paridade total. A dívida só morde no
+  próximo valor aditivo do backend.
+- **Fora (K3-7):** oferecer `limparCrt`. É decisão funcional e fica para quando a B-45 responder.
+- **K3-5:** `modBCST` "valor da operação" = 7, como no código do backend (`EnumsRegraFiscal.cs:36`). O 6 do FE-0 é
+  erro do plano e colidiria com `ListaNeutra`.
+
+Reversível: sim. Gatilho de revisita: resposta da B-45 ou primeiro enum aditivo do backend.
