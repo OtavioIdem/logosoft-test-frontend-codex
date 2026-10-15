@@ -28,13 +28,15 @@ describe('Frota (Onda 2) — estrutura e scaffold', () => {
         expect(erp).toContain("'FROTA_GERENCIAR'");
     });
 
-    it('registra rota e menu (registros centrais)', () => {
+    it('registra rota e preserva cadastros na central e operações no menu', () => {
         const rotas = read('lib/security/routePermissions.ts');
         expect(rotas).toContain('/^\\/frota');
         expect(rotas).toContain('FROTA_CONSULTAR');
         const menu = read('layout/AppMenu.tsx');
-        expect(menu).toContain("to: '/frota/veiculos'");
-        expect(menu).toContain("to: '/frota/motoristas'");
+        const cadastros = read('features/cadastros/cadastrosCatalogo.ts');
+        expect(menu).toContain("to: '/cadastros'");
+        expect(cadastros).toContain("to: '/frota/veiculos'");
+        expect(cadastros).toContain("to: '/frota/motoristas'");
         expect(menu).toContain("to: '/frota/viagens'");
         const pageList = read('app/(main)/frota/veiculos/page.tsx');
         expect(pageList).toContain('VeiculosPage');

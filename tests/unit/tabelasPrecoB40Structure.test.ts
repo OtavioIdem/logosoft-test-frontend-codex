@@ -6,14 +6,17 @@ const root = process.cwd();
 const read = (path: string) => readFileSync(join(root, path), 'utf8');
 
 describe('tabelas de preço B40', () => {
-    it('expõe página real no menu e no guard de rotas', () => {
+    it('expõe página real na central de cadastros e no guard de rotas', () => {
         const page = read('app/(main)/tabelas-preco/page.tsx');
         const menu = read('layout/AppMenu.tsx');
+        const cadastros = read('features/cadastros/cadastrosCatalogo.ts');
         const routePermissions = read('lib/security/routePermissions.ts');
 
         expect(page).toContain('TabelasPrecoPage');
         expect(page).not.toContain('ModulePlaceholderPage');
-        expect(menu).toContain('/tabelas-preco');
+        expect(menu).toContain("to: '/cadastros'");
+        expect(cadastros).toContain('/tabelas-preco');
+        expect(cadastros).toContain('TABELAS_PRECO_CONSULTAR');
         expect(menu).toContain('TABELAS_PRECO_CONSULTAR');
         expect(routePermissions).toContain('^\\/tabelas-preco');
         expect(routePermissions).toContain('TABELAS_PRECO_GERENCIAR');

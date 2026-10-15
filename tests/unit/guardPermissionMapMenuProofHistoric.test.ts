@@ -182,25 +182,22 @@ describe('Gate de menu (C2 e C3) — prova histórica da b53', () => {
   });
 
   describe('Contagem de itens do menu', () => {
-    it('parser enumera 82 itens na árvore atual', () => {
+    it('parser enumera 49 itens na árvore atual', () => {
       // b58: +1 "Séries fiscais" (84). b62: −1 "Bloqueios" (`/estoque/bloqueios`,
       // ESTOQUE_MOVIMENTAR), removido em 6d42c62 por levar a rota inexistente — a contagem caiu
       // para 83 e esta prova não foi atualizada junto, então `test:unit` ficou vermelho da b62 em
       // diante e assim foi commitado pela b62, b63 e b64. Corrigido aqui.
-      // b67: +1 "Classificações de pessoa" (D68) em Cadastros > /pessoas/classificacoes — contagem sobe para 84.
-      // b72: +1 "Naturezas de operação" (D98) em Fiscal > /fiscal/naturezas-operacao — contagem sobe para 85.
-      // PR #39: -2 "Entradas" e "Saídas" (absorvidas por Movimentos) e -1 "Financeiro avançado"
-      // (absorvido pela página de Fluxo de caixa) — contagem atual é 82.
-      expect(hierarchyCountAtuais).toBe(82);
+      // D106: 34 atalhos cadastrais foram consolidados na entrada /cadastros.
+      expect(hierarchyCountAtuais).toBe(49);
     });
 
-    it('b72: o item novo é /fiscal/naturezas-operacao no grupo Fiscal, e o pai carrega as duas permissões do filho (D49)', () => {
-      const item = divergenciasHoje.itens.filter((candidato) => candidato.rota === '/fiscal/naturezas-operacao');
+    it('D106: /cadastros fica no grupo Cadastros e o pai carrega suas permissões', () => {
+      const item = divergenciasHoje.itens.filter((candidato) => candidato.rota === '/cadastros');
       expect(item).toHaveLength(1);
-      expect(item[0].grupo).toBe('Fiscal');
-      expect(item[0].permissoes).toEqual(['FISCAL_CADASTROS_CONSULTAR', 'FISCAL_CADASTROS_GERENCIAR']);
+      expect(item[0].grupo).toBe('Cadastros');
+      expect(item[0].permissoes).toEqual(expect.arrayContaining(['FISCAL_CADASTROS_CONSULTAR', 'FISCAL_CADASTROS_GERENCIAR']));
       expect(item[0].permissoesDoPai).toEqual(expect.arrayContaining(['FISCAL_CADASTROS_CONSULTAR', 'FISCAL_CADASTROS_GERENCIAR']));
-      expect(divergenciasHoje.c2.filter((par) => par.grupo === 'Fiscal')).toEqual([]);
+      expect(divergenciasHoje.c2.filter((par) => par.grupo === 'Cadastros')).toEqual([]);
     });
   });
 });
