@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { isValidGuid } from '@/lib/http/requestUtils';
-import { TipoCobranca } from '@/features/bancos/types/bancos.types';
+import { StatusBoleto, TipoCobranca } from '@/features/bancos/types/bancos.types';
 
 const requiredGuid = (label: string) => z.string().trim().refine(isValidGuid, `${label} deve ser selecionado corretamente.`);
 const optionalGuid = z
@@ -47,6 +47,39 @@ export const gerarBoletoSchema = z.object({
     numeroDocumento: nullableText
 });
 
+const boletoStatusSchema = z.number().int().refine((value) => Object.values(StatusBoleto).includes(value), 'Status de boleto inválido.');
+
+export const boletoResponseSchema = z.object({
+    id: requiredGuid('Boleto'),
+    contaReceberId: requiredGuid('Conta a receber'),
+    parcelaReceberId: requiredGuid('Parcela a receber'),
+    carteiraCobrancaId: requiredGuid('Carteira de cobrança'),
+    nossoNumero: z.number().int().positive(),
+    numeroDocumento: z.string(),
+    dataEmissao: z.string().datetime({ offset: true }),
+    dataVencimento: z.string().datetime({ offset: true }),
+    valorTitulo: z.number(),
+    statusBoleto: boletoStatusSchema,
+    linhaDigitavel: z.string().nullable().optional(),
+    codigoBarras: z.string().nullable().optional(),
+    dataLiquidacao: z.string().datetime({ offset: true }).nullable().optional(),
+    valorPago: z.number().nullable().optional()
+});
+
+export const boletoHistoricoResponseSchema = z.object({
+    id: requiredGuid('Histórico de boleto'),
+    statusAnterior: boletoStatusSchema,
+    statusNovo: boletoStatusSchema,
+    observacao: z.string(),
+    usuarioId: z.string().uuid().nullable().optional(),
+    data: z.string().datetime({ offset: true })
+});
+
+export const gerarBoletoResponseSchema = z.object({
+    boleto: boletoResponseSchema,
+    alertas: z.array(z.string())
+});
+
 export const gerarRemessaSchema = z.object({
     carteiraCobrancaId: requiredGuid('Carteira de cobrança')
 });
@@ -57,4 +90,4 @@ export const importarRetornoSchema = z.object({
     conteudo: textRequired('Conteúdo do arquivo vazio.')
 });
 
-export const motivoSchema = z.object({ motivo: textRequired('Informe o motivo.') });
+export const motivoSchema = z.object({ motivo: textRequired('Informe o motivo.').max(300, 'O motivo deve ter no máximo 300 caracteres.') });

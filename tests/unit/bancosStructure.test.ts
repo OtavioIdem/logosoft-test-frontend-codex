@@ -48,7 +48,7 @@ describe('Bancos/Boletos/CNAB (Onda 4) — estrutura e scaffold', () => {
         const cadastros = read('features/bancos/components/CadastrosBancariosPage.tsx');
         const cnab = read('features/bancos/components/CnabPage.tsx');
         expect(cadastros).toContain('não oferece endpoints de consulta');
-        expect(boletos).toContain('Geração de boleto indisponível');
+        expect(boletos).toContain('Geração indisponível: ainda não é possível selecionar uma carteira de cobrança pelo sistema.');
         expect(cnab).toContain('operações de remessa e retorno estão indisponíveis');
     });
 

@@ -7,9 +7,12 @@ import {
     criarContaBancariaSchema,
     criarConvenioSchema,
     gerarBoletoSchema,
+    gerarBoletoResponseSchema,
     gerarRemessaSchema,
     importarRetornoSchema,
-    motivoSchema
+    motivoSchema,
+    boletoHistoricoResponseSchema,
+    boletoResponseSchema
 } from '@/features/bancos/schemas/bancosSchemas';
 import {
     BancoResponse,
@@ -18,8 +21,8 @@ import {
     CarteiraCobrancaResponse,
     BoletoHistoricoResponse,
     BoletoResponse,
-    BoletoResumoResponse,
     BoletosListQuery,
+    GerarBoletoResponse,
     RemessaCnabResponse,
     RetornoCnabResponse
 } from '@/features/bancos/types/bancos.types';
@@ -58,22 +61,37 @@ export const bancosApi = {
     },
 
     // ---- Boletos ----
-    async listarBoletos(query?: BoletosListQuery) {
-        return runRequest(async () => (await httpClient.get<BoletoResumoResponse[]>(`${BASE}/boletos`, { params: cleanQueryParams({ empresaId: query?.empresaId, filialId: query?.filialId, status: query?.status, termo: query?.termo }) })).data);
+    async listarBoletos(query: BoletosListQuery) {
+        return runRequest(async () => {
+            const response = await httpClient.get<unknown>(`${BASE}/boletos`, { params: cleanQueryParams({ empresaId: query.empresaId, filialId: query.filialId, status: query.status }) });
+            return boletoResponseSchema.array().parse(response.data) as BoletoResponse[];
+        });
     },
     async obterBoleto(id: string) {
-        return runRequest(async () => (await httpClient.get<BoletoResponse>(`${BASE}/boletos/${id}`)).data);
+        return runRequest(async () => {
+            const response = await httpClient.get<unknown>(`${BASE}/boletos/${id}`);
+            return boletoResponseSchema.parse(response.data) as BoletoResponse;
+        });
     },
     async historicoBoleto(id: string) {
-        return runRequest(async () => (await httpClient.get<BoletoHistoricoResponse[]>(`${BASE}/boletos/${id}/historico`)).data);
+        return runRequest(async () => {
+            const response = await httpClient.get<unknown>(`${BASE}/boletos/${id}/historico`);
+            return boletoHistoricoResponseSchema.array().parse(response.data) as BoletoHistoricoResponse[];
+        });
     },
     async gerarBoleto(values: unknown) {
         const payload = parseSchema(gerarBoletoSchema, values);
-        return runRequest(async () => (await httpClient.post<BoletoResponse>(`${BASE}/boletos/gerar`, payload)).data);
+        return runRequest(async () => {
+            const response = await httpClient.post<unknown>(`${BASE}/boletos/gerar`, payload);
+            return gerarBoletoResponseSchema.parse(response.data) as GerarBoletoResponse;
+        });
     },
     async cancelarBoleto(id: string, motivo: string) {
         const payload = parseSchema(motivoSchema, { motivo });
-        return runRequest(async () => (await httpClient.post<BoletoResponse>(`${BASE}/boletos/${id}/cancelar`, payload)).data);
+        return runRequest(async () => {
+            const response = await httpClient.post<unknown>(`${BASE}/boletos/${id}/cancelar`, payload);
+            return boletoResponseSchema.parse(response.data) as BoletoResponse;
+        });
     },
 
     // ---- CNAB ----
