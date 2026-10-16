@@ -31,12 +31,14 @@ describe('Produção (Onda 3) — estrutura e scaffold', () => {
         expect(erp).toContain("'PRODUCAO_ORDENS_CANCELAR'");
     });
 
-    it('registra rota e menu (registros centrais)', () => {
+    it('registra rota e preserva cadastros na central e operações no menu', () => {
         const rotas = read('lib/security/routePermissions.ts');
         expect(rotas).toContain('/^\\/producao');
         expect(rotas).toContain('PRODUCAO_CONSULTAR');
         const menu = read('layout/AppMenu.tsx');
-        expect(menu).toContain("to: '/producao/fichas-tecnicas'");
+        const cadastros = read('features/cadastros/cadastrosCatalogo.ts');
+        expect(menu).toContain("to: '/cadastros'");
+        expect(cadastros).toContain("to: '/producao/fichas-tecnicas'");
         expect(menu).toContain("to: '/producao/ordens'");
         const page = read('app/(main)/producao/ordens/page.tsx');
         expect(page).toContain('OrdensProducaoPage');

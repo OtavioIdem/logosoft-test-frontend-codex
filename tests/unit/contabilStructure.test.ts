@@ -29,12 +29,14 @@ describe('Contábil (Onda 4) — estrutura e scaffold', () => {
         expect(erp).toContain("'CONTABIL_REGRAS_GERENCIAR'");
     });
 
-    it('registra rota e menu (registros centrais)', () => {
+    it('registra rota e preserva cadastros na central e operações no menu', () => {
         const rotas = read('lib/security/routePermissions.ts');
         expect(rotas).toContain('/^\\/contabil');
         expect(rotas).toContain('CONTABIL_CONSULTAR');
         const menu = read('layout/AppMenu.tsx');
-        expect(menu).toContain("to: '/contabil/plano-contas'");
+        const cadastros = read('features/cadastros/cadastrosCatalogo.ts');
+        expect(menu).toContain("to: '/cadastros'");
+        expect(cadastros).toContain("to: '/contabil/plano-contas'");
         expect(menu).toContain("to: '/contabil/lancamentos'");
         const page = read('app/(main)/contabil/lancamentos/page.tsx');
         expect(page).toContain('LancamentosPage');

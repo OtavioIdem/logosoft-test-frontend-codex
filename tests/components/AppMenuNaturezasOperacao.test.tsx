@@ -60,24 +60,24 @@ describe('AC-3: regra de rota /fiscal/naturezas-operacao', () => {
     });
 });
 
-describe('AC-3: item "Naturezas de operação" no menu filtrado', () => {
+describe('D106: Central de cadastros no menu filtrado', () => {
     it.each([
         ['S1', S1],
         ['S2', S2],
         ['S3', S3]
-    ])('%s vê o grupo Fiscal e o item, com link para a rota', (_sessao, perms) => {
+    ])('%s vê a central de cadastros, sem manter o atalho fiscal duplicado', (_sessao, perms) => {
         estado.perms = perms;
         render(<AppMenu />);
-        const grupo = screen.getByRole('list', { name: 'Fiscal' });
-        expect(within(grupo).getByRole('link', { name: 'Naturezas de operação' })).toHaveAttribute('href', '/fiscal/naturezas-operacao');
+        const grupo = screen.getByRole('list', { name: 'Cadastros' });
+        expect(within(grupo).getByRole('link', { name: 'Central de cadastros' })).toHaveAttribute('href', '/cadastros');
+        expect(screen.queryByRole('link', { name: 'Naturezas de operação' })).not.toBeInTheDocument();
     });
 
-    it('S4 vê o grupo Fiscal pelas notas, mas não o item de naturezas', () => {
+    it('S4 vê o grupo Fiscal pelas notas, mas não recebe a central sem cadastro permitido', () => {
         estado.perms = S4;
         render(<AppMenu />);
         const grupo = screen.getByRole('list', { name: 'Fiscal' });
         expect(within(grupo).getByRole('link', { name: 'Notas fiscais' })).toBeInTheDocument();
-        expect(within(grupo).queryByRole('link', { name: 'Naturezas de operação' })).not.toBeInTheDocument();
-        expect(screen.queryByRole('link', { name: 'Naturezas de operação' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: 'Central de cadastros' })).not.toBeInTheDocument();
     });
 });

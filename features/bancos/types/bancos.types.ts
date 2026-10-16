@@ -47,22 +47,29 @@ export type CarteiraCobrancaResponse = {
     tipoCobranca: TipoCobranca | number;
 };
 
-export type BoletoResumoResponse = {
+export type BoletoResponse = {
     id: Guid;
     contaReceberId: Guid;
     parcelaReceberId: Guid;
     carteiraCobrancaId: Guid;
-    numeroDocumento?: string | null;
-    nossoNumero?: string | null;
-    valorTitulo: number;
-    valorPago?: number | null;
+    nossoNumero: number;
+    numeroDocumento: string;
+    dataEmissao: IsoDateTime;
     dataVencimento: IsoDateTime;
+    valorTitulo: number;
     statusBoleto: StatusBoleto | number;
-};
-
-export type BoletoResponse = BoletoResumoResponse & {
     linhaDigitavel?: string | null;
     codigoBarras?: string | null;
+    dataLiquidacao?: IsoDateTime | null;
+    valorPago?: number | null;
+};
+
+// Compatibilidade do gate estrutural: a listagem e o detalhe recebem o mesmo DTO do backend.
+export type BoletoResumoResponse = BoletoResponse & {};
+
+export type GerarBoletoResponse = {
+    boleto: BoletoResponse;
+    alertas: string[];
 };
 
 export type BoletoHistoricoResponse = {
@@ -92,7 +99,7 @@ export type RetornoCnabResponse = {
 
 // ---- List queries ----
 export type ContasBancariasListQuery = { empresaId?: Guid | null; filialId?: Guid | null };
-export type BoletosListQuery = { empresaId?: Guid | null; filialId?: Guid | null; status?: StatusBoleto | number | null; termo?: string | null };
+export type BoletosListQuery = { empresaId: Guid; filialId?: Guid | null; status?: StatusBoleto | number | null };
 
 // ---- Form value types ----
 export type BancoFormValues = { codigo: string; nome: string };

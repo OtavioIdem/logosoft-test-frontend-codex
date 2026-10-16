@@ -29,12 +29,14 @@ describe('Patrimônio (Onda 4) — estrutura e scaffold', () => {
         expect(erp).toContain("'PATRIMONIO_INVENTARIO_GERENCIAR'");
     });
 
-    it('registra rota e menu (registros centrais)', () => {
+    it('registra rota e preserva cadastros na central e operações no menu', () => {
         const rotas = read('lib/security/routePermissions.ts');
         expect(rotas).toContain('/^\\/patrimonio');
         expect(rotas).toContain('PATRIMONIO_CONSULTAR');
         const menu = read('layout/AppMenu.tsx');
-        expect(menu).toContain("to: '/patrimonio/bens'");
+        const cadastros = read('features/cadastros/cadastrosCatalogo.ts');
+        expect(menu).toContain("to: '/cadastros'");
+        expect(cadastros).toContain("to: '/patrimonio/bens'");
         expect(menu).toContain("to: '/patrimonio/depreciacao'");
         expect(menu).toContain("to: '/patrimonio/inventarios'");
         const page = read('app/(main)/patrimonio/bens/page.tsx');

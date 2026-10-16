@@ -21,13 +21,14 @@ describe('AC-6: painel de retorno operacional sem persistência', () => {
 // nenhum outro item do menu muda (CLAUDE.md: pai e filho avaliados de forma independente).
 describe('AC-8: menu Fiscal e Notas fiscais ganham FISCAL_REPROCESSAR', () => {
     const source = read('layout/AppMenu.tsx');
+    const cadastrosSource = read('features/cadastros/cadastrosCatalogo.ts');
 
     it('FISCAL_REPROCESSAR aparece exatamente 2 vezes: uma no pai, uma no filho', () => {
         expect((source.match(/FISCAL_REPROCESSAR/g) ?? []).length).toBe(2);
     });
 
     it('o item pai "Fiscal" ganha FISCAL_REPROCESSAR no fim da lista atual', () => {
-        const anyPermissionsLine = "anyPermissions: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_CANCELAR', 'FISCAL_INUTILIZAR', 'FISCAL_CARTA_CORRECAO', 'FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR', 'FISCAL_REPROCESSAR', 'FISCAL_SERIES_CONSULTAR', 'FISCAL_SERIES_GERENCIAR', 'FISCAL_CADASTROS_CONSULTAR', 'FISCAL_CADASTROS_GERENCIAR'],"; // b58: +2 séries; b72: +2 cadastros (D98, D49)
+        const anyPermissionsLine = "anyPermissions: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_CANCELAR', 'FISCAL_INUTILIZAR', 'FISCAL_CARTA_CORRECAO', 'FISCAL_REGRAS_CONSULTAR', 'FISCAL_REPROCESSAR'],";
         expect(source).toContain(anyPermissionsLine);
         expect(source.indexOf("label: 'Fiscal',")).toBeLessThan(source.indexOf(anyPermissionsLine));
         expect(source.indexOf(anyPermissionsLine) - source.indexOf("label: 'Fiscal',")).toBeLessThan(60);
@@ -39,13 +40,13 @@ describe('AC-8: menu Fiscal e Notas fiscais ganham FISCAL_REPROCESSAR', () => {
         );
     });
 
-    it('os demais itens do grupo Fiscal ficam intactos', () => {
+    it('preserva operações fiscais no menu e cadastros fiscais na central', () => {
         expect(source).toContain("{ label: 'Simulador de tributação', icon: 'pi pi-fw pi-calculator', to: '/fiscal/simulador', permission: 'FISCAL_REGRAS_CONSULTAR' },");
-        expect(source).toContain("{ label: 'Regras fiscais', icon: 'pi pi-fw pi-sliders-h', to: '/fiscal/regras', anyPermissions: ['FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR'] },");
-        expect(source).toContain("{ label: 'Exceções e benefícios', icon: 'pi pi-fw pi-percentage', to: '/fiscal/excecoes', anyPermissions: ['FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR'] },");
-        expect(source).toContain("{ label: 'Exceções por NCM', icon: 'pi pi-fw pi-tags', to: '/fiscal/excecoes-ncm', anyPermissions: ['FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR'] },");
         expect(source).toContain("{ label: 'Observabilidade', icon: 'pi pi-fw pi-chart-line', to: '/fiscal/observabilidade', permission: 'FISCAL_CONSULTAR' },");
         expect(source).toContain("{ label: 'Inutilizações', icon: 'pi pi-fw pi-ban', to: '/fiscal/inutilizacoes', permission: 'FISCAL_INUTILIZAR' }");
+        expect(cadastrosSource).toContain("to: '/fiscal/regras'");
+        expect(cadastrosSource).toContain("to: '/fiscal/excecoes'");
+        expect(cadastrosSource).toContain("to: '/fiscal/excecoes-ncm'");
     });
 });
 

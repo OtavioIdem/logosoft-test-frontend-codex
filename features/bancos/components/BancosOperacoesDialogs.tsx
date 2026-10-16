@@ -7,7 +7,9 @@ import { DataTable } from 'primereact/datatable';
 import { Dialog } from 'primereact/dialog';
 import { InputText } from 'primereact/inputtext';
 import { Message } from 'primereact/message';
+import { Skeleton } from 'primereact/skeleton';
 import { Tag } from 'primereact/tag';
+import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { EmpresaFilialFilter } from '@/components/forms/EmpresaFilialFilter';
 import { EntitySelect } from '@/components/forms/EntitySelect';
 import { FieldError } from '@/components/forms/FieldError';
@@ -17,6 +19,7 @@ import { useContasReceber } from '@/features/financeiro/hooks/useFinanceiroResou
 import { BoletoHistoricoResponse, BoletoResponse, GerarBoletoFormValues, ImportarRetornoFormValues } from '@/features/bancos/types/bancos.types';
 import { statusBoletoLabel } from '@/features/bancos/components/bancosLabels';
 import { formatMoney, formatMoneyOptional } from '@/lib/formatters/money';
+import { ApiError } from '@/types/erp';
 
 const footer = (label: string, loading: boolean | undefined, onHide: () => void, onConfirm: () => void, disabled?: boolean) => (
     <div className="flex justify-content-end gap-2">
@@ -95,26 +98,31 @@ export const GerarBoletoDialog = ({ visible, loading, carteiraOptions, carteiraL
     );
 };
 
-export const BoletoDetalheDialog = ({ visible, boleto, historico, historicoLoading, onHide }: { visible: boolean; boleto: BoletoResponse | null; historico: BoletoHistoricoResponse[]; historicoLoading?: boolean; onHide: () => void }) => {
+export const BoletoDetalheDialog = ({ visible, boleto, loading, error, historico, historicoLoading, historicoError, onRetryDetalhe, onRetryHistorico, onHide }: { visible: boolean; boleto: BoletoResponse | null; loading?: boolean; error?: ApiError | null; historico: BoletoHistoricoResponse[]; historicoLoading?: boolean; historicoError?: ApiError | null; onRetryDetalhe: () => void; onRetryHistorico: () => void; onHide: () => void }) => {
     return (
         <Dialog header="Boleto" visible={visible} modal style={{ width: 'min(56rem, 98vw)' }} onHide={onHide}>
+            {error ? <ApiErrorPanel error={error} title="Não foi possível carregar o boleto." /> : null}
+            {loading && !boleto ? <div className="grid"><div className="col-12 md:col-3"><Skeleton height="3rem" /></div><div className="col-12 md:col-3"><Skeleton height="3rem" /></div><div className="col-12 md:col-3"><Skeleton height="3rem" /></div><div className="col-12 md:col-3"><Skeleton height="3rem" /></div></div> : null}
+            {error && !boleto ? <Button type="button" label="Tentar novamente" icon="pi pi-refresh" text onClick={onRetryDetalhe} /> : null}
             {boleto ? (
                 <>
                     <div className="grid mb-2">
                         <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Valor do título</span><strong>{formatMoney(boleto.valorTitulo)}</strong></div>
                         <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Valor pago</span><strong>{formatMoneyOptional(boleto.valorPago)}</strong></div>
+                        <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Emissão</span>{formatDate(boleto.dataEmissao)}</div>
                         <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Vencimento</span>{formatDate(boleto.dataVencimento)}</div>
+                        <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Liquidação</span>{formatDate(boleto.dataLiquidacao)}</div>
                         <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Nosso número</span>{boleto.nossoNumero || '—'}</div>
                         <div className="col-6 md:col-3"><span className="block text-color-secondary text-sm">Documento</span>{boleto.numeroDocumento || '—'}</div>
                         <div className="col-12"><span className="block text-color-secondary text-sm">Linha digitável</span><span className="font-mono">{boleto.linhaDigitavel || '—'}</span></div>
                         <div className="col-12"><span className="block text-color-secondary text-sm">Código de barras</span><span className="font-mono">{boleto.codigoBarras || '—'}</span></div>
                     </div>
                     <Message className="w-full mb-3" severity="info" text="Layout de linha digitável/código de barras é best-effort — validar contra o banco real antes de usar em produção." />
-                    <DataTable value={historico} dataKey="id" loading={historicoLoading} emptyMessage="Sem histórico." responsiveLayout="scroll" stripedRows size="small">
+                    {historicoError ? <><ApiErrorPanel error={historicoError} title="Não foi possível carregar o histórico do boleto." /><Button type="button" label="Tentar novamente" icon="pi pi-refresh" text onClick={onRetryHistorico} /></> : <DataTable value={historico} dataKey="id" loading={historicoLoading} emptyMessage="Sem histórico." responsiveLayout="scroll" stripedRows size="small">
                         <Column header="Data" body={(row: BoletoHistoricoResponse) => new Date(row.data).toLocaleString('pt-BR')} />
                         <Column header="Evento" body={(row: BoletoHistoricoResponse) => <Tag value={`${statusBoletoLabel(Number(row.statusAnterior))} → ${statusBoletoLabel(Number(row.statusNovo))}`} />} />
                         <Column field="observacao" header="Descrição" body={(row: BoletoHistoricoResponse) => row.observacao} />
-                    </DataTable>
+                    </DataTable>}
                 </>
             ) : null}
         </Dialog>

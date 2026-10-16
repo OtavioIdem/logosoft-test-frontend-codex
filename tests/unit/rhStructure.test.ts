@@ -35,12 +35,14 @@ describe('RH (Onda 2) — estrutura e scaffold', () => {
         expect(erp).toContain("'RH_EVENTOS_GERENCIAR'");
     });
 
-    it('registra rota e menu (registros centrais)', () => {
+    it('registra rota e preserva cadastros na central e operações no menu', () => {
         const rotas = read('lib/security/routePermissions.ts');
         expect(rotas).toContain('/^\\/rh');
         expect(rotas).toContain('RH_CONSULTAR');
         const menu = read('layout/AppMenu.tsx');
-        expect(menu).toContain("to: '/rh/colaboradores'");
+        const cadastros = read('features/cadastros/cadastrosCatalogo.ts');
+        expect(menu).toContain("to: '/cadastros'");
+        expect(cadastros).toContain("to: '/rh/colaboradores'");
         expect(menu).toContain("to: '/rh/ponto'");
         expect(menu).toContain("to: '/rh/ausencias'");
         expect(menu).toContain("to: '/rh/eventos'");

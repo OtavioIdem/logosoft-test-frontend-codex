@@ -2730,3 +2730,95 @@ volta como `ADMINISTRACAO_VALIDACAO`, sem código próprio nem campo (`Errors = 
   erro do plano e colidiria com `ListaNeutra`.
 
 Reversível: sim. Gatilho de revisita: resposta da B-45 ou primeiro enum aditivo do backend.
+
+### D106 — Central de Cadastros: um índice `/cadastros`, sem mega-CRUD
+
+Data: 2026-10-14. Rodada: inventário e posições `21-*-central-cadastros`. Quem arbitrou:
+orquestrador. Pedido do cliente: reunir todos os cadastros, inclusive empresas, filiais, setores,
+cargos e séries, para que a cadeia de implantação seja visível num único ponto.
+
+Decisão:
+
+- Criar `/cadastros` como **índice categorizado e ordenado**, não como uma página que monta os 34
+  CRUDs. Cada cartão/atalho navega para a rota canônica já existente; assim consultas, query keys,
+  invalidações e estados continuam pertencendo à feature dona.
+- A central lista os 34 destinos de cadastro/configuração do inventário 21, organizados na ordem:
+  estrutura organizacional; pessoas e parceiros; catálogo e estoque; comercial e financeiro;
+  fiscal; operação especializada; contábil e patrimônio; segurança e acessos. A ordem orienta e
+  não bloqueia o uso de uma tela.
+- Cada item da central usa a mesma permissão do item de menu atual. Não será criada permissão
+  global `CADASTROS_ACESSAR`. Itens sem permissão não aparecem e a rota filha preserva seu guard.
+- Os destinos operacionais permanecem nos módulos. As cinco telas mistas (Veículos,
+  Colaboradores, Benefícios, Períodos e Bens) entram como porta de cadastro, preservando todas as
+  ações operacionais já existentes. Cadastros bancários ficam fora enquanto os quatro GETs
+  necessários não tiverem contrato utilizável.
+- As URLs atuais permanecem válidas, para não quebrar favoritos, auditoria, notificações ou E2E.
+  O menu lateral terá uma única entrada Cadastros apontando ao índice; a retirada dos atalhos
+  duplicados só ocorre junto da prova estrutural e de permissão da central.
+
+Discordo do corte em quatro versões proposto pela posição de escopo apenas quanto à primeira
+visibilidade: como a central é um índice de links e o pedido é explicitamente “tudo”, o índice
+deve nascer com os 34 destinos. A normalização interna dos CRUDs continua posterior e fatiada;
+nesta decisão não se alteram endpoints, payloads, schemas ou regras de negócio.
+
+Risco principal: o catálogo precisa manter a paridade entre o link central, permissão e rota. A
+proteção será um registro único tipado, teste de unidade da matriz, teste de componente de
+visibilidade e E2E de navegação/permissão. Reversível: sim — rota e organização de menu, sem dado
+persistido.
+
+### D107 — `b78`: Boletos corrige o contrato e fecha consulta/cancelamento; geração continua bloqueada
+
+Data: 2026-10-15. Rodada 22: inventário e posições de operação, plataforma, escopo e design para
+`bancos-boletos`. Quem arbitrou: orquestrador. O controller confirma as cinco rotas e os DTOs em
+`../New project 3/src/Erp.Api/Controllers/Bancos/BoletosController.cs:21-65` e
+`../New project 3/src/Erp.Application/Bancos/BancosContracts.cs:13-50`.
+
+Decisão:
+
+- Entra na `b78`: consulta de boletos somente depois de uma empresa selecionada; filtros de
+  servidor `empresaId`, `filialId` e `status`; busca local por documento/nosso número; detalhe,
+  histórico e cancelamento com motivo obrigatório de até 300 caracteres. O frontend mantém o
+  backend como autoridade para estado e concorrência.
+- O contrato de `BoletoResponse` passa a refletir integralmente o record do backend, inclusive
+  `nossoNumero` numérico, `dataEmissao` e `dataLiquidacao`. `POST /gerar` passa a declarar o
+  envelope `GerarBoletoResponse { boleto, alertas }`, mesmo sem chamador interativo nesta fatia;
+  os alertas não podem ser descartados quando a ação futura for habilitada.
+- **Não entra:** ativar geração, CNAB, cadastro bancário, filtro por conta bancária, permissões
+  novas ou qualquer GUID livre. O botão `Gerar boleto` permanece visível e desabilitado, com o
+  motivo de não haver consulta legível de carteiras. O diálogo incompleto não é aberto.
+- O detalhe mantém linha digitável e código de barras em leitura, mas não exibe GUIDs de vínculos
+  como informação operacional. O histórico falho aparece dentro do diálogo, não como tabela vazia
+  ou toast perdido.
+- O mapa de contrato já foi conferido sem supressão: `npm run validate:backend-contract-map` passou
+  com 484 rotas compatíveis. Logo não será criada exceção na allowlist; a fatia corrige os tipos e
+  payloads para o contrato existente.
+
+Gatilho de revisita: backend publicar `GET` de carteiras de cobrança com identificação legível,
+contexto organizacional e permissão definida. A geração entra apenas depois disso e de decisão
+sobre o perfil que consulta contas e parcelas elegíveis. Risco remanescente: a geração usa cálculo
+best-effort de linha digitável/código de barras; sucesso jamais significa homologação bancária.
+
+### D108 — AJ-07: limites do leiaute entram como formato de cadastro, sem repetir regra fiscal
+
+Data: 2026-10-15. Rodada 23: inventário e posições em `23-*-aj07-limites-leiaute`. O plano
+formal pendente é AJ-07 (`19-planejamento-proxima-sessao-v124.md:21-23`), e a fonte superior é
+`../New project 3/src/Erp.Domain/Fiscal/LimitesDoLeiaute.cs:18-89`.
+
+Decisão:
+
+- A próxima fatia funcional proposta, depois da aceitação de b77/b78, valida NCM, CEST, CFOP,
+  unidade, IE e IM nos requests que hoje os enviam. Série 0–999 e o teto da unidade tributável
+  já estão aderentes; entram como regressão, não como reimplementação.
+- O formato comum fica em helper de `lib/validators/`, porque há consumidores em Produtos,
+  Naturezas, Administração e Pessoas. A validação não trunca, não calcula imposto e não escolhe
+  condição de contribuinte: só antecipa formato que o backend já aceita.
+- O escopo do plano AJ-07 foi corrigido: CFOP é enviado por
+  `naturezasOperacaoSchemas.ts`, e IE/IM também são escritos por Empresa, Filial e Pessoa.
+  O mapa anterior não citava essas superfícies.
+- GTIN/código de barras genérico, CNPJ alfanumérico (AJ-09), máscaras, correção de legado,
+  permissões, rotas, endpoints e regras de emissão ficam fora. GTIN só volta se houver campo de
+  contrato próprio; AJ-09 depende da rodada K6.
+
+Gatilho de revisita: metadado de leiaute gerado disponibilizado ao frontend (R1), ou evidência de
+que a edição de cadastro legado fora do limite exige comportamento adicional. Reversível: sim —
+somente validação local de formato, sem persistência nova.
