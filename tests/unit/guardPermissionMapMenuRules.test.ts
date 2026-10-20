@@ -457,7 +457,7 @@ export const MenuFixtureFRulePrecedence = () => {
   });
 
   describe('AC-1: parser enumera todo universo', () => {
-    it('parser deve enumerar 82 itens do AppMenu.tsx atual', () => {
+    it('parser deve enumerar 49 itens do AppMenu.tsx atual', () => {
       const appMenuSource = readFileSync(
         join(root, 'layout/AppMenu.tsx'),
         'utf8'
@@ -472,17 +472,13 @@ export const MenuFixtureFRulePrecedence = () => {
       // (hierarquia.length é cada par pai-filho ou item isolado)
       // Número total deve refletir a contagem
       expect(result.hierarchy.length).toBeGreaterThan(0);
-      // b62: -1 "Bloqueios" removido — o item apontava para /estoque/bloqueios que só faz redirect('/estoque/avancado')
-      // b67: +1 "Classificações de pessoa" adicionado (D68) em Cadastros > /pessoas/classificacoes
-      // b72: +1 "Naturezas de operação" adicionado (D98) em Fiscal > /fiscal/naturezas-operacao.
-      // PR #39: -2 "Entradas" e "Saídas" (absorvidas por Movimentos) e -1 "Financeiro avançado"
-      // (absorvido pela página de Fluxo de caixa), reduzindo a contagem para 82.
-      expect(itemsWithTo).toBe(82);
-      // O item novo, pelo nome: um único item com a rota, no grupo Fiscal, com as duas permissões do filho.
-      const itemNovo = result.hierarchy.filter((item: any) => item.rota === '/fiscal/naturezas-operacao');
+      // D106: 34 atalhos de cadastro foram substituídos por uma única entrada /cadastros.
+      expect(itemsWithTo).toBe(49);
+      const itemNovo = result.hierarchy.filter((item: any) => item.rota === '/cadastros');
       expect(itemNovo).toHaveLength(1);
-      expect(itemNovo[0]).toMatchObject({ group: 'Fiscal', permissions: ['FISCAL_CADASTROS_CONSULTAR', 'FISCAL_CADASTROS_GERENCIAR'] });
-      expect(appMenuSource).toContain("{ label: 'Naturezas de operação', icon: 'pi pi-fw pi-book', to: '/fiscal/naturezas-operacao', anyPermissions: ['FISCAL_CADASTROS_CONSULTAR', 'FISCAL_CADASTROS_GERENCIAR'] },");
+      expect(itemNovo[0]).toMatchObject({ group: 'Cadastros' });
+      expect(itemNovo[0].permissions).toContain('FISCAL_CADASTROS_CONSULTAR');
+      expect(appMenuSource).toContain("to: '/cadastros'");
     });
 
     it('D46: nenhum item ou grupo do AppMenu.tsx atual declara mais de uma forma de permissão', () => {

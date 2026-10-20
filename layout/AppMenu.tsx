@@ -50,43 +50,14 @@ const AppMenu = () => {
                 items: [{ label: 'Dashboard', icon: 'pi pi-fw pi-home', to: '/dashboard' }]
             },
             {
-                label: 'Segurança',
-                anyPermissions: ['SEGURANCA_USUARIOS_CONSULTAR', 'SEGURANCA_USUARIOS_GERENCIAR', 'SEGURANCA_PERMISSOES_GERENCIAR', 'SEGURANCA_GRUPOS_ACESSO_CONSULTAR', 'SEGURANCA_GRUPOS_ACESSO_GERENCIAR'],
-                items: [
-                    { label: 'Usuários', icon: 'pi pi-fw pi-users', to: '/seguranca/usuarios', anyPermissions: ['SEGURANCA_USUARIOS_CONSULTAR', 'SEGURANCA_USUARIOS_GERENCIAR'] },
-                    { label: 'Grupos de acesso', icon: 'pi pi-fw pi-shield', to: '/seguranca/grupos-acesso', anyPermissions: ['SEGURANCA_GRUPOS_ACESSO_CONSULTAR', 'SEGURANCA_GRUPOS_ACESSO_GERENCIAR'] }
-                ]
-            },
-            {
-                label: 'Administração',
-                anyPermissions: ['ADMINISTRACAO_CONSULTAR', 'ADMINISTRACAO_GERENCIAR'],
-                items: [
-                    { label: 'Empresas', icon: 'pi pi-fw pi-building', to: '/administracao/empresas', anyPermissions: ['ADMINISTRACAO_CONSULTAR', 'ADMINISTRACAO_GERENCIAR'] },
-                    { label: 'Filiais', icon: 'pi pi-fw pi-map-marker', to: '/administracao/filiais', anyPermissions: ['ADMINISTRACAO_CONSULTAR', 'ADMINISTRACAO_GERENCIAR'] },
-                    { label: 'Setores', icon: 'pi pi-fw pi-sitemap', to: '/administracao/setores', anyPermissions: ['ADMINISTRACAO_CONSULTAR', 'ADMINISTRACAO_GERENCIAR'] },
-                    { label: 'Cargos', icon: 'pi pi-fw pi-id-card', to: '/administracao/cargos', anyPermissions: ['ADMINISTRACAO_CONSULTAR', 'ADMINISTRACAO_GERENCIAR'] },
-                    { label: 'Centros de custo', icon: 'pi pi-fw pi-wallet', to: '/administracao/centros-custo', anyPermissions: ['ADMINISTRACAO_CONSULTAR', 'ADMINISTRACAO_GERENCIAR'] }
-                ]
-            },
-            {
                 label: 'Cadastros',
-                anyPermissions: ['PESSOAS_CONSULTAR', 'PESSOAS_GERENCIAR', 'CLIENTES_CONSULTAR', 'CLIENTES_GERENCIAR', 'FORNECEDORES_CONSULTAR', 'FORNECEDORES_GERENCIAR', 'PRODUTOS_CONSULTAR', 'PRODUTOS_GERENCIAR', 'CATEGORIAS_PRODUTO_GERENCIAR', 'UNIDADES_MEDIDA_GERENCIAR', 'MARCAS_GERENCIAR'],
-                items: [
-                    { label: 'Pessoas', icon: 'pi pi-fw pi-address-book', to: '/pessoas', anyPermissions: ['PESSOAS_CONSULTAR', 'PESSOAS_GERENCIAR'] },
-                    { label: 'Clientes', icon: 'pi pi-fw pi-user-plus', to: '/clientes', anyPermissions: ['CLIENTES_CONSULTAR', 'CLIENTES_GERENCIAR'] },
-                    { label: 'Fornecedores', icon: 'pi pi-fw pi-truck', to: '/fornecedores', anyPermissions: ['FORNECEDORES_CONSULTAR', 'FORNECEDORES_GERENCIAR'] },
-                    { label: 'Classificações de pessoa', icon: 'pi pi-fw pi-tag', to: '/pessoas/classificacoes', anyPermissions: ['PESSOAS_CONSULTAR'] },
-                    { label: 'Produtos', icon: 'pi pi-fw pi-box', to: '/produtos', anyPermissions: ['PRODUTOS_CONSULTAR', 'PRODUTOS_GERENCIAR'] },
-                    { label: 'Categorias', icon: 'pi pi-fw pi-tags', to: '/produtos/categorias', anyPermissions: ['PRODUTOS_CONSULTAR', 'CATEGORIAS_PRODUTO_GERENCIAR'] },
-                    { label: 'Unidades de medida', icon: 'pi pi-fw pi-sort-numeric-up', to: '/produtos/unidades-medida', anyPermissions: ['PRODUTOS_CONSULTAR', 'UNIDADES_MEDIDA_GERENCIAR'] },
-                    { label: 'Marcas', icon: 'pi pi-fw pi-star', to: '/produtos/marcas', anyPermissions: ['PRODUTOS_CONSULTAR', 'MARCAS_GERENCIAR'] }
-                ]
+                anyPermissions: ['ADMINISTRACAO_CONSULTAR', 'ADMINISTRACAO_GERENCIAR', 'PESSOAS_CONSULTAR', 'PESSOAS_GERENCIAR', 'CLIENTES_CONSULTAR', 'CLIENTES_GERENCIAR', 'FORNECEDORES_CONSULTAR', 'FORNECEDORES_GERENCIAR', 'PRODUTOS_CONSULTAR', 'UNIDADES_MEDIDA_GERENCIAR', 'MARCAS_GERENCIAR', 'CATEGORIAS_PRODUTO_GERENCIAR', 'PRODUTOS_GERENCIAR', 'ESTOQUE_CONSULTAR', 'LOCAIS_ESTOQUE_GERENCIAR', 'TABELAS_PRECO_CONSULTAR', 'TABELAS_PRECO_GERENCIAR', 'FINANCEIRO_CONSULTAR', 'FORMAS_PAGAMENTO_GERENCIAR', 'CONDICOES_PAGAMENTO_GERENCIAR', 'FISCAL_SERIES_CONSULTAR', 'FISCAL_SERIES_GERENCIAR', 'FISCAL_CADASTROS_CONSULTAR', 'FISCAL_CADASTROS_GERENCIAR', 'FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR', 'RH_CONSULTAR', 'RH_GERENCIAR', 'FROTA_CONSULTAR', 'FROTA_GERENCIAR', 'PRODUCAO_CONSULTAR', 'PRODUCAO_FICHA_TECNICA_GERENCIAR', 'CONTABIL_CONSULTAR', 'CONTABIL_PLANO_CONTAS_GERENCIAR', 'CONTABIL_PERIODOS_GERENCIAR', 'CONTABIL_REGRAS_GERENCIAR', 'PATRIMONIO_CONSULTAR', 'PATRIMONIO_BENS_GERENCIAR', 'SEGURANCA_USUARIOS_CONSULTAR', 'SEGURANCA_USUARIOS_GERENCIAR', 'SEGURANCA_GRUPOS_ACESSO_CONSULTAR', 'SEGURANCA_GRUPOS_ACESSO_GERENCIAR'],
+                items: [{ label: 'Central de cadastros', icon: 'pi pi-fw pi-th-large', to: '/cadastros', anyPermissions: ['ADMINISTRACAO_CONSULTAR', 'ADMINISTRACAO_GERENCIAR', 'PESSOAS_CONSULTAR', 'PESSOAS_GERENCIAR', 'CLIENTES_CONSULTAR', 'CLIENTES_GERENCIAR', 'FORNECEDORES_CONSULTAR', 'FORNECEDORES_GERENCIAR', 'PRODUTOS_CONSULTAR', 'UNIDADES_MEDIDA_GERENCIAR', 'MARCAS_GERENCIAR', 'CATEGORIAS_PRODUTO_GERENCIAR', 'PRODUTOS_GERENCIAR', 'ESTOQUE_CONSULTAR', 'LOCAIS_ESTOQUE_GERENCIAR', 'TABELAS_PRECO_CONSULTAR', 'TABELAS_PRECO_GERENCIAR', 'FINANCEIRO_CONSULTAR', 'FORMAS_PAGAMENTO_GERENCIAR', 'CONDICOES_PAGAMENTO_GERENCIAR', 'FISCAL_SERIES_CONSULTAR', 'FISCAL_SERIES_GERENCIAR', 'FISCAL_CADASTROS_CONSULTAR', 'FISCAL_CADASTROS_GERENCIAR', 'FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR', 'RH_CONSULTAR', 'RH_GERENCIAR', 'FROTA_CONSULTAR', 'FROTA_GERENCIAR', 'PRODUCAO_CONSULTAR', 'PRODUCAO_FICHA_TECNICA_GERENCIAR', 'CONTABIL_CONSULTAR', 'CONTABIL_PLANO_CONTAS_GERENCIAR', 'CONTABIL_PERIODOS_GERENCIAR', 'CONTABIL_REGRAS_GERENCIAR', 'PATRIMONIO_CONSULTAR', 'PATRIMONIO_BENS_GERENCIAR', 'SEGURANCA_USUARIOS_CONSULTAR', 'SEGURANCA_USUARIOS_GERENCIAR', 'SEGURANCA_GRUPOS_ACESSO_CONSULTAR', 'SEGURANCA_GRUPOS_ACESSO_GERENCIAR'] }]
             },
             {
                 label: 'Estoque',
-                anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_MOVIMENTAR', 'ESTOQUE_RESERVAR', 'ESTOQUE_INVENTARIO_GERENCIAR', 'LOCAIS_ESTOQUE_GERENCIAR', 'ESTOQUE_AJUSTAR', 'ESTOQUE_BLOQUEIO_GERENCIAR'],
+                anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_MOVIMENTAR', 'ESTOQUE_RESERVAR', 'ESTOQUE_INVENTARIO_GERENCIAR', 'ESTOQUE_AJUSTAR', 'ESTOQUE_BLOQUEIO_GERENCIAR'],
                 items: [
-                    { label: 'Locais de estoque', icon: 'pi pi-fw pi-warehouse', to: '/estoque/locais', anyPermissions: ['ESTOQUE_CONSULTAR', 'LOCAIS_ESTOQUE_GERENCIAR'] },
                     { label: 'Saldos', icon: 'pi pi-fw pi-database', to: '/estoque/saldos', permission: 'ESTOQUE_CONSULTAR' },
                     { label: 'Movimentos', icon: 'pi pi-fw pi-list', to: '/estoque/movimentos', permission: 'ESTOQUE_CONSULTAR' },
                     { label: 'Transferências', icon: 'pi pi-fw pi-send', to: '/estoque/transferencias', permission: 'ESTOQUE_MOVIMENTAR' },
@@ -98,21 +69,18 @@ const AppMenu = () => {
             },
             {
                 label: 'Vendas',
-                anyPermissions: ['VENDAS_CONSULTAR', 'VENDAS_GERENCIAR', 'TABELAS_PRECO_CONSULTAR', 'TABELAS_PRECO_GERENCIAR'],
+                anyPermissions: ['VENDAS_CONSULTAR', 'VENDAS_GERENCIAR'],
                 items: [
-                    { label: 'Pedidos de venda', icon: 'pi pi-fw pi-shopping-cart', to: '/vendas/pedidos', anyPermissions: ['VENDAS_CONSULTAR', 'VENDAS_GERENCIAR'] },
-                    { label: 'Tabelas de preço', icon: 'pi pi-fw pi-tags', to: '/tabelas-preco', anyPermissions: ['TABELAS_PRECO_CONSULTAR', 'TABELAS_PRECO_GERENCIAR'] }
+                    { label: 'Pedidos de venda', icon: 'pi pi-fw pi-shopping-cart', to: '/vendas/pedidos', anyPermissions: ['VENDAS_CONSULTAR', 'VENDAS_GERENCIAR'] }
                 ]
             },
             {
                 label: 'Financeiro',
-                anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_GERENCIAR', 'FINANCEIRO_RECEBER', 'FINANCEIRO_PAGAR', 'FINANCEIRO_FLUXO_CAIXA_CONSULTAR', 'FORMAS_PAGAMENTO_GERENCIAR', 'CONDICOES_PAGAMENTO_GERENCIAR'],
+                anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_GERENCIAR', 'FINANCEIRO_RECEBER', 'FINANCEIRO_PAGAR', 'FINANCEIRO_FLUXO_CAIXA_CONSULTAR'],
                 items: [
                     { label: 'Contas a receber', icon: 'pi pi-fw pi-arrow-down-left', to: '/financeiro/contas-receber', anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_RECEBER'] },
                     { label: 'Contas a pagar', icon: 'pi pi-fw pi-arrow-up-right', to: '/financeiro/contas-pagar', anyPermissions: ['FINANCEIRO_CONSULTAR', 'FINANCEIRO_PAGAR'] },
-                    { label: 'Fluxo de caixa', icon: 'pi pi-fw pi-chart-line', to: '/financeiro/fluxo-caixa', permission: 'FINANCEIRO_FLUXO_CAIXA_CONSULTAR' },
-                    { label: 'Formas de pagamento', icon: 'pi pi-fw pi-credit-card', to: '/financeiro/formas-pagamento', anyPermissions: ['FINANCEIRO_CONSULTAR', 'FORMAS_PAGAMENTO_GERENCIAR'] },
-                    { label: 'Condições de pagamento', icon: 'pi pi-fw pi-calendar-plus', to: '/financeiro/condicoes-pagamento', anyPermissions: ['FINANCEIRO_CONSULTAR', 'CONDICOES_PAGAMENTO_GERENCIAR'] }
+                    { label: 'Fluxo de caixa', icon: 'pi pi-fw pi-chart-line', to: '/financeiro/fluxo-caixa', permission: 'FINANCEIRO_FLUXO_CAIXA_CONSULTAR' }
                 ]
             },
             {
@@ -127,15 +95,10 @@ const AppMenu = () => {
             },
             {
                 label: 'Fiscal',
-                anyPermissions: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_CANCELAR', 'FISCAL_INUTILIZAR', 'FISCAL_CARTA_CORRECAO', 'FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR', 'FISCAL_REPROCESSAR', 'FISCAL_SERIES_CONSULTAR', 'FISCAL_SERIES_GERENCIAR', 'FISCAL_CADASTROS_CONSULTAR', 'FISCAL_CADASTROS_GERENCIAR'],
+                anyPermissions: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_CANCELAR', 'FISCAL_INUTILIZAR', 'FISCAL_CARTA_CORRECAO', 'FISCAL_REGRAS_CONSULTAR', 'FISCAL_REPROCESSAR'],
                 items: [
                     { label: 'Notas fiscais', icon: 'pi pi-fw pi-file', to: '/fiscal/notas', anyPermissions: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_REPROCESSAR'] },
-                    { label: 'Séries fiscais', icon: 'pi pi-fw pi-hashtag', to: '/fiscal/series', anyPermissions: ['FISCAL_SERIES_CONSULTAR', 'FISCAL_SERIES_GERENCIAR'] },
-                    { label: 'Naturezas de operação', icon: 'pi pi-fw pi-book', to: '/fiscal/naturezas-operacao', anyPermissions: ['FISCAL_CADASTROS_CONSULTAR', 'FISCAL_CADASTROS_GERENCIAR'] },
                     { label: 'Simulador de tributação', icon: 'pi pi-fw pi-calculator', to: '/fiscal/simulador', permission: 'FISCAL_REGRAS_CONSULTAR' },
-                    { label: 'Regras fiscais', icon: 'pi pi-fw pi-sliders-h', to: '/fiscal/regras', anyPermissions: ['FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR'] },
-                    { label: 'Exceções e benefícios', icon: 'pi pi-fw pi-percentage', to: '/fiscal/excecoes', anyPermissions: ['FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR'] },
-                    { label: 'Exceções por NCM', icon: 'pi pi-fw pi-tags', to: '/fiscal/excecoes-ncm', anyPermissions: ['FISCAL_REGRAS_CONSULTAR', 'FISCAL_REGRAS_GERENCIAR'] },
                     { label: 'Observabilidade', icon: 'pi pi-fw pi-chart-line', to: '/fiscal/observabilidade', permission: 'FISCAL_CONSULTAR' },
                     { label: 'Inutilizações', icon: 'pi pi-fw pi-ban', to: '/fiscal/inutilizacoes', permission: 'FISCAL_INUTILIZAR' }
                 ]
@@ -161,11 +124,7 @@ const AppMenu = () => {
             {
                 label: 'Frota',
                 anyPermissions: ['FROTA_CONSULTAR', 'FROTA_GERENCIAR'],
-                items: [
-                    { label: 'Veículos', icon: 'pi pi-fw pi-car', to: '/frota/veiculos', anyPermissions: ['FROTA_CONSULTAR', 'FROTA_GERENCIAR'] },
-                    { label: 'Motoristas', icon: 'pi pi-fw pi-user', to: '/frota/motoristas', anyPermissions: ['FROTA_CONSULTAR', 'FROTA_GERENCIAR'] },
-                    { label: 'Viagens', icon: 'pi pi-fw pi-map', to: '/frota/viagens', anyPermissions: ['FROTA_CONSULTAR', 'FROTA_GERENCIAR'] }
-                ]
+                items: [{ label: 'Viagens', icon: 'pi pi-fw pi-map', to: '/frota/viagens', anyPermissions: ['FROTA_CONSULTAR', 'FROTA_GERENCIAR'] }]
             },
             {
                 label: 'Portaria',
@@ -184,11 +143,8 @@ const AppMenu = () => {
                 label: 'RH',
                 anyPermissions: ['RH_CONSULTAR', 'RH_GERENCIAR', 'RH_PONTO_REGISTRAR', 'RH_EVENTOS_GERENCIAR'],
                 items: [
-                    { label: 'Colaboradores', icon: 'pi pi-fw pi-users', to: '/rh/colaboradores', anyPermissions: ['RH_CONSULTAR', 'RH_GERENCIAR'] },
-                    { label: 'Jornadas', icon: 'pi pi-fw pi-clock', to: '/rh/jornadas', anyPermissions: ['RH_CONSULTAR', 'RH_GERENCIAR'] },
                     { label: 'Ponto', icon: 'pi pi-fw pi-stopwatch', to: '/rh/ponto', anyPermissions: ['RH_CONSULTAR', 'RH_PONTO_REGISTRAR'] },
                     { label: 'Ausências', icon: 'pi pi-fw pi-calendar-times', to: '/rh/ausencias', anyPermissions: ['RH_CONSULTAR', 'RH_GERENCIAR'] },
-                    { label: 'Benefícios', icon: 'pi pi-fw pi-gift', to: '/rh/beneficios', anyPermissions: ['RH_CONSULTAR', 'RH_GERENCIAR'] },
                     { label: 'Eventos de folha', icon: 'pi pi-fw pi-file-edit', to: '/rh/eventos', anyPermissions: ['RH_CONSULTAR', 'RH_EVENTOS_GERENCIAR'] }
                 ]
             },
@@ -202,11 +158,8 @@ const AppMenu = () => {
             },
             {
                 label: 'Produção',
-                anyPermissions: ['PRODUCAO_CONSULTAR', 'PRODUCAO_FICHA_TECNICA_GERENCIAR', 'PRODUCAO_ORDENS_GERENCIAR', 'PRODUCAO_ORDENS_LIBERAR', 'PRODUCAO_ORDENS_APONTAR', 'PRODUCAO_ORDENS_ENCERRAR', 'PRODUCAO_ORDENS_CANCELAR'],
-                items: [
-                    { label: 'Fichas técnicas', icon: 'pi pi-fw pi-sitemap', to: '/producao/fichas-tecnicas', anyPermissions: ['PRODUCAO_CONSULTAR', 'PRODUCAO_FICHA_TECNICA_GERENCIAR'] },
-                    { label: 'Ordens de produção', icon: 'pi pi-fw pi-briefcase', to: '/producao/ordens', anyPermissions: ['PRODUCAO_CONSULTAR', 'PRODUCAO_ORDENS_GERENCIAR'] }
-                ]
+                anyPermissions: ['PRODUCAO_CONSULTAR', 'PRODUCAO_ORDENS_GERENCIAR', 'PRODUCAO_ORDENS_LIBERAR', 'PRODUCAO_ORDENS_APONTAR', 'PRODUCAO_ORDENS_ENCERRAR', 'PRODUCAO_ORDENS_CANCELAR'],
+                items: [{ label: 'Ordens de produção', icon: 'pi pi-fw pi-briefcase', to: '/producao/ordens', anyPermissions: ['PRODUCAO_CONSULTAR', 'PRODUCAO_ORDENS_GERENCIAR'] }]
             },
             {
                 label: 'CRM',
@@ -229,13 +182,8 @@ const AppMenu = () => {
             },
             {
                 label: 'Contábil',
-                anyPermissions: ['CONTABIL_CONSULTAR', 'CONTABIL_PLANO_CONTAS_GERENCIAR', 'CONTABIL_PERIODOS_GERENCIAR', 'CONTABIL_LANCAMENTOS_GERENCIAR', 'CONTABIL_LANCAMENTOS_ESTORNAR', 'CONTABIL_REGRAS_GERENCIAR'],
-                items: [
-                    { label: 'Plano de contas', icon: 'pi pi-fw pi-sitemap', to: '/contabil/plano-contas', anyPermissions: ['CONTABIL_CONSULTAR', 'CONTABIL_PLANO_CONTAS_GERENCIAR'] },
-                    { label: 'Períodos', icon: 'pi pi-fw pi-calendar', to: '/contabil/periodos', anyPermissions: ['CONTABIL_CONSULTAR', 'CONTABIL_PERIODOS_GERENCIAR'] },
-                    { label: 'Lançamentos', icon: 'pi pi-fw pi-book', to: '/contabil/lancamentos', anyPermissions: ['CONTABIL_CONSULTAR', 'CONTABIL_LANCAMENTOS_GERENCIAR'] },
-                    { label: 'Regras de contabilização', icon: 'pi pi-fw pi-sliders-h', to: '/contabil/regras', anyPermissions: ['CONTABIL_CONSULTAR', 'CONTABIL_REGRAS_GERENCIAR'] }
-                ]
+                anyPermissions: ['CONTABIL_CONSULTAR', 'CONTABIL_LANCAMENTOS_GERENCIAR', 'CONTABIL_LANCAMENTOS_ESTORNAR'],
+                items: [{ label: 'Lançamentos', icon: 'pi pi-fw pi-book', to: '/contabil/lancamentos', anyPermissions: ['CONTABIL_CONSULTAR', 'CONTABIL_LANCAMENTOS_GERENCIAR'] }]
             },
             {
                 label: 'Bancos',
@@ -247,9 +195,8 @@ const AppMenu = () => {
             },
             {
                 label: 'Patrimônio',
-                anyPermissions: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_BENS_GERENCIAR', 'PATRIMONIO_TRANSFERIR', 'PATRIMONIO_BAIXAR', 'PATRIMONIO_DEPRECIAR', 'PATRIMONIO_INVENTARIO_GERENCIAR'],
+                anyPermissions: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_DEPRECIAR', 'PATRIMONIO_INVENTARIO_GERENCIAR'],
                 items: [
-                    { label: 'Bens', icon: 'pi pi-fw pi-building', to: '/patrimonio/bens', anyPermissions: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_BENS_GERENCIAR'] },
                     { label: 'Depreciação', icon: 'pi pi-fw pi-chart-line', to: '/patrimonio/depreciacao', anyPermissions: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_DEPRECIAR'] },
                     { label: 'Inventário', icon: 'pi pi-fw pi-clipboard', to: '/patrimonio/inventarios', anyPermissions: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_INVENTARIO_GERENCIAR'] }
                 ]
