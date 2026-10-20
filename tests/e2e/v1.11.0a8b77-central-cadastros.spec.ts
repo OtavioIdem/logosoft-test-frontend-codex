@@ -10,7 +10,7 @@ test('E1: a central exibe somente os cadastros permitidos, sem consultar APIs de
         if (path.startsWith('/api/') && !path.startsWith('/api/auth/')) chamadasDeDominio.push(path);
     });
 
-    await page.goto('/cadastros');
+    await page.goto('/cadastros', { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByRole('heading', { name: 'Cadastros' })).toBeVisible();
     await expect(page.getByText('1. Estrutura organizacional')).toBeVisible();
