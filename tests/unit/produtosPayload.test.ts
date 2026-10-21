@@ -5,6 +5,8 @@ import {
     buildAtualizarDadosFiscaisProdutoPayload,
     buildAtualizarPrecoCustoProdutoPayload,
     buildCriarProdutoPayload,
+    buildCriarGrupoProdutoPayload,
+    buildAtualizarGrupoProdutoPayload,
     buildCriarUnidadeMedidaPayload,
     buildProdutoMotivoPayload,
     buildVincularFornecedorProdutoPayload
@@ -27,6 +29,7 @@ describe('payloads de Produtos / Catálogo', () => {
             unidadeMedidaId,
             categoriaProdutoId: '',
             marcaId: '',
+            grupoProdutoId: '',
             precoVendaBase: 100,
             custoReferencial: 60,
             controlaEstoque: true,
@@ -46,6 +49,15 @@ describe('payloads de Produtos / Catálogo', () => {
             unidadeMedidaId,
             categoriaProdutoId: null,
             marcaId: null,
+            grupoProdutoId: null,
+            linhaProdutoId: null,
+            classificacaoProdutoId: null,
+            classificacaoCompraId: null,
+            modoAplicacaoProdutoId: null,
+            naturezaFisicaProdutoId: null,
+            fabricanteId: null,
+            categoriaFinanceiraReceitaId: null,
+            categoriaFinanceiraDespesaId: null,
             precoVendaBase: 100,
             custoReferencial: 60,
             controlaEstoque: true,
@@ -60,10 +72,16 @@ describe('payloads de Produtos / Catálogo', () => {
         expect(() => buildAtualizarPrecoCustoProdutoPayload({ precoVendaBase: -1, custoReferencial: 10 })).toThrow('Preço de venda não pode ser negativo.');
     });
 
+    it('normaliza os padrões obrigatórios do grupo e preserva controlaEstoque explícito', () => {
+        expect(buildCriarGrupoProdutoPayload({ empresaId, codigo: ' eletro ', descricao: 'Eletrônicos', controlaEstoque: false })).toMatchObject({ empresaId, codigo: 'ELETRO', grupoPaiId: null, exigeNcm: true, controlaEstoque: false, controlaEstoqueContabil: true, descontoMaximoPercentual: 0 });
+        expect(buildAtualizarGrupoProdutoPayload({ descricao: 'Eletrônicos', controlaEstoque: true })).toMatchObject({ descricao: 'Eletrônicos', exigeNcm: true, controlaEstoque: true, controlaEstoqueContabil: true, descontoMaximoPercentual: 0 });
+        expect(() => buildCriarGrupoProdutoPayload({ empresaId, codigo: 'COM ESPACO', descricao: 'Inválido', controlaEstoque: false })).toThrow('Código não pode conter espaços.');
+    });
+
     it('monta dados fiscais com NCM, CEST e unidade tributável conforme contrato', () => {
-        expect(buildAtualizarDadosFiscaisProdutoPayload({ ncmCodigo: '84713012', cestCodigo: '01048100', origemMercadoriaCodigo: '0', tipoItemFiscal: TipoItemFiscal.Mercadoria, unidadeMedidaTributavelId: unidadeMedidaId, codigoFiscalExterno: '' })).toEqual({
+        expect(buildAtualizarDadosFiscaisProdutoPayload({ ncmCodigo: '84713012', cestCodigo: '0104800', origemMercadoriaCodigo: '0', tipoItemFiscal: TipoItemFiscal.Mercadoria, unidadeMedidaTributavelId: unidadeMedidaId, codigoFiscalExterno: '' })).toEqual({
             ncmCodigo: '84713012',
-            cestCodigo: '01048100',
+            cestCodigo: '0104800',
             origemMercadoriaCodigo: '0',
             tipoItemFiscal: TipoItemFiscal.Mercadoria,
             tipoItemSped: null,
@@ -125,7 +143,7 @@ describe('payloads de Produtos / Catálogo', () => {
     it('AC-3: editar dados fiscais com tipoItemSped=0 (MercadoriaParaRevenda) reenvia o valor 0 sem transformação', () => {
         const payload = buildAtualizarDadosFiscaisProdutoPayload({
             ncmCodigo: '84713012',
-            cestCodigo: '01048100',
+            cestCodigo: '0104800',
             origemMercadoriaCodigo: '0',
             tipoItemFiscal: TipoItemFiscal.Mercadoria,
             tipoItemSped: 0, // MercadoriaParaRevenda
@@ -170,7 +188,7 @@ describe('payloads de Produtos / Catálogo', () => {
     it('AC-2: editar dados fiscais com sigla de unidade tributável envia a sigla como string', () => {
         const payload = buildAtualizarDadosFiscaisProdutoPayload({
             ncmCodigo: '84713012',
-            cestCodigo: '01048100',
+            cestCodigo: '0104800',
             origemMercadoriaCodigo: '0',
             tipoItemFiscal: TipoItemFiscal.Mercadoria,
             tipoItemSped: 0,
@@ -190,7 +208,7 @@ describe('payloads de Produtos / Catálogo', () => {
     it('AC-5: editar dados fiscais com EX-TIPI envia o valor e omite quando vazio', () => {
         const payloadComExTipi = buildAtualizarDadosFiscaisProdutoPayload({
             ncmCodigo: '84713012',
-            cestCodigo: '01048100',
+            cestCodigo: '0104800',
             origemMercadoriaCodigo: '0',
             tipoItemFiscal: TipoItemFiscal.Mercadoria,
             tipoItemSped: 0,
@@ -205,7 +223,7 @@ describe('payloads de Produtos / Catálogo', () => {
 
         const payloadSemExTipi = buildAtualizarDadosFiscaisProdutoPayload({
             ncmCodigo: '84713012',
-            cestCodigo: '01048100',
+            cestCodigo: '0104800',
             origemMercadoriaCodigo: '0',
             tipoItemFiscal: TipoItemFiscal.Mercadoria,
             tipoItemSped: 0,
@@ -223,7 +241,7 @@ describe('payloads de Produtos / Catálogo', () => {
     it('AC-6: editar dados fiscais com benefício fiscal envia o valor e omite quando vazio', () => {
         const payloadComBeneficio = buildAtualizarDadosFiscaisProdutoPayload({
             ncmCodigo: '84713012',
-            cestCodigo: '01048100',
+            cestCodigo: '0104800',
             origemMercadoriaCodigo: '0',
             tipoItemFiscal: TipoItemFiscal.Mercadoria,
             tipoItemSped: 0,
@@ -238,7 +256,7 @@ describe('payloads de Produtos / Catálogo', () => {
 
         const payloadSemBeneficio = buildAtualizarDadosFiscaisProdutoPayload({
             ncmCodigo: '84713012',
-            cestCodigo: '01048100',
+            cestCodigo: '0104800',
             origemMercadoriaCodigo: '0',
             tipoItemFiscal: TipoItemFiscal.Mercadoria,
             tipoItemSped: 0,

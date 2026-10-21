@@ -109,7 +109,7 @@ export const ProdutosPage = () => {
 
     const produtosQuery = useProdutos(filters);
     const fornecedoresQuery = useFornecedores({ empresaId: filters.empresaId, filialId: filters.filialId });
-    const { saveMutation, precoCustoMutation, dadosFiscaisMutation, codigoBarrasMutation, fornecedorMutation, inativarMutation } = useProdutoMutations();
+    const { saveMutation, precoCustoMutation, dadosFiscaisMutation, classificacaoMutation, codigoBarrasMutation, fornecedorMutation, inativarMutation } = useProdutoMutations();
 
     const records = useMemo(() => filterLocal(produtosQuery.data ?? [], localSearch), [produtosQuery.data, localSearch]);
     const visibleRecords = useMemo(() => records.slice(first, first + rows), [records, first, rows]);
@@ -138,6 +138,15 @@ export const ProdutosPage = () => {
         const disparaDadosFiscais = hasPermission('PRODUTOS_DADOS_FISCAIS_GERENCIAR') && !dadosFiscaisEstaoEmBranco(values);
 
         if (isEdicao) {
+            if (values.grupoProdutoId !== selected?.grupoProdutoId) {
+                try {
+                    await classificacaoMutation.mutateAsync({ id: produtoId, grupoProdutoId: values.grupoProdutoId ?? null });
+                } catch (error) {
+                    const apiError = mapApiError(error);
+                    toast.error('Produto salvo, mas o grupo não foi atualizado', `O cadastro do produto foi gravado. ${apiError.message}`);
+                    throw error;
+                }
+            }
             try {
                 await precoCustoMutation.mutateAsync({ id: produtoId, values: { precoVendaBase: values.precoVendaBase, custoReferencial: values.custoReferencial } });
             } catch (error) {
@@ -205,7 +214,7 @@ export const ProdutosPage = () => {
         </div>
     );
 
-    const mutationLoading = saveMutation.isPending || precoCustoMutation.isPending || dadosFiscaisMutation.isPending;
+    const mutationLoading = saveMutation.isPending || precoCustoMutation.isPending || dadosFiscaisMutation.isPending || classificacaoMutation.isPending;
 
     return (
         <>

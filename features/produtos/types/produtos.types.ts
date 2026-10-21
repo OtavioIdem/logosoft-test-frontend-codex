@@ -38,6 +38,27 @@ export type MarcaResponse = {
     status: EntityStatus | number;
 };
 
+export type GrupoProdutoResponse = {
+    id: Guid; empresaId: Guid; codigo: string; descricao: string; grupoPaiId?: Guid | null; nivel: number;
+    exigeNcm: boolean; margemLucroPercentual?: number | null; margemLucroNivel1?: number | null; margemLucroNivel2?: number | null;
+    margemLucroNivel3?: number | null; percentualComissao?: number | null; descontoMaximoPercentual: number;
+    controlaEstoque: boolean; controlaEstoqueContabil: boolean; status: EntityStatus | number;
+    categoriaFinanceiraReceitaId?: Guid | null; categoriaFinanceiraDespesaId?: Guid | null;
+};
+export type GrupoProdutoListQuery = { empresaId?: Guid | null; incluirInativos?: boolean; pagina?: number; tamanho?: number };
+export type CriarGrupoProdutoRequest = {
+    empresaId: Guid; codigo: string; descricao: string; grupoPaiId?: Guid | null; exigeNcm: boolean;
+    margemLucroPercentual?: number | null; margemLucroNivel1?: number | null; margemLucroNivel2?: number | null; margemLucroNivel3?: number | null;
+    percentualComissao?: number | null; descontoMaximoPercentual: number; controlaEstoque: boolean; controlaEstoqueContabil: boolean;
+    categoriaFinanceiraReceitaId?: Guid | null; categoriaFinanceiraDespesaId?: Guid | null;
+};
+export type AtualizarGrupoProdutoRequest = Omit<CriarGrupoProdutoRequest, 'empresaId' | 'codigo' | 'grupoPaiId'>;
+export type GrupoProdutoFormValues = Partial<CriarGrupoProdutoRequest & AtualizarGrupoProdutoRequest> & { id?: Guid };
+export type CadastroAuxiliarProdutoResponse = { id: Guid; empresaId: Guid; codigo: string; nome: string; status: EntityStatus | number };
+export type CadastroAuxiliarProdutoRequest = { empresaId: Guid; codigo: string; nome: string };
+export type CategoriaFinanceiraResponse = { id: Guid; empresaId: Guid; nome: string; tipo: string; categoriaPaiId?: Guid | null; nivel: number; status: EntityStatus | number };
+export type ReferenciasCadastraisProdutoRequest = { linhaProdutoId: Guid | null; classificacaoProdutoId: Guid | null; classificacaoCompraId: Guid | null; modoAplicacaoProdutoId: Guid | null; naturezaFisicaProdutoId: Guid | null; fabricanteId: Guid | null; categoriaFinanceiraReceitaId: Guid | null; categoriaFinanceiraDespesaId: Guid | null };
+
 export type CodigoBarrasProdutoResponse = {
     id?: Guid;
     codigo: string;
@@ -64,6 +85,8 @@ export type ProdutoResponse = {
     unidadeMedidaId: Guid;
     categoriaProdutoId?: Guid | null;
     marcaId?: Guid | null;
+    grupoProdutoId?: Guid | null;
+    linhaProdutoId?: Guid | null; classificacaoProdutoId?: Guid | null; classificacaoCompraId?: Guid | null; modoAplicacaoProdutoId?: Guid | null; naturezaFisicaProdutoId?: Guid | null; fabricanteId?: Guid | null; categoriaFinanceiraReceitaId?: Guid | null; categoriaFinanceiraDespesaId?: Guid | null;
     precoVendaBase: number;
     custoReferencial: number;
     controlaEstoque: boolean;
@@ -136,6 +159,8 @@ export type CriarProdutoRequest = {
     unidadeMedidaId: Guid;
     categoriaProdutoId?: Guid | null;
     marcaId?: Guid | null;
+    grupoProdutoId?: Guid | null;
+    linhaProdutoId?: Guid | null; classificacaoProdutoId?: Guid | null; classificacaoCompraId?: Guid | null; modoAplicacaoProdutoId?: Guid | null; naturezaFisicaProdutoId?: Guid | null; fabricanteId?: Guid | null; categoriaFinanceiraReceitaId?: Guid | null; categoriaFinanceiraDespesaId?: Guid | null;
     precoVendaBase: number;
     custoReferencial: number;
     controlaEstoque: boolean;

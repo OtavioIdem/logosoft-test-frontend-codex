@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
     acaoRetomadaOptions,
+    cancelamentoBloqueadoPorReversao,
+    cancelamentoBloqueadoTooltip,
     confirmacaoBloqueadaPorReversao,
     estadoLegLabel,
     estadoLegSeverity,
@@ -137,5 +139,9 @@ describe('Faturamento — rótulos e regras de UI', () => {
         };
         expect(confirmacaoBloqueadaPorReversao(com_reversao)).toBe(true);
         expect(confirmacaoBloqueadaPorReversao(sem_reversao)).toBe(false);
+        expect(cancelamentoBloqueadoPorReversao(com_reversao)).toBe(true);
+        expect(cancelamentoBloqueadoPorReversao(sem_reversao)).toBe(false);
+        expect(cancelamentoBloqueadoTooltip(true)).toBe('Há um leg em reversão. Retome a reversão antes de cancelar o faturamento.');
+        expect(cancelamentoBloqueadoTooltip(false)).toContain('FATURAMENTO_RETOMAR_REVERSAO');
     });
 });

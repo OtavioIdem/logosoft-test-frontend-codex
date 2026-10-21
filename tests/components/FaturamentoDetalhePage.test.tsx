@@ -248,6 +248,50 @@ describe('FaturamentoDetalhePage — legs de integração', () => {
         expect(screen.getByRole('button', { name: 'Confirmar' })).toBeEnabled();
     });
 
+    it('AJ-30: Cancelar fica bloqueado enquanto houver leg em reversão e orienta a retomada conforme a permissão', async () => {
+        api.obter.mockResolvedValue(baseFaturamento({ possuiLegEmReversao: true }));
+        permsState.perms = ['FATURAMENTO_CONSULTAR', 'FATURAMENTO_CANCELAR', 'FATURAMENTO_RETOMAR_REVERSAO'];
+        const primeiro = renderPage();
+        const cancelarComPermissao = await screen.findByRole('button', { name: 'Cancelar' });
+        expect(cancelarComPermissao).toBeDisabled();
+        expect(screen.getByText(/O cancelamento fica bloqueado até a retomada/)).toBeInTheDocument();
+        primeiro.unmount();
+
+        permsState.perms = ['FATURAMENTO_CONSULTAR', 'FATURAMENTO_CANCELAR'];
+        renderPage();
+        const cancelarSemPermissao = await screen.findByRole('button', { name: 'Cancelar' });
+        expect(cancelarSemPermissao).toBeDisabled();
+    });
+
+    it('AJ-30: mostra no diálogo a recusa de cancelamento retornada pelo backend', async () => {
+        api.obter.mockResolvedValue(baseFaturamento({ possuiLegEmReversao: false }));
+        permsState.perms = ['FATURAMENTO_CONSULTAR', 'FATURAMENTO_CANCELAR'];
+        const falha = Object.assign(new Error('Cancele apenas após retomar a reversão.'), {
+            apiError: { code: 'Faturamento.CancelamentoPendenteReversao', message: 'Cancele apenas após retomar a reversão.', status: 400 }
+        });
+        api.cancelar.mockRejectedValue(falha);
+
+        const rejeicoes: unknown[] = [];
+        const capturar = (motivo: unknown) => rejeicoes.push(motivo);
+        process.on('unhandledRejection', capturar);
+        try {
+            renderPage();
+            await userEvent.click(await screen.findByRole('button', { name: 'Cancelar' }));
+            const dialog = await screen.findByRole('dialog', { name: 'Cancelar faturamento' });
+            await userEvent.type(within(dialog).getByLabelText('Motivo obrigatório'), 'cancelamento solicitado');
+            await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar faturamento' }));
+
+            await waitFor(() => {
+                expect(api.cancelar).toHaveBeenCalledWith(faturamentoId, 'cancelamento solicitado');
+                expect(within(dialog).getByText('Cancele apenas após retomar a reversão.')).toBeInTheDocument();
+            });
+            await waitFor(() => expect(rejeicoes).toHaveLength(1));
+        } finally {
+            process.off('unhandledRejection', capturar);
+        }
+        expect(rejeicoes).toEqual([falha]);
+    });
+
     it('AC-10: após retomada rejeitada reconsulta o detalhe e o diálogo fecha quando o leg deixa de estar em reversão', async () => {
         api.obter.mockResolvedValueOnce(baseFaturamento()).mockResolvedValue(comLeg5Revertido());
         const falha = new Error('falhou');

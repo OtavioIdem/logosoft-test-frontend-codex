@@ -170,6 +170,13 @@ export const montarLinhasDeLegs = (legs?: FaturamentoLegResponse[] | null): Linh
 // confirmacaoBloqueadaPorReversao (D23): o backend já recusa confirmar com leg EmReversao.
 export const confirmacaoBloqueadaPorReversao = (faturamento: FaturamentoResponse) => Boolean(faturamento.possuiLegEmReversao);
 
+export const cancelamentoBloqueadoPorReversao = (faturamento: FaturamentoResponse) => Boolean(faturamento.possuiLegEmReversao);
+
+export const cancelamentoBloqueadoTooltip = (podeRetomarReversao: boolean) =>
+    podeRetomarReversao
+        ? 'Há um leg em reversão. Retome a reversão antes de cancelar o faturamento.'
+        : 'Há um leg em reversão. É necessário um operador com a permissão FATURAMENTO_RETOMAR_REVERSAO para retomá-la antes de cancelar o faturamento.';
+
 // legQueParou (D93): o primeiro leg, na ordem do catálogo, cujo registro está `Falhou`. Reusa as linhas de
 // `montarLinhasDeLegs` (D25/D30), a mesma fonte da tabela "Legs de integração" do detalhe.
 export const legQueParou = (legs?: FaturamentoLegResponse[] | null): LinhaLegFaturamento | null =>

@@ -1852,6 +1852,93 @@ Gerado do código; a ordem é a dos arquivos.
 | `POST` | `/{id:guid}/codigos-barras` | `ProdutosGerenciar` | `AdicionarCodigoBarras(Guid id, [FromBody] AdicionarCodigoBarrasProdutoRequest request)` |
 | `POST` | `/{id:guid}/fornecedores` | `ProdutosGerenciar` | `VincularFornecedor(Guid id, [FromBody] VincularProdutoFornecedorRequest request)` |
 | `POST` | `/{id:guid}/inativar` | `ProdutosInativar` | `Inativar(Guid id, [FromBody] InativarProdutoRequest request)` |
+| `PUT` | `/{id:guid}/classificacao` | `ProdutosGerenciar` | `Classificar(Guid id, [FromBody] ClassificarProdutoRequest request)` |
+| `PUT` | `/{id:guid}/referencias-cadastrais` | `ProdutosGerenciar` | `DefinirReferenciasCadastrais(Guid id, [FromBody] DefinirReferenciasCadastraisProdutoRequest request)` |
+
+### `api/produtos/grupos`
+
+<sub>Produtos/GruposProdutoController — confirmado no Swagger ativo em 2026-10-21</sub>
+
+| Método | Caminho | Permissão | Assinatura |
+| --- | --- | --- | --- |
+| `GET` | `/` | `ProdutosConsultar` | `Listar(Guid empresaId, bool incluirInativos, int pagina, int tamanho)` |
+| `POST` | `/` | `ProdutosGruposGerenciar` | `Criar([FromBody] CriarGrupoProdutoRequest request)` |
+| `PUT` | `/{id:guid}` | `ProdutosGruposGerenciar` | `Atualizar(Guid id, [FromBody] AtualizarGrupoProdutoRequest request)` |
+| `POST` | `/{id:guid}/mover` | `ProdutosGruposGerenciar` | `Mover(Guid id, [FromBody] MoverGrupoProdutoRequest request)` |
+| `POST` | `/{id:guid}/inativar` | `ProdutosGruposGerenciar` | `Inativar(Guid id, [FromBody] InativarGrupoProdutoRequest request)` |
+| `POST` | `/{id:guid}/reativar` | `ProdutosGruposGerenciar` | `Reativar(Guid id, [FromBody] ReativarGrupoProdutoRequest request)` |
+
+### `api/produtos/linhas`
+
+<sub>Produtos/LinhasProdutoController — confirmado no Swagger ativo em 2026-10-21</sub>
+
+| Método | Caminho | Permissão | Assinatura |
+| --- | --- | --- | --- |
+| `GET` | `/` | `ProdutosConsultar` | `Listar(Guid empresaId, string? termo, bool incluirInativos, int pagina, int tamanho)` |
+| `POST` | `/` | `ProdutosCadastrosAuxiliaresGerenciar` | `Criar([FromBody] CriarCadastroAuxiliarProdutoRequest request)` |
+| `PUT` | `/{id:guid}` | `ProdutosCadastrosAuxiliaresGerenciar` | `Atualizar(Guid id, [FromBody] AtualizarCadastroAuxiliarProdutoRequest request)` |
+| `POST` | `/{id:guid}/inativar` | `ProdutosCadastrosAuxiliaresGerenciar` | `Inativar(Guid id, [FromBody] InativarCadastroAuxiliarProdutoRequest request)` |
+| `POST` | `/{id:guid}/reativar` | `ProdutosCadastrosAuxiliaresGerenciar` | `Reativar(Guid id, [FromBody] ReativarCadastroAuxiliarProdutoRequest request)` |
+
+### `api/produtos/classificacoes`
+
+<sub>Produtos/ClassificacoesProdutoController — confirmado no Swagger ativo em 2026-10-21</sub>
+
+| Método | Caminho | Permissão | Assinatura |
+| --- | --- | --- | --- |
+| `GET` | `/` | `ProdutosConsultar` | `Listar(Guid empresaId, string? termo, bool incluirInativos, int pagina, int tamanho)` |
+| `POST` | `/` | `ProdutosCadastrosAuxiliaresGerenciar` | `Criar([FromBody] CriarCadastroAuxiliarProdutoRequest request)` |
+| `PUT` | `/{id:guid}` | `ProdutosCadastrosAuxiliaresGerenciar` | `Atualizar(Guid id, [FromBody] AtualizarCadastroAuxiliarProdutoRequest request)` |
+| `POST` | `/{id:guid}/inativar` | `ProdutosCadastrosAuxiliaresGerenciar` | `Inativar(Guid id, [FromBody] InativarCadastroAuxiliarProdutoRequest request)` |
+| `POST` | `/{id:guid}/reativar` | `ProdutosCadastrosAuxiliaresGerenciar` | `Reativar(Guid id, [FromBody] ReativarCadastroAuxiliarProdutoRequest request)` |
+
+### `api/produtos/classificacoes-compra`
+
+<sub>Produtos/ClassificacoesCompraController — confirmado no Swagger ativo em 2026-10-21</sub>
+
+| Método | Caminho | Permissão | Assinatura |
+| --- | --- | --- | --- |
+| `GET` | `/` | `ProdutosConsultar` | `Listar(Guid empresaId, string? termo, bool incluirInativos, int pagina, int tamanho)` |
+| `POST` | `/` | `ProdutosCadastrosAuxiliaresGerenciar` | `Criar([FromBody] CriarCadastroAuxiliarProdutoRequest request)` |
+| `PUT` | `/{id:guid}` | `ProdutosCadastrosAuxiliaresGerenciar` | `Atualizar(Guid id, [FromBody] AtualizarCadastroAuxiliarProdutoRequest request)` |
+| `POST` | `/{id:guid}/inativar` | `ProdutosCadastrosAuxiliaresGerenciar` | `Inativar(Guid id, [FromBody] InativarCadastroAuxiliarProdutoRequest request)` |
+| `POST` | `/{id:guid}/reativar` | `ProdutosCadastrosAuxiliaresGerenciar` | `Reativar(Guid id, [FromBody] ReativarCadastroAuxiliarProdutoRequest request)` |
+
+### `api/produtos/modos-aplicacao`
+
+<sub>Produtos/ModosAplicacaoProdutoController — confirmado no Swagger ativo em 2026-10-21</sub>
+
+| Método | Caminho | Permissão | Assinatura |
+| --- | --- | --- | --- |
+| `GET` | `/` | `ProdutosConsultar` | `Listar(Guid empresaId, string? termo, bool incluirInativos, int pagina, int tamanho)` |
+| `POST` | `/` | `ProdutosCadastrosAuxiliaresGerenciar` | `Criar([FromBody] CriarCadastroAuxiliarProdutoRequest request)` |
+| `PUT` | `/{id:guid}` | `ProdutosCadastrosAuxiliaresGerenciar` | `Atualizar(Guid id, [FromBody] AtualizarCadastroAuxiliarProdutoRequest request)` |
+| `POST` | `/{id:guid}/inativar` | `ProdutosCadastrosAuxiliaresGerenciar` | `Inativar(Guid id, [FromBody] InativarCadastroAuxiliarProdutoRequest request)` |
+| `POST` | `/{id:guid}/reativar` | `ProdutosCadastrosAuxiliaresGerenciar` | `Reativar(Guid id, [FromBody] ReativarCadastroAuxiliarProdutoRequest request)` |
+
+### `api/produtos/naturezas-fisicas`
+
+<sub>Produtos/NaturezasFisicasProdutoController — confirmado no Swagger ativo em 2026-10-21</sub>
+
+| Método | Caminho | Permissão | Assinatura |
+| --- | --- | --- | --- |
+| `GET` | `/` | `ProdutosConsultar` | `Listar(Guid empresaId, string? termo, bool incluirInativos, int pagina, int tamanho)` |
+| `POST` | `/` | `ProdutosCadastrosAuxiliaresGerenciar` | `Criar([FromBody] CriarCadastroAuxiliarProdutoRequest request)` |
+| `PUT` | `/{id:guid}` | `ProdutosCadastrosAuxiliaresGerenciar` | `Atualizar(Guid id, [FromBody] AtualizarCadastroAuxiliarProdutoRequest request)` |
+| `POST` | `/{id:guid}/inativar` | `ProdutosCadastrosAuxiliaresGerenciar` | `Inativar(Guid id, [FromBody] InativarCadastroAuxiliarProdutoRequest request)` |
+| `POST` | `/{id:guid}/reativar` | `ProdutosCadastrosAuxiliaresGerenciar` | `Reativar(Guid id, [FromBody] ReativarCadastroAuxiliarProdutoRequest request)` |
+
+### `api/produtos/fabricantes`
+
+<sub>Produtos/FabricantesController — confirmado no Swagger ativo em 2026-10-21</sub>
+
+| Método | Caminho | Permissão | Assinatura |
+| --- | --- | --- | --- |
+| `GET` | `/` | `ProdutosConsultar` | `Listar(Guid empresaId, string? termo, bool incluirInativos, int pagina, int tamanho)` |
+| `POST` | `/` | `ProdutosCadastrosAuxiliaresGerenciar` | `Criar([FromBody] CriarCadastroAuxiliarProdutoRequest request)` |
+| `PUT` | `/{id:guid}` | `ProdutosCadastrosAuxiliaresGerenciar` | `Atualizar(Guid id, [FromBody] AtualizarCadastroAuxiliarProdutoRequest request)` |
+| `POST` | `/{id:guid}/inativar` | `ProdutosCadastrosAuxiliaresGerenciar` | `Inativar(Guid id, [FromBody] InativarCadastroAuxiliarProdutoRequest request)` |
+| `POST` | `/{id:guid}/reativar` | `ProdutosCadastrosAuxiliaresGerenciar` | `Reativar(Guid id, [FromBody] ReativarCadastroAuxiliarProdutoRequest request)` |
 
 ### `api/produtos/unidades-medida`
 

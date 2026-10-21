@@ -8,6 +8,7 @@
 
 import { z } from 'zod';
 import { isValidGuid } from '@/lib/http/requestUtils';
+import { isCfopLeiauteValido } from '@/lib/validators/fiscalLayoutFormats';
 import {
     AMBITO_CFOP_OPTIONS,
     FINALIDADE_NATUREZA_OPTIONS,
@@ -72,7 +73,7 @@ export const chaveMapeamentoCfop = (item: { ambito: number; tipoItem: number | n
 export const mapeamentoCfopSchema = z
     .object({
         ambito: ambitoSchema,
-        cfopCodigo: z.string({ required_error: NATUREZA_CFOP_GRADE.cfopObrigatorio, invalid_type_error: NATUREZA_CFOP_GRADE.cfopObrigatorio }).trim().min(1, NATUREZA_CFOP_GRADE.cfopObrigatorio),
+        cfopCodigo: z.string({ required_error: NATUREZA_CFOP_GRADE.cfopObrigatorio, invalid_type_error: NATUREZA_CFOP_GRADE.cfopObrigatorio }).trim().min(1, NATUREZA_CFOP_GRADE.cfopObrigatorio).refine(isCfopLeiauteValido, 'CFOP deve ter 4 dígitos e iniciar com 1, 2, 3, 5, 6 ou 7.'),
         tipoItem: tipoItemSchema
     })
     .strict();

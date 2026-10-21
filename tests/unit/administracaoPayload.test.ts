@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildAtualizarCargoPayload, buildAtualizarEmpresaPayload, buildCriarCargoPayload, buildCriarEmpresaPayload, buildCriarSetorPayload, buildDefinirEnderecoFiscalPayload } from '@/features/administracao/api/administracaoApi';
+import { buildAtualizarCargoPayload, buildAtualizarEmpresaPayload, buildCriarCargoPayload, buildCriarEmpresaPayload, buildCriarFilialPayload, buildCriarSetorPayload, buildDefinirEnderecoFiscalPayload } from '@/features/administracao/api/administracaoApi';
 import { crtLabel, crtOptions } from '@/features/administracao/components/administracaoLabels';
 import { criarEmpresaSchema, atualizarEmpresaSchema } from '@/features/administracao/schemas/administracaoSchemas';
 import { Crt, RegimeTributario } from '@/features/administracao/types/administracao.types';
@@ -29,6 +29,25 @@ describe('administracao payload builders', () => {
             crt: null,
             contribuinteIpi: true
         });
+    });
+
+    it('AJ-09: normaliza CNPJ alfanumérico de empresa e filial e recusa formato fora de 14 caracteres', () => {
+        const empresa = buildCriarEmpresaPayload({
+            razaoSocial: 'Logosoft Tecnologia LTDA',
+            nomeFantasia: '',
+            documento: '12.abc.678/0001-9z',
+            inscricaoEstadual: '',
+            inscricaoMunicipal: '',
+            regimeTributario: RegimeTributario.SimplesNacional,
+            crt: null,
+            contribuinteIpi: false
+        });
+        const filial = buildCriarFilialPayload({ empresaId, nome: 'Filial Centro', documento: '12ABC67800019Z', inscricaoEstadual: '', inscricaoMunicipal: '' });
+
+        expect(empresa.documento).toBe('12ABC67800019Z');
+        expect(filial.documento).toBe('12ABC67800019Z');
+        expect(() => buildCriarEmpresaPayload({ ...empresa, documento: '1234567890123' })).toThrow('Informe um CNPJ numérico ou alfanumérico com 14 caracteres.');
+        expect(() => buildCriarFilialPayload({ ...filial, documento: '123456789012345' })).toThrow('Informe um CNPJ numérico ou alfanumérico com 14 caracteres.');
     });
 
     it('normaliza filialId opcional de setor para null', () => {
@@ -77,7 +96,7 @@ describe('administracao payload builders', () => {
         const criar = criarEmpresaSchema.safeParse({
             razaoSocial: 'Empresa MEI',
             nomeFantasia: '',
-            documento: '12345678901',
+            documento: '12345678000195',
             inscricaoEstadual: '',
             inscricaoMunicipal: '',
             regimeTributario: RegimeTributario.SimplesNacional,

@@ -12,10 +12,29 @@
   "suppressions": [],
   "description": "Registro auditável, fechado e monotônico das divergências entre o union PermissionCode (types/erp.ts) e o snapshot documental de permissões (scripts/backend-permissions.snapshot.json). F1.2/F1.3 fecharam os 3 fantasmas e as 36 coberturas pendentes registradas em b48/b49. A b69 (D81) reabre 2 coberturas pendentes e a b70 (D89) mais 2, num total de 4: POLITICA_COMERCIAL_GERENCIAR, VENDAS_PRECO_MINIMO_SOBRESCREVER, FINANCEIRO_CAIXA_GERENCIAR e FINANCEIRO_BANCO_GERENCIAR saíram do union e do catálogo do frontend porque o próprio backend as tirou do catálogo (sem endpoint), mas o snapshot documental — gerado do contrato v1.23/§12, que a B-16 ainda não atualizou — continua listando as quatro.",
   "teto": {
-    "fantasmas": 0,
+    "fantasmas": 2,
     "coberturaPendente": 4
   },
-  "fantasmasConhecidos": [],
+  "fantasmasConhecidos": [
+    {
+      "id": "PRODUTOS_CADASTROS_AUXILIARES_GERENCIAR_CATALOGO_PENDENTE",
+      "code": "PRODUTOS_CADASTROS_AUXILIARES_GERENCIAR",
+      "usos": ["features/produtos/components/CadastroAuxiliarProdutoPage.tsx"],
+      "backend": "CRUD de linhas, classificações, classificações de compra, modos de aplicação, naturezas físicas e fabricantes confirmado no Swagger ativo; o Swagger não publica metadados de autorização.",
+      "impacto": "Sem o catálogo atualizado, a interface mantém as ações de escrita protegidas e não presume concessão de acesso.",
+      "decision": "Registrada como divergência até que o catálogo documental de permissões do backend seja atualizado. Não é supressão: o gate continua declarando a diferença.",
+      "target": "Atualizar catálogo de permissões do backend"
+    },
+    {
+      "id": "PRODUTOS_GRUPOS_GERENCIAR_CATALOGO_PENDENTE",
+      "code": "PRODUTOS_GRUPOS_GERENCIAR",
+      "usos": ["features/produtos/components/GruposProdutoPage.tsx"],
+      "backend": "CRUD e movimentação de grupos de produto confirmados no Swagger ativo; o Swagger não publica metadados de autorização.",
+      "impacto": "Sem o catálogo atualizado, a interface mantém as ações de escrita protegidas e não presume concessão de acesso.",
+      "decision": "Registrada como divergência até que o catálogo documental de permissões do backend seja atualizado. Não é supressão: o gate continua declarando a diferença.",
+      "target": "Atualizar catálogo de permissões do backend"
+    }
+  ],
   "coberturaPendente": [
     {
       "id": "POLITICA_COMERCIAL_GERENCIAR_PENDENTE",

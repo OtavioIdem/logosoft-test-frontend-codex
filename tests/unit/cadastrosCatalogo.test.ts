@@ -3,11 +3,11 @@ import { cadastroCategorias, cadastroItens, cadastrosAnyPermissions } from '@/fe
 import { findRoutePermissionRule } from '@/lib/security/routePermissions';
 
 describe('central de cadastros', () => {
-    it('mantém os 34 destinos em oito etapas sem anunciar o cadastro bancário bloqueado', () => {
+    it('mantém os 38 destinos em oito etapas sem anunciar o cadastro bancário bloqueado', () => {
         expect(cadastroCategorias).toHaveLength(8);
-        expect(cadastroItens).toHaveLength(34);
-        expect(new Set(cadastroItens.map((item) => item.id)).size).toBe(34);
-        expect(new Set(cadastroItens.map((item) => item.to)).size).toBe(34);
+        expect(cadastroItens).toHaveLength(38);
+        expect(new Set(cadastroItens.map((item) => item.id)).size).toBe(38);
+        expect(new Set(cadastroItens.map((item) => item.to)).size).toBe(38);
         expect(cadastroItens.some((item) => item.to === '/bancos')).toBe(false);
     });
 

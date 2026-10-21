@@ -12,8 +12,18 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
 import { formatAuditoriaDateTime, getAuditoriaActionLabel, getAuditoriaActionSeverity } from '@/features/auditoria/utils/auditoriaDisplay';
+import { useMemo, useState } from 'react';
+import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
+import { DateInput } from '@/components/forms/DateInput';
+import { EmpresaFilialFilter } from '@/components/forms/EmpresaFilialFilter';
+import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { useDashboard } from '@/features/dashboard/hooks/useDashboard';
 import { DashboardAuditItem, DashboardMetric } from '@/features/dashboard/types/dashboard.types';
+import { useRelatorioDashboardConsolidado } from '@/features/relatorios/hooks/useRelatoriosResources';
+import { RelatorioPeriodoQuery, RelatorioResponse } from '@/features/relatorios/types/relatorios.types';
+import { metricEntries } from '@/features/relatorios/components/relatoriosMetricUtils';
+import { useOrganizationalContext } from '@/hooks/useOrganizationalContext';
+import { mapApiError } from '@/lib/http/apiError';
 import { PermissionCode } from '@/types/erp';
 
 const severityClass = (severity?: DashboardMetric['severity']) => {
@@ -103,9 +113,35 @@ const QuickActions = () => (
     </Card>
 );
 
+const startOfCurrentMonth = () => {
+    const date = new Date();
+    return new Date(date.getFullYear(), date.getMonth(), 1);
+};
+
+const endOfCurrentMonth = () => {
+    const date = new Date();
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+};
+
+const DashboardGerencialSection = ({ title, data }: { title: string; data?: RelatorioResponse | null }) => {
+    const entries = metricEntries(data);
+    return <Card title={title} className="h-full">
+        {entries.length === 0 ? <span className="text-color-secondary">Nenhum indicador disponível para o período.</span> : <div className="grid">{entries.map((entry) => <div className="col-6" key={`${title}-${entry.label}`}><span className="block text-color-secondary text-sm">{entry.label}</span><strong>{entry.value}</strong></div>)}</div>}
+    </Card>;
+};
+
 export const DashboardPage = () => {
+    const { hasPermission } = usePermissions();
+    const organizationalContext = useOrganizationalContext();
     const dashboardQuery = useDashboard();
     const data = dashboardQuery.data;
+    const [empresaId, setEmpresaId] = useState<string | null>(organizationalContext.empresaId);
+    const [filialId, setFilialId] = useState<string | null>(organizationalContext.filialId);
+    const [dataInicial, setDataInicial] = useState<Date | null>(() => startOfCurrentMonth());
+    const [dataFinal, setDataFinal] = useState<Date | null>(() => endOfCurrentMonth());
+    const query = useMemo<RelatorioPeriodoQuery | null>(() => empresaId ? { empresaId, filialId, dataInicial: dataInicial ?? startOfCurrentMonth(), dataFinal: dataFinal ?? endOfCurrentMonth() } : null, [dataFinal, dataInicial, empresaId, filialId]);
+    const podeVerDashboardGerencial = hasPermission('RELATORIOS_DASHBOARD_CONSULTAR');
+    const dashboardGerencial = useRelatorioDashboardConsolidado(query, podeVerDashboardGerencial);
 
     return (
         <>
@@ -124,6 +160,27 @@ export const DashboardPage = () => {
             ) : (
                 <div className="dashboard-metrics-grid">{data?.metrics.map((metric) => <MetricCard key={metric.key} metric={metric} />)}</div>
             )}
+            <PermissionGuard permission="RELATORIOS_DASHBOARD_CONSULTAR" mode="hide">
+                <Card title="Indicadores gerenciais consolidados" className="mb-3">
+                    <div className="flex flex-column lg:flex-row gap-3 lg:align-items-end mb-3">
+                        <EmpresaFilialFilter empresaId={empresaId} filialId={filialId} onEmpresaChange={setEmpresaId} onFilialChange={setFilialId} />
+                        <div className="field mb-0"><label htmlFor="dashboardDataInicial" className="font-medium block">Data inicial</label><DateInput id="dashboardDataInicial" value={dataInicial} onChange={setDataInicial} /></div>
+                        <div className="field mb-0"><label htmlFor="dashboardDataFinal" className="font-medium block">Data final</label><DateInput id="dashboardDataFinal" value={dataFinal} onChange={setDataFinal} /></div>
+                        <Button label="Atualizar indicadores" icon="pi pi-refresh" outlined loading={dashboardGerencial.isFetching} onClick={() => dashboardGerencial.refetch()} disabled={!query} />
+                    </div>
+                    {!query ? <Message severity="info" text="Selecione uma empresa para consultar os indicadores gerenciais." /> : null}
+                    {dashboardGerencial.error ? <ApiErrorPanel error={mapApiError(dashboardGerencial.error)} /> : null}
+                    {dashboardGerencial.isLoading ? <LoadingState variant="metrics" cards={6} /> : null}
+                    {!dashboardGerencial.isLoading && !dashboardGerencial.error && dashboardGerencial.data ? <div className="grid">
+                        <div className="col-12 lg:col-6"><DashboardGerencialSection title="Vendas" data={dashboardGerencial.data.vendas} /></div>
+                        <div className="col-12 lg:col-6"><DashboardGerencialSection title="Compras" data={dashboardGerencial.data.compras} /></div>
+                        <div className="col-12 lg:col-6"><DashboardGerencialSection title="Financeiro" data={dashboardGerencial.data.financeiro} /></div>
+                        <div className="col-12 lg:col-6"><DashboardGerencialSection title="Estoque" data={dashboardGerencial.data.estoque} /></div>
+                        <div className="col-12 lg:col-6"><DashboardGerencialSection title="Fiscal" data={dashboardGerencial.data.fiscal} /></div>
+                        <div className="col-12 lg:col-6"><DashboardGerencialSection title="Produção" data={dashboardGerencial.data.producao} /></div>
+                    </div> : null}
+                </Card>
+            </PermissionGuard>
             <div className="grid">
                 <div className="col-12 lg:col-7">
                     <Card title="Fluxos críticos" className="dashboard-flow-panel">

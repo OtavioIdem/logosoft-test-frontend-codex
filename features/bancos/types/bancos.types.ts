@@ -99,7 +99,9 @@ export type RetornoCnabResponse = {
 
 // ---- List queries ----
 export type ContasBancariasListQuery = { empresaId?: Guid | null; filialId?: Guid | null };
-export type BoletosListQuery = { empresaId: Guid; filialId?: Guid | null; status?: StatusBoleto | number | null };
+// `contaBancariaId` é filtro publicado pelo backend. A tela ainda não o expõe porque não há GET
+// de contas para uma seleção legível; o tipo/client o preservam para não perder o contrato.
+export type BoletosListQuery = { empresaId: Guid; filialId?: Guid | null; contaBancariaId?: Guid | null; status?: StatusBoleto | number | null };
 
 // ---- Form value types ----
 export type BancoFormValues = { codigo: string; nome: string };

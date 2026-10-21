@@ -19,7 +19,7 @@ import { SearchSelect } from '@/components/forms/SearchSelect';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
 import { atualizarProdutoSchema, criarProdutoSchema } from '@/features/produtos/schemas/produtosSchemas';
 import { CatalogoListQuery, ProdutoFormValues, ProdutoResponse } from '@/features/produtos/types/produtos.types';
-import { useCategoriasProduto, useMarcas, useUnidadesMedida } from '@/features/produtos/hooks/useProdutosResources';
+import { useCategoriasProduto, useGruposProduto, useMarcas, useUnidadesMedida } from '@/features/produtos/hooks/useProdutosResources';
 import { useUnidadesTributaveis } from '@/features/produtos/hooks/useUnidadeTributavelCatalogo';
 import { FieldErrors, fieldErrorMap, textValue, toOptions } from '@/features/produtos/components/produtoFormUtils';
 import { SelectOption, TipoItemFiscal, TipoItemSped, TipoProduto } from '@/types/erp';
@@ -80,6 +80,7 @@ const buildInitialValues = (record?: ProdutoResponse | null): ProdutoFormValues 
               unidadeMedidaId: record.unidadeMedidaId,
               categoriaProdutoId: record.categoriaProdutoId,
               marcaId: record.marcaId,
+              grupoProdutoId: record.grupoProdutoId,
               precoVendaBase: record.precoVendaBase,
               custoReferencial: record.custoReferencial,
               controlaEstoque: record.controlaEstoque,
@@ -109,6 +110,7 @@ const buildInitialValues = (record?: ProdutoResponse | null): ProdutoFormValues 
               unidadeMedidaId: '',
               categoriaProdutoId: null,
               marcaId: null,
+              grupoProdutoId: null,
               precoVendaBase: 0,
               custoReferencial: 0,
               controlaEstoque: true,
@@ -161,10 +163,12 @@ export const ProdutoFormDialog = ({
     const unidadesQuery = useUnidadesMedida(catalogoQuery, catalogosHabilitados);
     const categoriasQuery = useCategoriasProduto(catalogoQuery, catalogosHabilitados);
     const marcasQuery = useMarcas(catalogoQuery, catalogosHabilitados);
+    const gruposQuery = useGruposProduto({ empresaId: catalogoQuery.empresaId, pagina: 1, tamanho: 500, incluirInativos: false }, catalogosHabilitados);
 
     const unidadeOptions = useMemo(() => toOptions(unidadesQuery.data ?? [], (item) => `${item.sigla} - ${item.descricao}`), [unidadesQuery.data]);
     const categoriaOptions = useMemo(() => toOptions(categoriasQuery.data ?? [], (item) => `${item.codigo} - ${item.nome}`), [categoriasQuery.data]);
     const marcaOptions = useMemo(() => toOptions(marcasQuery.data ?? [], (item) => item.nome), [marcasQuery.data]);
+    const grupoOptions = useMemo(() => (gruposQuery.data?.items ?? []).map((item) => ({ value: item.id, label: `${item.codigo} - ${item.descricao}` })), [gruposQuery.data]);
     const semEmpresaSelecionada = !record && !catalogoQuery.empresaId;
 
     // Catálogo oficial global (Mód.04) da sigla de unidade tributável — guarda escopada ao próprio
@@ -248,6 +252,11 @@ export const ProdutoFormDialog = ({
                             <label htmlFor="marcaId" className="font-medium">Marca</label>
                             <EntitySelect id="marcaId" entityName="marca" value={textValue(values.marcaId) || null} options={marcaOptions} onChange={(value) => update('marcaId', value)} />
                             <FieldError message={errors.marcaId} />
+                        </div>
+                        <div className="field col-12 md:col-3">
+                            <label htmlFor="grupoProdutoId" className="font-medium">Grupo de produto</label>
+                            <EntitySelect id="grupoProdutoId" entityName="grupo de produto" value={textValue(values.grupoProdutoId) || null} options={grupoOptions} onChange={(value) => update('grupoProdutoId', value)} />
+                            <FieldError message={errors.grupoProdutoId} />
                         </div>
                     </FormGrid>
                 </TabPanel>

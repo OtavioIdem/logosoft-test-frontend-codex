@@ -8,7 +8,6 @@ import { SearchInput } from '@/components/forms/SearchInput';
 import { Tag } from 'primereact/tag';
 import { PageHeader } from '@/components/common/PageHeader';
 import { OperationalGovernancePanel } from '@/components/common/OperationalGovernancePanel';
-import { EmpresaFilialFilter } from '@/components/forms/EmpresaFilialFilter';
 import { DataTableActions } from '@/components/data/DataTableActions';
 import { DataTableServer } from '@/components/data/DataTableServer';
 import { StatusTag } from '@/components/data/StatusTag';
@@ -22,6 +21,7 @@ import { PessoaFormDialog } from '@/features/pessoas/components/PessoaFormDialog
 import { usePessoaMutations, usePessoas } from '@/features/pessoas/hooks/usePessoasResources';
 import { PessoaFormValues, PessoaListQuery, PessoaResponse } from '@/features/pessoas/types/pessoas.types';
 import { useMutationWithToast } from '@/hooks/useMutationWithToast';
+import { useOrganizationalContext } from '@/hooks/useOrganizationalContext';
 import { mapApiError } from '@/lib/http/apiError';
 import { maskDocument } from '@/lib/formatters/privacy';
 import { EntityStatus, TipoPessoa } from '@/types/erp';
@@ -37,15 +37,16 @@ const filterLocal = (records: PessoaResponse[], term: string) => {
 export const PessoasPage = () => {
     const runWithToast = useMutationWithToast();
     const { hasPermission } = usePermissions();
-    const [filters, setFilters] = useState<PessoaListQuery>({});
+    const organizationalContext = useOrganizationalContext();
     const [localSearch, setLocalSearch] = useState('');
     const [first, setFirst] = useState(0);
     const [rows, setRows] = useState(10);
     const [formVisible, setFormVisible] = useState(false);
     const [selected, setSelected] = useState<PessoaResponse | null>(null);
     const [reasonRecord, setReasonRecord] = useState<PessoaResponse | null>(null);
-    const listQuery = usePessoas(filters);
-    const { saveMutation, inativarMutation } = usePessoaMutations(filters);
+    const contextualFilters = useMemo<PessoaListQuery>(() => ({ empresaId: organizationalContext.empresaId, filialId: organizationalContext.filialId }), [organizationalContext.empresaId, organizationalContext.filialId]);
+    const listQuery = usePessoas(contextualFilters, { enabled: Boolean(organizationalContext.empresaId), snapshot: organizationalContext.snapshot });
+    const { saveMutation, inativarMutation } = usePessoaMutations(contextualFilters, organizationalContext.snapshot);
 
     const records = useMemo(() => filterLocal(listQuery.data ?? [], localSearch), [listQuery.data, localSearch]);
     const visibleRecords = useMemo(() => records.slice(first, first + rows), [records, first, rows]);
@@ -56,11 +57,6 @@ export const PessoasPage = () => {
     if (!hasPermission('PESSOAS_CONSULTAR')) {
         return <UnauthorizedState description="A rotina de Pessoas exige a permissão PESSOAS_CONSULTAR." />;
     }
-
-    const updateFilter = (name: keyof PessoaListQuery, value: string | null) => {
-        setFirst(0);
-        setFilters((current) => ({ ...current, [name]: value || null }));
-    };
 
     const openCreate = () => {
         setSelected(null);
@@ -74,12 +70,11 @@ export const PessoasPage = () => {
                 await saveMutation.mutateAsync({ id: values.id, values });
                 setFormVisible(false);
                 setSelected(null);
-                // Após criar, alinha o filtro à empresa/filial do novo registro para que ele apareça na listagem
-                // (a lista é filtrada por empresa; sem isso o cadastro recém-criado "some" apesar do sucesso).
-                if (isCreate && values.empresaId) {
+                // A listagem é sempre do contexto ativo. Após criar, só limpamos a busca local para o registro
+                // recém-criado não ficar oculto; empresa e filial não são filtros locais desta tela.
+                if (isCreate) {
                     setFirst(0);
                     setLocalSearch('');
-                    setFilters((current) => ({ ...current, empresaId: values.empresaId ?? null, filialId: values.filialId ?? null }));
                 }
             },
             { success: { summary: 'Pessoa salva', detail: 'Cadastro de pessoa gravado com sucesso.' }, error: { summary: 'Erro ao salvar pessoa', detail: 'Não foi possível salvar a pessoa.' }, rethrow: true }
@@ -99,7 +94,6 @@ export const PessoasPage = () => {
 
     const headerActions = (
         <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
-            <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
             <SearchInput ariaLabel="Buscar pessoas" defaultValue={localSearch} onChange={(term) => { setFirst(0); setLocalSearch(term); }} />
             <PermissionGuard permission="PESSOAS_GERENCIAR" mode="disable">
                 {({ disabled }) => <Button label="Nova pessoa" icon="pi pi-plus" disabled={disabled} onClick={openCreate} />}

@@ -67,7 +67,7 @@ describe('backend contract map', () => {
 
     it('resolve constantes, templates e clients indiretos sem divergências do contrato canônico', () => {
         const result = readContractMapInputs(root);
-        expect(result.backendRoutes).toHaveLength(579);
+        expect(result.backendRoutes).toHaveLength(617);
         expect(new Set(result.frontendRoutes.map((route: { key: string }) => route.key)).size).toBeGreaterThanOrEqual(450);
         expect(result.comparison.incompatible).toEqual([]);
         expect(result.comparison.methodMismatch).toEqual([]);

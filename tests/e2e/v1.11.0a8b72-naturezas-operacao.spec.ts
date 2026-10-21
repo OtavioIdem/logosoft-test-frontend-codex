@@ -173,13 +173,14 @@ const dropdownPorInputId = (escopo: Locator, inputId: string) => escopo.locator(
 const linhaDaTabela = (page: Page, codigo: string) => page.getByRole('row').filter({ has: page.getByRole('cell', { name: codigo, exact: true }) });
 
 test.describe('v1.11.0a8b72 — S2 opera naturezas de operação (AC-4, AC-5, AC-6, AC-7)', () => {
-    test('(a) S2 abre pelo menu Fiscal, cria com 2 linhas de CFOP e o POST leva cfops completo com tipoItem', async ({ page }) => {
+    test('(a) S2 abre pela Central de cadastros, cria com 2 linhas de CFOP e o POST leva cfops completo com tipoItem', async ({ page }) => {
         await sessao(page, S2);
         const estado = await instalarRotas(page, []);
 
         await page.goto('/dashboard');
-        const grupoFiscal = page.locator('li.layout-root-menuitem').filter({ has: page.locator('.layout-menuitem-root-text', { hasText: /^Fiscal$/ }) });
-        await grupoFiscal.getByRole('link', { name: /Naturezas de operação$/ }).click();
+        const grupoCadastros = page.locator('li.layout-root-menuitem').filter({ has: page.locator('.layout-menuitem-root-text', { hasText: /^Cadastros$/ }) });
+        await grupoCadastros.getByRole('link', { name: /Central de cadastros$/ }).click();
+        await page.getByRole('link', { name: /Naturezas de operação/ }).click();
         await expect(page).toHaveURL(/\/fiscal\/naturezas-operacao$/);
         await expect(page.getByRole('heading', { name: TITULO, exact: true })).toBeVisible();
         await expect.poll(() => estado.listas.length).toBeGreaterThan(0);

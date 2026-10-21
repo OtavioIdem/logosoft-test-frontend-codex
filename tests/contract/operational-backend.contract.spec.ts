@@ -129,6 +129,10 @@ const assertMovimentoEstoque = (value: unknown, label: string) => {
     requireString(movimento, 'localEstoqueId', label);
     requireNumber(movimento, 'tipo', label);  // D71: tipo deve estar sempre presente (não-anulável)
     requireNumber(movimento, 'quantidade', label);
+    requireNumber(movimento, 'quantidadeAnterior', label);
+    requireNumber(movimento, 'quantidadePosterior', label);
+    requireNumber(movimento, 'quantidadeReservadaAnterior', label);
+    requireNumber(movimento, 'quantidadeReservadaPosterior', label);
     requireOptionalString(movimento, 'origemModulo', label);
     requireOptionalString(movimento, 'origemId', label);
     requireString(movimento, 'dataMovimento', label);  // D71: dataMovimento deve estar sempre presente (não-anulável)

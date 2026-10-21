@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { EstoqueMovimentosPage } from '@/features/estoque/components/EstoqueMovimentosPage';
@@ -204,6 +204,10 @@ describe('EstoqueMovimentosPage — v1.11.0a8b68', () => {
                 localEstoqueId: 'llllllll-llll-llll-llll-llllllllllll',
                 tipo: TipoMovimentoEstoque.TransferenciaSaida, // 8
                 quantidade: 5,
+                quantidadeAnterior: 12,
+                quantidadePosterior: 7,
+                quantidadeReservadaAnterior: 3,
+                quantidadeReservadaPosterior: 3,
                 origemModulo: 'MANUAL',
                 origemId: null,
                 documento: null,
@@ -241,6 +245,34 @@ describe('EstoqueMovimentosPage — v1.11.0a8b68', () => {
                 return element?.textContent?.includes('2024') ?? false;
             });
             expect(dataCells.length).toBeGreaterThan(0);
+        });
+
+        it('mostra os saldos antes e depois somente no detalhe do movimento', async () => {
+            permsState.perms = ['ESTOQUE_CONSULTAR'];
+            const user = userEvent.setup();
+            const movimento: MovimentoEstoqueResponse = {
+                id: 'ffffffff-ffff-ffff-ffff-ffffffffffff', empresaId, filialId: null,
+                produtoId: 'pppppppp-pppp-pppp-pppp-pppppppppppp', localEstoqueId: 'llllllll-llll-llll-llll-llllllllllll',
+                tipo: TipoMovimentoEstoque.Reserva, quantidade: 4, quantidadeAnterior: 10, quantidadePosterior: 10,
+                quantidadeReservadaAnterior: 2, quantidadeReservadaPosterior: 6, origemModulo: 'Vendas.PedidoVenda',
+                dataMovimento: '2024-09-24T14:30:00Z', criadoEm: '2024-09-24T14:30:00Z', criadoPor: 'usuario@example.com', atualizadoEm: '2024-09-24T14:30:00Z', atualizadoPor: 'usuario@example.com'
+            } as MovimentoEstoqueResponse;
+            vi.mocked(useMovimentosEstoque).mockReturnValue({ data: [movimento], isFetching: false, isLoading: false, error: undefined } as never);
+
+            const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+            render(<QueryClientProvider client={queryClient}><EstoqueMovimentosPage initialTab="historico" /></QueryClientProvider>);
+
+            expect(screen.queryByText('Saldo físico anterior')).not.toBeInTheDocument();
+            await user.click(screen.getByRole('button', { name: /ver saldos/i }));
+            const detalhe = screen.getByTestId('movimento-saldos-detalhe');
+            expect(detalhe).toBeInTheDocument();
+            expect(screen.getByText('Saldo físico anterior')).toBeInTheDocument();
+            expect(screen.getByText('Saldo físico posterior')).toBeInTheDocument();
+            expect(screen.getByText('Reservado anterior')).toBeInTheDocument();
+            expect(screen.getByText('Reservado posterior')).toBeInTheDocument();
+            expect(within(detalhe).getAllByText('10')).toHaveLength(2);
+            expect(within(detalhe).getByText('2')).toBeInTheDocument();
+            expect(within(detalhe).getByText('6')).toBeInTheDocument();
         });
 
         it('controle: com os nomes antigos (`tipoMovimento`, `criadoEm`), o rótulo "Transferência — saída" e data não aparecem', () => {
@@ -331,6 +363,10 @@ describe('EstoqueMovimentosPage — v1.11.0a8b68', () => {
                 localEstoqueId: 'llllllll-llll-llll-llll-llllllllllll',
                 tipo: TipoMovimentoEstoque.Entrada,
                 quantidade: 10,
+                quantidadeAnterior: 0,
+                quantidadePosterior: 10,
+                quantidadeReservadaAnterior: 0,
+                quantidadeReservadaPosterior: 0,
                 origemModulo: 'MANUAL',
                 origemId: null,
                 documento: null,

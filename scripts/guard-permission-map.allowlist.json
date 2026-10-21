@@ -12,7 +12,7 @@
   "suppressions": [],
   "description": "Registro auditável, fechado e monotônico das divergências entre as permissões que o contrato exige em cada operação HTTP e as permissões que os módulos frontend declaram. Calibração: 9 órfãs registradas nominalmente em C1 — módulos bancos, auditoria e relatorios sem página de rota ativa. C2 e C3 leem o menu pela AST desde a v1.11.0a8b57.c1 (D44, D45, D46). Hierarquia de menu: 0. Menu sem regra: 0. Catálogo genérico: 1 (GC-01). Nota: filtro de alcançabilidade desabilitado pois estava eliminando divergências legítimas junto com órfãs.",
   "teto": {
-    "chamadaSemGuard": 9,
+    "chamadaSemGuard": 7,
     "menuHierarquia": 0,
     "menuSemRegra": 0,
     "catalogoGenerico": 1
@@ -75,26 +75,6 @@
       "path": "/api/bancos/boletos/gerar",
       "module": "bancos",
       "requiredPermission": "BOLETOS_GERAR",
-      "target": "F5.6 — remove código morto",
-      "decision": "órfão: módulo sem página de rota ativa no repositório"
-    },
-    {
-      "id": "chamada-features/bancos/api/bancosApi.ts-POST-/api/bancos/cnab/remessas",
-      "file": "features/bancos/api/bancosApi.ts",
-      "method": "POST",
-      "path": "/api/bancos/cnab/remessas",
-      "module": "bancos",
-      "requiredPermission": "CNAB_REMESSA_GERAR",
-      "target": "F5.6 — remove código morto",
-      "decision": "órfão: módulo sem página de rota ativa no repositório"
-    },
-    {
-      "id": "chamada-features/bancos/api/bancosApi.ts-POST-/api/bancos/cnab/retornos/importar",
-      "file": "features/bancos/api/bancosApi.ts",
-      "method": "POST",
-      "path": "/api/bancos/cnab/retornos/importar",
-      "module": "bancos",
-      "requiredPermission": "CNAB_RETORNO_PROCESSAR",
       "target": "F5.6 — remove código morto",
       "decision": "órfão: módulo sem página de rota ativa no repositório"
     },

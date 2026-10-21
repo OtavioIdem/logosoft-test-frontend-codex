@@ -18,6 +18,7 @@ import {
     PESSOA_MUNICIPIO_TOAST
 } from '@/features/pessoas/components/pessoaFiscalLabels';
 import { AuthContext } from '@/providers/AuthProvider';
+import { OrganizationalContextProvider } from '@/providers/OrganizationalContextProvider';
 import { AppToastContext, AppToastContextValue } from '@/hooks/useAppToast';
 import { httpClient } from '@/lib/http/httpClient';
 import { PermissionCode } from '@/types/erp';
@@ -140,7 +141,7 @@ const instalarRede = () => {
 };
 
 const authValue = (permissoes: PermissionCode[]): AuthContextValue => ({
-    user: { id: 'u1', nome: 'Operador', email: 'operador@teste.local', permissoes },
+    user: { id: 'u1', nome: 'Operador', email: 'operador@teste.local', permissoes, empresaId: '11111111-1111-1111-1111-111111111111', filialId: null, isMaster: false },
     isAuthenticated: true,
     isLoading: false,
     authStatus: 'authenticated',
@@ -158,7 +159,9 @@ const renderPagina = (permissoes: PermissionCode[] = S2) => {
         <AuthContext.Provider value={authValue(permissoes)}>
             <AppToastContext.Provider value={toast as unknown as AppToastContextValue}>
                 <QueryClientProvider client={client}>
-                    <PessoasPage />
+                    <OrganizationalContextProvider>
+                        <PessoasPage />
+                    </OrganizationalContextProvider>
                 </QueryClientProvider>
             </AppToastContext.Provider>
         </AuthContext.Provider>
