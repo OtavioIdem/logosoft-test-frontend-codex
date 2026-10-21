@@ -49,6 +49,7 @@ import {
 } from '@/features/tributacao/types/tributacao.types';
 import { useAppToast } from '@/hooks/useAppToast';
 import { mapApiError } from '@/lib/http/apiError';
+import { selectOptionsWithCurrentValue } from '@/lib/forms/selectOptionsWithCurrentValue';
 import { ApiError } from '@/types/erp';
 
 type RegraFormValues = {
@@ -320,7 +321,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                             <Dropdown
                                 inputId="regimeEmpresa"
                                 value={values.regimeEmpresa}
-                                options={comCuringa(regimeTributarioOptions)}
+                                options={selectOptionsWithCurrentValue(comCuringa(regimeTributarioOptions), values.regimeEmpresa)}
                                 placeholder="(qualquer)"
                                 onChange={(event) => alterar('regimeEmpresa', event.value === null || event.value === undefined ? null : Number(event.value))}
                             />
@@ -374,7 +375,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                     <Dropdown inputId="csosnCodigo" value={values.icms.csosnCodigo} options={csosnOptions} showClear placeholder="Selecione" onChange={(event) => alterarIcms({ csosnCodigo: (event.value as string) ?? null })} />
                                 </Campo>
                                 <Campo label="Modalidade da base" htmlFor="modalidadeBaseCalculo">
-                                    <Dropdown inputId="modalidadeBaseCalculo" value={values.icms.modalidadeBaseCalculo} options={modalidadeBaseIcmsOptions} onChange={(event) => alterarIcms({ modalidadeBaseCalculo: Number(event.value) })} />
+                                    <Dropdown inputId="modalidadeBaseCalculo" value={values.icms.modalidadeBaseCalculo} options={selectOptionsWithCurrentValue(modalidadeBaseIcmsOptions, values.icms.modalidadeBaseCalculo)} onChange={(event) => alterarIcms({ modalidadeBaseCalculo: Number(event.value) })} />
                                 </Campo>
                                 <Campo label="Alíquota do ICMS" htmlFor="aliquotaIcms">
                                     <InputNumber
@@ -416,7 +417,7 @@ export const RegraFiscalFormDialog = ({ visible, regraId, empresaId, filialId, o
                                     />
                                 </Campo>
                                 <Campo label="Modalidade da base de ST" htmlFor="modalidadeBaseCalculoSt">
-                                    <Dropdown inputId="modalidadeBaseCalculoSt" value={values.icms.modalidadeBaseCalculoSt} options={modalidadeBaseIcmsStOptions} onChange={(event) => alterarIcms({ modalidadeBaseCalculoSt: Number(event.value) })} />
+                                    <Dropdown inputId="modalidadeBaseCalculoSt" value={values.icms.modalidadeBaseCalculoSt} options={selectOptionsWithCurrentValue(modalidadeBaseIcmsStOptions, values.icms.modalidadeBaseCalculoSt)} onChange={(event) => alterarIcms({ modalidadeBaseCalculoSt: Number(event.value) })} />
                                 </Campo>
                                 <Campo label="MVA" htmlFor="mva">
                                     <InputNumber inputId="mva" value={values.icms.mva} locale="pt-BR" suffix=" %" min={0} max={100} minFractionDigits={2} maxFractionDigits={4} onValueChange={(event) => alterarIcms({ mva: Number(event.value ?? 0) })} />

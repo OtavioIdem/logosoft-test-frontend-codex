@@ -331,6 +331,16 @@ describe('AC-5: Contribuinte com IE vazia no registro bloqueia o envio', () => {
 });
 
 describe('AC-3: permissões da aba Dados fiscais e da ação Vincular município', () => {
+    it('AJ-06.c1: regime desconhecido do registro continua selecionado, sem virar campo vazio', async () => {
+        pessoasServidor = [pessoa({ regimeTributarioParceiro: 99 })];
+        renderPagina(S2);
+        await abrirEdicao();
+        abrirAba(PESSOA_FISCAL_ABA.titulo);
+
+        const regime = screen.getByLabelText('Regime tributário do parceiro');
+        expect((within(regime).getByRole('option', { name: 'Não mapeado (99)' }) as HTMLOptionElement).selected).toBe(true);
+    });
+
     it('S1 (sem PESSOAS_DADOS_FISCAIS_GERENCIAR) vê a aba Dados fiscais só leitura', async () => {
         renderPagina(S1);
         await abrirEdicao();

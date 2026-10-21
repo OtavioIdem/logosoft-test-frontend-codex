@@ -1,3 +1,13 @@
+# v1.11.0a8b76.c1
+
+## Enums fiscais desconhecidos permanecem explícitos nos selects
+
+Os sete selects pendentes da AJ-06 agora preservam valores numéricos devolvidos
+por registros legados ou por um enum novo do backend como `Não mapeado (N)`.
+O valor não passa a ser aceito pelo schema: para salvar, o operador precisa
+selecionar uma opção que o contrato atual reconhece. Não há alteração de rota,
+request, permissão ou regra fiscal local.
+
 # v1.11.0a8b76
 
 ## Fiscal v1.24 (P1): pipeline XML sem opções mortas, reabrir nota, ambiente e enums por rótulo
