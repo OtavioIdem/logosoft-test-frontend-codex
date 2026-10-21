@@ -6,6 +6,7 @@ vi.mock('@/lib/http/httpClient');
 
 const empresaId = '11111111-1111-1111-1111-111111111111';
 const filialId = '22222222-2222-2222-2222-222222222222';
+const contaBancariaId = '77777777-7777-7777-7777-777777777777';
 const boleto = {
     id: '33333333-3333-3333-3333-333333333333',
     contaReceberId: '44444444-4444-4444-4444-444444444444',
@@ -27,11 +28,11 @@ describe('Bancos / Boletos — b78 contrato publicado', () => {
     it('AC-1: valida o DTO integral de BoletoResponse e só envia os filtros publicados na listagem', async () => {
         vi.mocked(httpClient.get).mockResolvedValueOnce({ data: [boleto] } as never);
 
-        const result = await bancosApi.listarBoletos({ empresaId, filialId, status: 1, termo: 'REC-000123' } as never);
+        const result = await bancosApi.listarBoletos({ empresaId, filialId, contaBancariaId, status: 1, termo: 'REC-000123' } as never);
 
         expect(result).toEqual([boleto]);
         expect(httpClient.get).toHaveBeenCalledWith('/api/bancos/boletos', {
-            params: { empresaId, filialId, status: 1 }
+            params: { empresaId, filialId, contaBancariaId, status: 1 }
         });
         expect((vi.mocked(httpClient.get).mock.calls[0][1] as { params: Record<string, unknown> }).params).not.toHaveProperty('termo');
     });

@@ -63,7 +63,7 @@ export const bancosApi = {
     // ---- Boletos ----
     async listarBoletos(query: BoletosListQuery) {
         return runRequest(async () => {
-            const response = await httpClient.get<unknown>(`${BASE}/boletos`, { params: cleanQueryParams({ empresaId: query.empresaId, filialId: query.filialId, status: query.status }) });
+            const response = await httpClient.get<unknown>(`${BASE}/boletos`, { params: cleanQueryParams({ empresaId: query.empresaId, filialId: query.filialId, contaBancariaId: query.contaBancariaId, status: query.status }) });
             return boletoResponseSchema.array().parse(response.data) as BoletoResponse[];
         });
     },

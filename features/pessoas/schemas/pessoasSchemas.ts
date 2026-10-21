@@ -5,10 +5,13 @@ import { UFS_BRASIL } from '@/lib/constants/ufs';
 import { PESSOA_ENDERECO_LIMITES, PESSOA_ENDERECO_VALIDACAO } from '@/features/pessoas/components/pessoaEnderecosLabels';
 import { INDICADOR_CONTRIBUINTE_ICMS_OPTIONS, PESSOA_FISCAL_LIMITES, PESSOA_FISCAL_VALIDACAO, REGIME_TRIBUTARIO_PARCEIRO_OPTIONS } from '@/features/pessoas/components/pessoaFiscalLabels';
 import { TipoEndereco } from '@/features/pessoas/types/pessoaEnderecos.types';
+import { isInscricaoEstadualLeiauteValida, isInscricaoMunicipalLeiauteValida } from '@/lib/validators/fiscalLayoutFormats';
 
 const guid = z.string().uuid('Selecione um registro válido.');
 const optionalGuid = z.union([guid, z.null()]).optional();
 const nullableText = z.string().trim().transform((value) => (value ? value : null)).nullable().optional();
+const inscricaoEstadualSchema = nullableText.refine((value) => value == null || isInscricaoEstadualLeiauteValida(value), 'Inscrição estadual deve ter de 2 a 14 dígitos ou ser ISENTO.');
+const inscricaoMunicipalSchema = nullableText.refine((value) => value == null || isInscricaoMunicipalLeiauteValida(value), 'Inscrição municipal deve ter de 1 a 15 caracteres.');
 
 const documentoPessoaSchema = z
     .string()
@@ -33,8 +36,8 @@ export const criarPessoaSchema = z
         nomeRazaoSocial: z.string().trim().min(2, 'Nome/razão social é obrigatório.'),
         nomeFantasia: nullableText,
         documento: documentoPessoaSchema,
-        inscricaoEstadual: nullableText,
-        inscricaoMunicipal: nullableText,
+        inscricaoEstadual: inscricaoEstadualSchema,
+        inscricaoMunicipal: inscricaoMunicipalSchema,
         observacao: nullableText
     })
     .superRefine((value, ctx) => {
@@ -50,8 +53,8 @@ export const criarPessoaSchema = z
 export const atualizarPessoaSchema = z.object({
     nomeRazaoSocial: z.string().trim().min(2, 'Nome/razão social é obrigatório.'),
     nomeFantasia: nullableText,
-    inscricaoEstadual: nullableText,
-    inscricaoMunicipal: nullableText,
+    inscricaoEstadual: inscricaoEstadualSchema,
+    inscricaoMunicipal: inscricaoMunicipalSchema,
     observacao: nullableText
 });
 

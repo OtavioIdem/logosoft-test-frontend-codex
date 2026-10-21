@@ -26,7 +26,7 @@ export const useRelatorioGerencialFinanceiro = (query: RelatorioQuery, allowed =
 export const useRelatorioGerencialEstoque = (query: RelatorioQuery, allowed = true) => useQuery({ queryKey: relatoriosQueryKeys.estoque(query), queryFn: () => relatoriosApi.gerencialEstoque(requireQuery(query)), enabled: enabled(query, allowed) });
 export const useRelatorioGerencialFiscal = (query: RelatorioQuery, allowed = true) => useQuery({ queryKey: relatoriosQueryKeys.fiscal(query), queryFn: () => relatoriosApi.gerencialFiscal(requireQuery(query)), enabled: enabled(query, allowed) });
 export const useRelatorioGerencialProducao = (query: RelatorioQuery, allowed = true) => useQuery({ queryKey: relatoriosQueryKeys.producao(query), queryFn: () => relatoriosApi.gerencialProducao(requireQuery(query)), enabled: enabled(query, allowed) });
-export const useRelatorioDashboardConsolidado = (query: RelatorioQuery) => useQuery({ queryKey: relatoriosQueryKeys.dashboard(query), queryFn: () => relatoriosApi.dashboardConsolidado(requireQuery(query)), enabled: enabled(query) });
+export const useRelatorioDashboardConsolidado = (query: RelatorioQuery, allowed = true) => useQuery({ queryKey: relatoriosQueryKeys.dashboard(query), queryFn: () => relatoriosApi.dashboardConsolidado(requireQuery(query)), enabled: enabled(query, allowed) });
 
 const baixarBlob = (blob: Blob, nomeArquivo: string) => {
     const url = window.URL.createObjectURL(blob);

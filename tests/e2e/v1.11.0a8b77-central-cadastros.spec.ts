@@ -24,7 +24,7 @@ test('E2: permissão fiscal revela Séries e preserva o deep link canônico', as
     await mockApiRoutes(page);
     await writeSession(page, { permissions: ['FISCAL_SERIES_CONSULTAR'] });
 
-    await page.goto('/cadastros');
+    await page.goto('/cadastros', { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByText('5. Fiscal')).toBeVisible();
     await expect(page.getByRole('link', { name: /Séries fiscais/i })).toHaveAttribute('href', '/fiscal/series');
@@ -38,7 +38,7 @@ test('E3: sem nenhuma permissão de cadastro a rota é negada', async ({ page })
     await mockApiRoutes(page);
     await writeSession(page, { permissions: ['FISCAL_CONSULTAR'] });
 
-    await page.goto('/cadastros');
+    await page.goto('/cadastros', { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByText(/A rota Central de cadastros exige uma das permissões/i)).toBeVisible();
 });

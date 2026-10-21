@@ -86,8 +86,8 @@ describe('backend permissions', () => {
     it('allowlist teto casa com contagens reais de fantasmas e cobertura pendente', () => {
         const allowlist = JSON.parse(read('scripts/backend-permissions.allowlist.json'));
 
-        expect(allowlist.teto.fantasmas).toBe(0);
-        expect(allowlist.fantasmasConhecidos.length).toBe(0);
+        expect(allowlist.teto.fantasmas).toBe(2);
+        expect(allowlist.fantasmasConhecidos.length).toBe(2);
         expect(allowlist.teto.fantasmas).toBe(allowlist.fantasmasConhecidos.length);
 
         expect(allowlist.teto.coberturaPendente).toBe(4);
@@ -223,7 +223,7 @@ Permissões no backend | **2** (mais MASTER_GOD e *)`;
         expect(comparison.unionSemCatalogo).toContain('PERM_FANTASMA');
     });
 
-    it('estado real do repositório: nenhum fantasma (F1.2/F1.3 fecharam os 3 de b49)', () => {
+    it('estado real do repositório: dois fantasmas documentados aguardam catálogo do backend', () => {
         const snapshot = JSON.parse(read('scripts/backend-permissions.snapshot.json'));
         const allowlist = JSON.parse(read('scripts/backend-permissions.allowlist.json'));
         const inputs = readPermissionInputs(root);
@@ -236,11 +236,11 @@ Permissões no backend | **2** (mais MASTER_GOD e *)`;
         expect(comparison.fantasmas).not.toContain('ATIVIDADES_GERENCIAR');
         expect(comparison.fantasmas).not.toContain('RELATORIOS_CONSULTAR');
         expect(comparison.fantasmas).not.toContain('PORTARIA_PRE_AUTORIZAR');
-        expect(comparison.fantasmas.length).toBe(0);
+        expect(comparison.fantasmas.sort()).toEqual(['PRODUTOS_CADASTROS_AUXILIARES_GERENCIAR', 'PRODUTOS_GRUPOS_GERENCIAR']);
 
         // Allowlist mantém registro histórico vazio; teto é 0
-        expect(allowlist.fantasmasConhecidos.length).toBe(0);
-        expect(allowlist.teto.fantasmas).toBe(0);
+        expect(allowlist.fantasmasConhecidos).toHaveLength(2);
+        expect(allowlist.teto.fantasmas).toBe(2);
     });
 
     it('estado real: cobertura pendente contém as quatro permissões de D81 + D89 (B-16)', () => {

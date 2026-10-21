@@ -61,6 +61,8 @@ export const PERMISSOES_CATALOGO: Record<PermissionCode, PermissaoCatalogoItem> 
     CATEGORIAS_PRODUTO_GERENCIAR: { grupo: 'Produtos', label: 'Categorias · Gerenciar' },
     UNIDADES_MEDIDA_GERENCIAR: { grupo: 'Produtos', label: 'Unidades de medida · Gerenciar' },
     MARCAS_GERENCIAR: { grupo: 'Produtos', label: 'Marcas · Gerenciar' },
+    PRODUTOS_GRUPOS_GERENCIAR: { grupo: 'Produtos', label: 'Grupos de produto · Gerenciar' },
+    PRODUTOS_CADASTROS_AUXILIARES_GERENCIAR: { grupo: 'Produtos', label: 'Cadastros auxiliares · Gerenciar' },
     // Estoque
     ESTOQUE_CONSULTAR: { grupo: 'Estoque', label: 'Consultar' },
     ESTOQUE_MOVIMENTAR: { grupo: 'Estoque', label: 'Movimentar' },

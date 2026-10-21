@@ -10,11 +10,11 @@ import path from 'path';
  *
  * Asserções:
  * 1. Lista de arquivos:linha sem locale é vazia
- * 2. Total de InputNumber decimais é 53
+ * 2. Total de InputNumber decimais é 54
  */
 
 describe('AC-10: InputNumber decimal locale', () => {
-    it('todos os 53 InputNumber decimais declaram locale', () => {
+    it('todos os 54 InputNumber decimais declaram locale', () => {
         const files: string[] = [];
         const walk = (d: string) => {
             for (const e of fs.readdirSync(d, { withFileTypes: true })) {
@@ -66,7 +66,7 @@ describe('AC-10: InputNumber decimal locale', () => {
         }
         expect(semLocale).toEqual([]);
 
-        // AC-10 assertion 2: total de InputNumber decimais é 53
-        expect(comLocale).toBe(53);
+        // AC-10 assertion 2: total de InputNumber decimais é 54
+        expect(comLocale).toBe(54);
     });
 });

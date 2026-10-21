@@ -3,6 +3,8 @@
 import { useMemo, useState } from 'react';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
+import { Button } from 'primereact/button';
+import { Dialog } from 'primereact/dialog';
 import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
 import { DataTableServer } from '@/components/data/DataTableServer';
@@ -36,6 +38,7 @@ export const HistoricoMovimentosTab = () => {
     const [localSearch, setLocalSearch] = useState('');
     const [first, setFirst] = useState(0);
     const [rows, setRows] = useState(10);
+    const [movimentoEmDetalhe, setMovimentoEmDetalhe] = useState<MovimentoEstoqueResponse | null>(null);
     const movimentosQuery = useMovimentosEstoque(filters);
     const produtosQuery = useProdutos({ empresaId: filters.empresaId, filialId: filters.filialId });
     const locaisQuery = useLocaisEstoque({ empresaId: filters.empresaId, filialId: filters.filialId });
@@ -72,9 +75,18 @@ export const HistoricoMovimentosTab = () => {
                     <Column field="documento" header="Documento" />
                     <Column field="motivo" header="Motivo" />
                     <Column header="Data" body={(row: MovimentoEstoqueResponse) => formatDateTime(row.dataMovimento)} />
+                    <Column header="Detalhes" body={(row: MovimentoEstoqueResponse) => <Button type="button" label="Ver saldos" icon="pi pi-search" text size="small" onClick={() => setMovimentoEmDetalhe(row)} />} />
                 </DataTableServer>
                 {!movimentosQuery.isLoading && records.length === 0 ? <EmptyState title="Nenhum movimento" description="Registre uma entrada, saída, ajuste ou reserva, ou amplie o período do filtro." /> : null}
             </Card>
+            <Dialog header="Saldos no momento do movimento" visible={Boolean(movimentoEmDetalhe)} modal style={{ width: 'min(42rem, 96vw)' }} onHide={() => setMovimentoEmDetalhe(null)}>
+                {movimentoEmDetalhe ? <div className="grid" data-testid="movimento-saldos-detalhe">
+                    <div className="col-12 md:col-6"><Card><span className="block text-color-secondary mb-2">Saldo físico anterior</span><strong className="text-2xl">{formatQuantity(movimentoEmDetalhe.quantidadeAnterior)}</strong></Card></div>
+                    <div className="col-12 md:col-6"><Card><span className="block text-color-secondary mb-2">Saldo físico posterior</span><strong className="text-2xl">{formatQuantity(movimentoEmDetalhe.quantidadePosterior)}</strong></Card></div>
+                    <div className="col-12 md:col-6"><Card><span className="block text-color-secondary mb-2">Reservado anterior</span><strong className="text-2xl">{formatQuantity(movimentoEmDetalhe.quantidadeReservadaAnterior)}</strong></Card></div>
+                    <div className="col-12 md:col-6"><Card><span className="block text-color-secondary mb-2">Reservado posterior</span><strong className="text-2xl">{formatQuantity(movimentoEmDetalhe.quantidadeReservadaPosterior)}</strong></Card></div>
+                </div> : null}
+            </Dialog>
         </>
     );
 };

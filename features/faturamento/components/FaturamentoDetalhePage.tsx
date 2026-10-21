@@ -37,6 +37,8 @@ import { ConfirmarFaturamentoDialog, RetomarReversaoDialog } from '@/features/fa
 import { ResultadoConfirmacaoPanel } from '@/features/faturamento/components/ResultadoConfirmacaoPanel';
 import {
     confirmacaoBloqueadaPorReversao,
+    cancelamentoBloqueadoPorReversao,
+    cancelamentoBloqueadoTooltip,
     descricaoLegQueParou,
     estadoLegLabel,
     estadoLegSeverity,
@@ -160,6 +162,11 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
 
     const etapa = faturamento ? Number(faturamento.etapa) : 0;
 
+    const fecharCancelar = () => {
+        cancelarMutation.reset();
+        setDialog(null);
+    };
+
     const headerActions = (
         <div className="flex gap-2 flex-wrap justify-content-end">
             <Button label="Voltar" icon="pi pi-arrow-left" severity="secondary" outlined onClick={() => router.push('/faturamento')} />
@@ -181,7 +188,31 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
                     }}
                 </PermissionGuard>
             ) : null}
-            {faturamento && podeCancelar(etapa) ? <PermissionGuard permission="FATURAMENTO_CANCELAR" mode="disable">{({ disabled }) => <Button label="Cancelar" icon="pi pi-ban" severity="danger" outlined disabled={disabled} onClick={() => setDialog('cancelar')} />}</PermissionGuard> : null}
+            {faturamento && podeCancelar(etapa) ? (
+                <PermissionGuard permission="FATURAMENTO_CANCELAR" mode="disable">
+                    {({ disabled }) => {
+                        const bloqueadoPorReversao = cancelamentoBloqueadoPorReversao(faturamento);
+                        const podeRetomarReversao = hasPermission('FATURAMENTO_RETOMAR_REVERSAO');
+                        const tooltip = bloqueadoPorReversao ? cancelamentoBloqueadoTooltip(podeRetomarReversao) : undefined;
+
+                        return (
+                            <Button
+                                label="Cancelar"
+                                icon="pi pi-ban"
+                                severity="danger"
+                                outlined
+                                disabled={disabled || bloqueadoPorReversao}
+                                tooltip={tooltip}
+                                tooltipOptions={{ showOnDisabled: true }}
+                                onClick={() => {
+                                    cancelarMutation.reset();
+                                    setDialog('cancelar');
+                                }}
+                            />
+                        );
+                    }}
+                </PermissionGuard>
+            ) : null}
         </div>
     );
 
@@ -224,7 +255,7 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
                         <Message
                             className="w-full mb-3"
                             severity="warn"
-                            text="Há um leg em reversão: o efeito original pode continuar de pé até a retomada."
+                            text="Há um leg em reversão: o efeito original pode continuar de pé até a retomada. O cancelamento fica bloqueado até a retomada."
                         />
                     ) : null}
 
@@ -304,7 +335,7 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
                         onHide={fecharConfirmar}
                         onSubmit={confirmar}
                     />
-                    <ReasonDialog visible={dialog === 'cancelar'} title="Cancelar faturamento" confirmLabel="Cancelar faturamento" loading={cancelarMutation.isPending} onHide={() => setDialog(null)} onConfirm={cancelar} />
+                    <ReasonDialog visible={dialog === 'cancelar'} title="Cancelar faturamento" confirmLabel="Cancelar faturamento" loading={cancelarMutation.isPending} error={cancelarMutation.error ? mapApiError(cancelarMutation.error).message : null} onHide={fecharCancelar} onConfirm={cancelar} />
                     <RetomarReversaoDialog visible={dialogRetomarVisivel} loading={retomarReversaoMutation.isPending} leg={legEmRetomada} onHide={() => setLegEmRetomada(null)} onSubmit={retomar} />
                 </>
             ) : null}

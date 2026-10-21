@@ -49,7 +49,8 @@ describe('Bancos/Boletos/CNAB (Onda 4) — estrutura e scaffold', () => {
         const cnab = read('features/bancos/components/CnabPage.tsx');
         expect(cadastros).toContain('não oferece endpoints de consulta');
         expect(boletos).toContain('Geração indisponível: ainda não é possível selecionar uma carteira de cobrança pelo sistema.');
-        expect(cnab).toContain('operações de remessa e retorno estão indisponíveis');
+        expect(cnab).toContain('Operações indisponíveis:');
+        expect(cnab).toContain('não solicitará um identificador técnico manualmente');
     });
 
     it('v1.11.0a8b54.c1: tipos BoletoResponse e BoletoHistoricoResponse refletem contrato C#', () => {

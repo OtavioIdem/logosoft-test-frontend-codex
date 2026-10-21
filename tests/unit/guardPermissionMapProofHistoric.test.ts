@@ -132,7 +132,7 @@ describe('Gate de permissão × guard — prova histórica (F1.6.b)', () => {
         for (const item of registro.chamadaSemGuard) {
             porModulo[item.module] = (porModulo[item.module] ?? 0) + 1;
         }
-        expect(porModulo).toEqual({ bancos: 7, auditoria: 1, relatorios: 1 });
+        expect(porModulo).toEqual({ bancos: 5, auditoria: 1, relatorios: 1 });
     });
 
     it('o catálogo genérico continua com a divergência registrada e com alvo', () => {

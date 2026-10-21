@@ -270,6 +270,8 @@ export type PermissionCode =
     | 'CATEGORIAS_PRODUTO_GERENCIAR'
     | 'UNIDADES_MEDIDA_GERENCIAR'
     | 'MARCAS_GERENCIAR'
+    | 'PRODUTOS_GRUPOS_GERENCIAR'
+    | 'PRODUTOS_CADASTROS_AUXILIARES_GERENCIAR'
     | 'ESTOQUE_CONSULTAR'
     | 'ESTOQUE_MOVIMENTAR'
     | 'ESTOQUE_RESERVAR'
@@ -453,7 +455,7 @@ export type EstoqueSaldo = BaseOperationalRecord & { produtoId: Guid; localEstoq
 // `tipo`/`dataMovimento` são os nomes que `MovimentoEstoqueResponse` (C#) serializa — não anuláveis
 // no record, portanto não opcionais aqui (D71, v1.11.0a8b68; o nome antigo `tipoMovimento`/`criadoEm`
 // nunca existiu na resposta, era o defeito que este tipo escondia do compilador).
-export type MovimentoEstoque = BaseOperationalRecord & { produtoId: Guid; localEstoqueId: Guid; tipo: TipoMovimentoEstoque; quantidade: number; origemModulo?: string; origemId?: Guid | null; documento?: string | null; motivo?: string | null; dataMovimento: IsoDateTime };
+export type MovimentoEstoque = BaseOperationalRecord & { produtoId: Guid; localEstoqueId: Guid; tipo: TipoMovimentoEstoque; quantidade: number; quantidadeAnterior: number; quantidadePosterior: number; quantidadeReservadaAnterior: number; quantidadeReservadaPosterior: number; origemModulo?: string; origemId?: Guid | null; documento?: string | null; motivo?: string | null; dataMovimento: IsoDateTime };
 export type LocalEstoque = BaseOperationalRecord & { codigo: string; nome: string; descricao?: string | null };
 export type ReservaEstoque = BaseOperationalRecord & { produtoId: Guid; localEstoqueId: Guid; quantidade: number; origemModulo: string; origemId?: Guid | null; observacao?: string | null; statusReserva?: StatusReservaEstoque | number };
 export type Inventario = BaseOperationalRecord & { codigo: string; localEstoqueId: Guid; descricao?: string | null; statusInventario?: StatusInventario | number; itens?: ItemInventario[] };

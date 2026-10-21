@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { TipoPessoa } from '@/types/erp';
-import { buildCriarPessoaPayload } from '@/features/pessoas/api/pessoasApi';
+import { EntityStatus, TipoPessoa } from '@/types/erp';
+import { buildCriarPessoaPayload, normalizePessoasListResponse } from '@/features/pessoas/api/pessoasApi';
 import { buildCriarClientePayload, buildClienteMotivoPayload } from '@/features/clientes/api/clientesApi';
 import { buildCriarFornecedorPayload } from '@/features/fornecedores/api/fornecedoresApi';
 
@@ -24,6 +24,13 @@ describe('payloads de Pessoas, Clientes e Fornecedores', () => {
         expect(payload.documento).toBe('12ABC67800019Z');
         expect(payload.filialId).toBeNull();
         expect(payload.inscricaoEstadual).toBeNull();
+    });
+
+    it('aceita a listagem de pessoas no envelope Result da AJ-24', () => {
+        const pessoa = { id: pessoaId, empresaId, filialId: null, tipoPessoa: TipoPessoa.Juridica, nomeRazaoSocial: 'Cliente Exemplo LTDA', nomeFantasia: null, documento: '11222333000181', inscricaoEstadual: null, inscricaoMunicipal: null, observacao: null, status: EntityStatus.Ativo };
+
+        expect(normalizePessoasListResponse({ success: true, data: [pessoa] })).toEqual([pessoa]);
+        expect(() => normalizePessoasListResponse({ success: false, error: { code: 'Pessoas.NaoEncontrado', message: 'Recurso não encontrado.' } })).toThrow('Recurso não encontrado.');
     });
 
     it('monta cliente com filial null e limite de crédito decimal', () => {

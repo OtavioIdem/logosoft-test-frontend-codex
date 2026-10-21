@@ -21,6 +21,10 @@ import {
     PessoaListQuery,
     PessoaResponse
 } from '@/features/pessoas/types/pessoas.types';
+import type { ApiResult } from '@/types/erp';
+import type { OrganizationalContextSnapshot } from '@/lib/http/organizationalContextPolicy';
+
+type PessoasListPayload = PessoaResponse[] | ApiResult<PessoaResponse[]>;
 
 const runPessoaRequest = async <T>(request: () => Promise<T>) => {
     try {
@@ -34,6 +38,12 @@ const runPessoaRequest = async <T>(request: () => Promise<T>) => {
 const parseSchema = <T>(schema: { parse: (value: unknown) => T }, values: unknown): T => sanitizePayload(schema.parse(values)) as T;
 const params = (query?: PessoaListQuery) => cleanQueryParams({ empresaId: query?.empresaId, filialId: query?.filialId, termo: query?.termo });
 
+export const normalizePessoasListResponse = (payload: PessoasListPayload): PessoaResponse[] => {
+    if (Array.isArray(payload)) return payload;
+    if (payload.success) return payload.data ?? [];
+    throw new Error(payload.error?.message ?? 'A API não conseguiu listar as pessoas.');
+};
+
 export const buildCriarPessoaPayload = (values: unknown): CriarPessoaRequest => parseSchema(criarPessoaSchema, values);
 export const buildAtualizarPessoaPayload = (values: unknown): AtualizarPessoaRequest => parseSchema(atualizarPessoaSchema, values);
 export const buildInativarPessoaPayload = (motivo: string): InativarPessoaRequest => parseSchema(inativarPessoaSchema, { motivo });
@@ -43,16 +53,21 @@ export const buildAtualizarClassificacaoPessoaPayload = (values: unknown): Atual
 export const buildInativarClassificacaoPessoaPayload = (empresaId: string, motivo: string): InativarClassificacaoPessoaRequest => parseSchema(inativarClassificacaoPessoaSchema, { empresaId, motivo });
 
 export const pessoasApi = {
-    async listar(query?: PessoaListQuery) {
+    async listar(query?: PessoaListQuery, snapshot?: OrganizationalContextSnapshot) {
         return runPessoaRequest(async () => {
-            const response = await httpClient.get<PessoaResponse[]>('/api/pessoas', { params: params(query) });
-            return response.data;
+            const response = await httpClient.get<PessoasListPayload>('/api/pessoas', {
+                params: params(query),
+                organizationalContext: snapshot ? { scope: 'query', required: true, snapshot } : undefined
+            });
+            return normalizePessoasListResponse(response.data);
         });
     },
-    async criar(values: unknown) {
+    async criar(values: unknown, snapshot?: OrganizationalContextSnapshot) {
         const payload = buildCriarPessoaPayload(values);
         return runPessoaRequest(async () => {
-            const response = await httpClient.post<PessoaResponse>('/api/pessoas', payload);
+            const response = await httpClient.post<PessoaResponse>('/api/pessoas', payload, {
+                organizationalContext: snapshot ? { scope: 'body', required: true, snapshot } : undefined
+            });
             return response.data;
         });
     },
