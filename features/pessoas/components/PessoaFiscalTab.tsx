@@ -44,6 +44,7 @@ import { atualizarDadosFiscaisPessoaSchema } from '@/features/pessoas/schemas/pe
 import { PessoaFiscalFormValues, PessoaResponse } from '@/features/pessoas/types/pessoas.types';
 import { useAppToast } from '@/hooks/useAppToast';
 import { mapApiError } from '@/lib/http/apiError';
+import { selectOptionsWithCurrentValue } from '@/lib/forms/selectOptionsWithCurrentValue';
 import { ApiError, EntityStatus } from '@/types/erp';
 
 type PessoaFiscalTabProps = {
@@ -213,7 +214,7 @@ export const PessoaFiscalTab = ({ record, podeGerenciar, inscricaoEstadualDigita
                     <Dropdown
                         inputId="pessoaFiscalRegime"
                         value={values.regimeTributarioParceiro}
-                        options={REGIME_OPTIONS}
+                        options={selectOptionsWithCurrentValue(REGIME_OPTIONS, values.regimeTributarioParceiro)}
                         placeholder={PESSOA_FISCAL_CAMPOS.regimeTributarioParceiroPlaceholder}
                         disabled={camposDesabilitados}
                         className={className('regimeTributarioParceiro')}

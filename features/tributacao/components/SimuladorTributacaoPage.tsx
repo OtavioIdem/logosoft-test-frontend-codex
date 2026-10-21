@@ -25,6 +25,7 @@ import { simularTributacaoSchema, toDateOnly } from '@/features/tributacao/schem
 import { FinalidadeNaturezaOperacao, IndicadorContribuinteIcms, NaturezaTomadorServico, RegimeTributario, ResultadoTributacaoDocumento, TipoCfop, TipoItemSped } from '@/features/tributacao/types/tributacao.types';
 import { useAppToast } from '@/hooks/useAppToast';
 import { mapApiError } from '@/lib/http/apiError';
+import { selectOptionsWithCurrentValue } from '@/lib/forms/selectOptionsWithCurrentValue';
 import { ApiError } from '@/types/erp';
 
 type SimuladorValues = {
@@ -230,13 +231,13 @@ export const SimuladorTributacaoPage = () => {
                         <Dropdown inputId="tipoOperacao" value={values.tipoOperacao} options={tipoOperacaoOptions} onChange={(event) => alterar('tipoOperacao', Number(event.value))} />
                     </Campo>
                     <Campo label="Regime tributário" htmlFor="regimeEmpresa">
-                        <Dropdown inputId="regimeEmpresa" value={values.regimeEmpresa} options={regimeTributarioOptions} onChange={(event) => alterar('regimeEmpresa', Number(event.value))} />
+                        <Dropdown inputId="regimeEmpresa" value={values.regimeEmpresa} options={selectOptionsWithCurrentValue(regimeTributarioOptions, values.regimeEmpresa)} onChange={(event) => alterar('regimeEmpresa', Number(event.value))} />
                     </Campo>
                     <Campo label="CRT do emitente" htmlFor="crtEmitente">
                         <Dropdown
                             inputId="crtEmitente"
                             value={values.crtEmitente}
-                            options={crtOptions}
+                            options={selectOptionsWithCurrentValue(crtOptions, values.crtEmitente)}
                             showClear
                             placeholder="Usar o regime"
                             onChange={(event) => alterar('crtEmitente', event.value === null || event.value === undefined ? null : Number(event.value))}
@@ -262,7 +263,7 @@ export const SimuladorTributacaoPage = () => {
                         />
                     </Campo>
                     <Campo label="Finalidade" htmlFor="finalidade">
-                        <Dropdown inputId="finalidade" value={values.finalidade} options={finalidadeOptions} onChange={(event) => alterar('finalidade', Number(event.value))} />
+                        <Dropdown inputId="finalidade" value={values.finalidade} options={selectOptionsWithCurrentValue(finalidadeOptions, values.finalidade)} onChange={(event) => alterar('finalidade', Number(event.value))} />
                     </Campo>
                     <Campo label="Natureza do tomador do serviço" htmlFor="naturezaTomadorServico">
                         <Dropdown inputId="naturezaTomadorServico" value={values.naturezaTomadorServico} options={naturezaTomadorOptions} onChange={(event) => alterar('naturezaTomadorServico', Number(event.value))} />
