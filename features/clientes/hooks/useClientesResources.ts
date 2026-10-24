@@ -13,7 +13,8 @@ export const clientesQueryKey = (query?: ClienteListQuery) => ['clientes', query
 export const useClientes = (query: ClienteListQuery = {}) =>
     useQuery({
         queryKey: clientesQueryKey(query),
-        queryFn: () => clientesApi.listar(query)
+        queryFn: () => clientesApi.listar(query),
+        enabled: Boolean(query.empresaId)
     });
 
 export const useClienteMutations = (query: ClienteListQuery = {}) => {

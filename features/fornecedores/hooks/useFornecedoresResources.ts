@@ -14,7 +14,8 @@ export const fornecedoresQueryKey = (query?: FornecedorListQuery) => ['fornecedo
 export const useFornecedores = (query: FornecedorListQuery = {}) =>
     useQuery({
         queryKey: fornecedoresQueryKey(query),
-        queryFn: () => fornecedoresApi.listar(query)
+        queryFn: () => fornecedoresApi.listar(query),
+        enabled: Boolean(query.empresaId)
     });
 
 export const useFornecedorMutations = (query: FornecedorListQuery = {}) => {

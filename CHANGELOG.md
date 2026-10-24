@@ -1,3 +1,124 @@
+# v1.11.0a8b76.c2
+
+## Listas de apoio só consultam com empresa, e relatórios gerenciais enviam data pura
+
+Corretiva da verificação `QA-20261024-161925-6b180b` do projeto `logosoft-frontend-QA`
+(24/10/2026), que reprovou 22 das 49 páginas do menu por requisições que o backend recusa
+com HTTP 400. O plano está em
+`docs/fatias/v1.11.0a8b76.c2-qa-empresaid-datas-gerenciais.md`.
+
+**Risco: `MEDIUM`** (toca a camada de dados de cinco listagens compartilhadas e os
+parâmetros de sete rotas de relatório). **Risco de acesso: `NENHUM`**: nenhuma permissão,
+guard, rota ou item de menu mudou.
+
+### F1 — listas de apoio consultadas sem `empresaId` (20 páginas)
+
+`EmpresaFilialFilter` hidrata `filters.empresaId` a partir do contexto organizacional em
+`useEffect`. Na primeira renderização o filtro ainda está vazio, `cleanQueryParams` remove o
+parâmetro ausente e a listagem saía sem empresa — 400 `*.EmpresaObrigatoria` — para só então
+ser refeita com a empresa. É o par 400 + 200 que o QA mediu em 26 das 40 combinações de
+página × rota; em 14 delas nenhuma chamada chegava a dar certo.
+
+Cinco hooks de listagem passam a exigir a empresa antes de disparar, no mesmo formato que
+`useGruposProduto` já usava:
+
+- `useProdutos` (`features/produtos/hooks/useProdutosResources.ts`)
+- `useClientes` (`features/clientes/hooks/useClientesResources.ts`)
+- `useFornecedores` (`features/fornecedores/hooks/useFornecedoresResources.ts`)
+- `usePessoas` (`features/pessoas/hooks/usePessoasResources.ts`)
+- `useCondicoesPagamento` (`features/financeiro/hooks/useFinanceiroResources.ts`)
+
+Quatro telas chamavam esses hooks sem nunca passar empresa — hoje levavam 400 e entregavam
+lista vazia. Elas passam a ler a empresa de onde ela já existe:
+
+- `TabelasPrecoPage` e `TabelaPrecoItemDialog` leem `useOrganizationalContext()`;
+- `ProdutoFornecedorDialog` lê `useOrganizationalContext()`;
+- `GerarContaReceberPedidoDialog` usa o `empresaId` que já é estado local do diálogo.
+
+Sem empresa selecionada a lista fica vazia, que é o comportamento esperado. Nas telas com
+`EmpresaFilialFilter` o aviso para selecionar o contexto já aparece. `TabelasPrecoPage`,
+`TabelaPrecoItemDialog` e `ProdutoFornecedorDialog` não usam o filtro: lá o select fica vazio sem aviso, como já
+ficava antes, quando o 400 virava lista vazia.
+
+`useCategoriasProduto`, `useUnidadesMedida` e `useMarcas` ficaram de fora: o QA não reportou
+400 nessas rotas, e ampliar a guarda sem medição é desenho, não correção.
+
+### F2 — datas dos relatórios gerenciais (`/dashboard` e `/relatorios`)
+
+`RelatorioGerencialFiltro` declara `DateOnly` no backend, que na query só aceita
+`yyyy-MM-dd`. O frontend enviava o `toISOString()` completo e recebia
+`Validation.InvalidRequest`, deixando os dois painéis sem indicador.
+
+`toDateOnlyParam` (`features/relatorios/schemas/relatoriosSchemas.ts`) monta a data a partir
+dos componentes **locais** do `Date`. Não é `toISOString().slice(0, 10)` de propósito: o fim
+do mês às 23:59 no horário local vira o dia seguinte em UTC. O helper `params` de
+`relatoriosApi` usa a conversão nas sete rotas gerenciais — vendas, compras, financeiro,
+estoque, fiscal, produção, dashboard — e em `exportar`, que compartilha os mesmos
+parâmetros.
+
+`/api/relatorios/operacional/geral` não mudou: ele usa `inicio`/`fim` e já respondia 200 com
+ISO completo. A validação de ordem continua comparando `Date`.
+
+### F3 — rótulo acessível nos selects de busca
+
+`SearchSelect` e `EntitySelect` aceitam `ariaLabel` e repassam ao `Dropdown`. O padrão é
+`Buscar <entidade>`, derivado do `entityName` que cada ponto de uso já informa, então os
+selects de produto, cliente, pessoa, fornecedor e empresa deixam de aparecer como
+"(sem rótulo)" para leitor de tela e para a automação de teste. Nenhum ponto de uso mudou.
+
+### Proteção contra recorrência (§5 do pedido do QA)
+
+Os testes E2E não pegaram nada porque a fixture respondia 200 com ou sem `empresaId` e com data ISO completa. Agora:
+
+- `tests/e2e/fixtures/logosoft.ts` recusa com 400, no formato do backend, as cinco listagens escopadas sem
+  `empresaId` e as sete rotas `/api/relatorios/gerenciais/*` com `dataInicial`/`dataFinal` fora de `yyyy-MM-dd`.
+  Cada recusa é registrada por página (`recusasDeContratoDe`), porque a UI se recupera quando o segundo disparo
+  já traz a empresa, e só o registro prova que o primeiro existiu.
+- `tests/e2e/contrato-listagens-escopadas.spec.ts` (32 testes) afirma, por rota e por página, que nenhuma recusa
+  ocorre no carregamento. `/api/relatorios/operacional/geral` segue aceitando ISO completo, e o spec trava isso.
+- `tests/unit/relatoriosDateOnly.test.ts` (16) e `tests/unit/listagensEscopadasEmpresaId.test.tsx` (18) cobrem
+  `toDateOnlyParam` em fuso negativo e positivo e a guarda `enabled` dos cinco hooks.
+
+**Como foi medido.** Vitest por arquivo e Playwright com a receita isolada do `CLAUDE.md`. Em cada rodada o
+servidor que atende a porta foi identificado pela linha de comando do processo: a 3412 serve esta árvore e a 3411
+serve um `git worktree` de `b762b5a`.
+
+| Alvo | Resultado |
+| --- | --- |
+| Unitários, árvore corrigida | 34 de 34 verdes |
+| Unitários, `b762b5a` | 24 vermelhos e 10 verdes |
+| Spec E2E, árvore corrigida | 32 de 32 verdes, duas rodadas |
+| Spec E2E, `b762b5a` | 12 vermelhos e 20 verdes, três rodadas idênticas |
+| Outras 22 specs E2E que usam a fixture, árvore corrigida | 98 de 98 verdes, uma rodada (0 instáveis, lidos do JSON do Playwright) |
+
+O vermelho em `b762b5a` registra, por página, a requisição recusada. Na rede aparece
+`dataFinal=2026-11-01T02:59:59.999Z` para o mês de outubro: o fim do mês às 23:59 em UTC-3 já é novembro em UTC, o
+que confirma no navegador por que `toISOString().slice(0, 10)` mandaria o mês errado.
+
+### O que esta corretiva não faz
+
+Não há gate estrutural em `scripts/` que varra hooks de listagem sem guarda de empresa: os testes cobrem os cinco
+hooks nominais, e um hook novo que repita o erro passa batido até a fixture o recusar numa tela. `ariaLabel` (F3) e
+as quatro chamadas que passaram a enviar empresa não têm teste de componente próprio; o dublê do `Dropdown` em
+`tests/mocks/primereact/dropdown.tsx` ignora `ariaLabel`.
+
+Pendência conhecida, só inferida do código e não medida no navegador: com `@tanstack/react-query` v5 uma query
+desabilitada tem `isLoading = false`. `ClientesPage`, `FornecedoresPage`, `PessoasPage` e `ProdutosPage`
+condicionam o `EmptyState` a `!isLoading`, então no primeiro render, antes de o `EmpresaFilialFilter` hidratar a
+empresa, "Nenhum registro" pode aparecer por um instante. É cosmético: não há perda de dado nem de acesso.
+
+Também não foi confirmado contra o backend que `/api/relatorios/gerenciais/exportar` aceita só `yyyy-MM-dd`; a
+fixture o trata como as outras sete rotas, por extrapolação do mesmo filtro.
+
+A segunda sugestão do QA — declarar `organizationalContext: { scope: 'query' }` nas chamadas
+de listagem para que o `empresaId` do contexto seja sempre injetado — ficou fora.
+`httpClient` aplica a política sem snapshot ambiente, então cada chamada precisaria recebê-lo
+por parâmetro, como `pessoasApi` faz; são ~30 pontos de chamada e é refatoração de camada de
+dados, não correção.
+
+O aceite depende de o QA rodar de novo contra a imagem publicada e registrar o comparativo
+em `docs/verificacao/`.
+
 # v1.11.0a8b76.c1
 
 ## Enums fiscais desconhecidos permanecem explícitos nos selects

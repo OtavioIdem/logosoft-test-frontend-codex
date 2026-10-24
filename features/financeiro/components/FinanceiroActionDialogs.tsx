@@ -126,7 +126,7 @@ export const GerarContaReceberPedidoDialog = ({ visible, loading, onHide, onSubm
     const [filialId, setFilialId] = useState<string | null>(null);
     const [pedidoVendaId, setPedidoVendaId] = useState('');
     const [values, setValues] = useState<GerarContaReceberPedidoRequest>({ condicaoPagamentoId: null, primeiraDataVencimento: new Date(), documento: '', observacao: '' });
-    const condicoesQuery = useCondicoesPagamentoOptions();
+    const condicoesQuery = useCondicoesPagamentoOptions(empresaId);
     const pedidosQuery = usePedidosVenda({ empresaId, filialId });
     const pedidoOptions = useMemo<SelectOption<string>[]>(() => (pedidosQuery.data ?? []).map((pedido) => ({ label: `${pedido.numero ?? 'Pedido sem número'} • ${formatMoney(pedido.valorTotal)}`, value: pedido.id })), [pedidosQuery.data]);
 

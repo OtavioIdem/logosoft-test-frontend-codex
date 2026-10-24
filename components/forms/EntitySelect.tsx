@@ -5,6 +5,7 @@ import { SelectOption } from '@/types/erp';
 
 export const EntitySelect = ({
     id,
+    ariaLabel,
     value,
     options,
     onChange,
@@ -15,6 +16,7 @@ export const EntitySelect = ({
     emptyMessage
 }: {
     id?: string;
+    ariaLabel?: string;
     value?: string | null;
     options: SelectOption<string>[];
     onChange: (value: string | null) => void;
@@ -26,6 +28,7 @@ export const EntitySelect = ({
 }) => (
     <SearchSelect
         id={id}
+        ariaLabel={ariaLabel ?? `Buscar ${entityName}`}
         value={value}
         options={options}
         onChange={onChange}

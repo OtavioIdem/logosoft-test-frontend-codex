@@ -18,7 +18,7 @@ export const useProdutos = (query: ProdutoListQuery = {}, enabled = true) =>
     useQuery({
         queryKey: produtosQueryKey(query),
         queryFn: () => produtosApi.listar(query),
-        enabled
+        enabled: enabled && Boolean(query.empresaId)
     });
 
 export const useCategoriasProduto = (query: CatalogoListQuery = {}, enabled = true) =>

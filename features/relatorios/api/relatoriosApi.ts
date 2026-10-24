@@ -1,7 +1,7 @@
 import { httpClient } from '@/lib/http/httpClient';
 import { mapApiError } from '@/lib/http/apiError';
 import { cleanQueryParams, sanitizePayload } from '@/lib/http/requestUtils';
-import { relatorioPeriodoQuerySchema } from '@/features/relatorios/schemas/relatoriosSchemas';
+import { relatorioPeriodoQuerySchema, toDateOnlyParam } from '@/features/relatorios/schemas/relatoriosSchemas';
 import {
     RelatorioAreaExportavel,
     RelatorioDashboardConsolidadoResponse,
@@ -30,7 +30,7 @@ const runRelatoriosRequest = async <T>(request: () => Promise<T>) => {
 const parseSchema = <T>(schema: Schema<T>, values: unknown): T => sanitizePayload(schema.parse(values)) as T;
 const params = (query: RelatorioPeriodoQuery) => {
     const payload = buildRelatorioPeriodoQuery(query);
-    return cleanQueryParams({ empresaId: payload.empresaId, filialId: payload.filialId, dataInicial: payload.dataInicial, dataFinal: payload.dataFinal });
+    return cleanQueryParams({ empresaId: payload.empresaId, filialId: payload.filialId, dataInicial: toDateOnlyParam(query.dataInicial), dataFinal: toDateOnlyParam(query.dataFinal) });
 };
 const operacionalParams = (query: RelatorioPeriodoQuery) => {
     const payload = buildRelatorioPeriodoQuery(query);
