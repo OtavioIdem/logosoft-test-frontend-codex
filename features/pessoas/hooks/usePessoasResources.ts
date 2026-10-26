@@ -14,7 +14,7 @@ export const usePessoas = (query: PessoaListQuery = {}, options?: { enabled?: bo
     useQuery({
         queryKey: pessoasQueryKey(query),
         queryFn: () => pessoasApi.listar(query, options?.snapshot),
-        enabled: options?.enabled ?? true
+        enabled: (options?.enabled ?? true) && Boolean(query.empresaId)
     });
 
 export const usePessoaMutations = (query: PessoaListQuery = {}, snapshot?: OrganizationalContextSnapshot) => {

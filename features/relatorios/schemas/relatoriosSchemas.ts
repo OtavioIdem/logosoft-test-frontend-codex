@@ -3,6 +3,17 @@ import { normalizeGuidOrNull } from '@/lib/http/requestUtils';
 
 const optionalGuidSchema = z.preprocess((value) => normalizeGuidOrNull(value) ?? undefined, z.string().uuid('Selecione um registro válido.').optional());
 const requiredGuidSchema = z.preprocess((value) => normalizeGuidOrNull(value) ?? value, z.string().uuid());
+const dateOnlyPattern = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
+
+export const toDateOnlyParam = (value: unknown): string => {
+    if (typeof value === 'string' && dateOnlyPattern.test(value.trim())) return value.trim();
+    const date = value instanceof Date ? value : new Date(value as string | number);
+    if (!Number.isFinite(date.getTime())) return '';
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${date.getFullYear()}-${month}-${day}`;
+};
+
 const isoDateSchema = z.preprocess((value) => {
     if (value instanceof Date) return Number.isFinite(value.getTime()) ? value.toISOString() : '';
     if (typeof value === 'string') return value.trim();

@@ -1,4 +1,4 @@
-import { expect, Page } from '@playwright/test';
+import { expect, Page, Route } from '@playwright/test';
 
 /**
  * O usuario mockado precisa de um GUID de verdade: meResponseSchema valida usuarioId,
@@ -171,6 +171,37 @@ const json = (body: unknown) => ({
     contentType: 'application/json',
     body: JSON.stringify(body)
 });
+
+// v1.11.0a8b76.c2 — a fixture passa a recusar o que o backend recusa. Antes respondia 200 com ou sem
+// `empresaId` e com data ISO completa, e por isso nenhum teste E2E enxergou os HTTP 400 que reprovaram
+// 22 das 49 páginas na verificação QA-20261024-161925-6b180b. Formato do corpo copiado do backend real.
+const DATE_ONLY_PARAM = /^\d{4}-\d{2}-\d{2}$/;
+const empresaObrigatoria = (code: string, operation: string) => ({
+    status: 400,
+    contentType: 'application/json',
+    body: JSON.stringify({ code, message: 'Empresa é obrigatória para operação multiempresa.', operation })
+});
+// Registro das recusas por página: a UI se recupera sozinha quando o 2º disparo (já com empresa) responde 200,
+// então só o registro prova que o 1º disparo existiu. Ver tests/e2e/contrato-listagens-escopadas.spec.ts.
+const recusasDeContrato = new WeakMap<Page, string[]>();
+export const recusasDeContratoDe = (page: Page): string[] => recusasDeContrato.get(page) ?? [];
+const recusar = (route: Route, page: Page, resposta: { status: number; contentType: string; body: string }, url: URL) => {
+    const { code } = JSON.parse(resposta.body) as { code: string };
+    recusasDeContrato.set(page, [...recusasDeContratoDe(page), `${route.request().method()} ${url.pathname}${url.search} -> ${resposta.status} ${code}`]);
+    return route.fulfill(resposta);
+};
+const semEmpresaId = (url: URL) => !(url.searchParams.get('empresaId') ?? '').trim();
+const dataGerencialInvalida = (url: URL) => {
+    const invalidos = ['dataInicial', 'dataFinal']
+        .map((nome) => url.searchParams.get(nome))
+        .filter((valor): valor is string => valor !== null && !DATE_ONLY_PARAM.test(valor));
+    if (invalidos.length === 0) return null;
+    return {
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 'Validation.InvalidRequest', message: invalidos.map((valor) => `The value '${valor}' is not valid.`).join(' ') })
+    };
+};
 
 const empresaId = '11111111-1111-1111-1111-111111111111';
 const filialId = '22222222-2222-2222-2222-222222222222';
@@ -737,9 +768,13 @@ export const mockApiRoutes = async (page: Page) => {
         if (path.includes('/api/produtos/categorias')) return route.fulfill(json(categorias));
         if (path.includes('/api/produtos/unidades-medida')) return route.fulfill(json(unidades));
         if (path.includes('/api/produtos/marcas')) return route.fulfill(json(marcas));
+        if (path === '/api/produtos' && semEmpresaId(url)) return recusar(route, page, empresaObrigatoria('Produtos.EmpresaObrigatoria', 'listar produtos'), url);
         if (path === '/api/produtos' || path.match(/\/api\/produtos\/[^/]+$/)) return route.fulfill(json(path === '/api/produtos' ? produtos : produtos[0]));
+        if (path === '/api/pessoas' && semEmpresaId(url)) return recusar(route, page, empresaObrigatoria('Pessoas.EmpresaObrigatoria', 'listar pessoas'), url);
         if (path.includes('/api/pessoas')) return route.fulfill(json(pessoas));
+        if (path === '/api/clientes' && semEmpresaId(url)) return recusar(route, page, empresaObrigatoria('Pessoas.EmpresaObrigatoria', 'listar clientes'), url);
         if (path.includes('/api/clientes')) return route.fulfill(json(clientes));
+        if (path === '/api/fornecedores' && semEmpresaId(url)) return recusar(route, page, empresaObrigatoria('Pessoas.EmpresaObrigatoria', 'listar fornecedores'), url);
         if (path.includes('/api/fornecedores')) return route.fulfill(json(fornecedores));
         if (path.includes('/api/estoque/locais')) return route.fulfill(json(locais));
         if (path.includes('/api/estoque/saldos')) return route.fulfill(json([{ id: 'saldo-1', empresaId, filialId, produtoId, localEstoqueId: localId, quantidadeAtual: 10, quantidadeReservada: 2, quantidadeDisponivel: 8 }]));
@@ -759,6 +794,7 @@ export const mockApiRoutes = async (page: Page) => {
         if (path.includes('/api/compras/pedidos/')) return route.fulfill(json(pedidoCompra));
         if (path.includes('/api/compras/pedidos')) return route.fulfill(json([pedidoCompra]));
         if (path.includes('/api/financeiro/formas-pagamento')) return route.fulfill(json([{ id: 'fp-1', nome: 'PIX', permiteReceber: true, permitePagar: true, permiteRecebimento: true, permitePagamento: true, status: 'ATIVO' }]));
+        if (path === '/api/financeiro/condicoes-pagamento' && semEmpresaId(url)) return recusar(route, page, empresaObrigatoria('Financeiro.EmpresaObrigatoria', 'listar condições de pagamento'), url);
         if (path.includes('/api/financeiro/condicoes-pagamento')) return route.fulfill(json([{ id: 'cond-1', nome: '30/60/90', parcelas: 3, intervaloDias: 30, quantidadeParcelas: 3, status: 'ATIVO' }]));
         if (path.match(/\/api\/financeiro\/contas-receber\/[^/]+$/)) {
             const conta = contasReceber.find((item) => item.id === path.split('/').pop());
@@ -770,6 +806,13 @@ export const mockApiRoutes = async (page: Page) => {
         }
         if (path.includes('/api/financeiro/contas-receber')) return route.fulfill(json(contasReceber));
         if (path.includes('/api/financeiro/contas-pagar')) return route.fulfill(json(contasPagar));
+        // Gerenciais: o backend declara DateOnly e só aceita yyyy-MM-dd. /operacional/geral NÃO entra aqui:
+        // ele segue aceitando `inicio`/`fim` em ISO completo e cai no default 200 abaixo.
+        if (method === 'GET' && path.startsWith('/api/relatorios/gerenciais/')) {
+            const recusa = dataGerencialInvalida(url);
+            if (recusa) return recusar(route, page, recusa, url);
+            return route.fulfill(json([]));
+        }
         if (path.includes('/api/auditoria/eventos')) return route.fulfill(json(auditoria));
 
         // Faturamento: GET /api/faturamento/{id}, /historico, /ocorrencias; POST /retomar-reversao

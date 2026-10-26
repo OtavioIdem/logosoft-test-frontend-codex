@@ -9,6 +9,7 @@ export const EmpresaSelect = ({ id = 'empresaId', value, onChange, disabled, req
     return (
         <EntitySelect
             id={id}
+            ariaLabel="Empresa"
             value={value ?? null}
             options={empresasQuery.options}
             onChange={onChange}

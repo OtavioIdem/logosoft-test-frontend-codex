@@ -7,6 +7,7 @@ import { truncateLabel } from '@/lib/formatters/display';
 
 export const SearchSelect = <TValue extends string | number | boolean | null = string>({
     id,
+    ariaLabel,
     value,
     options,
     onChange,
@@ -19,6 +20,7 @@ export const SearchSelect = <TValue extends string | number | boolean | null = s
     maxLabelLength = 40
 }: {
     id?: string;
+    ariaLabel?: string;
     value?: TValue | null;
     options: SelectOption<TValue>[];
     onChange: (value: TValue | null) => void;
@@ -32,6 +34,8 @@ export const SearchSelect = <TValue extends string | number | boolean | null = s
 }) => (
     <Dropdown
         id={id}
+        ariaLabel={ariaLabel ?? placeholder ?? 'Selecione'}
+        aria-label={ariaLabel}
         value={value ?? null}
         options={options}
         optionLabel="label"

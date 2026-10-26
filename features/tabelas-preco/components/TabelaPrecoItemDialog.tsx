@@ -8,6 +8,7 @@ import { FieldError } from '@/components/forms/FieldError';
 import { MoneyInput } from '@/components/forms/MoneyInput';
 import { PercentInput } from '@/components/forms/PercentInput';
 import { useProdutos } from '@/features/produtos/hooks/useProdutosResources';
+import { useOrganizationalContext } from '@/hooks/useOrganizationalContext';
 import { tabelaPrecoItemSchema } from '@/features/tabelas-preco/schemas/tabelasPrecoSchemas';
 import { TabelaPrecoItemFormValues, TabelaPrecoItemResponse } from '@/features/tabelas-preco/types/tabelasPreco.types';
 
@@ -16,7 +17,8 @@ const fieldErrorMap = (error: { issues: Array<{ path: Array<string | number>; me
 const initialValues = (item?: TabelaPrecoItemResponse | null): TabelaPrecoItemFormValues => ({ produtoId: item?.produtoId ?? '', precoVenda: item?.precoVenda ?? null, precoMinimo: item?.precoMinimo ?? null, margemPercentual: item?.margemPercentual ?? null });
 
 export const TabelaPrecoItemDialog = ({ visible, loading, item, onHide, onSubmit }: { visible: boolean; loading?: boolean; item?: TabelaPrecoItemResponse | null; onHide: () => void; onSubmit: (values: TabelaPrecoItemFormValues) => Promise<void> }) => {
-    const produtosQuery = useProdutos({});
+    const { empresaId, filialId } = useOrganizationalContext();
+    const produtosQuery = useProdutos({ empresaId, filialId });
     const [values, setValues] = useState<TabelaPrecoItemFormValues>(initialValues(item));
     const [errors, setErrors] = useState<FieldErrors>({});
     const produtoOptions = useMemo(() => (produtosQuery.data ?? []).map((produto) => ({ label: `${produto.codigo} - ${produto.descricao}`, value: produto.id })), [produtosQuery.data]);

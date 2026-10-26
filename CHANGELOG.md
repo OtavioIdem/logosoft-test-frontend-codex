@@ -1,3 +1,239 @@
+# v1.11.0a8b76.c3
+
+## Seletores de busca e campos de data passam a ter nome no elemento que recebe o foco
+
+Corretiva do item F3 da verificação `QA-20261024-212047-a2fc3a` (`logosoft-frontend-QA`): a F3 da c2 repassou
+`ariaLabel` ao `Dropdown` e o QA mediu 72 de 248 campos "(sem rótulo)" antes e depois. O plano está em
+`docs/fatias/v1.11.0a8b76.c3-rotulo-acessivel-selects.md` e o inventário nominal das 72 em
+`docs/arquitetura/debate/24-inventario-rotulo-selects.md`.
+
+**Risco: `HIGH`** (componente compartilhado, herdado por todas as telas com seletor de busca ou data).
+**Risco de acesso: `NENHUM`**: nenhuma permissão, guard, rota ou item de menu mudou.
+
+### O que muda para quem usa
+
+Leitor de tela passa a anunciar o nome do seletor de empresa dos filtros ("Empresa") e o de seis campos de data:
+"Início do período" e "Fim do período" em `/estoque/movimentos`; "Data inicial" e "Data final" em
+`/auditoria/operacional` e `/auditoria/eventos`. Todo `EntitySelect` (filial, produto, local e demais) passa a
+anunciar `Buscar <entidade>` no campo focável, que antes ficava sem nome. Nenhum texto visível, placeholder ou
+`id` de raiz mudou, então os seletores `#empresaId`, `#tipoPessoa` e afins dos testes E2E seguem valendo.
+
+### Por que a F3 da c2 não surtiu efeito
+
+No PrimeReact 10.2.1, `ariaLabel` (camelCase) do `Dropdown` só chega ao `div role="button"` do ícone de abrir, e
+ali o `placeholder` ainda vence (`props.placeholder || props.ariaLabel`, `dropdown.cjs.js:1344`). O elemento que
+recebe o foco é um `<input readOnly>` escondido, e só props `aria-*` em kebab-case chegam a ele. O `id` do
+componente fica na raiz `<div>`, que não é rotulável. No `Calendar`, o `<input>` interno só recebe
+`aria-labelledby`; `aria-label` não passa por prop direta.
+
+### O que foi feito
+
+- `SearchSelect` repassa `aria-label` em kebab ao `Dropdown` quando `ariaLabel` vem definido. O `'Selecione'` padrão não vira nome do campo focável: o `ariaLabel` camelCase
+  do gatilho segue como estava. O `id` da raiz não mudou.
+- `EmpresaSelect` passa `ariaLabel="Empresa"`. `entityName` e placeholder (`Buscar empresa obrigatória`) ficaram
+  como estavam.
+- `DateInput` e `DateTimeInput` ganham `ariaLabel` opcional, repassado ao `<input>` interno pelo `pt` do `Calendar`
+  (`pt.input.root`). O nome chega ao `<input>` com e sem `id`. Nenhum id novo é criado no `<input>` interno.
+- `EstoqueFilterBar` (2 datas) e `AuditoriaEventosPage` (2 datas, renderizadas por 2 rotas) passam o `ariaLabel`
+  literal. São as únicas edições em ponto de chamada.
+
+### Como foi medido
+
+- Marcação HTML do servidor (`react-dom/server.renderToStaticMarkup`) dos componentes reais com o PrimeReact
+  10.2.1, script fora do repositório: o `<input>` focável do seletor de empresa traz `aria-label="Empresa"` e
+  nenhum `id` próprio, com a raiz ainda `id="empresaId"`; o gatilho segue `aria-label="Buscar empresa"` e
+  `"Buscar empresa obrigatória"` quando `required`; o `<input>` de `DateInput` e `DateTimeInput` traz o
+  `aria-label` com `id` e sem `id`. A raiz do `Dropdown` não recebe `aria-label`.
+- O E2E isolado (`v1.11.0a8b72-naturezas-operacao.spec.ts:176`) reprovou nas 2 execuções com "strict mode violation": um id
+  `<id>-input` no `<input>` interno colidia com o seletor por prefixo `[id^="naturezaCfop-"]`. O `inputId` só serviria a um
+  `label[for]` que foi retirado e o nome acessível vem do `aria-label`, então o `inputId` foi removido e o `id` não mudou.
+- E2E isolado, primeira bateria (com o `inputId`): 2 execuções de 103 testes (101 aprovados e 2 reprovados; 102 aprovados e 1
+  reprovado). Falha determinística em `v1.11.0a8b72-naturezas-operacao.spec.ts:176`, por colisão do id `<id>-input` com
+  `[id^="naturezaCfop-"]` (causa da c3, corrigida removendo o `inputId`). Uma falha só na execução 1, em
+  `b67-classificacoes-pessoa.spec.ts:129`, com `net::ERR_NO_BUFFER_SPACE` no `page.goto`, não reproduzida.
+- E2E isolado, depois de remover o `inputId`: 2 execuções completas de 103 testes, 103 aprovados, 0 reprovados e 0 ignorados nas
+  duas, coincidentes spec a spec, mais uma terceira só de b67 e b72 com 11 aprovados. `naturezas-operacao.spec.ts:176` passou nas
+  3; `fiscal-series` E4 (clique em "Buscar empresa obrigatória") passou nas 2 completas. Método: Playwright com
+  `playwright.isolated.config.ts` contra um único `next dev -p 3411` deste diretório (dono da porta conferido por `netstat` e
+  `Get-CimInstance`, porta liberada depois), 16 specs que tocam os componentes alterados (mais a
+  `v1.11.0a8b77-central-cadastros`, que entrou por filtro de regex), sem vitest em paralelo. Ressalva: Node local v22.18.0, o
+  projeto exige 24.
+- Vitest dos 8 arquivos do recorte: 78 de 78 verdes (rodado pelo orquestrador, pelo engenheiro-testes e pelo qa-revisor, depois
+  do ajuste dos testes). O recorte mais 3 consumidores (`LoginForm`, `ColaboradorFormDialogB63`, `SeriesFiscaisPage`), 11
+  arquivos, deu 105 de 105 (relato do engenheiro-testes).
+- `typecheck`, `lint` e `validate:source` verdes nesta árvore.
+- Nó de testes concluído com `tests/components/nomeAcessivelSelects.test.tsx`: 11 testes no PrimeReact real (sem o dublê
+  do `Dropdown`), `npx vitest run`. Dos 9 originais, contra a árvore `284ad88`, 6 reprovam, nomeando Tipo de pessoa, Empresa,
+  Produto principal, Buscar produto, Início do período e Data inicial. Método: `git worktree` de `284ad88`, o mesmo arquivo de
+  teste, `npx vitest run`. Os 2 casos acrescentados depois (`DateInput` e `DateTimeInput` com `ariaLabel` e sem `id`) não foram
+  provados vermelhos em `284ad88`.
+- Dois testes de busca de empresa passaram a buscar o nome "Empresa" em vez de "Buscar empresa obrigatória":
+  `FiscalActionDialogsNatureza` e `SimuladorTributacaoPage`. O dublê do `Dropdown` usava `aria-label` antes do
+  placeholder, e o `aria-label` do campo agora é "Empresa". O placeholder visível não mudou.
+
+### O que esta corretiva não faz
+
+- **Nome calculado não foi lido em navegador nem em leitor de tela.** O nome foi verificado pela marcação do servidor
+  e pelos testes de componente com DOM real (`nomeAcessivelSelects.test.tsx`), não pelo nome acessível que um navegador
+  ou um leitor de tela calcula.
+- **O indicador do QA pode não se mexer.** Esta corretiva muda o `<input>` interno. O `rotuloDe` do QA
+  (`src/sweep/inventario.ts`) lê só a raiz (`label[for]`, `aria-label`, `<label>` do `.field`, `placeholder`), e a
+  raiz não mudou de propósito. Dedução de leitura do código do QA, não medida. A contagem só cai se o `rotuloDe`
+  passar a ler o `<input>` interno; esse ajuste é pedido ao projeto QA, que não editamos.
+- Das 72, 24 já tinham nome no campo focável (23 `<Dropdown>` crus com `aria-label` e o `InputSwitch` de
+  `/alimentar/lotes`) e ficam fora do escopo; o `InputNumber` de `LotesPage.tsx:106` também. Realmente sem nome eram
+  48: 41 empresas, 6 datas e 1 `InputNumber`; esta corretiva trata 47.
+- Versão: o ritual de carimbo dos artefatos gerados (`scripts/*.json`) é negado pelo hook de política de arquivos,
+  então só o `CHANGELOG.md` foi carimbado, como na c2. `package.json`, `.env*`, `README.md` e `config/app.ts`
+  seguem em `1.11.0a8b76`.
+- Gate estrutural "campo focável sem nome" e `FormField` (rótulo, campo e erro como componente único) ficam para
+  fatia própria.
+
+### Dívida conhecida
+
+- Os seletores `SearchSelect` sem `ariaLabel` continuam com o `<input>` focável sem nome acessível no PrimeReact real:
+  o de CFOP (`features/fiscal/components/NaturezaOperacaoDialogs.tsx`, linha ~375, e `CadastroFiscalSelects`) e o de
+  município (`features/pessoas`).
+- Os testes `NaturezasOperacaoPage` AC-4 e `PessoaFiscalAC2AC5` AC-2 só passam porque o dublê
+  `tests/mocks/primereact/dropdown.tsx` dá a esses campos um nome falso, derivado do placeholder.
+- Esses seletores não estão entre as 72 do QA. A decisão do usuário (opção B) foi não ampliar a c3. A correção é passar
+  `ariaLabel` nesses pontos de chamada e adotar um dublê fiel ao PrimeReact real, em fatia futura.
+- O nome padrão `Buscar ${entityName}` (`EntitySelect.tsx`, repassado como `aria-label` por `SearchSelect.tsx`) passa a ser o
+  nome acessível do `<input>` de todo `EntitySelect`, `FilialSelect` e `SetorSelect`. Onde há rótulo visível com `htmlFor` no
+  mesmo id, o nome diverge do texto visível: o `<label for>` aponta para a raiz e nunca nomeou o `<input>`. Antes o `<input>`
+  ficava sem nome, e o gatilho já anunciava "Buscar filial". O usuário aceitou o nome padrão (melhor que nenhum nome) e a
+  divergência fica registrada como dívida.
+  - Medido pelo qa-revisor com `grep -rn "<FilialSelect"` (16 chamadas) e leitura de cada ponto com `htmlFor`: 8 chamadas
+    diretas de `FilialSelect` com rótulo visível ligado (`TransferenciaEstoquePage.tsx:76-77`, onde "Filial origem" e "Filial
+    destino" ficam ambos "Buscar filial"; `TabelaPrecoFormDialog.tsx:38`; `TabelasPrecoPage.tsx:169`;
+    `SimuladorTributacaoPage.tsx:227`; `RegrasFiscaisPage.tsx:153`; `ExcecoesFiscaisPage.tsx:172`; `UsuarioFormDialog.tsx:86`),
+    mais `EmpresaFilialFields.tsx:107` (rótulo "Filial", `htmlFor="filialId"`), com 50 usos em 40 arquivos
+    (`grep -rn "<EmpresaFilialFields"`).
+  - Uma heurística geral do QA achou 124 pares arquivo+id com `htmlFor` igual. Esse número NÃO foi validado ponto a ponto.
+  - Correção futura, em fatia própria: `ariaLabel` igual ao rótulo visível nos pontos listados, ou associação do rótulo ao
+    `<input>` dentro do próprio campo, escopada ao contêiner `.field`, sem consulta global por id, que colidiria em 20 rotas.
+
+# v1.11.0a8b76.c2
+
+## Listas de apoio só consultam com empresa, e relatórios gerenciais enviam data pura
+
+Corretiva da verificação `QA-20261024-161925-6b180b` do projeto `logosoft-frontend-QA`
+(24/10/2026), que reprovou 22 das 49 páginas do menu por requisições que o backend recusa
+com HTTP 400. O plano está em
+`docs/fatias/v1.11.0a8b76.c2-qa-empresaid-datas-gerenciais.md`.
+
+**Risco: `MEDIUM`** (toca a camada de dados de cinco listagens compartilhadas e os
+parâmetros de sete rotas de relatório). **Risco de acesso: `NENHUM`**: nenhuma permissão,
+guard, rota ou item de menu mudou.
+
+### F1 — listas de apoio consultadas sem `empresaId` (20 páginas)
+
+`EmpresaFilialFilter` hidrata `filters.empresaId` a partir do contexto organizacional em
+`useEffect`. Na primeira renderização o filtro ainda está vazio, `cleanQueryParams` remove o
+parâmetro ausente e a listagem saía sem empresa — 400 `*.EmpresaObrigatoria` — para só então
+ser refeita com a empresa. É o par 400 + 200 que o QA mediu em 26 das 40 combinações de
+página × rota; em 14 delas nenhuma chamada chegava a dar certo.
+
+Cinco hooks de listagem passam a exigir a empresa antes de disparar, no mesmo formato que
+`useGruposProduto` já usava:
+
+- `useProdutos` (`features/produtos/hooks/useProdutosResources.ts`)
+- `useClientes` (`features/clientes/hooks/useClientesResources.ts`)
+- `useFornecedores` (`features/fornecedores/hooks/useFornecedoresResources.ts`)
+- `usePessoas` (`features/pessoas/hooks/usePessoasResources.ts`)
+- `useCondicoesPagamento` (`features/financeiro/hooks/useFinanceiroResources.ts`)
+
+Quatro telas chamavam esses hooks sem nunca passar empresa — hoje levavam 400 e entregavam
+lista vazia. Elas passam a ler a empresa de onde ela já existe:
+
+- `TabelasPrecoPage` e `TabelaPrecoItemDialog` leem `useOrganizationalContext()`;
+- `ProdutoFornecedorDialog` lê `useOrganizationalContext()`;
+- `GerarContaReceberPedidoDialog` usa o `empresaId` que já é estado local do diálogo.
+
+Sem empresa selecionada a lista fica vazia, que é o comportamento esperado. Nas telas com
+`EmpresaFilialFilter` o aviso para selecionar o contexto já aparece. `TabelasPrecoPage`,
+`TabelaPrecoItemDialog` e `ProdutoFornecedorDialog` não usam o filtro: lá o select fica vazio sem aviso, como já
+ficava antes, quando o 400 virava lista vazia.
+
+`useCategoriasProduto`, `useUnidadesMedida` e `useMarcas` ficaram de fora: o QA não reportou
+400 nessas rotas, e ampliar a guarda sem medição é desenho, não correção.
+
+### F2 — datas dos relatórios gerenciais (`/dashboard` e `/relatorios`)
+
+`RelatorioGerencialFiltro` declara `DateOnly` no backend, que na query só aceita
+`yyyy-MM-dd`. O frontend enviava o `toISOString()` completo e recebia
+`Validation.InvalidRequest`, deixando os dois painéis sem indicador.
+
+`toDateOnlyParam` (`features/relatorios/schemas/relatoriosSchemas.ts`) monta a data a partir
+dos componentes **locais** do `Date`. Não é `toISOString().slice(0, 10)` de propósito: o fim
+do mês às 23:59 no horário local vira o dia seguinte em UTC. O helper `params` de
+`relatoriosApi` usa a conversão nas sete rotas gerenciais — vendas, compras, financeiro,
+estoque, fiscal, produção, dashboard — e em `exportar`, que compartilha os mesmos
+parâmetros.
+
+`/api/relatorios/operacional/geral` não mudou: ele usa `inicio`/`fim` e já respondia 200 com
+ISO completo. A validação de ordem continua comparando `Date`.
+
+### F3 — rótulo acessível nos selects de busca
+
+`SearchSelect` e `EntitySelect` aceitam `ariaLabel` e repassam ao `Dropdown`. O padrão é
+`Buscar <entidade>`, derivado do `entityName` que cada ponto de uso já informa, então os
+selects de produto, cliente, pessoa, fornecedor e empresa deixam de aparecer como
+"(sem rótulo)" para leitor de tela e para a automação de teste. Nenhum ponto de uso mudou.
+
+### Proteção contra recorrência (§5 do pedido do QA)
+
+Os testes E2E não pegaram nada porque a fixture respondia 200 com ou sem `empresaId` e com data ISO completa. Agora:
+
+- `tests/e2e/fixtures/logosoft.ts` recusa com 400, no formato do backend, as cinco listagens escopadas sem
+  `empresaId` e as sete rotas `/api/relatorios/gerenciais/*` com `dataInicial`/`dataFinal` fora de `yyyy-MM-dd`.
+  Cada recusa é registrada por página (`recusasDeContratoDe`), porque a UI se recupera quando o segundo disparo
+  já traz a empresa, e só o registro prova que o primeiro existiu.
+- `tests/e2e/contrato-listagens-escopadas.spec.ts` (32 testes) afirma, por rota e por página, que nenhuma recusa
+  ocorre no carregamento. `/api/relatorios/operacional/geral` segue aceitando ISO completo, e o spec trava isso.
+- `tests/unit/relatoriosDateOnly.test.ts` (16) e `tests/unit/listagensEscopadasEmpresaId.test.tsx` (18) cobrem
+  `toDateOnlyParam` em fuso negativo e positivo e a guarda `enabled` dos cinco hooks.
+
+**Como foi medido.** Vitest por arquivo e Playwright com a receita isolada do `CLAUDE.md`. Em cada rodada o
+servidor que atende a porta foi identificado pela linha de comando do processo: a 3412 serve esta árvore e a 3411
+serve um `git worktree` de `b762b5a`.
+
+| Alvo | Resultado |
+| --- | --- |
+| Unitários, árvore corrigida | 34 de 34 verdes |
+| Unitários, `b762b5a` | 24 vermelhos e 10 verdes |
+| Spec E2E, árvore corrigida | 32 de 32 verdes, duas rodadas |
+| Spec E2E, `b762b5a` | 12 vermelhos e 20 verdes, três rodadas idênticas |
+| Outras 22 specs E2E que usam a fixture, árvore corrigida | 98 de 98 verdes, uma rodada (0 instáveis, lidos do JSON do Playwright) |
+
+O vermelho em `b762b5a` registra, por página, a requisição recusada. Na rede aparece
+`dataFinal=2026-11-01T02:59:59.999Z` para o mês de outubro: o fim do mês às 23:59 em UTC-3 já é novembro em UTC, o
+que confirma no navegador por que `toISOString().slice(0, 10)` mandaria o mês errado.
+
+### O que esta corretiva não faz
+
+Não há gate estrutural em `scripts/` que varra hooks de listagem sem guarda de empresa: os testes cobrem os cinco
+hooks nominais, e um hook novo que repita o erro passa batido até a fixture o recusar numa tela. `ariaLabel` (F3) e
+as quatro chamadas que passaram a enviar empresa não têm teste de componente próprio; o dublê do `Dropdown` em
+`tests/mocks/primereact/dropdown.tsx` ignora `ariaLabel`.
+
+Pendência conhecida, só inferida do código e não medida no navegador: com `@tanstack/react-query` v5 uma query
+desabilitada tem `isLoading = false`. `ClientesPage`, `FornecedoresPage`, `PessoasPage` e `ProdutosPage`
+condicionam o `EmptyState` a `!isLoading`, então no primeiro render, antes de o `EmpresaFilialFilter` hidratar a
+empresa, "Nenhum registro" pode aparecer por um instante. É cosmético: não há perda de dado nem de acesso.
+
+Também não foi confirmado contra o backend que `/api/relatorios/gerenciais/exportar` aceita só `yyyy-MM-dd`; a
+fixture o trata como as outras sete rotas, por extrapolação do mesmo filtro.
+
+A segunda sugestão do QA — declarar `organizationalContext: { scope: 'query' }` nas chamadas
+de listagem para que o `empresaId` do contexto seja sempre injetado — ficou fora.
+`httpClient` aplica a política sem snapshot ambiente, então cada chamada precisaria recebê-lo
+por parâmetro, como `pessoasApi` faz; são ~30 pontos de chamada e é refatoração de camada de
+dados, não correção.
+
+O aceite depende de o QA rodar de novo contra a imagem publicada e registrar o comparativo
+em `docs/verificacao/`.
+
 # v1.11.0a8b76.c1
 
 ## Enums fiscais desconhecidos permanecem explícitos nos selects

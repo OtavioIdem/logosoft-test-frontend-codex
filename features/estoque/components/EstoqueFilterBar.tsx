@@ -19,8 +19,8 @@ export const EstoqueFilterBar = ({ filters, produtos, locais, showProduto = fals
         {showLocal ? <div className="min-w-18rem"><EntitySelect entityName="local" value={filters.localEstoqueId ?? null} options={localOptions(locais ?? [])} onChange={(value) => onFilterChange('localEstoqueId', value)} /></div> : null}
         {showPeriodo ? (
             <>
-                <DateInput id="estoqueFiltroInicio" value={toDateOrNull(filters.inicio)} onChange={(value) => onFilterChange('inicio', value ? value.toISOString() : null)} />
-                <DateInput id="estoqueFiltroFim" value={toDateOrNull(filters.fim)} onChange={(value) => onFilterChange('fim', value ? value.toISOString() : null)} />
+                <DateInput id="estoqueFiltroInicio" ariaLabel="Início do período" value={toDateOrNull(filters.inicio)} onChange={(value) => onFilterChange('inicio', value ? value.toISOString() : null)} />
+                <DateInput id="estoqueFiltroFim" ariaLabel="Fim do período" value={toDateOrNull(filters.fim)} onChange={(value) => onFilterChange('fim', value ? value.toISOString() : null)} />
             </>
         ) : null}
         <span className="p-input-icon-left">

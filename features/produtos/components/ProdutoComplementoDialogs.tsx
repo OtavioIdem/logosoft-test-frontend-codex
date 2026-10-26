@@ -13,6 +13,7 @@ import { CodigoBarrasFormValues, ProdutoFornecedorFormValues } from '@/features/
 import { FieldErrors, fieldErrorMap, textValue, toOptions } from '@/features/produtos/components/produtoFormUtils';
 import { FornecedorResponse } from '@/features/fornecedores/types/fornecedores.types';
 import { usePessoas } from '@/features/pessoas/hooks/usePessoasResources';
+import { useOrganizationalContext } from '@/hooks/useOrganizationalContext';
 import { EntityStatus } from '@/types/erp';
 
 export const CodigoBarrasDialog = ({ visible, loading, onHide, onSubmit }: { visible: boolean; loading?: boolean; onHide: () => void; onSubmit: (values: CodigoBarrasFormValues) => Promise<void> }) => {
@@ -68,7 +69,8 @@ export const CodigoBarrasDialog = ({ visible, loading, onHide, onSubmit }: { vis
 export const ProdutoFornecedorDialog = ({ visible, loading, fornecedores, onHide, onSubmit }: { visible: boolean; loading?: boolean; fornecedores: FornecedorResponse[]; onHide: () => void; onSubmit: (values: ProdutoFornecedorFormValues) => Promise<void> }) => {
     const [values, setValues] = useState<ProdutoFornecedorFormValues>({ fornecedorId: '', codigoFornecedor: '', descricaoFornecedor: null, principal: true });
     const [errors, setErrors] = useState<FieldErrors>({});
-    const pessoasQuery = usePessoas({});
+    const { empresaId, filialId } = useOrganizationalContext();
+    const pessoasQuery = usePessoas({ empresaId, filialId });
     const pessoaLabelMap = useMemo(() => new Map((pessoasQuery.data ?? []).map((pessoa) => [pessoa.id, pessoa.nomeFantasia ? `${pessoa.nomeRazaoSocial} • ${pessoa.nomeFantasia}` : pessoa.nomeRazaoSocial])), [pessoasQuery.data]);
     const fornecedoresAtivos = useMemo(() => fornecedores.filter((item) => Number(item.status) === EntityStatus.Ativo), [fornecedores]);
     const fornecedorOptions = useMemo(() => toOptions(fornecedoresAtivos, (item) => `${item.codigo} - ${pessoaLabelMap.get(item.pessoaId) ?? 'Pessoa não carregada'}`), [fornecedoresAtivos, pessoaLabelMap]);

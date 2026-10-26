@@ -62,7 +62,7 @@ export const useCondicoesPagamento = (empresaId?: string | null, enabled = true)
     useQuery({
         queryKey: condicoesPagamentoQueryKey(empresaId),
         queryFn: () => financeiroApi.listarCondicoesPagamento({ empresaId }),
-        enabled
+        enabled: enabled && Boolean(empresaId)
     });
 
 export const useCondicoesPagamentoOptions = (empresaId?: string | null, enabled = true) => {

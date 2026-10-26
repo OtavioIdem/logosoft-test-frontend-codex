@@ -20,6 +20,7 @@ import { UnauthorizedState } from '@/components/feedback/UnauthorizedState';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
 import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { useProdutos } from '@/features/produtos/hooks/useProdutosResources';
+import { useOrganizationalContext } from '@/hooks/useOrganizationalContext';
 import { TabelaPrecoFormDialog } from '@/features/tabelas-preco/components/TabelaPrecoFormDialog';
 import { TabelaPrecoItemDialog } from '@/features/tabelas-preco/components/TabelaPrecoItemDialog';
 import { isTabelaAtiva } from '@/features/tabelas-preco/components/tabelasPrecoUiUtils';
@@ -52,7 +53,8 @@ export const TabelasPrecoPage = () => {
     const listQuery = useMemo<TabelaPrecoListQuery>(() => ({ page, pageSize: rows }), [page, rows]);
     const tabelasQuery = useTabelasPreco(listQuery);
     const detalheQuery = useTabelaPrecoDetalhe(selectedTabela?.id ?? null);
-    const produtosQuery = useProdutos({});
+    const { empresaId, filialId } = useOrganizationalContext();
+    const produtosQuery = useProdutos({ empresaId, filialId });
     const precoVigenteQuery = usePrecoVigente({ produtoId: precoProdutoId, empresaId: precoEmpresaId, filialId: precoFilialId, dataReferencia: precoData }, Boolean(precoProdutoId && precoEnabled));
     const mutations = useTabelaPrecoMutations();
 
