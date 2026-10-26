@@ -102,7 +102,7 @@ describe('AC-9: Nova nota envia a natureza escolhida', () => {
         const user = userEvent.setup({ delay: null });
         renderCom(<CriarNotaFiscalDialog visible onHide={vi.fn()} onSubmit={async (values) => { await fiscalApi.criarNota(values); }} />);
         const dialog = await screen.findByRole('dialog', { name: 'Nova nota fiscal manual' });
-        await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Buscar empresa obrigatória' }), 'Empresa A');
+        await user.selectOptions(within(dialog).getByRole('combobox', { name: 'Empresa' }), 'Empresa A');
         await escolherNatureza(user, dialog, 'REMESSA — Remessa');
         await user.type(campoTexto(dialog, 'Número'), '1001');
         await user.click(within(dialog).getByRole('button', { name: 'Criar nota' }));

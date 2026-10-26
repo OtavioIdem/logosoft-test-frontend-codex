@@ -1,3 +1,118 @@
+# v1.11.0a8b76.c3
+
+## Seletores de busca e campos de data passam a ter nome no elemento que recebe o foco
+
+Corretiva do item F3 da verificação `QA-20261024-212047-a2fc3a` (`logosoft-frontend-QA`): a F3 da c2 repassou
+`ariaLabel` ao `Dropdown` e o QA mediu 72 de 248 campos "(sem rótulo)" antes e depois. O plano está em
+`docs/fatias/v1.11.0a8b76.c3-rotulo-acessivel-selects.md` e o inventário nominal das 72 em
+`docs/arquitetura/debate/24-inventario-rotulo-selects.md`.
+
+**Risco: `HIGH`** (componente compartilhado, herdado por todas as telas com seletor de busca ou data).
+**Risco de acesso: `NENHUM`**: nenhuma permissão, guard, rota ou item de menu mudou.
+
+### O que muda para quem usa
+
+Leitor de tela passa a anunciar o nome do seletor de empresa dos filtros ("Empresa") e o de seis campos de data:
+"Início do período" e "Fim do período" em `/estoque/movimentos`; "Data inicial" e "Data final" em
+`/auditoria/operacional` e `/auditoria/eventos`. Todo `EntitySelect` (filial, produto, local e demais) passa a
+anunciar `Buscar <entidade>` no campo focável, que antes ficava sem nome. Nenhum texto visível, placeholder ou
+`id` de raiz mudou, então os seletores `#empresaId`, `#tipoPessoa` e afins dos testes E2E seguem valendo.
+
+### Por que a F3 da c2 não surtiu efeito
+
+No PrimeReact 10.2.1, `ariaLabel` (camelCase) do `Dropdown` só chega ao `div role="button"` do ícone de abrir, e
+ali o `placeholder` ainda vence (`props.placeholder || props.ariaLabel`, `dropdown.cjs.js:1344`). O elemento que
+recebe o foco é um `<input readOnly>` escondido, e só props `aria-*` em kebab-case chegam a ele. O `id` do
+componente fica na raiz `<div>`, que não é rotulável. No `Calendar`, o `<input>` interno só recebe
+`aria-labelledby`; `aria-label` não passa por prop direta.
+
+### O que foi feito
+
+- `SearchSelect` repassa `aria-label` em kebab ao `Dropdown` quando `ariaLabel` vem definido. O `'Selecione'` padrão não vira nome do campo focável: o `ariaLabel` camelCase
+  do gatilho segue como estava. O `id` da raiz não mudou.
+- `EmpresaSelect` passa `ariaLabel="Empresa"`. `entityName` e placeholder (`Buscar empresa obrigatória`) ficaram
+  como estavam.
+- `DateInput` e `DateTimeInput` ganham `ariaLabel` opcional, repassado ao `<input>` interno pelo `pt` do `Calendar`
+  (`pt.input.root`). O nome chega ao `<input>` com e sem `id`. Nenhum id novo é criado no `<input>` interno.
+- `EstoqueFilterBar` (2 datas) e `AuditoriaEventosPage` (2 datas, renderizadas por 2 rotas) passam o `ariaLabel`
+  literal. São as únicas edições em ponto de chamada.
+
+### Como foi medido
+
+- Marcação HTML do servidor (`react-dom/server.renderToStaticMarkup`) dos componentes reais com o PrimeReact
+  10.2.1, script fora do repositório: o `<input>` focável do seletor de empresa traz `aria-label="Empresa"` e
+  nenhum `id` próprio, com a raiz ainda `id="empresaId"`; o gatilho segue `aria-label="Buscar empresa"` e
+  `"Buscar empresa obrigatória"` quando `required`; o `<input>` de `DateInput` e `DateTimeInput` traz o
+  `aria-label` com `id` e sem `id`. A raiz do `Dropdown` não recebe `aria-label`.
+- O E2E isolado (`v1.11.0a8b72-naturezas-operacao.spec.ts:176`) reprovou nas 2 execuções com "strict mode violation": um id
+  `<id>-input` no `<input>` interno colidia com o seletor por prefixo `[id^="naturezaCfop-"]`. O `inputId` só serviria a um
+  `label[for]` que foi retirado e o nome acessível vem do `aria-label`, então o `inputId` foi removido e o `id` não mudou.
+- E2E isolado, primeira bateria (com o `inputId`): 2 execuções de 103 testes (101 aprovados e 2 reprovados; 102 aprovados e 1
+  reprovado). Falha determinística em `v1.11.0a8b72-naturezas-operacao.spec.ts:176`, por colisão do id `<id>-input` com
+  `[id^="naturezaCfop-"]` (causa da c3, corrigida removendo o `inputId`). Uma falha só na execução 1, em
+  `b67-classificacoes-pessoa.spec.ts:129`, com `net::ERR_NO_BUFFER_SPACE` no `page.goto`, não reproduzida.
+- E2E isolado, depois de remover o `inputId`: 2 execuções completas de 103 testes, 103 aprovados, 0 reprovados e 0 ignorados nas
+  duas, coincidentes spec a spec, mais uma terceira só de b67 e b72 com 11 aprovados. `naturezas-operacao.spec.ts:176` passou nas
+  3; `fiscal-series` E4 (clique em "Buscar empresa obrigatória") passou nas 2 completas. Método: Playwright com
+  `playwright.isolated.config.ts` contra um único `next dev -p 3411` deste diretório (dono da porta conferido por `netstat` e
+  `Get-CimInstance`, porta liberada depois), 16 specs que tocam os componentes alterados (mais a
+  `v1.11.0a8b77-central-cadastros`, que entrou por filtro de regex), sem vitest em paralelo. Ressalva: Node local v22.18.0, o
+  projeto exige 24.
+- Vitest dos 8 arquivos do recorte: 78 de 78 verdes (rodado pelo orquestrador, pelo engenheiro-testes e pelo qa-revisor, depois
+  do ajuste dos testes). O recorte mais 3 consumidores (`LoginForm`, `ColaboradorFormDialogB63`, `SeriesFiscaisPage`), 11
+  arquivos, deu 105 de 105 (relato do engenheiro-testes).
+- `typecheck`, `lint` e `validate:source` verdes nesta árvore.
+- Nó de testes concluído com `tests/components/nomeAcessivelSelects.test.tsx`: 11 testes no PrimeReact real (sem o dublê
+  do `Dropdown`), `npx vitest run`. Dos 9 originais, contra a árvore `284ad88`, 6 reprovam, nomeando Tipo de pessoa, Empresa,
+  Produto principal, Buscar produto, Início do período e Data inicial. Método: `git worktree` de `284ad88`, o mesmo arquivo de
+  teste, `npx vitest run`. Os 2 casos acrescentados depois (`DateInput` e `DateTimeInput` com `ariaLabel` e sem `id`) não foram
+  provados vermelhos em `284ad88`.
+- Dois testes de busca de empresa passaram a buscar o nome "Empresa" em vez de "Buscar empresa obrigatória":
+  `FiscalActionDialogsNatureza` e `SimuladorTributacaoPage`. O dublê do `Dropdown` usava `aria-label` antes do
+  placeholder, e o `aria-label` do campo agora é "Empresa". O placeholder visível não mudou.
+
+### O que esta corretiva não faz
+
+- **Nome calculado não foi lido em navegador nem em leitor de tela.** O nome foi verificado pela marcação do servidor
+  e pelos testes de componente com DOM real (`nomeAcessivelSelects.test.tsx`), não pelo nome acessível que um navegador
+  ou um leitor de tela calcula.
+- **O indicador do QA pode não se mexer.** Esta corretiva muda o `<input>` interno. O `rotuloDe` do QA
+  (`src/sweep/inventario.ts`) lê só a raiz (`label[for]`, `aria-label`, `<label>` do `.field`, `placeholder`), e a
+  raiz não mudou de propósito. Dedução de leitura do código do QA, não medida. A contagem só cai se o `rotuloDe`
+  passar a ler o `<input>` interno; esse ajuste é pedido ao projeto QA, que não editamos.
+- Das 72, 24 já tinham nome no campo focável (23 `<Dropdown>` crus com `aria-label` e o `InputSwitch` de
+  `/alimentar/lotes`) e ficam fora do escopo; o `InputNumber` de `LotesPage.tsx:106` também. Realmente sem nome eram
+  48: 41 empresas, 6 datas e 1 `InputNumber`; esta corretiva trata 47.
+- Versão: o ritual de carimbo dos artefatos gerados (`scripts/*.json`) é negado pelo hook de política de arquivos,
+  então só o `CHANGELOG.md` foi carimbado, como na c2. `package.json`, `.env*`, `README.md` e `config/app.ts`
+  seguem em `1.11.0a8b76`.
+- Gate estrutural "campo focável sem nome" e `FormField` (rótulo, campo e erro como componente único) ficam para
+  fatia própria.
+
+### Dívida conhecida
+
+- Os seletores `SearchSelect` sem `ariaLabel` continuam com o `<input>` focável sem nome acessível no PrimeReact real:
+  o de CFOP (`features/fiscal/components/NaturezaOperacaoDialogs.tsx`, linha ~375, e `CadastroFiscalSelects`) e o de
+  município (`features/pessoas`).
+- Os testes `NaturezasOperacaoPage` AC-4 e `PessoaFiscalAC2AC5` AC-2 só passam porque o dublê
+  `tests/mocks/primereact/dropdown.tsx` dá a esses campos um nome falso, derivado do placeholder.
+- Esses seletores não estão entre as 72 do QA. A decisão do usuário (opção B) foi não ampliar a c3. A correção é passar
+  `ariaLabel` nesses pontos de chamada e adotar um dublê fiel ao PrimeReact real, em fatia futura.
+- O nome padrão `Buscar ${entityName}` (`EntitySelect.tsx`, repassado como `aria-label` por `SearchSelect.tsx`) passa a ser o
+  nome acessível do `<input>` de todo `EntitySelect`, `FilialSelect` e `SetorSelect`. Onde há rótulo visível com `htmlFor` no
+  mesmo id, o nome diverge do texto visível: o `<label for>` aponta para a raiz e nunca nomeou o `<input>`. Antes o `<input>`
+  ficava sem nome, e o gatilho já anunciava "Buscar filial". O usuário aceitou o nome padrão (melhor que nenhum nome) e a
+  divergência fica registrada como dívida.
+  - Medido pelo qa-revisor com `grep -rn "<FilialSelect"` (16 chamadas) e leitura de cada ponto com `htmlFor`: 8 chamadas
+    diretas de `FilialSelect` com rótulo visível ligado (`TransferenciaEstoquePage.tsx:76-77`, onde "Filial origem" e "Filial
+    destino" ficam ambos "Buscar filial"; `TabelaPrecoFormDialog.tsx:38`; `TabelasPrecoPage.tsx:169`;
+    `SimuladorTributacaoPage.tsx:227`; `RegrasFiscaisPage.tsx:153`; `ExcecoesFiscaisPage.tsx:172`; `UsuarioFormDialog.tsx:86`),
+    mais `EmpresaFilialFields.tsx:107` (rótulo "Filial", `htmlFor="filialId"`), com 50 usos em 40 arquivos
+    (`grep -rn "<EmpresaFilialFields"`).
+  - Uma heurística geral do QA achou 124 pares arquivo+id com `htmlFor` igual. Esse número NÃO foi validado ponto a ponto.
+  - Correção futura, em fatia própria: `ariaLabel` igual ao rótulo visível nos pontos listados, ou associação do rótulo ao
+    `<input>` dentro do próprio campo, escopada ao contêiner `.field`, sem consulta global por id, que colidiria em 20 rotas.
+
 # v1.11.0a8b76.c2
 
 ## Listas de apoio só consultam com empresa, e relatórios gerenciais enviam data pura

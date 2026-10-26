@@ -72,7 +72,7 @@ const renderPagina = () =>
 /** Venda interestadual (SP → MG) a consumidor final não contribuinte: a operação que expõe ST × DIFAL. */
 const preencherOperacaoDifalESimular = async () => {
     const user = userEvent.setup({ delay: null });
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Buscar empresa obrigatória' }), 'Empresa A');
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Empresa' }), 'Empresa A');
     await user.type(screen.getByLabelText('UF de origem'), 'sp');
     await user.type(screen.getByLabelText('UF de destino'), 'mg');
     await user.selectOptions(screen.getByLabelText('Indicador do destinatário'), 'Não contribuinte');

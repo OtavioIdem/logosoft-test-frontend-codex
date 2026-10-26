@@ -35,6 +35,7 @@ export const SearchSelect = <TValue extends string | number | boolean | null = s
     <Dropdown
         id={id}
         ariaLabel={ariaLabel ?? placeholder ?? 'Selecione'}
+        aria-label={ariaLabel}
         value={value ?? null}
         options={options}
         optionLabel="label"
