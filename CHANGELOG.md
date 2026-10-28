@@ -1,3 +1,79 @@
+# v1.11.0a8b77.c1
+
+## Produto: editar abre o produto completo por id, e não a linha da listagem
+
+**Defeito (relatado após teste da b77 no Docker):** Origem, Tipo fiscal, Unidade tributável (sigla e medida interna),
+Código de benefício fiscal e Código fiscal externo "não persistiam" ao reabrir o produto para editar.
+
+**Causa (diagnóstico recebido do orquestrador, a partir de logs do backend e do banco; não reverificado nesta
+fatia, que não leu o C#):** `GET /api/produtos` (listagem) devolve `ProdutoListagemItemResponse`, um DTO enxuto que do bloco
+fiscal traz só `ncm` e `tipoItemSped`; não traz CEST, origem, tipo fiscal, unidade tributável (sigla e medida), EX-TIPI,
+benefício, código externo nem grupo. `ProdutosPage` guardava a linha da listagem em `selected` e o `ProdutoFormDialog`
+reidratava o formulário a partir dela. Os dados estavam gravados (o PATCH `dados-fiscais` respondia 200 e o banco tinha
+os valores); a tela é que os lia de um registro que não os tinha. Pior: ao salvar a edição, o formulário reenviava o
+bloco fiscal com esses campos vazios, e `values.grupoProdutoId !== selected?.grupoProdutoId` comparava contra um campo
+que a listagem não traz. Não é defeito do backend; nenhum contorno foi feito nele.
+
+**Risco de acesso: `NENHUM`**: nenhuma permissão, guard, rota ou item de menu mudou. `GET /api/produtos/{id}` já era
+consumido (`produtosApi.obter`).
+
+### O que muda para quem usa
+
+- **Editar** carrega o produto completo (`GET /api/produtos/{id}`) antes de montar o formulário. Enquanto carrega: o
+  diálogo "Editar produto" mostra "Carregando dados do produto..." e **Salvar fica desabilitado**. Se a carga falha:
+  mensagem com o motivo, botão **Tentar novamente** e Salvar desabilitado. **Sem fallback para a linha da listagem**: nunca
+  se edita sobre dado parcial.
+- A comparação do grupo (para decidir o PUT `/classificacao`) usa o grupo do produto completo, lido antes de qualquer
+  `await` do salvamento, e normaliza `null`/`undefined`.
+- Código de barras, fornecedor e inativar continuam usando a linha só para `id` (lido em `ProdutoComplementoDialogs` e
+  nas mutações); não eram afetados. `CatalogoProdutoPage` trata categorias, unidades e marcas, não produtos: fora do defeito.
+
+### Como foi feito
+
+- `useProduto(id, enabled)` em `useProdutosResources.ts`, `queryKey` `['produtos', 'detalhe', id]` (`produtoDetalheQueryKey`),
+  `gcTime: 0` e sem refetch em foco/reconexão: cada abertura parte de carga nova e o formulário não é reidratado por
+  baixo do operador.
+- As mutações continuam invalidando `['produtos']`; o detalhe é marcado como velho (`refetchType: 'none'`) e **não** refeito
+  com o diálogo aberto. Motivo: o salvamento é em etapas (PUT, PATCH preço, PATCH fiscal); refazer o detalhe no meio trocaria
+  o `record`, o formulário seria reidratado e o que o operador digitou se perderia quando um PATCH posterior falha.
+- `ProdutoListagemItem` (`produtos.types.ts`): `ProdutoResponse` sem os nove campos ausentes da listagem, documentado no tipo.
+  Usado na grade; `ProdutoResponse` segue como contrato do detalhe. `produtosApi.listar` não mudou de tipo de retorno (mudar
+  repercutiria em dezenas de consumidores fora do escopo).
+
+### Achados não bloqueantes do QA da b77, fechados aqui
+
+1. `obterCestPorCodigo` devolvia `items[0]`; o backend filtra `codigo` por prefixo. Agora
+   `items.find((i) => i.codigo === codigo) ?? null`, e a página pedida passou de 1 para 20 itens (com 1, um prefixo na
+   frente esconderia o código exato).
+2. Janela de corrida: trocado o NCM e salvo antes de a lista de vínculos carregar, o CEST antigo seguia no payload. Salvar
+   fica desabilitado (e o `submit` recusa) enquanto o NCM foi alterado e a consulta de vínculos está em andamento.
+3. Falta de espaço em `if (...)data = ...` em `ProdutoFormDialogCest.test.tsx`.
+
+### Testes
+
+- `tests/components/ProdutosPageEdicaoDetalhe.test.tsx` (novo, 4 casos; página, diálogo, hooks, client e `httpClient` reais, rede
+  por `httpClient.defaults.adapter`, listagem com o DTO enxuto e detalhe completo): o formulário mostra os campos fiscais do
+  detalhe; salvar sem mexer envia o PATCH `dados-fiscais` com os valores (não `null`) e não regrava o grupo; loading desabilita
+  Salvar; erro da carga mostra a mensagem e "Tentar novamente" recupera.
+- `ProdutoFormDialogCest.test.tsx` (caso da janela de corrida) e `produtosFiscaisDropdowns.test.ts` (CEST por prefixo).
+- **Prova de vermelho:** os três arquivos, copiados para um `git worktree` de `c0217cf` (b77 sem a correção): 6 reprovam
+  (4 da página, 1 da corrida, 1 do CEST por prefixo); com a correção, todos passam.
+
+### Pendente / não verificado
+
+- **Sem E2E Playwright e sem preview no navegador.**
+- **Sem chamada à API HTTP autenticada**: o comportamento foi provado contra o `httpClient` real com adaptador de teste, com a
+  forma do DTO da listagem e do detalhe conforme descrita no relato do defeito, não contra o backend vivo.
+- O usuário ainda não retestou no Docker.
+- Carimbo de versão só no CHANGELOG, como nas corretivas b76.c1 a c3 (`package.json`, `config/app.ts`, `.env*`, workflow,
+  README e JSONs de `scripts/` seguem em `1.11.0a8b77`; o gate `validate:ci` compara por prefixo).
+
+### Arquivos
+
+`features/produtos/{hooks/useProdutosResources.ts,components/ProdutosPage.tsx,components/ProdutoFormDialog.tsx,types/produtos.types.ts}`,
+`features/fiscal/api/cadastrosFiscaisApi.ts`. Testes: `tests/components/ProdutosPageEdicaoDetalhe.test.tsx` (novo),
+`tests/components/ProdutoFormDialogCest.test.tsx`, `tests/unit/produtosFiscaisDropdowns.test.ts`.
+
 # v1.11.0a8b77
 
 ## Produto: NCM, CEST e origem da mercadoria viram listas alimentadas pelo cadastro fiscal

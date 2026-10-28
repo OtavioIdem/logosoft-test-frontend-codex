@@ -28,13 +28,14 @@ export const cadastrosFiscaisApi = {
         });
         return cfopResumoPagedSchema.parse(response.data) as PagedResult<CfopResumoResponse>;
     },
-    // CEST pelo código exato: resolve a descrição de um vínculo `ncm-cest`, que só traz `cestCodigo`.
+    // CEST pelo código exato: resolve a descrição de um vínculo `ncm-cest`, que só traz `cestCodigo`. O backend filtra
+    // `codigo` por prefixo, então a resposta pode trazer outros códigos: só vale o item de código idêntico.
     async obterCestPorCodigo(codigo: string): Promise<CestResumoResponse | null> {
         const response = await httpClient.get<unknown>('/api/fiscal/cadastros/cest', {
-            params: cleanQueryParams({ codigo, ativo: true, pagina: 1, tamanhoPagina: 1 })
+            params: cleanQueryParams({ codigo, ativo: true, pagina: 1, tamanhoPagina: CADASTROS_FISCAIS_TAMANHO_PAGINA })
         });
         const parsed = cestResumoPagedSchema.parse(response.data) as PagedResult<CestResumoResponse>;
-        return parsed.items[0] ?? null;
+        return parsed.items.find((item) => item.codigo === codigo) ?? null;
     },
     // Vínculos ativos do NCM: o conjunto de CESTs que o backend aceita para ele (`ncmCodigo` é o código de 8 dígitos).
     async listarVinculosNcmCest(ncmCodigo: string): Promise<PagedResult<NcmCestVinculoResponse>> {

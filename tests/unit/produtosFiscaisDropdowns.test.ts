@@ -69,6 +69,16 @@ describe('cadastrosFiscaisApi: rotas e parâmetros das referências do produto',
         expect(await cadastrosFiscaisApi.obterCestPorCodigo('9999999')).toBeNull();
     });
 
+    it('CEST por código: o backend filtra por prefixo, então só vale o item de código idêntico (não o primeiro da lista)', async () => {
+        resposta = pagina([
+            { id: 'c0', codigo: '03001001', descricao: 'Outro, que só começa igual', ativo: true },
+            { id: 'c1', codigo: '0300100', descricao: 'Cerveja', ativo: true }
+        ]);
+        expect((await cadastrosFiscaisApi.obterCestPorCodigo('0300100'))?.descricao).toBe('Cerveja');
+        resposta = pagina([{ id: 'c0', codigo: '03001001', descricao: 'Só prefixo', ativo: true }]);
+        expect(await cadastrosFiscaisApi.obterCestPorCodigo('0300100')).toBeNull();
+    });
+
     it('NCM: a busca existente segue com termo, ativo e 20 por página (debounce fica no hook)', async () => {
         await cadastrosFiscaisApi.listarNcm('cerv');
         expect(capturados[0].url).toBe('/api/fiscal/cadastros/ncm');

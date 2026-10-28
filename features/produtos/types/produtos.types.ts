@@ -109,6 +109,16 @@ export type ProdutoResponse = {
     fornecedores: ProdutoFornecedorResponse[];
 };
 
+// `ProdutoResponse` é o contrato COMPLETO: só `GET /api/produtos/{id}` o devolve. A listagem
+// (`GET /api/produtos`) devolve `ProdutoListagemItemResponse`, um DTO enxuto que, do bloco fiscal, traz apenas
+// `ncm` e `tipoItemSped`; não traz CEST, origem, tipo fiscal, unidade tributável, EX-TIPI, benefício fiscal,
+// código fiscal externo nem grupo. Este tipo marca esses campos como ausentes na linha da grade: quem precisar
+// deles (formulário de edição) carrega o produto por id, nunca reidrata a partir da linha da lista.
+export type ProdutoListagemItem = Omit<
+    ProdutoResponse,
+    'cest' | 'origemMercadoriaCodigo' | 'tipoItemFiscal' | 'unidadeTributavelSigla' | 'unidadeMedidaTributavelId' | 'exTipi' | 'codigoBeneficioFiscalPadrao' | 'codigoFiscalExterno' | 'grupoProdutoId'
+>;
+
 export type CriarCategoriaProdutoRequest = {
     empresaId: Guid;
     filialId?: Guid | null;

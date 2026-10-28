@@ -9,6 +9,7 @@ type ReasonPayload = { id: string; motivo: string };
 type ProdutoPatchPayload = { id: string; values: unknown };
 
 export const produtosQueryKey = (query?: ProdutoListQuery) => ['produtos', query] as const;
+export const produtoDetalheQueryKey = (id?: string | null) => ['produtos', 'detalhe', id ?? null] as const;
 export const categoriasProdutoQueryKey = (query?: CatalogoListQuery) => ['produtos-categorias', query] as const;
 export const unidadesMedidaQueryKey = (query?: CatalogoListQuery) => ['produtos-unidades-medida', query] as const;
 export const marcasQueryKey = (query?: CatalogoListQuery) => ['produtos-marcas', query] as const;
@@ -19,6 +20,19 @@ export const useProdutos = (query: ProdutoListQuery = {}, enabled = true) =>
         queryKey: produtosQueryKey(query),
         queryFn: () => produtosApi.listar(query),
         enabled: enabled && Boolean(query.empresaId)
+    });
+
+// Produto completo por id (`GET /api/produtos/{id}`). A linha da listagem é parcial e não serve de fonte do formulário.
+// `gcTime: 0` + sem refetch em foco: cada abertura do "Editar" parte de uma carga nova e o formulário não é
+// reidratado por baixo do operador enquanto ele digita.
+export const useProduto = (id: string | null | undefined, enabled = true) =>
+    useQuery({
+        queryKey: produtoDetalheQueryKey(id),
+        queryFn: () => produtosApi.obter(id as string),
+        enabled: enabled && Boolean(id),
+        gcTime: 0,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: false
     });
 
 export const useCategoriasProduto = (query: CatalogoListQuery = {}, enabled = true) =>
@@ -47,7 +61,14 @@ export const useGruposProduto = (query: GrupoProdutoListQuery, enabled = true) =
 
 export const useProdutoMutations = () => {
     const queryClient = useQueryClient();
-    const invalidate = () => queryClient.invalidateQueries({ queryKey: ['produtos'] });
+    // Lista refaz a busca; o detalhe só é marcado como velho (`refetchType: 'none'`): refazê-lo com o diálogo aberto
+    // trocaria o `record` no meio de um salvamento em etapas e apagaria do formulário o que o operador digitou quando
+    // um PATCH posterior falha. Com `gcTime: 0` a próxima abertura carrega de novo de qualquer forma.
+    const invalidate = () =>
+        Promise.all([
+            queryClient.invalidateQueries({ queryKey: ['produtos'], predicate: (query) => query.queryKey[1] !== 'detalhe' }),
+            queryClient.invalidateQueries({ queryKey: ['produtos', 'detalhe'], refetchType: 'none' })
+        ]);
 
     const saveMutation = useMutation({
         mutationFn: ({ id, values }: SavePayload) => (id ? produtosApi.atualizar(id, values) : produtosApi.criar(values)),

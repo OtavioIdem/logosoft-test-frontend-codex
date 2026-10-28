@@ -24,7 +24,7 @@ import { CatalogoListQuery, ProdutoFormValues, ProdutoResponse } from '@/feature
 import { useCategoriasProduto, useGruposProduto, useMarcas, useUnidadesMedida } from '@/features/produtos/hooks/useProdutosResources';
 import { useUnidadesTributaveis } from '@/features/produtos/hooks/useUnidadeTributavelCatalogo';
 import { FieldErrors, fieldErrorMap, textValue, toOptions } from '@/features/produtos/components/produtoFormUtils';
-import { SelectOption, TipoItemFiscal, TipoItemSped, TipoProduto } from '@/types/erp';
+import { ApiError, SelectOption, TipoItemFiscal, TipoItemSped, TipoProduto } from '@/types/erp';
 
 const tipoProdutoOptions = [
     { label: 'Mercadoria', value: TipoProduto.Mercadoria },
@@ -139,12 +139,22 @@ export const ProdutoFormDialog = ({
     visible,
     loading,
     record,
+    editando = false,
+    carregando = false,
+    erroCarga = null,
+    onRetry,
     onHide,
     onSubmit
 }: {
     visible: boolean;
     loading?: boolean;
+    // Na edição, o `record` TEM de ser o produto completo (`GET /api/produtos/{id}`), nunca a linha da listagem.
     record?: ProdutoResponse | null;
+    // Edição em curso (mesmo antes de o `record` chegar): impede que o diálogo se apresente como "Novo produto".
+    editando?: boolean;
+    carregando?: boolean;
+    erroCarga?: ApiError | null;
+    onRetry?: () => void;
     onHide: () => void;
     onSubmit: (values: ProdutoFormValues) => Promise<void>;
 }) => {
@@ -218,7 +228,14 @@ export const ProdutoFormDialog = ({
         setErrors((current) => ({ ...current, ncmCodigo: undefined }));
     };
 
+    // Trocou o NCM e a lista de vínculos ainda não respondeu: o CEST antigo ainda não pôde ser conferido. Salvar agora
+    // mandaria o CEST do NCM anterior no payload.
+    const aguardandoVinculosCest = visible && ncmAlterado && cestVinculos.isFetching;
+    const emEdicaoSemRegistro = editando && !record;
+    const salvarIndisponivel = carregando || Boolean(erroCarga) || emEdicaoSemRegistro || aguardandoVinculosCest;
+
     const submit = async () => {
+        if (salvarIndisponivel) return;
         const schema = record ? atualizarProdutoSchema : criarProdutoSchema;
         const parsed = schema.safeParse(values);
         if (!parsed.success) {
@@ -231,10 +248,30 @@ export const ProdutoFormDialog = ({
     const footer = (
         <div className="flex justify-content-end gap-2">
             <Button type="button" label="Cancelar" icon="pi pi-times" severity="secondary" outlined onClick={onHide} disabled={loading} />
-            <Button type="button" label="Salvar" icon="pi pi-check" loading={loading} onClick={submit} />
+            <Button type="button" label="Salvar" icon="pi pi-check" loading={loading} disabled={salvarIndisponivel} title={aguardandoVinculosCest ? 'Aguarde a consulta dos CESTs do NCM escolhido.' : undefined} onClick={submit} />
         </div>
     );
     const className = (field: string) => classNames({ 'p-invalid': errors[field] });
+
+    // Edição sobre dados parciais é proibida: enquanto o produto completo não chega (ou se a carga falhou), o formulário
+    // nem é montado — só o estado de carga/erro, com Salvar desabilitado. Sem fallback para a linha da listagem.
+    if (emEdicaoSemRegistro) {
+        return (
+            <Dialog header="Editar produto" visible={visible} modal style={{ width: 'min(72rem, 98vw)' }} footer={footer} onHide={onHide}>
+                {erroCarga ? (
+                    <div role="alert" className="flex flex-column gap-2 align-items-start">
+                        <Message severity="error" className="w-full" text={`Não foi possível carregar o produto: ${erroCarga.message}`} />
+                        <Button type="button" label="Tentar novamente" icon="pi pi-refresh" severity="secondary" outlined onClick={onRetry} />
+                    </div>
+                ) : (
+                    <div role="status" aria-live="polite" className="flex align-items-center gap-2">
+                        <i className="pi pi-spin pi-spinner" aria-hidden="true" />
+                        <span>Carregando dados do produto...</span>
+                    </div>
+                )}
+            </Dialog>
+        );
+    }
 
     return (
         <Dialog header={record ? 'Editar produto' : 'Novo produto'} visible={visible} modal style={{ width: 'min(72rem, 98vw)' }} footer={footer} onHide={onHide}>

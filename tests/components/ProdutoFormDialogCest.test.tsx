@@ -21,6 +21,8 @@ vi.mock('@/features/auth/hooks/usePermissions', () => {
 
 const pagina = (items: unknown[], totalItems = items.length) => ({ items, page: 1, pageSize: 100, totalItems, totalPages: 1 });
 const adapterOriginal = httpClient.defaults.adapter;
+// Quando definido, a consulta de vínculos do NCM_B só responde depois que esta promessa resolve (janela de corrida).
+let atrasoVinculosNcmB: Promise<void> | null = null;
 
 const NCM_A = '22030000'; // vínculos: 0300100, 0300200
 const NCM_B = '33030010'; // vínculos: 0500100
@@ -30,14 +32,16 @@ const vinculosPorNcm: Record<string, string[]> = { [NCM_A]: ['0300100', '0300200
 const ncmCatalogo = [NCM_A, NCM_B, NCM_SEM, NCM_PARCIAL].map((codigo) => ({ id: `id-${codigo}`, codigo, descricao: `NCM ${codigo}`, ativo: true }));
 
 beforeEach(() => {
+    atrasoVinculosNcmB = null;
     httpClient.defaults.adapter = vi.fn(async (config: InternalAxiosRequestConfig) => {
         const params = (config.params ?? {}) as Record<string, unknown>;
         let data: unknown = pagina([]);
         // Catálogos do produto (unidade, categoria, marca) devolvem array; grupos e unidades tributáveis, página.
         if (['/api/produtos/unidades-medida', '/api/produtos/categorias', '/api/produtos/marcas'].includes(String(config.url))) data = [];
-        if (config.url === '/api/fiscal/cadastros/ncm')data = pagina(ncmCatalogo);
+        if (config.url === '/api/fiscal/cadastros/ncm') data = pagina(ncmCatalogo);
         if (config.url === '/api/fiscal/cadastros/ncm-cest') {
             const ncm = String(params.ncmCodigo);
+            if (ncm === NCM_B && atrasoVinculosNcmB) await atrasoVinculosNcmB;
             data = pagina(
                 (vinculosPorNcm[ncm] ?? []).map((cestCodigo, i) => ({ id: `v${i}`, ncmId: 'n', ncmCodigo: ncm, cestId: `c${i}`, cestCodigo, ativo: true })),
                 ncm === NCM_PARCIAL ? 150 : undefined
@@ -129,6 +133,27 @@ describe('ProdutoFormDialog: limpeza do CEST ao trocar o NCM (comportamento)', (
         await abrir(user, 'a');
         await trocarNcm(user, NCM_B);
         await aguardarVinculos('0500100');
+        const values = await salvar(user, onSubmit);
+        expect(values.ncmCodigo).toBe(NCM_B);
+        expect(values.cestCodigo).toBeNull();
+    });
+
+    it('trocou o NCM e a lista de vínculos ainda não respondeu: Salvar fica desabilitado (o CEST antigo não vai no payload)', async () => {
+        let liberar: () => void = () => undefined;
+        atrasoVinculosNcmB = new Promise<void>((resolve) => { liberar = resolve; });
+        const { user, onSubmit } = await montar({ a: produto('a', NCM_A, '0300100') });
+        await abrir(user, 'a');
+        await aguardarVinculos('0300100');
+        expect(screen.getByRole('button', { name: /Salvar/ })).toBeEnabled();
+
+        await trocarNcm(user, NCM_B);
+        await waitFor(() => expect(screen.getByRole('button', { name: /Salvar/ })).toBeDisabled());
+        await user.click(screen.getByRole('button', { name: /Salvar/ }));
+        expect(onSubmit).not.toHaveBeenCalled();
+
+        liberar();
+        await aguardarVinculos('0500100');
+        await waitFor(() => expect(screen.getByRole('button', { name: /Salvar/ })).toBeEnabled());
         const values = await salvar(user, onSubmit);
         expect(values.ncmCodigo).toBe(NCM_B);
         expect(values.cestCodigo).toBeNull();
