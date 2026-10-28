@@ -1,3 +1,71 @@
+# v1.11.0a8b77
+
+## Produto: NCM, CEST e origem da mercadoria viram listas alimentadas pelo cadastro fiscal
+
+Na aba "Dados fiscais" do produto, NCM, CEST e Origem eram texto livre e chegavam vazios ou inválidos ao backend.
+Agora são seletores alimentados pelos GETs de referência do módulo fiscal. O valor enviado continua sendo o
+**código** (`ncmCodigo` de 8 dígitos, `cestCodigo` de 7, `origemMercadoriaCodigo` de `'0'` a `'8'`), porque o backend
+resolve o produto pelo código (`ProdutoDadosFiscaisResolver`), nunca pelo Id. Nenhum Id é enviado.
+
+**Risco de acesso: `NENHUM`**: nenhuma permissão, guard, rota ou item de menu mudou. As três consultas exigem
+`FISCAL_CADASTROS_CONSULTAR`, que já existe em `PermissionCode`.
+
+### O que muda para quem usa
+
+- **NCM**: busca no servidor (`/api/fiscal/cadastros/ncm`, 350 ms de debounce, 20 por página).
+- **CEST**: depende do NCM. Sem NCM o campo fica desabilitado ("Selecione o NCM"). Com NCM, lista só os CESTs
+  vinculados a ele (`/api/fiscal/cadastros/ncm-cest?ncmCodigo=`), com a descrição vinda de `/cest?codigo=`. NCM sem
+  vínculo mostra "Este NCM não exige CEST". Trocar o NCM limpa o CEST quando ele não pertence aos vínculos do novo NCM;
+  limpar o NCM limpa o CEST. Um produto legado com CEST fora dos vínculos não é alterado em silêncio ao abrir a
+  edição: só uma troca de NCM feita pelo operador limpa o CEST. Se a lista de vínculos do NCM vier parcial
+  (`totalItems` maior que a página carregada), o CEST **não** é limpo: a lista incompleta não prova que ele é inválido,
+  e a tela avisa que a lista está incompleta.
+- **Origem**: lista fechada de 9 itens (`/api/fiscal/cadastros/origens-mercadoria`, só ativas).
+- **Sem `FISCAL_CADASTROS_CONSULTAR`** (D61): só o campo afetado é desabilitado, com aviso; o código já gravado continua
+  visível (o rótulo é o próprio código, como em `comSiglaSelecionada`). Falha de consulta aparece com "Tentar novamente".
+
+### O que ficou de fora de propósito
+
+`EX-TIPI`, `codigoBeneficioFiscalPadrao` e `codigoFiscalExterno` continuam texto livre: **não há endpoint de
+referência** para eles no backend. `tipoItemFiscal`, `tipoItemSped` e `unidadeTributavelSigla` já eram listas.
+A obrigatoriedade da origem (quando o tipo exige NCM) e do CEST (quando o NCM tem vínculo) é regra do backend: a tela
+só orienta, não bloqueia o envio por regra local.
+
+### Como foi medido
+
+Contrato lido no C# (`../New project 3/src`) e no banco de desenvolvimento. **A API HTTP autenticada não foi
+chamada**: o comportamento da tela foi provado contra o `httpClient` real com adaptador de teste, não contra o
+backend vivo. O CEST faz uma consulta `/cest?codigo=` por vínculo para obter a descrição (um NCM com muitos CESTs
+gera muitas chamadas paralelas; se uma falhar, o rótulo mostra só o código). Os vínculos vêm numa página de 100 (o teto
+do backend é 200, `CadastrosFiscaisFiltroFactory.cs`, `TamanhoPaginaMaximo`).
+
+### Correção do QA dentro da b77
+
+- O reset de `values` e do flag "NCM alterado" na abertura/troca de registro passou de `useEffect` para ajuste de estado
+  durante o render, no mesmo passo: o diálogo fica sempre montado em `ProdutosPage` e a limpeza do CEST não depende mais
+  da ordem de efeitos. Medido: com o reset antigo em efeito os 8 testes novos também passam (o batching do React 18
+  já impedia a corrida); a mudança remove a dependência de ordem, não corrige defeito reproduzido.
+- Lista parcial de vínculos não limpa o CEST (N4). Comentário do tamanho de página corrigido (N1). O
+  `eslint-disable` de `useCestPorNcm` foi trocado por chave estável (N2).
+- Teste de comportamento `tests/components/ProdutoFormDialogCest.test.tsx` (diálogo real, rede por
+  `httpClient.defaults.adapter`): removendo o efeito de limpeza do CEST, 2 de 8 reprovam; removendo a guarda de lista
+  parcial, 1 de 8 reprova.
+
+### Pendente / aguardando análise
+
+- Item (a) do B1 (reset síncrono) é robustez, não defeito reproduzido; decisão do usuário: aceitar.
+- Teto de 200 por página do backend confirmado no C# (`CadastrosFiscaisFiltroFactory.cs:13`, aplicado na linha 184).
+- Sem E2E Playwright e sem preview da tela no navegador (porta 3000 ocupada pelo frontend em Docker).
+- Sem chamada à API HTTP autenticada (contrato lido no C# e no banco de dev).
+- QA ainda não reaprovou após a correção do B1.
+
+### Arquivos
+
+`features/fiscal/{types,schemas,api,hooks}` (client e hooks de `ncm-cest`, `cest` por código e `origens-mercadoria`),
+`features/fiscal/components/CodigoFiscalSelects.tsx` (novo), `features/produtos/components/ProdutoFormDialog.tsx`.
+Testes: `tests/unit/produtosFiscaisDropdowns.test.ts`, `tests/components/CodigoFiscalSelects.test.tsx`,
+`tests/components/ProdutoFormDialogCest.test.tsx`.
+
 # v1.11.0a8b76.c3
 
 ## Seletores de busca e campos de data passam a ter nome no elemento que recebe o foco

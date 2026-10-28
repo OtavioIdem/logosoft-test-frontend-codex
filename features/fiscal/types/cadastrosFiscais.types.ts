@@ -34,3 +34,36 @@ export type CfopBuscaFiltros = {
     ambito?: number | null;
     tipo?: number | null;
 };
+
+// Referências do bloco fiscal do produto (v1.11.0a8b77). O backend resolve NCM, CEST e origem pelo CÓDIGO
+// (`ProdutoDadosFiscaisResolver`), nunca pelo Id: o `value` dos selects de produto é sempre o código.
+// Origem: `CadastrosFiscaisController.cs` (`/cest`, `/ncm-cest`, `/origens-mercadoria`) em `../New project 3/src`.
+
+/** `CestResponse` reduzido ao que o select lê (o schema não é estrito). */
+export type CestResumoResponse = {
+    id: Guid;
+    codigo: string;
+    descricao: string;
+    segmento?: string | null;
+    ativo: boolean;
+};
+
+/** Vínculo vigente entre NCM e CEST (`/ncm-cest`): define quais CESTs o NCM aceita e se o CEST é exigido. */
+export type NcmCestVinculoResponse = {
+    id: Guid;
+    ncmId: Guid;
+    ncmCodigo: string;
+    cestId: Guid;
+    cestCodigo: string;
+    ativo: boolean;
+};
+
+/** `OrigemMercadoriaResponse`: tabela A do CST/CSOSN, códigos `'0'` a `'8'`. */
+export type OrigemMercadoriaResponse = {
+    id: Guid;
+    codigo: string;
+    descricao: string;
+    ehEstrangeira?: boolean;
+    ativo: boolean;
+    motivoInativacao?: string | null;
+};

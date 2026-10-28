@@ -17,6 +17,8 @@ import { MoneyInput } from '@/components/forms/MoneyInput';
 import { FormGrid } from '@/components/forms/FormGrid';
 import { SearchSelect } from '@/components/forms/SearchSelect';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
+import { CestCodigoSelect, NcmCodigoSelect, OrigemMercadoriaSelect } from '@/features/fiscal/components/CodigoFiscalSelects';
+import { useCestPorNcm } from '@/features/fiscal/hooks/useCadastrosFiscais';
 import { atualizarProdutoSchema, criarProdutoSchema } from '@/features/produtos/schemas/produtosSchemas';
 import { CatalogoListQuery, ProdutoFormValues, ProdutoResponse } from '@/features/produtos/types/produtos.types';
 import { useCategoriasProduto, useGruposProduto, useMarcas, useUnidadesMedida } from '@/features/produtos/hooks/useProdutosResources';
@@ -148,6 +150,9 @@ export const ProdutoFormDialog = ({
 }) => {
     const [values, setValues] = useState<ProdutoFormValues>(() => buildInitialValues(record));
     const [errors, setErrors] = useState<FieldErrors>({});
+    // Só uma troca de NCM feita pelo operador pode limpar o CEST: um produto legado com CEST fora dos vínculos
+    // não é alterado em silêncio ao abrir a edição (o backend é quem recusa, e o erro aparece).
+    const [ncmAlterado, setNcmAlterado] = useState(false);
 
     // Catálogos (unidade/categoria/marca) são carregados pela empresa efetiva do próprio modal:
     // na edição usa a empresa do produto; na criação, a empresa escolhida no formulário. Assim o
@@ -177,16 +182,40 @@ export const ProdutoFormDialog = ({
     const unidadeTributavelCatalogo = useUnidadesTributaveis(visible);
     const unidadeTributavelOptions = useMemo(() => comSiglaSelecionada(unidadeTributavelCatalogo.options, textValue(values.unidadeTributavelSigla) || null), [unidadeTributavelCatalogo.options, values.unidadeTributavelSigla]);
 
-    useEffect(() => {
+    // Mesma consulta de vínculos do select de CEST (React Query deduplica pela chave): decide se o CEST gravado ainda
+    // pertence ao NCM escolhido.
+    const cestVinculos = useCestPorNcm(textValue(values.ncmCodigo) || null, visible);
+    const cestAtual = textValue(values.cestCodigo);
+    // Lista parcial (`totalItems` > página carregada) não prova que o CEST é inválido: não limpa (a tela já avisa que está incompleta).
+    const cestForaDosVinculos = visible && ncmAlterado && cestVinculos.isSuccess && !cestVinculos.parcial && Boolean(cestAtual) && !cestVinculos.codigos.includes(cestAtual);
+
+    // Reset por abertura/registro feito DURANTE o render (padrão "ajustar estado quando a prop muda"), não em efeito:
+    // `values` e `ncmAlterado` são trocados no mesmo passo e o React refaz o render antes de qualquer efeito rodar.
+    // O dialog fica montado em ProdutosPage; com efeito, o render da reabertura ainda enxergava o `ncmAlterado` e o CEST
+    // do registro anterior, e a limpeza abaixo podia zerar o CEST do produto recém-aberto.
+    const [aberturaAtual, setAberturaAtual] = useState({ record, visible });
+    if (aberturaAtual.record !== record || aberturaAtual.visible !== visible) {
+        setAberturaAtual({ record, visible });
         if (visible) {
             setValues(buildInitialValues(record));
             setErrors({});
+            setNcmAlterado(false);
         }
-    }, [record, visible]);
+    }
+
+    useEffect(() => {
+        if (cestForaDosVinculos) setValues((current) => ({ ...current, cestCodigo: null }));
+    }, [cestForaDosVinculos]);
 
     const update = (name: keyof ProdutoFormValues, value: unknown) => {
         setValues((current) => ({ ...current, [name]: value }));
         setErrors((current) => ({ ...current, [name]: undefined }));
+    };
+
+    const trocarNcm = (codigo: string | null) => {
+        setNcmAlterado(true);
+        setValues((current) => ({ ...current, ncmCodigo: codigo, ...(codigo ? {} : { cestCodigo: null }) }));
+        setErrors((current) => ({ ...current, ncmCodigo: undefined }));
     };
 
     const submit = async () => {
@@ -302,17 +331,17 @@ export const ProdutoFormDialog = ({
                         <FormGrid>
                             <div className="field col-12 md:col-3">
                                 <label htmlFor="ncmCodigo" className="font-medium">NCM</label>
-                                <InputText id="ncmCodigo" value={textValue(values.ncmCodigo)} className={className('ncmCodigo')} onChange={(event) => update('ncmCodigo', event.target.value)} />
+                                <NcmCodigoSelect id="ncmCodigo" value={textValue(values.ncmCodigo) || null} onChange={trocarNcm} />
                                 <FieldError message={errors.ncmCodigo} />
                             </div>
                             <div className="field col-12 md:col-3">
                                 <label htmlFor="cestCodigo" className="font-medium">CEST</label>
-                                <InputText id="cestCodigo" value={textValue(values.cestCodigo)} className={className('cestCodigo')} onChange={(event) => update('cestCodigo', event.target.value)} />
+                                <CestCodigoSelect id="cestCodigo" ncmCodigo={textValue(values.ncmCodigo) || null} value={textValue(values.cestCodigo) || null} onChange={(codigo) => update('cestCodigo', codigo)} />
                                 <FieldError message={errors.cestCodigo} />
                             </div>
                             <div className="field col-12 md:col-3">
                                 <label htmlFor="origemMercadoriaCodigo" className="font-medium">Origem</label>
-                                <InputText id="origemMercadoriaCodigo" value={textValue(values.origemMercadoriaCodigo)} className={className('origemMercadoriaCodigo')} onChange={(event) => update('origemMercadoriaCodigo', event.target.value)} />
+                                <OrigemMercadoriaSelect id="origemMercadoriaCodigo" value={textValue(values.origemMercadoriaCodigo) || null} onChange={(codigo) => update('origemMercadoriaCodigo', codigo)} />
                                 <FieldError message={errors.origemMercadoriaCodigo} />
                             </div>
                             <div className="field col-12 md:col-3">
