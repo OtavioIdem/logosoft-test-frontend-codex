@@ -2822,3 +2822,48 @@ Decisão:
 Gatilho de revisita: metadado de leiaute gerado disponibilizado ao frontend (R1), ou evidência de
 que a edição de cadastro legado fora do limite exige comportamento adicional. Reversível: sim —
 somente validação local de formato, sem persistência nova.
+
+### D109 — `b79`: `masterOnly` é eixo próprio; sete módulos recolhidos num grupo Desenvolvimento
+
+Data: 2026-10-29. Pedido direto do usuário, fora de onda. Quem arbitrou: orquestrador. O usuário
+decidiu três pontos na abertura da fatia: Bens acompanha Patrimônio, o grupo é lista única com rótulo
+prefixado (sem terceiro nível de menu), e o escopo fecha nos sete módulos nomeados.
+
+Decisão:
+
+- **Entra na `b79`:** Transferências, Ajustes e Estoque avançado (de Estoque), Qualidade, CRM,
+  Atividades e Patrimônio saem dos grupos de origem e passam a viver num grupo único
+  **Desenvolvimento**, último do menu, visível somente para `isMaster`. Onze itens de rótulo prefixado
+  pelo módulo (`CRM · Leads`), oito regras de rota marcadas, nenhuma exclusão de código.
+- **`masterOnly?: boolean` é eixo PRÓPRIO, separado de permissão**, em `AppMenuItem`, `CadastroItem` e
+  `RoutePermissionRule`. Não é permissão nova e não é sentinela, e a razão é mecânica, não estética:
+  `hasPermission` devolve `true` para master em qualquer código (`lib/permissions/permissions.ts:8`),
+  então nenhum código de permissão separa master de não-master; e as sentinelas existentes
+  (`MASTER_GOD`, `*`) fazem o oposto — recusam todo mundo, master incluído. O union `PermissionCode`,
+  o catálogo e os snapshots gerados não mudam, e por isso os três gates de permissão seguem verdes sem
+  exceção nova.
+- **O par menu↔rota é obrigatório, e a marca sozinha no menu não vale.** `masterOnly` no item esconde a
+  oferta; `masterOnly` na regra de rota é o que recusa a URL digitada. No guard a marca é checada
+  **antes** de `hasAnyPermission`, porque a sessão que ela precisa recusar é exatamente a que tem a
+  permissão do módulo.
+- **O pai carrega a união exata das permissões dos filhos.** C2 de `validate:guard-permission-map`
+  exige que o grupo admita toda sessão que um filho admite; o grupo Desenvolvimento declara 21 códigos
+  de cinco módulos. O grupo Estoque teve a união reduzida às três permissões das quatro telas que
+  restaram.
+- **Não entra:** excluir qualquer feature, rota ou teste dos sete módulos; mexer em
+  `lib/permissions/permissions.ts`; permissão nova no union; alterar o `anyOf` da regra `/cadastros`;
+  terceiro nível de aninhamento de menu; e Alimentar, Portaria, Frota, Contratos e Produção, que são
+  candidatos ao mesmo tratamento e ficaram fora por decisão do usuário.
+- **`b78` fica reservada a D107** (Boletos). O buraco numérico entre `b77` e `b79` é intencional.
+- **A contenção da classe de defeito é teste, não gate em `scripts/`.** `masterOnly` é invisível para
+  `parseMenuPermissions`, então a dessincronia menu↔rota não reprova em gate nenhum.
+  `tests/unit/desenvolvimentoMasterOnly.test.ts` assere item por item nominal nos dois sentidos, e foi
+  medido reprovando contra esta árvore com o defeito injetado nas duas direções (regra `/crm`
+  desmarcada; item `CRM · Leads` devolvido ao grupo Vendas), não apenas contra fixture.
+
+Gatilho de revisita: o fluxo que alimenta cada módulo passar a existir. A devolução é por módulo e
+exige remover `masterOnly` dos **dois** lados numa fatia nova — tirar de um lado só é o defeito que o
+teste reprova. Risco remanescente: `accessRisk CAPACIDADE` assumido de propósito, sem permissão a
+conceder antes do deploy (nenhuma foi retirada no backend); e a prova ao vivo da negação por URL para a
+sessão com permissão do módulo e sem `isMaster` ficou **não medida** nesta fatia — a cobertura é
+unitária, e o E2E da receita isolada é pendência declarada.

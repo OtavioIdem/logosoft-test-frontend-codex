@@ -13,14 +13,14 @@ import { cadastroCategorias, cadastroItens } from '../cadastrosCatalogo';
 const normalizar = (valor: string) => valor.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase();
 
 export const CadastrosPage = () => {
-    const { hasAnyPermission } = usePermissions();
+    const { hasAnyPermission, isMaster } = usePermissions();
     const router = useRouter();
     const [busca, setBusca] = useState('');
     const termo = normalizar(busca.trim());
     const categoriasVisiveis = useMemo(() => cadastroCategorias.map((categoria) => ({
         ...categoria,
-        itens: cadastroItens.filter((item) => item.categoriaId === categoria.id && hasAnyPermission([...item.anyPermissions]) && (!termo || normalizar(`${item.label} ${item.descricao}`).includes(termo)))
-    })).filter((categoria) => categoria.itens.length > 0), [hasAnyPermission, termo]);
+        itens: cadastroItens.filter((item) => item.categoriaId === categoria.id && (!item.masterOnly || isMaster) && hasAnyPermission([...item.anyPermissions]) && (!termo || normalizar(`${item.label} ${item.descricao}`).includes(termo)))
+    })).filter((categoria) => categoria.itens.length > 0), [hasAnyPermission, isMaster, termo]);
 
     return <>
         <PageHeader title="Cadastros" description="Siga esta sequência para preparar a operação. A ordem orienta o cadastro e não bloqueia o acesso às rotinas permitidas." actions={<div className="flex flex-column-reverse md:flex-row gap-2 w-full md:w-auto"><Button label="Voltar" icon="pi pi-arrow-left" severity="secondary" outlined onClick={() => router.back()} /><span className="p-input-icon-left w-full md:w-20rem"><i className="pi pi-search" /><InputText aria-label="Buscar cadastro" className="w-full" value={busca} onChange={(event) => setBusca(event.target.value)} placeholder="Buscar cadastro" /></span></div>} />

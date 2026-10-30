@@ -56,15 +56,18 @@ const AppMenu = () => {
             },
             {
                 label: 'Estoque',
-                anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_MOVIMENTAR', 'ESTOQUE_RESERVAR', 'ESTOQUE_INVENTARIO_GERENCIAR', 'ESTOQUE_AJUSTAR', 'ESTOQUE_BLOQUEIO_GERENCIAR'],
+                // A união do grupo volta a ser exatamente a dos filhos que restaram: Saldos e
+                // Movimentos (ESTOQUE_CONSULTAR), Reservas (+ESTOQUE_RESERVAR) e Inventários
+                // (+ESTOQUE_INVENTARIO_GERENCIAR). ESTOQUE_MOVIMENTAR, ESTOQUE_AJUSTAR e
+                // ESTOQUE_BLOQUEIO_GERENCIAR saíram com as telas que foram para Desenvolvimento;
+                // quem só tem ESTOQUE_MOVIMENTAR continua entrando por /estoque/entradas e
+                // /estoque/saidas, que nunca estiveram no menu (D76).
+                anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_RESERVAR', 'ESTOQUE_INVENTARIO_GERENCIAR'],
                 items: [
                     { label: 'Saldos', icon: 'pi pi-fw pi-database', to: '/estoque/saldos', permission: 'ESTOQUE_CONSULTAR' },
                     { label: 'Movimentos', icon: 'pi pi-fw pi-list', to: '/estoque/movimentos', permission: 'ESTOQUE_CONSULTAR' },
-                    { label: 'Transferências', icon: 'pi pi-fw pi-send', to: '/estoque/transferencias', permission: 'ESTOQUE_MOVIMENTAR' },
-                    { label: 'Ajustes', icon: 'pi pi-fw pi-sliders-h', to: '/estoque/ajustes', permission: 'ESTOQUE_MOVIMENTAR' },
                     { label: 'Reservas', icon: 'pi pi-fw pi-bookmark', to: '/estoque/reservas', anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_RESERVAR'] },
-                    { label: 'Inventários', icon: 'pi pi-fw pi-clipboard', to: '/estoque/inventarios', anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_INVENTARIO_GERENCIAR'] },
-                    { label: 'Estoque avançado', icon: 'pi pi-fw pi-sliders-v', to: '/estoque/avancado', anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_INVENTARIO_GERENCIAR', 'ESTOQUE_AJUSTAR', 'ESTOQUE_BLOQUEIO_GERENCIAR'] }
+                    { label: 'Inventários', icon: 'pi pi-fw pi-clipboard', to: '/estoque/inventarios', anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_INVENTARIO_GERENCIAR'] }
                 ]
             },
             {
@@ -149,36 +152,14 @@ const AppMenu = () => {
                 ]
             },
             {
-                label: 'Qualidade',
-                anyPermissions: ['QUALIDADE_CONSULTAR', 'QUALIDADE_INSPECIONAR', 'QUALIDADE_NAO_CONFORMIDADE_GERENCIAR'],
-                items: [
-                    { label: 'Inspeções', icon: 'pi pi-fw pi-verified', to: '/qualidade/inspecoes', anyPermissions: ['QUALIDADE_CONSULTAR', 'QUALIDADE_INSPECIONAR'] },
-                    { label: 'Não-conformidades', icon: 'pi pi-fw pi-exclamation-triangle', to: '/qualidade/nao-conformidades', anyPermissions: ['QUALIDADE_CONSULTAR', 'QUALIDADE_NAO_CONFORMIDADE_GERENCIAR'] }
-                ]
-            },
-            {
                 label: 'Produção',
                 anyPermissions: ['PRODUCAO_CONSULTAR', 'PRODUCAO_ORDENS_GERENCIAR', 'PRODUCAO_ORDENS_LIBERAR', 'PRODUCAO_ORDENS_APONTAR', 'PRODUCAO_ORDENS_ENCERRAR', 'PRODUCAO_ORDENS_CANCELAR'],
                 items: [{ label: 'Ordens de produção', icon: 'pi pi-fw pi-briefcase', to: '/producao/ordens', anyPermissions: ['PRODUCAO_CONSULTAR', 'PRODUCAO_ORDENS_GERENCIAR'] }]
             },
             {
-                label: 'CRM',
-                anyPermissions: ['CRM_CONSULTAR', 'CRM_LEADS_GERENCIAR', 'CRM_OPORTUNIDADES_GERENCIAR', 'CRM_CONVERTER', 'CRM_PROPOSTAS_GERENCIAR'],
-                items: [
-                    { label: 'Leads', icon: 'pi pi-fw pi-filter', to: '/crm/leads', anyPermissions: ['CRM_CONSULTAR', 'CRM_LEADS_GERENCIAR'] },
-                    { label: 'Oportunidades', icon: 'pi pi-fw pi-chart-line', to: '/crm/oportunidades', anyPermissions: ['CRM_CONSULTAR', 'CRM_OPORTUNIDADES_GERENCIAR'] },
-                    { label: 'Propostas', icon: 'pi pi-fw pi-file-edit', to: '/crm/propostas', anyPermissions: ['CRM_CONSULTAR', 'CRM_PROPOSTAS_GERENCIAR'] }
-                ]
-            },
-            {
                 label: 'Contratos',
                 anyPermissions: ['CONTRATOS_CONSULTAR', 'CONTRATOS_GERENCIAR', 'CONTRATOS_FATURAR'],
                 items: [{ label: 'Contratos', icon: 'pi pi-fw pi-file-o', to: '/contratos', anyPermissions: ['CONTRATOS_CONSULTAR', 'CONTRATOS_GERENCIAR'] }]
-            },
-            {
-                label: 'Atividades',
-                anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_CRIAR', 'ATIVIDADES_ATUALIZAR', 'ATIVIDADES_CANCELAR', 'ATIVIDADES_COMENTAR', 'ATIVIDADES_ATRIBUIR'],
-                items: [{ label: 'Workflow operacional', icon: 'pi pi-fw pi-check-square', to: '/atividades', anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_CRIAR', 'ATIVIDADES_ATUALIZAR', 'ATIVIDADES_CANCELAR', 'ATIVIDADES_COMENTAR', 'ATIVIDADES_ATRIBUIR'] }]
             },
             {
                 label: 'Contábil',
@@ -191,14 +172,6 @@ const AppMenu = () => {
                 items: [
                     { label: 'Boletos', icon: 'pi pi-fw pi-credit-card', to: '/bancos/boletos', anyPermissions: ['BANCOS_CONSULTAR', 'BOLETOS_GERAR'] },
                     { label: 'CNAB', icon: 'pi pi-fw pi-sync', to: '/bancos/cnab', anyPermissions: ['BANCOS_CONSULTAR', 'CNAB_REMESSA_GERAR', 'CNAB_RETORNO_PROCESSAR'] }
-                ]
-            },
-            {
-                label: 'Patrimônio',
-                anyPermissions: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_DEPRECIAR', 'PATRIMONIO_INVENTARIO_GERENCIAR'],
-                items: [
-                    { label: 'Depreciação', icon: 'pi pi-fw pi-chart-line', to: '/patrimonio/depreciacao', anyPermissions: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_DEPRECIAR'] },
-                    { label: 'Inventário', icon: 'pi pi-fw pi-clipboard', to: '/patrimonio/inventarios', anyPermissions: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_INVENTARIO_GERENCIAR'] }
                 ]
             },
             {
@@ -218,12 +191,44 @@ const AppMenu = () => {
                 label: 'Deploy',
                 anyPermissions: ['DEPLOY_CONSULTAR', 'DEPLOY_GERENCIAR'],
                 items: [{ label: 'Deploy / Ambiente', icon: 'pi pi-fw pi-server', to: '/administracao/deploy', anyPermissions: ['DEPLOY_CONSULTAR', 'DEPLOY_GERENCIAR'] }]
+            },
+            {
+                // Telas que existem e que o backend autoriza para quem tem a permissão do módulo,
+                // mas que isoladas não fecham rotina nenhuma no estágio atual do produto (D109).
+                // Nada foi excluído: rota, feature, hooks e testes continuam no lugar, e devolver
+                // uma tela à operação é tirar `masterOnly` daqui E da regra de rota — nunca
+                // conceder permissão, porque nenhuma foi retirada de ninguém.
+                // `anyPermissions` é a união EXATA das permissões dos filhos: C2 de
+                // `validate:guard-permission-map` exige que o pai admita toda sessão do filho.
+                label: 'Desenvolvimento',
+                masterOnly: true,
+                anyPermissions: ['ESTOQUE_MOVIMENTAR', 'ESTOQUE_CONSULTAR', 'ESTOQUE_INVENTARIO_GERENCIAR', 'ESTOQUE_AJUSTAR', 'ESTOQUE_BLOQUEIO_GERENCIAR', 'QUALIDADE_CONSULTAR', 'QUALIDADE_INSPECIONAR', 'QUALIDADE_NAO_CONFORMIDADE_GERENCIAR', 'CRM_CONSULTAR', 'CRM_LEADS_GERENCIAR', 'CRM_OPORTUNIDADES_GERENCIAR', 'CRM_PROPOSTAS_GERENCIAR', 'ATIVIDADES_CONSULTAR', 'ATIVIDADES_CRIAR', 'ATIVIDADES_ATUALIZAR', 'ATIVIDADES_CANCELAR', 'ATIVIDADES_COMENTAR', 'ATIVIDADES_ATRIBUIR', 'PATRIMONIO_CONSULTAR', 'PATRIMONIO_DEPRECIAR', 'PATRIMONIO_INVENTARIO_GERENCIAR'],
+                items: [
+                    { label: 'Estoque · Transferências', icon: 'pi pi-fw pi-send', to: '/estoque/transferencias', permission: 'ESTOQUE_MOVIMENTAR' },
+                    { label: 'Estoque · Ajustes', icon: 'pi pi-fw pi-sliders-h', to: '/estoque/ajustes', permission: 'ESTOQUE_MOVIMENTAR' },
+                    { label: 'Estoque · Avançado', icon: 'pi pi-fw pi-sliders-v', to: '/estoque/avancado', anyPermissions: ['ESTOQUE_CONSULTAR', 'ESTOQUE_INVENTARIO_GERENCIAR', 'ESTOQUE_AJUSTAR', 'ESTOQUE_BLOQUEIO_GERENCIAR'] },
+                    { label: 'Qualidade · Inspeções', icon: 'pi pi-fw pi-verified', to: '/qualidade/inspecoes', anyPermissions: ['QUALIDADE_CONSULTAR', 'QUALIDADE_INSPECIONAR'] },
+                    { label: 'Qualidade · Não-conformidades', icon: 'pi pi-fw pi-exclamation-triangle', to: '/qualidade/nao-conformidades', anyPermissions: ['QUALIDADE_CONSULTAR', 'QUALIDADE_NAO_CONFORMIDADE_GERENCIAR'] },
+                    { label: 'CRM · Leads', icon: 'pi pi-fw pi-filter', to: '/crm/leads', anyPermissions: ['CRM_CONSULTAR', 'CRM_LEADS_GERENCIAR'] },
+                    { label: 'CRM · Oportunidades', icon: 'pi pi-fw pi-chart-line', to: '/crm/oportunidades', anyPermissions: ['CRM_CONSULTAR', 'CRM_OPORTUNIDADES_GERENCIAR'] },
+                    { label: 'CRM · Propostas', icon: 'pi pi-fw pi-file-edit', to: '/crm/propostas', anyPermissions: ['CRM_CONSULTAR', 'CRM_PROPOSTAS_GERENCIAR'] },
+                    { label: 'Atividades · Workflow operacional', icon: 'pi pi-fw pi-check-square', to: '/atividades', anyPermissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_CRIAR', 'ATIVIDADES_ATUALIZAR', 'ATIVIDADES_CANCELAR', 'ATIVIDADES_COMENTAR', 'ATIVIDADES_ATRIBUIR'] },
+                    { label: 'Patrimônio · Depreciação', icon: 'pi pi-fw pi-chart-line', to: '/patrimonio/depreciacao', anyPermissions: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_DEPRECIAR'] },
+                    { label: 'Patrimônio · Inventário', icon: 'pi pi-fw pi-clipboard', to: '/patrimonio/inventarios', anyPermissions: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_INVENTARIO_GERENCIAR'] }
+                ]
             }
         ],
         []
     );
 
-    const isVisible = (item: AppMenuItem) => permissions.hasPermission(item.permission) && permissions.hasAnyPermission(item.anyPermissions) && permissions.hasAllPermissions(item.allPermissions);
+    // `masterOnly` é conjunção com as três formas de permissão, e não uma quarta forma delas: o
+    // item aparece se a sessão satisfaz a permissão declarada E, quando marcado, é master. Como o
+    // filtro avalia pai e filho de forma independente, marcar só o grupo já esconde os filhos —
+    // mas quem garante que a URL também recusa é a marca na regra de rota, e o par é provado
+    // nominalmente em tests/unit/desenvolvimentoMasterOnly.test.ts: nenhum gate de scripts/
+    // enxerga `masterOnly`.
+    const isVisible = (item: AppMenuItem) =>
+        (!item.masterOnly || permissions.isMaster) && permissions.hasPermission(item.permission) && permissions.hasAnyPermission(item.anyPermissions) && permissions.hasAllPermissions(item.allPermissions);
 
     const filterMenu = (items: AppMenuItem[]): AppMenuItem[] =>
         items

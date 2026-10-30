@@ -1,3 +1,160 @@
+# v1.11.0a8b79
+
+## Sete telas saem dos módulos de origem e passam a viver num grupo "Desenvolvimento", só para master
+
+**Pedido (usuário, 2026-10-29):** no estágio atual do produto, Transferências, Ajustes, Estoque avançado,
+Qualidade, CRM, Atividades e Patrimônio não fecham rotina nenhuma isoladas — faltam os fluxos que as
+alimentam. A instrução foi explícita: **não excluir**, e sim recolher numa aba separada chamada
+Desenvolvimento, limitada ao usuário master.
+
+**Nada foi excluído.** Rota, feature, hooks, schemas, componentes e testes dos sete módulos continuam
+exatamente onde estavam. O que mudou é **onde o menu oferece** e **para quem a rota abre**.
+
+**Risco de acesso: `CAPACIDADE`** — ver a seção operacional no fim desta entrada. Nenhuma permissão foi
+retirada de nenhum grupo de acesso; o que foi restrito é a tela.
+
+### O que muda para quem usa
+
+Para o **usuário master**, o menu ganha um grupo **Desenvolvimento** no fim, com onze itens de rótulo
+prefixado pelo módulo de origem:
+
+| Item | Rota |
+| --- | --- |
+| Estoque · Transferências | `/estoque/transferencias` |
+| Estoque · Ajustes | `/estoque/ajustes` |
+| Estoque · Avançado | `/estoque/avancado` |
+| Qualidade · Inspeções | `/qualidade/inspecoes` |
+| Qualidade · Não-conformidades | `/qualidade/nao-conformidades` |
+| CRM · Leads | `/crm/leads` |
+| CRM · Oportunidades | `/crm/oportunidades` |
+| CRM · Propostas | `/crm/propostas` |
+| Atividades · Workflow operacional | `/atividades` |
+| Patrimônio · Depreciação | `/patrimonio/depreciacao` |
+| Patrimônio · Inventário | `/patrimonio/inventarios` |
+
+Para **quem não é master**, esses onze itens desapareceram do menu, os grupos **Qualidade**, **CRM**,
+**Atividades** e **Patrimônio** deixaram de existir, e **Estoque** passou a ter quatro itens — Saldos,
+Movimentos, Reservas e Inventários. Digitar qualquer uma das rotas acima na barra de endereço devolve
+**"Tela em desenvolvimento"**, com o texto dizendo que a permissão do módulo continua sendo da pessoa e
+que o que está restrito é a tela.
+
+O cadastro de **Bens** (`/patrimonio/bens`) vivia como card da Central de cadastros, não do grupo
+Patrimônio. Ele acompanhou o módulo: para quem não é master o card saiu da Central, e a rota recusa.
+Patrimônio não ficou com porta lateral aberta.
+
+`/estoque/bloqueios` também foi marcada, embora não tenha item de menu desde a b62: a página só
+redireciona para `/estoque/avancado`, e sem a marca o não-master seria levado de uma rota liberada
+direto para uma negação.
+
+### Como foi feito
+
+`masterOnly?: boolean` entrou como **eixo próprio, separado de permissão**, em três lugares:
+`AppMenuItem` (`types/layout.d.ts`), `CadastroItem` (`features/cadastros/types/cadastros.types.ts`) e
+`RoutePermissionRule` (`lib/security/routePermissions.ts`). `usePermissions` passou a expor
+`isMaster: user?.isMaster === true`.
+
+Não é permissão nem permissão sentinela, e a razão é mecânica: `hasPermission` devolve `true` para
+master em **qualquer** código (`lib/permissions/permissions.ts:8`), então nenhum código de permissão
+consegue separar master de não-master. As sentinelas existentes (`MASTER_GOD`, `*`) fazem o oposto —
+recusam todo mundo, master incluído. **O union `PermissionCode` não mudou**: nenhuma permissão entrou
+ou saiu, e `features/seguranca/permissoesCatalogo.ts` está intocado.
+
+No menu (`layout/AppMenu.tsx`), `masterOnly` é **conjunção** com as três formas de permissão, não uma
+quarta forma. No guard (`components/security/RoutePermissionGate.tsx`) é checado **antes** de
+`hasAnyPermission`, e a ordem é o ponto: a sessão que a marca precisa recusar é justamente a que tem a
+permissão do módulo e passaria pelo teste de permissão.
+
+O `anyPermissions` do grupo Desenvolvimento é a **união exata** das permissões dos onze filhos — 21
+códigos, medidos por contagem direta no modelo e conferidos contra C2 de
+`validate:guard-permission-map`, que exige que o pai admita toda sessão que um filho admite. O grupo
+**Estoque** teve a união reduzida a `ESTOQUE_CONSULTAR`, `ESTOQUE_RESERVAR` e
+`ESTOQUE_INVENTARIO_GERENCIAR`: `ESTOQUE_MOVIMENTAR`, `ESTOQUE_AJUSTAR` e `ESTOQUE_BLOQUEIO_GERENCIAR`
+saíram com as telas. Quem só tem `ESTOQUE_MOVIMENTAR` continua entrando por `/estoque/entradas` e
+`/estoque/saidas`, que nunca estiveram no menu (D76).
+
+O guard de `/cadastros` **não mudou**. `cadastrosAnyPermissions` é derivado dos `anyPermissions` dos
+itens do catálogo, e `masterOnly` não toca `anyPermissions` — a união segue idêntica e ninguém perde a
+Central.
+
+### A classe de defeito que esta fatia abriu, e o que a contém
+
+`validate:guard-permission-map` lê o menu pela AST, mas conhece apenas `permission`, `anyPermissions` e
+`allPermissions` (`scripts/lib/guard-permission-map.mjs`, `parseMenuPermissions`). **`masterOnly` é
+invisível para ele.** Marcar o item de menu e esquecer a regra de rota — ou o contrário — não reprova em
+gate nenhum, e o sintoma em produção seria a tela sumir do menu enquanto a URL digitada continua
+entrando.
+
+A contenção é `tests/unit/desenvolvimentoMasterOnly.test.ts`, com asserção **por item nominal nos dois
+sentidos**. E, como gate não é aceito por ficar verde, **foi medido que ele reprova**, contra esta
+árvore e não contra fixture:
+
+| Defeito injetado | Resultado medido |
+| --- | --- |
+| `masterOnly` removido da regra `/crm` | 3 testes vermelhos, nomeando `menu-sem-rota-/crm/leads`, `menu-sem-rota-/crm/oportunidades` e `menu-sem-rota-/crm/propostas`, e a regra `"CRM (leads, oportunidades e propostas)"` como não marcada |
+| item `CRM · Leads` devolvido ao grupo Vendas | 1 teste vermelho, nomeando `rota-sem-menu-/crm/leads` |
+
+Em ambos os casos a árvore foi restaurada e o arquivo conferido por `git diff` depois. O leitor de menu
+do teste também tem prova própria: lê `masterOnly` no grupo e no item e herda a marca do grupo para o
+filho, verificado contra um modelo de menu escrito à mão no próprio teste.
+
+### Medições desta fatia
+
+| O que | Valor | Como foi medido |
+| --- | --- | --- |
+| Itens no grupo Desenvolvimento | 11 | contagem direta no modelo de `layout/AppMenu.tsx`, assertada nominalmente no teste |
+| Permissões na união do grupo | 21 | `[...new Set(filhos.flatMap(permissoes))]` no teste, com asserção nos dois sentidos contra a lista do grupo |
+| Regras de rota marcadas | 8 | `routePermissionRules.filter((r) => r.masterOnly === true)`, nomeadas uma a uma |
+| `validate:guard-permission-map` | 549 chamadas, 36 módulos, 7 faltas registradas | execução do gate; as 7 são as mesmas da b77, nenhuma exceção nova |
+| `validate:backend-permissions` | union com 175 códigos, 2 fantasmas, 4 pendências | execução do gate; idênticos à b77 |
+| `validate:backend-contract-map` | 525 rotas únicas e compatíveis | execução do gate |
+| `validate:source`, `next lint`, `tsc --noEmit` | sem divergência / sem warning / sem erro | execução direta |
+| Testes do recorte | 188 passando em 18 arquivos | `npx vitest run` nos arquivos de CRM, Qualidade, Patrimônio, Atividades, Estoque, cadastros, rotas, permissões, guard-map e auth |
+
+### O que NÃO foi medido
+
+**E2E não rodou nesta fatia.** `risk.yaml` liga E2E para fatia de permissão, e a receita obrigatória
+exige servidor isolado na porta 3411, aferição de quem atende a porta e duas execuções. Isso não foi
+feito, e nada foi afirmado em seu lugar. Fica como pendência explícita: **a prova ao vivo de que a
+sessão com `CRM_CONSULTAR` e sem `isMaster` recebe a negação é a que falta**, e a cobertura atual dela é
+unitária.
+
+### Dívida registrada
+
+**Perfil só-Patrimônio cai em catálogo vazio.** Quem tiver exclusivamente permissões `PATRIMONIO_*`
+continua vendo "Cadastros" no menu e agora encontra o estado vazio "Nenhum cadastro encontrado". É
+`ILUSAO` nova e pequena: o item existe, a Central abre, e não há cadastro a oferecer. Corrigir exige
+mexer no `anyOf` da regra `/cadastros`, que tem accessRisk próprio e ficou fora desta fatia.
+
+**`b78` não foi usada.** D107 a reserva para a fatia de Boletos, já desenhada e ainda não entregue. O
+buraco numérico entre b77 e b79 é intencional, e não indica entrega perdida.
+
+### Seção operacional — risco de acesso `CAPACIDADE`
+
+**Quem perde o quê.** Todo usuário **não master** que hoje tem qualquer uma destas permissões perde
+acesso real — não ilusão de clicar — às telas correspondentes:
+
+| Permissões | Telas que deixam de abrir |
+| --- | --- |
+| `ESTOQUE_MOVIMENTAR` | Transferências e Ajustes de estoque |
+| `ESTOQUE_CONSULTAR`, `ESTOQUE_INVENTARIO_GERENCIAR`, `ESTOQUE_AJUSTAR`, `ESTOQUE_BLOQUEIO_GERENCIAR` | Estoque avançado |
+| `QUALIDADE_CONSULTAR`, `QUALIDADE_INSPECIONAR`, `QUALIDADE_NAO_CONFORMIDADE_GERENCIAR` | Inspeções e Não-conformidades |
+| `CRM_CONSULTAR`, `CRM_LEADS_GERENCIAR`, `CRM_OPORTUNIDADES_GERENCIAR`, `CRM_PROPOSTAS_GERENCIAR` | Leads, Oportunidades e Propostas |
+| `ATIVIDADES_*` | Workflow operacional |
+| `PATRIMONIO_CONSULTAR`, `PATRIMONIO_BENS_GERENCIAR`, `PATRIMONIO_DEPRECIAR`, `PATRIMONIO_INVENTARIO_GERENCIAR` | Bens, Depreciação e Inventário de patrimônio |
+
+**Não há permissão a conceder antes do deploy.** Esta é a diferença entre este caso e os anteriores de
+`CAPACIDADE` registrados aqui: nenhuma permissão foi retirada de nenhum grupo no backend, e o backend
+continua autorizando essas operações para quem as tem. A restrição é do frontend, e **devolver uma tela
+à operação é remover `masterOnly` dos dois lados** — do item em `layout/AppMenu.tsx` e da regra em
+`lib/security/routePermissions.ts` — numa fatia nova. Tirar de um lado só é o defeito que
+`tests/unit/desenvolvimentoMasterOnly.test.ts` reprova.
+
+**Quem administra grupos de acesso não precisa fazer nada** para este deploy. Não há ordem de concessão,
+e não existe risco de auto-bloqueio: `SEGURANCA_USUARIOS_*` e `SEGURANCA_GRUPOS_ACESSO_*` não foram
+tocadas.
+
+---
+
 # v1.11.0a8b77.c1
 
 ## Produto: editar abre o produto completo por id, e não a linha da listagem

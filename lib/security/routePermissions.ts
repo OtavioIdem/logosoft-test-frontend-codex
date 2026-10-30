@@ -4,6 +4,11 @@ export type RoutePermissionRule = {
     pattern: RegExp;
     anyOf: PermissionCode[];
     description: string;
+    // Par obrigatório do `masterOnly` do item de menu (D109). Marcar só um dos lados é a classe
+    // de defeito que esta fatia abriu: `validate:guard-permission-map` lê o menu pela AST mas
+    // conhece apenas permission/anyPermissions/allPermissions, então não acusa a dessincronia.
+    // Quem prova o par é `tests/unit/desenvolvimentoMasterOnly.test.ts`, item por item nominal.
+    masterOnly?: boolean;
 };
 
 export const routePermissionRules: RoutePermissionRule[] = [
@@ -21,12 +26,12 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/produtos(?:\/.*)?$/, anyOf: ['PRODUTOS_CONSULTAR', 'PRODUTOS_GERENCIAR', 'CATEGORIAS_PRODUTO_GERENCIAR', 'UNIDADES_MEDIDA_GERENCIAR', 'MARCAS_GERENCIAR', 'PRODUTOS_GRUPOS_GERENCIAR'], description: 'Produtos e catálogo' },
     { pattern: /^\/estoque\/entradas(?:\/.*)?$/, anyOf: ['ESTOQUE_MOVIMENTAR'], description: 'Entradas de estoque' },
     { pattern: /^\/estoque\/saidas(?:\/.*)?$/, anyOf: ['ESTOQUE_MOVIMENTAR'], description: 'Saídas de estoque' },
-    { pattern: /^\/estoque\/ajustes(?:\/.*)?$/, anyOf: ['ESTOQUE_MOVIMENTAR'], description: 'Ajustes de estoque' },
-    { pattern: /^\/estoque\/transferencias(?:\/.*)?$/, anyOf: ['ESTOQUE_MOVIMENTAR'], description: 'Transferências de estoque' },
-    { pattern: /^\/estoque\/bloqueios(?:\/.*)?$/, anyOf: ['ESTOQUE_MOVIMENTAR'], description: 'Bloqueios de estoque' },
+    { pattern: /^\/estoque\/ajustes(?:\/.*)?$/, anyOf: ['ESTOQUE_MOVIMENTAR'], description: 'Ajustes de estoque', masterOnly: true },
+    { pattern: /^\/estoque\/transferencias(?:\/.*)?$/, anyOf: ['ESTOQUE_MOVIMENTAR'], description: 'Transferências de estoque', masterOnly: true },
+    { pattern: /^\/estoque\/bloqueios(?:\/.*)?$/, anyOf: ['ESTOQUE_MOVIMENTAR'], description: 'Bloqueios de estoque', masterOnly: true },
     { pattern: /^\/estoque\/reservas(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'ESTOQUE_RESERVAR'], description: 'Reservas de estoque' },
     { pattern: /^\/estoque\/inventarios(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'ESTOQUE_INVENTARIO_GERENCIAR'], description: 'Inventários de estoque' },
-    { pattern: /^\/estoque\/avancado(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'ESTOQUE_INVENTARIO_GERENCIAR', 'ESTOQUE_AJUSTAR', 'ESTOQUE_BLOQUEIO_GERENCIAR'], description: 'Estoque avançado' },
+    { pattern: /^\/estoque\/avancado(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'ESTOQUE_INVENTARIO_GERENCIAR', 'ESTOQUE_AJUSTAR', 'ESTOQUE_BLOQUEIO_GERENCIAR'], description: 'Estoque avançado', masterOnly: true },
     { pattern: /^\/estoque\/locais(?:\/.*)?$/, anyOf: ['ESTOQUE_CONSULTAR', 'LOCAIS_ESTOQUE_GERENCIAR'], description: 'Locais de estoque' },
     // Regras próprias (D76): os componentes de Saldos e do Histórico de Movimentos já recusam quem
     // não tem ESTOQUE_CONSULTAR (`SaldosEstoquePage`/`HistoricoMovimentosTab`), então o catch-all de
@@ -66,14 +71,14 @@ export const routePermissionRules: RoutePermissionRule[] = [
     { pattern: /^\/portaria(?:\/.*)?$/, anyOf: ['PORTARIA_CONSULTAR', 'PORTARIA_PREAUTORIZAR', 'PORTARIA_OPERAR'], description: 'Portaria (controle de acesso)' },
     { pattern: /^\/alimentar(?:\/.*)?$/, anyOf: ['ALIMENTAR_CONSULTAR', 'ALIMENTAR_LOTES_GERENCIAR', 'ALIMENTAR_RECALL_GERENCIAR'], description: 'Alimentar (lotes e recall)' },
     { pattern: /^\/rh(?:\/.*)?$/, anyOf: ['RH_CONSULTAR', 'RH_GERENCIAR', 'RH_PONTO_REGISTRAR', 'RH_EVENTOS_GERENCIAR'], description: 'RH (colaboradores, ponto, ausências, benefícios, eventos)' },
-    { pattern: /^\/qualidade(?:\/.*)?$/, anyOf: ['QUALIDADE_CONSULTAR', 'QUALIDADE_INSPECIONAR', 'QUALIDADE_NAO_CONFORMIDADE_GERENCIAR'], description: 'Qualidade (inspeções e não-conformidades)' },
+    { pattern: /^\/qualidade(?:\/.*)?$/, anyOf: ['QUALIDADE_CONSULTAR', 'QUALIDADE_INSPECIONAR', 'QUALIDADE_NAO_CONFORMIDADE_GERENCIAR'], description: 'Qualidade (inspeções e não-conformidades)', masterOnly: true },
     { pattern: /^\/producao(?:\/.*)?$/, anyOf: ['PRODUCAO_CONSULTAR', 'PRODUCAO_FICHA_TECNICA_GERENCIAR', 'PRODUCAO_ORDENS_GERENCIAR', 'PRODUCAO_ORDENS_LIBERAR', 'PRODUCAO_ORDENS_APONTAR', 'PRODUCAO_ORDENS_ENCERRAR', 'PRODUCAO_ORDENS_CANCELAR'], description: 'Produção (fichas técnicas e ordens de produção)' },
     { pattern: /^\/contratos(?:\/.*)?$/, anyOf: ['CONTRATOS_CONSULTAR', 'CONTRATOS_GERENCIAR', 'CONTRATOS_FATURAR'], description: 'Contratos (faturamento recorrente e por consumo)' },
-    { pattern: /^\/crm(?:\/.*)?$/, anyOf: ['CRM_CONSULTAR', 'CRM_LEADS_GERENCIAR', 'CRM_OPORTUNIDADES_GERENCIAR', 'CRM_CONVERTER', 'CRM_PROPOSTAS_GERENCIAR'], description: 'CRM (leads, oportunidades e propostas)' },
+    { pattern: /^\/crm(?:\/.*)?$/, anyOf: ['CRM_CONSULTAR', 'CRM_LEADS_GERENCIAR', 'CRM_OPORTUNIDADES_GERENCIAR', 'CRM_CONVERTER', 'CRM_PROPOSTAS_GERENCIAR'], description: 'CRM (leads, oportunidades e propostas)', masterOnly: true },
     { pattern: /^\/contabil(?:\/.*)?$/, anyOf: ['CONTABIL_CONSULTAR', 'CONTABIL_PLANO_CONTAS_GERENCIAR', 'CONTABIL_PERIODOS_GERENCIAR', 'CONTABIL_LANCAMENTOS_GERENCIAR', 'CONTABIL_LANCAMENTOS_ESTORNAR', 'CONTABIL_REGRAS_GERENCIAR'], description: 'Contábil (plano de contas, períodos, lançamentos, regras)' },
-    { pattern: /^\/patrimonio(?:\/.*)?$/, anyOf: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_BENS_GERENCIAR', 'PATRIMONIO_TRANSFERIR', 'PATRIMONIO_BAIXAR', 'PATRIMONIO_DEPRECIAR', 'PATRIMONIO_INVENTARIO_GERENCIAR'], description: 'Patrimônio (bens, depreciação e inventário)' },
+    { pattern: /^\/patrimonio(?:\/.*)?$/, anyOf: ['PATRIMONIO_CONSULTAR', 'PATRIMONIO_BENS_GERENCIAR', 'PATRIMONIO_TRANSFERIR', 'PATRIMONIO_BAIXAR', 'PATRIMONIO_DEPRECIAR', 'PATRIMONIO_INVENTARIO_GERENCIAR'], description: 'Patrimônio (bens, depreciação e inventário)', masterOnly: true },
     { pattern: /^\/bancos(?:\/.*)?$/, anyOf: ['BANCOS_CONSULTAR', 'BANCOS_GERENCIAR', 'BOLETOS_GERAR', 'BOLETOS_CANCELAR', 'CNAB_REMESSA_GERAR', 'CNAB_RETORNO_PROCESSAR'], description: 'Bancos, boletos e CNAB' },
-    { pattern: /^\/atividades(?:\/.*)?$/, anyOf: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_CRIAR', 'ATIVIDADES_ATUALIZAR', 'ATIVIDADES_CANCELAR', 'ATIVIDADES_COMENTAR', 'ATIVIDADES_ATRIBUIR'], description: 'Atividades' },
+    { pattern: /^\/atividades(?:\/.*)?$/, anyOf: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_CRIAR', 'ATIVIDADES_ATUALIZAR', 'ATIVIDADES_CANCELAR', 'ATIVIDADES_COMENTAR', 'ATIVIDADES_ATRIBUIR'], description: 'Atividades', masterOnly: true },
     { pattern: /^\/relatorios(?:\/.*)?$/, anyOf: ['RELATORIOS_OPERACIONAIS_CONSULTAR', 'RELATORIOS_VENDAS_CONSULTAR', 'RELATORIOS_COMPRAS_CONSULTAR', 'RELATORIOS_FINANCEIRO_CONSULTAR', 'RELATORIOS_ESTOQUE_CONSULTAR', 'RELATORIOS_FISCAL_CONSULTAR', 'RELATORIOS_PRODUCAO_CONSULTAR', 'RELATORIOS_DASHBOARD_CONSULTAR', 'RELATORIOS_EXPORTAR'], description: 'Relatórios' },
     { pattern: /^\/auditoria(?:\/.*)?$/, anyOf: ['AUDITORIA_CONSULTAR', 'AUDITORIA_OPERACIONAL_CONSULTAR'], description: 'Auditoria' }
 ];
