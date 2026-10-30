@@ -40,7 +40,20 @@
       "Bash(echo \"BUILD_EXIT=$? at $\\(date\\)\")",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/login)",
       "Bash(git commit *)",
-      "PowerShell(git fetch --all --prune 2>&1)"
+      "PowerShell(git fetch --all --prune 2>&1)",
+      "Bash(git merge *)",
+      "Bash(echo \"=== imagens logosoft ===\" && docker images --format \"{{.Repository}}:{{.Tag}}  {{.ID}}  {{.CreatedSince}}  {{.Size}}\" 2>&1 | grep -i logosoft | head; echo \"=== compose do projeto QA \\(so leitura\\) ===\" && grep -n -iE \"image|frontend\" \"E:/Programacao_VisualStudio/logosoft-frontend-QA/compose.yaml\" | head -12; echo \"=== .env.example do QA ===\" && grep -n -iE \"tag|image|frontend\" \"E:/Programacao_VisualStudio/logosoft-frontend-QA/.env.example\" | head -8)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(echo \"STOP_EXIT=$?\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1:3499/login)",
+      "Bash(echo \"CURL_EXIT=$?\")",
+      "Bash(sed -E 's/\\(\\(PASSWORD|SECRET|TOKEN|KEY\\)[A-Z_]*=\\).*/\\\\1***/I')",
+      "Bash(git pull *)",
+      "Bash(date +%s)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} redirect=%{redirect_url}\\\\n\" http://127.0.0.1:3000/login)",
+      "Bash(curl -s -o /dev/null -w \"root %{http_code} redirect=%{redirect_url}\\\\n\" http://127.0.0.1:3000/)",
+      "Bash(netstat -ano)"
     ]
   }
 }
