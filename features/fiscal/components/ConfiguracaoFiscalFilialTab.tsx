@@ -1,7 +1,8 @@
 'use client';
 
-// Aba "Filiais" da Configuração de emissão (v1.11.0a8b81, D112). A lista de filiais vem do endpoint de
-// administração; ao escolher uma, GET filiais/{id}. 404 = "herda da empresa" (estado, não erro: o client devolve
+// Aba "Filiais" da Configuração de emissão (v1.11.0a8b81, D112; D115). Não há seletor de filial: a filial é a do seletor de
+// contexto do header (`filialId` vem da página). Sem filial no header, a aba pede para escolher e não consulta. Com ela,
+// GET filiais/{id}. 404 = "herda da empresa" (estado, não erro: o client devolve
 // `null`). Com `herdaConfiguracaoEmpresa = true` os campos próprios ficam desabilitados e o texto diz que são
 // ignorados na emissão. Séries padrão são texto livre (contrato).
 
@@ -16,8 +17,6 @@ import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
 import { ApiErrorPanel } from '@/components/feedback/ApiErrorPanel';
 import { LoadingState } from '@/components/feedback/LoadingState';
-import { EntitySelect } from '@/components/forms/EntitySelect';
-import { useFiliaisOptions } from '@/features/administracao/hooks/useEmpresaFilialOptions';
 import { useAppToast } from '@/hooks/useAppToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { ApiError } from '@/types/erp';
@@ -52,26 +51,23 @@ const formDe = (config: ConfiguracaoFiscalFilialResponse | null | undefined): Fi
 
 export const ConfiguracaoFiscalFilialTab = ({
     escopo,
-    empresaContextoId,
     filialId,
-    onFilialChange,
     contextoDivergente,
     podeConsultar,
     podeGerenciar
 }: {
     escopo: ConfiguracaoFiscalEscopo;
-    empresaContextoId: string | null;
+    /** Filial do seletor de contexto (header); `null` = nenhuma selecionada. */
     filialId: string | null;
-    onFilialChange: (filialId: string | null) => void;
-    /** Contexto selecionado diverge da empresa do usuário: as filiais listadas não são as que o backend aceita. */
+    /** Contexto selecionado diverge da empresa do usuário (não master): a filial do header não é a que o backend aceita. */
     contextoDivergente: boolean;
     podeConsultar: boolean;
     podeGerenciar: boolean;
 }) => {
     const toast = useAppToast();
-    const filiais = useFiliaisOptions(empresaContextoId);
     const filialQuery = useConfiguracaoFiscalFilial(escopo, filialId, podeConsultar && !contextoDivergente);
-    const certificadosQuery = useCertificadosDigitais(escopo, false, podeConsultar && !contextoDivergente);
+    // Sem filial no header a aba não faz requisição nenhuma (os certificados só alimentam o campo da filial).
+    const certificadosQuery = useCertificadosDigitais(escopo, false, podeConsultar && !contextoDivergente && Boolean(filialId));
     const mutations = useConfiguracaoFiscalMutations(escopo);
     const [values, setValues] = useState<FilialFormValues>(formPadrao);
     const [erro, setErro] = useState<ApiError | null>(null);
@@ -111,15 +107,14 @@ export const ConfiguracaoFiscalFilialTab = ({
 
     return (
         <>
-            {filiais.blocked ? <Message severity="warn" className="w-full mb-3" text={filiais.blockedMessage} /> : null}
-            {filiais.error ? <ApiErrorPanel error={mapApiError(filiais.error)} /> : null}
-            <div className="mb-3 md:w-6">
-                <label htmlFor="filial-seletor" className="font-medium block mb-2">{CONFIGURACAO_FISCAL_FILIAL.selecionar}</label>
-                <EntitySelect id="filial-seletor" ariaLabel={CONFIGURACAO_FISCAL_FILIAL.selecionar} entityName="filial" value={filialId} options={filiais.options} loading={filiais.isFetching} disabled={filiais.blocked} onChange={onFilialChange} />
-                {!filiais.blocked && !filiais.isFetching && filiais.options.length === 0 ? <small className="text-color-secondary block mt-1">{CONFIGURACAO_FISCAL_FILIAL.semFiliais}</small> : null}
-            </div>
-
-            {!filialId ? <Message severity="info" className="w-full" text={CONFIGURACAO_FISCAL_FILIAL.selecionarVazio} /> : null}
+            {filialId ? (
+                <div className="mb-3">
+                    <span className="text-color-secondary text-sm block">{CONFIGURACAO_FISCAL_FILIAL.selecionar}</span>
+                    <strong data-testid="filial-do-contexto">{CONFIGURACAO_FISCAL_FILIAL.filialDoContexto}</strong>
+                </div>
+            ) : (
+                <Message severity="info" className="w-full" text={CONFIGURACAO_FISCAL_FILIAL.selecionarNoContexto} />
+            )}
             {filialId && filialQuery.isLoading ? <LoadingState variant="panel" /> : null}
             {filialId && filialQuery.error ? (
                 <>

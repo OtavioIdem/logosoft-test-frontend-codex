@@ -42,11 +42,11 @@ const mockedUseAuth = vi.mocked(useAuth) as unknown as ReturnType<typeof vi.fn>;
 
 const EMPRESA_OUTRA_ID = '99999999-9999-9999-9999-999999999999';
 
-const contextoPara = (empresaId: string | null, isMaster = false) => {
-    const snapshot = Object.freeze({ empresaId, filialId: null, isMaster, revision: 1 });
+const contextoPara = (empresaId: string | null, isMaster = false, filialId: string | null = null) => {
+    const snapshot = Object.freeze({ empresaId, filialId, isMaster, revision: 1 });
     return {
         empresaId,
-        filialId: null,
+        filialId,
         isGlobal: false,
         canChangeOrganization: true,
         requiresOrganizationSelection: false,
@@ -58,14 +58,14 @@ const contextoPara = (empresaId: string | null, isMaster = false) => {
 };
 
 // Padrão: usuário NÃO master (D114). Só o master passa isMaster = true.
-const sessao = (permissoes: string[], empresaUsuario = EMPRESA_USUARIO_ID, contextoEmpresa: string | null = EMPRESA_USUARIO_ID, isMaster = false) => {
+const sessao = (permissoes: string[], empresaUsuario = EMPRESA_USUARIO_ID, contextoEmpresa: string | null = EMPRESA_USUARIO_ID, isMaster = false, filialContexto: string | null = null) => {
     mockedUsePermissions.mockReturnValue({
         hasPermission: (code: string) => permissoes.includes(code),
         hasAnyPermission: (codes: string[]) => codes.some((code) => permissoes.includes(code)),
         hasAllPermissions: (codes: string[]) => codes.every((code) => permissoes.includes(code))
     });
     mockedUseAuth.mockReturnValue({ user: { id: 'u-1', nome: 'Operador', email: 'op@logosoft.local', empresaId: empresaUsuario, permissoes } });
-    const contexto = contextoPara(contextoEmpresa, isMaster);
+    const contexto = contextoPara(contextoEmpresa, isMaster, filialContexto);
     mockedUseOrganizationalContext.mockReturnValue(contexto);
     return contexto;
 };
@@ -229,42 +229,41 @@ describe('AC-11: usuário não master com empresa selecionada diferente da do us
     });
 });
 
-describe('trocar o escopo organizacional limpa a filial escolhida', () => {
+// D115 (AC-3): a filial é a do header. Trocar só a filial no header troca a filial exibida; nada da anterior fica.
+describe('trocar a filial no header troca a filial exibida (D115, AC-3)', () => {
     let restaurar: (() => void) | undefined;
     afterEach(() => {
         restaurar?.();
         restaurar = undefined;
     });
 
-    // Troca de empresa real (master indo para outra empresa) cai no bloqueio de contexto divergente, já coberto pelo
-    // teste da aba Filiais. Aqui o escopo muda na MESMA empresa do usuário (nova revisão do contexto), que é o caso em que
-    // a página precisa esquecer a filial: a chave de escopo mudou, então a filial de antes não vale mais.
-    it('a filial escolhida some e volta a instrução "Selecione uma filial"', async () => {
-        const contexto = sessao(['FISCAL_CONFIGURACAO_CONSULTAR', 'FISCAL_CONFIGURACAO_GERENCIAR']);
-        const servidor = instalarServidorFiscal(
-            rotasBase({
-                [`GET /api/fiscal/configuracao/filiais/${FILIAL_ID}`]: { status: 200, body: filialConfigurada({ herdaConfiguracaoEmpresa: false }) }
-            })
-        );
+    it('a filial F1 some e a F2 aparece; as requisições seguintes vão só à F2', async () => {
+        const FILIAL_F2 = '77777777-7777-7777-7777-777777777777';
+        const contexto = sessao(['FISCAL_CONFIGURACAO_CONSULTAR', 'FISCAL_CONFIGURACAO_GERENCIAR'], EMPRESA_USUARIO_ID, EMPRESA_USUARIO_ID, false, FILIAL_ID);
+        const servidor = instalarServidorFiscal({
+            [`GET /api/fiscal/configuracao/filiais/${FILIAL_ID}`]: { status: 200, body: filialConfigurada({ serieNFePadrao: '1' }) },
+            [`GET /api/fiscal/configuracao/filiais/${FILIAL_F2}`]: { status: 200, body: filialConfigurada({ id: '88888888-8888-8888-8888-888888888888', filialId: FILIAL_F2, serieNFePadrao: '2' }) }
+        });
         restaurar = servidor.restaurar;
         const usuario = userEvent.setup();
 
         const { rerender, queryClient } = renderPagina();
         await usuario.click(await screen.findByRole('tab', { name: CONFIGURACAO_FISCAL_PAGINA.abaFiliais }));
-        await usuario.selectOptions(await screen.findByRole('combobox', { name: CONFIGURACAO_FISCAL_FILIAL.selecionar }), 'Filial Centro');
-        expect(await screen.findByLabelText(CONFIGURACAO_FISCAL_FILIAL.serieNFePadrao)).toBeInTheDocument();
+        expect(await screen.findByLabelText(CONFIGURACAO_FISCAL_FILIAL.serieNFePadrao)).toHaveValue('1');
 
-        // Mesma empresa do usuário, nova revisão do contexto: a chave de escopo muda e a página tem de esquecer a filial.
-        const snapshotNovo = Object.freeze({ empresaId: EMPRESA_USUARIO_ID, filialId: null, isMaster: false, revision: 2 });
-        mockedUseOrganizationalContext.mockReturnValue({ ...contexto, organizationalScopeKey: organizationalScopeKey(snapshotNovo) });
+        // Troca só a filial no header (mesma empresa): nova revisão do contexto, nova chave.
+        const antesDaTroca = servidor.chamadas.length;
+        const snapshotF2 = Object.freeze({ empresaId: EMPRESA_USUARIO_ID, filialId: FILIAL_F2, isMaster: false, revision: 2 });
+        mockedUseOrganizationalContext.mockReturnValue({ ...contexto, filialId: FILIAL_F2, snapshot: snapshotF2, organizationalScopeKey: organizationalScopeKey(snapshotF2) });
         rerender(
             <QueryClientProvider client={queryClient}>
                 <ConfiguracaoFiscalPage />
             </QueryClientProvider>
         );
 
-        expect(await screen.findByText(CONFIGURACAO_FISCAL_FILIAL.selecionarVazio)).toBeInTheDocument();
-        expect(screen.queryByLabelText(CONFIGURACAO_FISCAL_FILIAL.serieNFePadrao)).not.toBeInTheDocument();
-        expect(within(document.body).queryByText(CONFIGURACAO_FISCAL_FILIAL.herdaTitulo, { exact: false })).not.toBeInTheDocument();
+        expect(await screen.findByLabelText(CONFIGURACAO_FISCAL_FILIAL.serieNFePadrao)).toHaveValue('2');
+        const depois = servidor.chamadas.slice(antesDaTroca).filter((chamada) => chamada.url.includes('/filiais/'));
+        expect(depois.length).toBeGreaterThan(0);
+        expect(depois.every((chamada) => chamada.url === `/api/fiscal/configuracao/filiais/${FILIAL_F2}`)).toBe(true);
     });
 });

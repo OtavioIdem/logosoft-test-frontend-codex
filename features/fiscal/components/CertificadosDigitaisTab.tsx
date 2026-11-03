@@ -45,7 +45,7 @@ export const CertificadosDigitaisTab = ({
 }: {
     escopo: ConfiguracaoFiscalEscopo;
     empresaContextoId: string | null;
-    /** Filial escolhida na aba Filiais: só a configuração já carregada dela entra no aviso de vínculo. */
+    /** Filial do seletor de contexto (D115): só a configuração já carregada dela entra no aviso de vínculo e no cadastro. */
     filialSelecionadaId: string | null;
     contextoDivergente: boolean;
     sefazSimulada: boolean;
@@ -70,7 +70,10 @@ export const CertificadosDigitaisTab = ({
 
     const certificados = certificadosQuery.data ?? [];
     const filialLabelPorId = new Map(filiais.options.map((option) => [option.value, option.label]));
-    const filialIndisponivel = contextoDivergente ? 'Indisponível: a empresa selecionada no contexto é diferente da empresa do seu usuário.' : filiais.blocked ? filiais.blockedMessage : undefined;
+    // D115: a filial do cadastro é a do header; com o contexto divergente da empresa do usuário ela não vale para esta empresa.
+    const filialDoCadastro = contextoDivergente ? null : filialSelecionadaId;
+    // `useFiliaisOptions` serve só aos rótulos (coluna Filial e nome no cadastro); não há seletor de filial na tela.
+    const filialDoCadastroRotulo = filialDoCadastro ? filialLabelPorId.get(filialDoCadastro) : undefined;
 
     const vinculado = inativando ? certificadoVinculadoAConfiguracaoAtiva(inativando.id, empresaQuery.data, filialQuery.data) : false;
 
@@ -186,7 +189,7 @@ export const CertificadosDigitaisTab = ({
                 {!certificadosQuery.isLoading && !certificadosQuery.error && certificados.length === 0 ? <EmptyState title={CERTIFICADOS_DIGITAIS.vazioTitulo} description={CERTIFICADOS_DIGITAIS.vazioDescricao} action={<Button type="button" label="Atualizar" icon="pi pi-refresh" text onClick={() => certificadosQuery.refetch()} />} /> : null}
             </Card>
 
-            <CertificadoCadastrarDialog visible={cadastrando} loading={mutations.cadastrarCertificadoMutation.isPending} error={erroDialogo} filialOptions={filiais.options} filialLoading={filiais.isFetching} filialIndisponivel={filialIndisponivel} onHide={fecharCadastro} onSubmit={cadastrar} />
+            <CertificadoCadastrarDialog visible={cadastrando} loading={mutations.cadastrarCertificadoMutation.isPending} error={erroDialogo} filialContextoId={filialDoCadastro} filialContextoRotulo={filialDoCadastroRotulo} onHide={fecharCadastro} onSubmit={cadastrar} />
             <ConfiguracaoFiscalMotivoDialog
                 visible={Boolean(inativando)}
                 title={CERTIFICADO_INATIVAR_DIALOG.titulo(inativando?.apelido ?? '')}
