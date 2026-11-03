@@ -3035,3 +3035,31 @@ consultada (mesma guarda de `useFiliaisOptions`), e a UF sugerida cai na da empr
 conveniência, o campo continua editável, e o backend valida (D94). Fica coberto por teste. O caso
 QA-03 (a espera pelo botão habilitar nos helpers de três testes antigos) é setup, consequência direta do
 Confirmar passar a depender da prontidão, e não muda nenhuma asserção.
+
+## D114 — Configuração de emissão para o master: empresa do seletor via `?empresaId=` (2026-11-03, v1.11.0a8b82.c3)
+
+**Contexto:** a correção v1.26.23 do backend (`docs/etapa-v1.26.23-master-na-configuracao-fiscal.md`, branch
+`fix/v1.26.23-master-configuracao-fiscal`, ainda não commitada) mostrou que a tela da b81 nunca abriu para o
+master/GOD. O master não tem `empresa_id` no token, e toda rota respondia `Fiscal.Configuracao.EmpresaObrigatoria`.
+O backend passou a ler a empresa escolhida da query `empresaId` (D1). Para usuário de empresa, a escolha ausente ou
+igual à do token passa, e a diferente vira 404 genérico (D2). Nas rotas de filial, sem escolha, vale a empresa da
+filial; com escolha, a filial tem de ser dela (D3).
+
+**Decidido:**
+- **Só o master injeta empresa.** Para `isMaster`, as 10 chamadas de `configuracaoFiscalApi` usam o escopo
+  `query`, com `required: true` e `includeFilial: false`, e levam `?empresaId=` da empresa ativa no seletor.
+  - `includeFilial: false` porque a filial vai na rota, e um `filialId` injetado na lista de certificados mudaria o
+    filtro.
+  - Sem empresa no seletor, a política recusa antes da rede, e a tela diz "selecione uma empresa no seletor de
+    contexto".
+- **O usuário não master não muda nada:** continua com o escopo `global`, sem `empresaId`. O plano do backend sugere
+  injetar para todos, mas isso só é inofensivo quando o contexto é a empresa do token. Com o contexto divergente, o
+  backend responde 404 mascarado, que a tela leria como "não configurada". Mantém-se o aviso de divergência e o
+  bloqueio da aba Filiais da D112.
+- **Para o master, não existe divergência:** o aviso some, e a aba Filiais é liberada (filiais da empresa do
+  seletor). O topo da página informa qual empresa está sendo configurada.
+- **Cache:** as chaves já levam `organizationalScopeKey`, então trocar de empresa no seletor refaz as consultas.
+- **Compatibilidade:** contra o backend v1.26.22 sem a v1.26.23, o `empresaId` é ignorado, e o master continua vendo
+  o erro de antes. Não há regressão para o usuário comum.
+
+`accessRisk: NENHUM`: o master ganha uso, e ninguém perde. Reversível: sim.

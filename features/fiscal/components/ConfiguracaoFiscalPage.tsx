@@ -3,9 +3,10 @@
 // Tela Fiscal › Configuração de emissão (v1.11.0a8b81, D112). Três abas: Empresa, Filiais e Certificados. Padrão
 // visual de `SeriesFiscaisPage.tsx`.
 //
-// A empresa vem do TOKEN (`empresa_id` do JWT), não do contexto selecionado: nenhuma chamada injeta `empresaId`.
-// Quando o contexto selecionado diverge da empresa do usuário (master trocando de empresa), a tela avisa que mostra
-// a configuração da empresa do usuário (AC-11).
+// Usuário comum: a empresa vem do TOKEN (`empresa_id` do JWT) e nenhuma chamada injeta `empresaId`. Quando o contexto
+// selecionado diverge da empresa do usuário, a tela avisa que mostra a configuração da empresa do usuário (AC-11).
+// Master (D114): não tem empresa no token; as chamadas levam `?empresaId=` da empresa do seletor de contexto, não há
+// divergência, a aba Filiais fica liberada e, sem empresa no seletor, a tela pede para escolher e não consulta nada.
 
 import { useEffect, useMemo, useState } from 'react';
 import { Message } from 'primereact/message';
@@ -41,8 +42,14 @@ export const ConfiguracaoFiscalPage = () => {
 
     const usuarioEmpresaId = normalizeGuidOrNull(user?.empresaId);
     const empresaContextoId = context.empresaId;
-    const contextoDivergente = contextoDivergeDaEmpresaDoUsuario(empresaContextoId, usuarioEmpresaId);
-    const escopo = useMemo<ConfiguracaoFiscalEscopo>(() => ({ organizationalScopeKey: context.organizationalScopeKey, usuarioEmpresaId }), [context.organizationalScopeKey, usuarioEmpresaId]);
+    const master = context.snapshot.isMaster;
+    // D114: para o master a empresa configurada É a do seletor, então nunca diverge.
+    const contextoDivergente = master ? false : contextoDivergeDaEmpresaDoUsuario(empresaContextoId, usuarioEmpresaId);
+    const escopo = useMemo<ConfiguracaoFiscalEscopo>(
+        () => ({ organizationalScopeKey: context.organizationalScopeKey, usuarioEmpresaId, master, empresaContextoId, snapshot: context.snapshot }),
+        [context.organizationalScopeKey, usuarioEmpresaId, master, empresaContextoId, context.snapshot]
+    );
+    const masterSemEmpresa = master && !empresaContextoId;
 
     // Trocar o contexto organizacional invalida a filial escolhida (ela pertencia a outra empresa).
     useEffect(() => {
@@ -63,18 +70,22 @@ export const ConfiguracaoFiscalPage = () => {
 
             {sefazSimulada ? <Message severity="warn" className="w-full mb-3" text={CONFIGURACAO_FISCAL_PAGINA.seloSefazSimuladaDetalhe} /> : null}
             {contextoDivergente ? <Message severity="warn" className="w-full mb-3" text={CONFIGURACAO_FISCAL_PAGINA.avisoContextoDivergente} /> : null}
+            {master && !masterSemEmpresa ? <Message severity="info" className="w-full mb-3" text={CONFIGURACAO_FISCAL_PAGINA.masterEmpresaSelecionada} /> : null}
+            {masterSemEmpresa ? <Message severity="warn" className="w-full mb-3" text={`${CONFIGURACAO_FISCAL_PAGINA.masterSemEmpresaTitulo}. ${CONFIGURACAO_FISCAL_PAGINA.masterSemEmpresa}`} /> : null}
 
-            <TabView activeIndex={abaAtiva} onTabChange={(event) => setAbaAtiva(event.index)}>
-                <TabPanel header={CONFIGURACAO_FISCAL_PAGINA.abaEmpresa}>
-                    <ConfiguracaoFiscalEmpresaTab escopo={escopo} podeConsultar={podeConsultar} podeGerenciar={podeGerenciar} />
-                </TabPanel>
-                <TabPanel header={CONFIGURACAO_FISCAL_PAGINA.abaFiliais}>
-                    <ConfiguracaoFiscalFilialTab escopo={escopo} empresaContextoId={empresaContextoId} filialId={filialId} onFilialChange={setFilialId} contextoDivergente={contextoDivergente} podeConsultar={podeConsultar} podeGerenciar={podeGerenciar} />
-                </TabPanel>
-                <TabPanel header={CONFIGURACAO_FISCAL_PAGINA.abaCertificados}>
-                    <CertificadosDigitaisTab escopo={escopo} empresaContextoId={empresaContextoId} filialSelecionadaId={filialId} contextoDivergente={contextoDivergente} sefazSimulada={sefazSimulada} podeConsultar={podeConsultar} podeGerenciar={podeGerenciar} />
-                </TabPanel>
-            </TabView>
+            {masterSemEmpresa ? null : (
+                <TabView activeIndex={abaAtiva} onTabChange={(event) => setAbaAtiva(event.index)}>
+                    <TabPanel header={CONFIGURACAO_FISCAL_PAGINA.abaEmpresa}>
+                        <ConfiguracaoFiscalEmpresaTab key={context.organizationalScopeKey} escopo={escopo} podeConsultar={podeConsultar} podeGerenciar={podeGerenciar} />
+                    </TabPanel>
+                    <TabPanel header={CONFIGURACAO_FISCAL_PAGINA.abaFiliais}>
+                        <ConfiguracaoFiscalFilialTab key={context.organizationalScopeKey} escopo={escopo} empresaContextoId={empresaContextoId} filialId={filialId} onFilialChange={setFilialId} contextoDivergente={contextoDivergente} podeConsultar={podeConsultar} podeGerenciar={podeGerenciar} />
+                    </TabPanel>
+                    <TabPanel header={CONFIGURACAO_FISCAL_PAGINA.abaCertificados}>
+                        <CertificadosDigitaisTab key={context.organizationalScopeKey} escopo={escopo} empresaContextoId={empresaContextoId} filialSelecionadaId={filialId} contextoDivergente={contextoDivergente} sefazSimulada={sefazSimulada} podeConsultar={podeConsultar} podeGerenciar={podeGerenciar} />
+                    </TabPanel>
+                </TabView>
+            )}
         </>
     );
 };

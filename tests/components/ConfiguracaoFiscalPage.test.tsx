@@ -42,8 +42,8 @@ const mockedUseAuth = vi.mocked(useAuth) as unknown as ReturnType<typeof vi.fn>;
 
 const EMPRESA_OUTRA_ID = '99999999-9999-9999-9999-999999999999';
 
-const contextoPara = (empresaId: string | null) => {
-    const snapshot = Object.freeze({ empresaId, filialId: null, isMaster: true, revision: 1 });
+const contextoPara = (empresaId: string | null, isMaster = false) => {
+    const snapshot = Object.freeze({ empresaId, filialId: null, isMaster, revision: 1 });
     return {
         empresaId,
         filialId: null,
@@ -57,14 +57,15 @@ const contextoPara = (empresaId: string | null) => {
     };
 };
 
-const sessao = (permissoes: string[], empresaUsuario = EMPRESA_USUARIO_ID, contextoEmpresa: string | null = EMPRESA_USUARIO_ID) => {
+// Padrão: usuário NÃO master (D114). Só o master passa isMaster = true.
+const sessao = (permissoes: string[], empresaUsuario = EMPRESA_USUARIO_ID, contextoEmpresa: string | null = EMPRESA_USUARIO_ID, isMaster = false) => {
     mockedUsePermissions.mockReturnValue({
         hasPermission: (code: string) => permissoes.includes(code),
         hasAnyPermission: (codes: string[]) => codes.some((code) => permissoes.includes(code)),
         hasAllPermissions: (codes: string[]) => codes.every((code) => permissoes.includes(code))
     });
     mockedUseAuth.mockReturnValue({ user: { id: 'u-1', nome: 'Operador', email: 'op@logosoft.local', empresaId: empresaUsuario, permissoes } });
-    const contexto = contextoPara(contextoEmpresa);
+    const contexto = contextoPara(contextoEmpresa, isMaster);
     mockedUseOrganizationalContext.mockReturnValue(contexto);
     return contexto;
 };
@@ -187,7 +188,7 @@ describe('AC-10: selo "SEFAZ simulada" só com fiscal.mock === true no health', 
     });
 });
 
-describe('AC-11: master com empresa selecionada diferente da do usuário vê o aviso', () => {
+describe('AC-11: usuário não master com empresa selecionada diferente da do usuário vê o aviso (D114)', () => {
     let restaurar: (() => void) | undefined;
     afterEach(() => {
         restaurar?.();
@@ -202,6 +203,18 @@ describe('AC-11: master com empresa selecionada diferente da do usuário vê o a
         renderPagina();
 
         expect(await screen.findByText(CONFIGURACAO_FISCAL_PAGINA.avisoContextoDivergente)).toBeInTheDocument();
+    });
+
+    it('master com empresa selecionada diferente da do usuário: sem aviso, porque para o master não há divergência (D114)', async () => {
+        sessao(['FISCAL_CONFIGURACAO_CONSULTAR'], EMPRESA_USUARIO_ID, EMPRESA_OUTRA_ID, true);
+        const servidor = instalarServidorFiscal(rotasBase());
+        restaurar = servidor.restaurar;
+
+        renderPagina();
+
+        // A mensagem de configuração do master aparece; a de divergência não.
+        expect(await screen.findByText(CONFIGURACAO_FISCAL_PAGINA.masterEmpresaSelecionada)).toBeInTheDocument();
+        expect(screen.queryByText(CONFIGURACAO_FISCAL_PAGINA.avisoContextoDivergente)).not.toBeInTheDocument();
     });
 
     it('contexto na mesma empresa do usuário (com caixa diferente): sem aviso', async () => {
@@ -242,7 +255,7 @@ describe('trocar o escopo organizacional limpa a filial escolhida', () => {
         expect(await screen.findByLabelText(CONFIGURACAO_FISCAL_FILIAL.serieNFePadrao)).toBeInTheDocument();
 
         // Mesma empresa do usuário, nova revisão do contexto: a chave de escopo muda e a página tem de esquecer a filial.
-        const snapshotNovo = Object.freeze({ empresaId: EMPRESA_USUARIO_ID, filialId: null, isMaster: true, revision: 2 });
+        const snapshotNovo = Object.freeze({ empresaId: EMPRESA_USUARIO_ID, filialId: null, isMaster: false, revision: 2 });
         mockedUseOrganizationalContext.mockReturnValue({ ...contexto, organizationalScopeKey: organizationalScopeKey(snapshotNovo) });
         rerender(
             <QueryClientProvider client={queryClient}>

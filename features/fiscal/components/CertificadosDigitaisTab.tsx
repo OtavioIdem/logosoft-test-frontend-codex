@@ -60,7 +60,7 @@ export const CertificadosDigitaisTab = ({
     const empresaQuery = useConfiguracaoFiscalEmpresa(escopo, podeConsultar);
     const filialQuery = useConfiguracaoFiscalFilial(escopo, filialSelecionadaId, false);
     const filiais = useFiliaisOptions(empresaContextoId);
-    const mutations = useConfiguracaoFiscalMutations();
+    const mutations = useConfiguracaoFiscalMutations(escopo);
 
     const [cadastrando, setCadastrando] = useState(false);
     const [inativando, setInativando] = useState<CertificadoDigitalResponse | null>(null);

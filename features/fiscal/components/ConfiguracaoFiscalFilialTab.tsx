@@ -72,7 +72,7 @@ export const ConfiguracaoFiscalFilialTab = ({
     const filiais = useFiliaisOptions(empresaContextoId);
     const filialQuery = useConfiguracaoFiscalFilial(escopo, filialId, podeConsultar && !contextoDivergente);
     const certificadosQuery = useCertificadosDigitais(escopo, false, podeConsultar && !contextoDivergente);
-    const mutations = useConfiguracaoFiscalMutations();
+    const mutations = useConfiguracaoFiscalMutations(escopo);
     const [values, setValues] = useState<FilialFormValues>(formPadrao);
     const [erro, setErro] = useState<ApiError | null>(null);
 

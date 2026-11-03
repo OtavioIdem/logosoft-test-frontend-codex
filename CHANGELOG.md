@@ -1,3 +1,85 @@
+# v1.11.0a8b82.c3
+
+## Fiscal › Configuração de emissão passa a funcionar para o master, com a empresa do seletor (backend v1.26.23)
+
+**Origem:** correção v1.26.23 do backend (`docs/etapa-v1.26.23-master-na-configuracao-fiscal.md`, branch
+`fix/v1.26.23-master-configuracao-fiscal`). Decisão **D114**. Plano: `docs/fatias/v1.11.0a8b82.c3-master-configuracao-fiscal.md`.
+
+A tela da b81 nunca abriu para o login master/GOD. O backend lia a empresa só do token, e o token do master não tem
+empresa, então toda rota respondia `Fiscal.Configuracao.EmpresaObrigatoria`. O backend passou a aceitar a empresa
+escolhida em `?empresaId=`.
+
+### O que muda para quem usa
+
+- **Master:** a tela configura a **empresa escolhida no seletor de contexto**.
+  - As 10 chamadas de empresa, filiais e certificados levam `?empresaId=` dessa empresa, e nenhuma injeta
+    `filialId`.
+  - O aviso de divergência some, a aba Filiais é liberada (filiais da empresa do seletor), e o topo informa que a
+    configuração é a da empresa selecionada.
+  - Sem empresa no seletor, nada é consultado, e a tela pede para escolher uma.
+  - Trocar de empresa no seletor remonta as três abas e refaz as consultas. Ações como salvar e cadastrar usam o
+    contexto do momento do clique.
+- **Usuário comum:** nada muda. Ele continua sem `empresaId`, preso à empresa do token, com o aviso e o bloqueio da
+  aba Filiais quando o contexto diverge (D112).
+  - Injetar `empresaId` para ele, como o plano do backend sugere, faria um contexto divergente receber 404
+    mascarado, que a tela leria como "não configurada".
+
+Nenhuma permissão nova (`accessRisk: NENHUM`).
+
+### Como foi feito
+
+- `configuracaoFiscalApi.ts`: `contextoDaChamada(snapshot | null)`. Com o snapshot do master, a chamada usa o escopo
+  `query` (`required: true`, `includeFilial: false`, `snapshot`). Sem ele, usa `global`.
+  - O tipo não aceita `boolean`: o escopo `query` só existe com snapshot.
+- `useConfiguracaoFiscal.ts`: o escopo carrega `master` e `snapshot`. As queries só ficam habilitadas com o snapshot,
+  e as mutações leem o escopo corrente por `ref`.
+- `ConfiguracaoFiscalPage.tsx`: o `isMaster` vem do snapshot do contexto, que tem a mesma fonte (`user.isMaster`) do
+  `usePermissions` e do guard. Há `key={organizationalScopeKey}` nas abas.
+- **Defeito pego antes do QA:** o primeiro corte mandava o escopo `query` sem `snapshot`, e a política recusava toda
+  chamada do master antes da rede. O teste de componente pegou o problema.
+  - O unitário original fazia mock da política e escondia o defeito. Ele foi reescrito com o `httpClient` e a
+    política reais.
+
+### Testes
+
+- **Recorte:** `npx vitest run tests/unit/configuracaoFiscal* tests/components/ConfiguracaoFiscal* tests/components/CertificadosDigitaisTab* tests/components/AppMenuConfiguracaoFiscal*`.
+  São 10 arquivos, e **171/171 passaram** nas duas rodadas.
+- **Arquivos novos:**
+  - `configuracaoFiscalMasterContexto` (30): as 10 funções com master, as 10 sem master e o master sem empresa,
+    sem mock da política;
+  - `ConfiguracaoFiscalMaster` (6): AC-3 a AC-7, incluindo a troca de E1 para E2.
+- **`ConfiguracaoFiscalPage`:** a fixture tratava todo usuário como master. Os casos de usuário comum passaram a
+  `isMaster: false`, e o aviso de divergência agora é afirmado para não master e negado para master.
+- **Prova de vermelho**, por mutação temporária restaurada por hash:
+
+  | Mutação | Testes que falharam |
+  | --- | --- |
+  | escopo sempre `global` | 12 |
+  | escopo sempre `query` | 16 |
+  | divergência sem o ramo do master | 4 |
+  | snapshot retirado da metadata | 10 |
+
+- **E2E** `v1.11.0a8b81-configuracao-fiscal.spec.ts`, pela receita isolada: 2/2 nas duas rodadas.
+- **Gates e build** verdes, rodados pelo QA. Também passaram `backendContractMap` e `fiscalTransmissaoStructure`.
+- **Não verificado:** a tela no navegador e as chamadas contra o backend real. O contrato foi conferido pela leitura do
+  C# (controller, `ConfiguracaoFiscalContexto` e `EmpresaSelecionadaNaRequisicao`).
+
+### Pendências aceitas
+
+- **QA-01, baixa:** ao trocar de empresa com uma filial escolhida, a aba Filiais pode disparar uma consulta da filial
+  antiga já com `empresaId` da nova. A filial é zerada num efeito do pai, que roda depois da remontagem. O backend
+  recusa a consulta com 404, o resultado é descartado e nada da empresa anterior aparece. Isso vem da análise de
+  código, sem medição. A correção é derivar o `filialId` junto com a chave de escopo.
+- Um master com o seletor numa empresa inexistente recebe 404 mascarado, que a tela lê como "sem configuração".
+
+### Requisito de backend
+
+**O master só funciona com o backend v1.26.23**, que **ainda não está commitado** (branch
+`fix/v1.26.23-master-configuracao-fiscal`). Contra o backend v1.26.22, o `empresaId` é ignorado: o master vê o mesmo
+erro de antes, e o usuário comum segue normal.
+
+---
+
 # v1.11.0a8b82.c2
 
 ## CI do PR #46: dois E2E ainda testavam como não master duas telas que a b79 tornou só de master

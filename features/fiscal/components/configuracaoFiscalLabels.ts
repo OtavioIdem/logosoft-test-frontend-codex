@@ -18,7 +18,11 @@ export const CONFIGURACAO_FISCAL_PAGINA = {
     abaCertificados: 'Certificados',
     seloSefazSimulada: 'SEFAZ simulada',
     seloSefazSimuladaDetalhe: 'O servidor está com a SEFAZ simulada: o resultado de Verificar não prova que o certificado real está montado.',
-    avisoContextoDivergente: 'Esta tela mostra a configuração da empresa do seu usuário, não a da empresa selecionada no contexto.'
+    avisoContextoDivergente: 'Esta tela mostra a configuração da empresa do seu usuário, não a da empresa selecionada no contexto.',
+    // D114: o master configura a empresa escolhida no seletor de contexto.
+    masterSemEmpresaTitulo: 'Selecione uma empresa',
+    masterSemEmpresa: 'Selecione uma empresa no seletor de contexto para configurar a emissão fiscal dela. Nenhuma consulta é feita antes disso.',
+    masterEmpresaSelecionada: 'Configurando a empresa selecionada no seletor de contexto. Trocar a empresa no seletor recarrega esta tela.'
 } as const;
 
 export const AMBIENTE_FISCAL_LABEL: Record<TipoAmbienteFiscal, string> = {
