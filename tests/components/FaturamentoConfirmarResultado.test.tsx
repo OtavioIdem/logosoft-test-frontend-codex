@@ -66,6 +66,14 @@ vi.mock('@/components/forms/DateInput', () => ({
 vi.mock('@/features/fiscal/components/NotaFiscalSerieField', () => ({
     NotaFiscalSerieField: ({ value, onChange }: { value: string; onChange: (value: string) => void }) => <input aria-label="Série" value={value} onChange={(event) => onChange(event.target.value)} />
 }));
+// Contexto organizacional (o diálogo consulta empresas e filiais por ele; sem provider o hook lança erro).
+vi.mock('@/hooks/useOrganizationalContext', () => ({
+    useOrganizationalContext: () => ({ snapshot: { empresaId: '11111111-1111-1111-1111-111111111111', filialId: null, isMaster: false, revision: 0 } })
+}));
+// `useSefazSimulada` (selo do resultado) lê o health por fora do httpClient: sem opt-in fiscal, o selo não aparece.
+vi.mock('@/lib/api/healthApi', () => ({
+    healthApi: { check: async () => ({ status: 'ok', service: 'LogoSoft', utcNow: '2026-09-30T10:00:00Z', fiscal: { mock: false, ambiente: 'homologacao' } }) }
+}));
 
 const empresaId = '11111111-1111-1111-1111-111111111111';
 const faturamentoId = '99999999-9999-9999-9999-999999999999';
@@ -132,6 +140,9 @@ describe('Faturamento — detalhe — resultado do Confirmar (AC-4) e erro da AP
                 // Os 15 campos de `NaturezaOperacaoResponse` (b72, D98): o schema de resposta exige todos, com `cfops`.
                 return ok({ items: [{ id: naturezaId, empresaId, filialId: null, codigo: '5102', descricao: 'Venda de mercadoria', tipoDocumento: 1, tipoOperacao: 1, finalidade: 1, indicadorPresencaComprador: 1, indicadorConsumidorFinal: false, movimentaEstoque: true, geraFinanceiro: true, observacao: null, ativa: true, cfops: [{ ambito: 1, cfopId: 'cccccccc-cccc-cccc-cccc-cccccccccccc', cfopCodigo: '5102', tipoItem: null }] }], page: 1, pageSize: 200, totalItems: 1, totalPages: 1 });
             }
+            if (config.method === 'get' && url === '/api/administracao/empresas') return ok([]);
+            // D113: prontidão `pronto = true` dos parâmetros atuais, para o Confirmar habilitar.
+            if (config.method === 'get' && url === '/api/faturamento/prontidao') return ok({ pronto: true, avaliacao: 'PrimeiraConfirmacao', pendencias: [] });
             if (config.method === 'post' && url === `/api/faturamento/${faturamentoId}/confirmar`) {
                 postsConfirmar += 1;
                 if (respostaConfirmar.tipo === 400) {
@@ -200,6 +211,8 @@ describe('Faturamento — detalhe — resultado do Confirmar (AC-4) e erro da AP
             fireEvent.change(within(dialog).getByLabelText(rotulo), { target: { value: valor } });
         }
         await user.click(within(dialog).getByRole('button', { name: 'Escolher vencimento' }));
+        // D113: o Confirmar só libera com a prontidão dos parâmetros atuais (debounce + consulta).
+        await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Confirmar' })).toBeEnabled(), { timeout: 3000 });
         const correlationId = (within(dialog).getByLabelText(FATURAMENTO_CONFIRMAR.correlationIdRotulo) as HTMLInputElement).value;
         await user.click(within(dialog).getByRole('button', { name: 'Confirmar' }));
         return { user, correlationId };

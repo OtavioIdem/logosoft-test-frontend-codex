@@ -22,8 +22,21 @@ vi.mock('@/features/faturamento/api/faturamentoApi', () => ({
         confirmar: vi.fn(),
         cancelar: vi.fn(),
         preparar: vi.fn(),
-        listar: vi.fn()
+        listar: vi.fn(),
+        prontidao: vi.fn()
     }
+}));
+
+// Contexto organizacional e health: o diálogo Confirmar (montado na página) consulta empresas/filiais e o selo
+// SEFAZ simulada lê o health. Sem provider e sem rede, esses hooks não funcionam nem respondem em teste.
+vi.mock('@/hooks/useOrganizationalContext', () => ({
+    useOrganizationalContext: () => ({ snapshot: { empresaId: '11111111-1111-1111-1111-111111111111', filialId: null, isMaster: false, revision: 0 } })
+}));
+vi.mock('@/lib/api/healthApi', () => ({
+    healthApi: { check: async () => ({ status: 'ok', service: 'LogoSoft', utcNow: '2026-09-30T10:00:00Z', fiscal: { mock: false, ambiente: 'homologacao' } }) }
+}));
+vi.mock('@/features/administracao/api/administracaoApi', () => ({
+    administracaoApi: { listarEmpresas: async () => [], listarFiliais: async () => [] }
 }));
 
 vi.mock('@/features/auth/hooks/usePermissions', () => {
@@ -150,6 +163,8 @@ beforeEach(() => {
     permsState.perms = ['FATURAMENTO_CONSULTAR', 'FATURAMENTO_RETOMAR_REVERSAO'];
     api.historico.mockResolvedValue([]);
     api.ocorrencias.mockResolvedValue([]);
+    // D113: prontidão `pronto = true`, para o Confirmar da página habilitar nos casos que o abrem.
+    api.prontidao.mockResolvedValue({ pronto: true, avaliacao: 'PrimeiraConfirmacao', pendencias: [] });
 });
 
 describe('FaturamentoDetalhePage — legs de integração', () => {

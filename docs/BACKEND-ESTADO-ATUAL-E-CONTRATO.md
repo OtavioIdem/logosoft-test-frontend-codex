@@ -1284,6 +1284,7 @@ Gerado do código; a ordem é a dos arquivos.
 | --- | --- | --- | --- |
 | `GET` | `/` | `FaturamentoConsultar` | `Listar([FromQuery] ListarFaturamentosRequest request)` |
 | `GET` | `/{id:guid}` | `FaturamentoConsultar` | `Obter(Guid id)` |
+| `GET` | `/prontidao` | `FaturamentoConsultar` | `ObterProntidao([FromQuery] ProntidaoFaturamentoRequest request)` — v1.26.22/F5, acrescentada na `b82` (D110, D113) |
 | `GET` | `/{id:guid}/historico` | `FaturamentoConsultar` | `ListarHistorico(Guid id)` |
 | `GET` | `/{id:guid}/ocorrencias` | `FaturamentoConsultar` | `ListarOcorrencias(Guid id)` |
 | `POST` | `/preparar` | `FaturamentoPreparar` | `Preparar([FromBody] PrepararFaturamentoRequest request)` |

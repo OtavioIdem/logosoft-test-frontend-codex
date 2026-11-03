@@ -10,21 +10,27 @@ import { Card } from 'primereact/card';
 import { InputText } from 'primereact/inputtext';
 import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
-import { FATURAMENTO_RESULTADO, resumoResultadoConfirmacao, statusFaturamentoLabel, statusFaturamentoSeverity } from '@/features/faturamento/components/faturamentoLabels';
+import { useSefazSimulada } from '@/features/fiscal/hooks/useSefazSimulada';
+import { alertaExibicao, FATURAMENTO_RESULTADO, resumoResultadoConfirmacao, statusFaturamentoLabel, statusFaturamentoSeverity } from '@/features/faturamento/components/faturamentoLabels';
 import { ResultadoConfirmacaoFaturamento } from '@/features/faturamento/types/faturamento.types';
 
 export const ResultadoConfirmacaoPanel = ({
     resultado,
     podeConfirmarDeNovo,
-    onConfirmarDeNovo
+    onConfirmarDeNovo,
+    codigoRejeicaoNota
 }: {
     resultado: ResultadoConfirmacaoFaturamento;
     podeConfirmarDeNovo: boolean;
     onConfirmarDeNovo: () => void;
+    // Código de rejeição da nota (emenda QA-01 da D113); null/ausente = motivo do backend como veio.
+    codigoRejeicaoNota?: string | null;
 }) => {
     const faturamento = resultado.resposta.faturamento;
     const etapa = Number(faturamento.etapa);
-    const resumo = resumoResultadoConfirmacao(faturamento);
+    const resumo = resumoResultadoConfirmacao(faturamento, codigoRejeicaoNota);
+    // D113/AJ-37: true só com `fiscal.mock === true` no health; false nunca afirma SEFAZ real.
+    const sefazSimulada = useSefazSimulada();
     const alertas = (resultado.resposta.alertas ?? []).filter((alerta) => typeof alerta === 'string' && alerta.trim() !== '');
 
     return (
@@ -42,11 +48,17 @@ export const ResultadoConfirmacaoPanel = ({
                 </div>
             </div>
             {!resumo.concluido ? <Message className="w-full mt-3" severity="info" text={FATURAMENTO_RESULTADO.proximoPasso} /> : null}
-            {alertas.length > 0 ? (
+            {sefazSimulada || alertas.length > 0 ? (
                 <div className="mt-3 flex flex-column gap-2">
                     <span className="text-color-secondary text-sm">{FATURAMENTO_RESULTADO.alertasTitulo}</span>
+                    {sefazSimulada ? (
+                        <div>
+                            <Tag icon="pi pi-exclamation-triangle" severity="warning" value={FATURAMENTO_RESULTADO.seloSefazSimulada} aria-label={FATURAMENTO_RESULTADO.seloSefazSimulada} />
+                            <small className="text-color-secondary block mt-1">{FATURAMENTO_RESULTADO.seloSefazSimuladaDetalhe}</small>
+                        </div>
+                    ) : null}
                     {alertas.map((alerta, indice) => (
-                        <Message key={`${indice}-${alerta}`} className="w-full" severity="warn" text={alerta} />
+                        <Message key={`${indice}-${alerta}`} className="w-full" severity="warn" text={alertaExibicao(alerta, codigoRejeicaoNota)} />
                     ))}
                 </div>
             ) : null}

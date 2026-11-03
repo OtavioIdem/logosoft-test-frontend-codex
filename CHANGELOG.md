@@ -1,3 +1,118 @@
+# v1.11.0a8b82
+
+## Faturamento › Confirmar só libera quando o backend diz que está pronto (backend v1.26.22, AJ-36 e restos de AJ-37/AJ-38)
+
+**Origem:** frente do planejador do backend, `docs/frontend/PLANO-FRONTEND-v1.26.22-faturamento.md` §2,
+§5.2 e §5.3. Decisões **D110** e **D113**, mais as duas emendas logo abaixo da D113. Plano:
+`docs/fatias/v1.11.0a8b82-prontidao-faturamento.md`.
+
+### O que muda para quem usa
+
+- **Checklist de prontidão no Confirmar.** Ao abrir o diálogo, a tela consulta
+  `GET /api/faturamento/prontidao` com o pedido e com os parâmetros preenchidos no formulário: natureza,
+  série, tipo de documento, número e condição de pagamento. As pendências aparecem agrupadas por etapa,
+  na ordem dos legs.
+  - Cada pendência tem link para a tela do cadastro. Se você não tem permissão para essa tela, o checklist
+    diz "peça a quem tem acesso". Um recurso que a tela não conhece aparece sem link.
+  - Mudar um parâmetro refaz a consulta. **Reconferir** refaz na hora.
+- **O botão Confirmar só habilita** quando o backend responde `pronto = true` **para os parâmetros que
+  estão no formulário agora**. Ele fica desabilitado enquanto você digita (há uma espera de 350 ms antes de
+  consultar), enquanto a consulta está em andamento e quando a consulta falha. Um 404 mostra uma mensagem
+  genérica, sem lista.
+- **Retomada:** quando a avaliação é `Retomada`, o botão passa a dizer **Retomar**, e o checklist explica
+  que o faturamento continua de onde parou.
+- **No detalhe do faturamento**, fora de Faturado e de Cancelado, há um painel de prontidão só para leitura.
+  As pendências que dependem de um parâmetro do Confirmar trazem a marca "informe no Confirmar".
+- **UF autorizadora pré-preenchida** com a UF do endereço fiscal da filial do faturamento, ou, se a filial
+  não tiver, com a da empresa. O campo continua editável, e o que você digitar nunca é sobrescrito.
+  - A sugestão só aparece para quem tem `ADMINISTRACAO_CONSULTAR`, ou para master, porque as duas listas
+    exigem essa permissão no backend. Sem ela, o campo fica vazio, como antes.
+  - Quando o contexto organizacional é de outra empresa (master trocando de empresa), a sugestão usa a UF
+    da empresa.
+- **Selo "SEFAZ simulada"** no resultado da confirmação, junto dos alertas, quando o health do backend diz
+  `fiscal.mock = true`.
+- **Recusa local no leg 4.** Quando a nota foi recusada **no servidor, antes de sair** (código
+  `RECUSA_LOCAL`), a tela diz isso, e não "rejeitada pela SEFAZ": é configuração do servidor. O texto vale
+  no resultado, na descrição do leg que parou, na coluna Motivo dos legs e no toast.
+  - Para saber disso, a tela lê a nota fiscal (`GET /api/fiscal/notas-fiscais/{id}`), e só quem tem
+    `FISCAL_CONSULTAR`, ou é master, faz essa leitura. Sem a permissão, ou se a leitura falhar, aparece o
+    motivo do backend como veio.
+
+Nenhuma permissão nova. A consulta de prontidão usa `FATURAMENTO_CONSULTAR`, e ninguém perdeu acesso
+(`accessRisk: NENHUM`).
+
+### Como foi feito
+
+- `features/faturamento`:
+  - tipos e schemas da prontidão. O request é `.strict()`; o response não é, e usa `z.string()` em `etapa`,
+    `recurso` e `avaliacao`;
+  - `faturamentoApi.prontidao`;
+  - `useProntidaoFaturamento`, com a chave de 6 parâmetros, sem `placeholderData` e com `gcTime: 0`;
+  - `prontidaoRecursos.ts`: o mapa fechado `recurso → rota`, o agrupamento e `estadoProntidao`;
+  - `ProntidaoChecklist`, `ProntidaoFaturamentoPanel`, `useUfEmitenteFaturamento` e `useCodigoRejeicaoNota`.
+- Depois do Confirmar, as queries `['faturamento-prontidao']` e `['faturamento-nota-rejeicao']` são
+  invalidadas, e a resposta nunca é escrita com `setQueryData` (AJ-37).
+- A rota de Estoque no checklist aponta para `/estoque/entradas`, porque a pendência típica é saldo
+  insuficiente.
+- A UF e a prontidão do diálogo só consultam com o Confirmar aberto. Abrir o detalhe não dispara
+  `/api/administracao/*`.
+- Contrato documental: `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md` ganhou a linha `GET /prontidao` na tabela
+  de `api/faturamento`.
+- O texto de pré-requisitos do Confirmar deixou de dizer que os cadastros fiscais não têm tela.
+
+### Diferença encontrada no backend (pergunta B-31)
+
+`ConfirmarFaturamentoUseCase.cs:275-277` grava, para toda transmissão não autorizada e sem reprocessamento,
+o texto "Nota fiscal rejeitada pela SEFAZ. Código: {cStat}...", **inclusive na recusa local**. O
+`RECUSA_LOCAL` fica só em `NotaFiscal.CodigoRejeicao`. O próprio comentário da F6 (D-F6-6) diz que a recusa
+local não deve dizer "rejeitada pela SEFAZ".
+
+O frontend contorna lendo a nota. A tabela de Ocorrências do detalhe continua mostrando o texto cru do
+backend. A correção certa é no backend.
+
+### Testes
+
+- **Recorte:** `npx vitest run tests/unit/faturamento* tests/components/Faturamento* tests/components/ConfirmarFaturamento* tests/components/useFaturamentos* tests/components/PrepararFaturamento*`.
+  São 18 arquivos, e **218/218 passaram**, em duas execuções.
+- **10 arquivos novos:** `faturamentoProntidao{Rotas,Estado,Labels,Uf,Payload}`, `faturamentoRecusaLocalNota`,
+  `ConfirmarFaturamentoProntidao`, `FaturamentoProntidaoPainel`, `FaturamentoResultadoSefazSimulada` e
+  `FaturamentoRecusaLocalNota`.
+- **3 arquivos existentes** só ganharam setup e mocks, mais a espera do botão habilitar.
+- **Prova de vermelho**, por mutação temporária, com o arquivo restaurado e conferido por hash:
+
+  | Mutação | Testes que falharam |
+  | --- | --- |
+  | `estadoProntidao` ignorando `isFetching` | 2 |
+  | `ehRecusaLocal` sempre falso | 5 |
+  | sem a guarda `ufTocada` | 1 |
+  | `enabled` da UF sempre verdadeiro | 1 |
+  | `notaRecusadaLocalmente` sempre falso | 13 |
+  | sem a guarda de permissão da leitura da nota | 2 |
+
+- **Fixture corrigida:** a primeira versão usava o texto sintético "Código: RECUSA_LOCAL" no motivo e
+  passava sem que a regra funcionasse. O QA bloqueou (QA-01). As fixtures agora usam o texto real do C#.
+- **Gates verdes, rodados pelo QA:** `validate:source`, `typecheck`, `lint`, `validate:ci`,
+  `validate:backend-permissions`, `validate:guard-permission-map`, `validate:backend-contract-map`,
+  `validate:mocks-isolation` e `build`.
+- **Não verificado:** a tela no navegador e o fluxo contra um backend real com a F5. Não há backend
+  v1.26.22 disponível nesta máquina. Também não há E2E nesta versão; ele era opcional no plano.
+
+### Pendências aceitas
+
+- Depois de um Confirmar com o leg 4 falho, a nota é lida duas vezes, uma para o toast e uma para o
+  resultado. É uma requisição a mais, só nesse caminho.
+- O título do painel de erro da prontidão cede lugar à mensagem do backend quando ela existe. A frase de
+  bloqueio aparece sempre.
+- A prontidão na tela do pedido de venda ficou de fora (D113).
+
+### Requisito de backend
+
+**Esta versão exige um backend com a F5 da v1.26.22** (`GET /api/faturamento/prontidao`), do commit
+`061b32e`, PR #83 do backend, **ainda não mergeado na `main`**. Contra um backend sem a rota, a prontidão
+falha, e o Confirmar fica bloqueado. Não suba esta versão antes do backend.
+
+---
+
 # v1.11.0a8b81
 
 ## Fiscal › Configuração de emissão: empresa, filiais e certificados digitais pela tela (backend v1.26.22, AJ-34 e AJ-35)

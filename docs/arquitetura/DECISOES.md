@@ -3014,3 +3014,24 @@ Filiais fica bloqueada quando o contexto diverge da empresa do usuário, que é 
 preserva o código nos 404 de "ainda não configurado", que não denunciam recurso de outro tenant. Fora,
 mantido: a Central de cadastros não ganha o card nesta versão (pede o catálogo, a regra `/cadastros` e
 o teste de 38 itens). Código fora do §5.1 mapeado: `Fiscal.Configuracao.InativaReativeAntes` (409).
+
+Emenda à D113 (2026-11-03, QA da `b82`, achado QA-01): **o `RECUSA_LOCAL` não chega ao texto do leg 4.**
+`ConfirmarFaturamentoUseCase.cs:275-277` (backend v1.26.22) grava, para toda transmissão não autorizada
+e sem reprocessamento, "Nota fiscal rejeitada pela SEFAZ. Código: {CodigoStatus}. Motivo: {Motivo}.", com o
+cStat do cliente da SEFAZ. O `RECUSA_LOCAL` fica só na nota (`FiscalSefazUseCases.cs:268`,
+`NotaFiscal.CodigoRejeicao`). Procurar a substring no motivo, como a primeira versão fazia, nunca casa no
+caminho real. Decidido: com o leg 4 `Falhou` e `notaFiscalId` presente, a tela lê a nota
+(`GET /api/fiscal/notas-fiscais/{id}`, `FISCAL_CONSULTAR`, que já existe) e trata
+`codigoRejeicao === 'RECUSA_LOCAL'` como recusa local. A leitura só acontece com a permissão. Sem ela, ou
+com a leitura falhando, a tela mostra o motivo do backend como veio, sem afirmar recusa local. O
+reconhecimento por substring no motivo fica como segundo sinal, para quando o backend corrigir o texto.
+**Pergunta ao backend (B-31):** o próprio comentário da F6 (D-F6-6) diz "sem 'rejeitada pela SEFAZ'",
+mas o motivo do leg 4 e a ocorrência do faturamento continuam dizendo "rejeitada pela SEFAZ" na recusa
+local. O certo é o Confirmar usar o código da nota.
+
+Emenda à D113 (mesma data, QA-02): **UF do emitente com contexto divergente.** Quando o contexto
+organizacional difere da empresa do faturamento (o master trocando de empresa), a lista de filiais não é
+consultada (mesma guarda de `useFiliaisOptions`), e a UF sugerida cai na da empresa. Aceito: a sugestão é
+conveniência, o campo continua editável, e o backend valida (D94). Fica coberto por teste. O caso
+QA-03 (a espera pelo botão habilitar nos helpers de três testes antigos) é setup, consequência direta do
+Confirmar passar a depender da prontidão, e não muda nenhuma asserção.
