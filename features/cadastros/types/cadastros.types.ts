@@ -19,6 +19,10 @@ export type CadastroItem = Readonly<{
     icon: string;
     to: string;
     anyPermissions: readonly PermissionCode[];
+    // Mesmo eixo do `masterOnly` de AppMenuItem (D109): o card sai da Central para quem não é
+    // master, mas segue contando para `cadastrosAnyPermissions` — a união do catálogo continua
+    // sendo o guard de /cadastros, e a regra de rota não muda.
+    masterOnly?: boolean;
 }>;
 
 export type CadastroCategoria = Readonly<{

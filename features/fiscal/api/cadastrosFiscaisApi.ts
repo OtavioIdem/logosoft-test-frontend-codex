@@ -5,11 +5,14 @@
 
 import { httpClient } from '@/lib/http/httpClient';
 import { cleanQueryParams } from '@/lib/http/requestUtils';
-import { cfopResumoPagedSchema, ncmResumoPagedSchema } from '@/features/fiscal/schemas/cadastrosFiscaisSchemas';
-import { CfopBuscaFiltros, CfopResumoResponse, NcmResumoResponse } from '@/features/fiscal/types/cadastrosFiscais.types';
+import { cestResumoPagedSchema, cfopResumoPagedSchema, gtinClassificacaoResponseSchema, ncmCestVinculoPagedSchema, ncmResumoPagedSchema, origemMercadoriaPagedSchema } from '@/features/fiscal/schemas/cadastrosFiscaisSchemas';
+import { CestResumoResponse, CfopBuscaFiltros, CfopResumoResponse, GtinClassificacaoResponse, NcmCestVinculoResponse, NcmResumoResponse, OrigemMercadoriaResponse } from '@/features/fiscal/types/cadastrosFiscais.types';
 import { PagedResult } from '@/types/erp';
 
 export const CADASTROS_FISCAIS_TAMANHO_PAGINA = 20;
+// Tabelas fechadas e pequenas (origem 0..8) e vínculos de um único NCM cabem numa página; o backend limita em 200 (`CadastrosFiscaisFiltroFactory.cs`, `TamanhoPaginaMaximo`).
+// 100 fica abaixo do teto; se os vínculos de um NCM passarem disso, `totalItems` acusa lista parcial (`useCestPorNcm.parcial`).
+export const CADASTROS_FISCAIS_TAMANHO_LISTA_FECHADA = 100;
 
 export const cadastrosFiscaisApi = {
     async listarNcm(termo?: string | null): Promise<PagedResult<NcmResumoResponse>> {
@@ -24,5 +27,33 @@ export const cadastrosFiscaisApi = {
             params: cleanQueryParams({ termo, ambito: filtros.ambito, tipo: filtros.tipo, ativo: true, pagina: 1, tamanhoPagina: CADASTROS_FISCAIS_TAMANHO_PAGINA })
         });
         return cfopResumoPagedSchema.parse(response.data) as PagedResult<CfopResumoResponse>;
+    },
+    // CEST pelo código exato: resolve a descrição de um vínculo `ncm-cest`, que só traz `cestCodigo`. O backend filtra
+    // `codigo` por prefixo, então a resposta pode trazer outros códigos: só vale o item de código idêntico.
+    async obterCestPorCodigo(codigo: string): Promise<CestResumoResponse | null> {
+        const response = await httpClient.get<unknown>('/api/fiscal/cadastros/cest', {
+            params: cleanQueryParams({ codigo, ativo: true, pagina: 1, tamanhoPagina: CADASTROS_FISCAIS_TAMANHO_PAGINA })
+        });
+        const parsed = cestResumoPagedSchema.parse(response.data) as PagedResult<CestResumoResponse>;
+        return parsed.items.find((item) => item.codigo === codigo) ?? null;
+    },
+    // Vínculos ativos do NCM: o conjunto de CESTs que o backend aceita para ele (`ncmCodigo` é o código de 8 dígitos).
+    async listarVinculosNcmCest(ncmCodigo: string): Promise<PagedResult<NcmCestVinculoResponse>> {
+        const response = await httpClient.get<unknown>('/api/fiscal/cadastros/ncm-cest', {
+            params: cleanQueryParams({ ncmCodigo, ativo: true, pagina: 1, tamanhoPagina: CADASTROS_FISCAIS_TAMANHO_LISTA_FECHADA })
+        });
+        return ncmCestVinculoPagedSchema.parse(response.data) as PagedResult<NcmCestVinculoResponse>;
+    },
+    async listarOrigensMercadoria(): Promise<PagedResult<OrigemMercadoriaResponse>> {
+        const response = await httpClient.get<unknown>('/api/fiscal/cadastros/origens-mercadoria', {
+            params: cleanQueryParams({ ativo: true, pagina: 1, tamanhoPagina: 50 })
+        });
+        return origemMercadoriaPagedSchema.parse(response.data) as PagedResult<OrigemMercadoriaResponse>;
+    },
+    // Sugestão por GTIN (D111): o GTIN segue como texto (zero à esquerda) e vai codificado no caminho; sem `data` (default do
+    // backend = hoje). 400 `FISCAL_CADASTROS_GTIN_FORMATO_INVALIDO` e 403 sobem crus e o chamador decide.
+    async obterClassificacaoPorGtin(gtin: string): Promise<GtinClassificacaoResponse> {
+        const response = await httpClient.get<unknown>(`/api/fiscal/cadastros/gtin-classificacao/${encodeURIComponent(gtin.trim())}`);
+        return gtinClassificacaoResponseSchema.parse(response.data) as GtinClassificacaoResponse;
     }
 };

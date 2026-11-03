@@ -6,8 +6,11 @@ test.describe('Navegação Estoque — AC-8 e AC-9', () => {
     // Esta rota não toca no menu: é redirecionamento server-side direto em app/(main)/estoque/bloqueios/page.tsx.
     // Afirma que a rota continua respondendo (não 404) e redireciona como esperado.
     // ORDEM CRÍTICA: mockApiRoutes PRIMEIRO, depois writeSession, depois goto
+    // Sessão MASTER: `/estoque/avancado` tem `masterOnly` (b79, D109) e o guard recusa quem não é master, antes de olhar a
+    // permissão. Com sessão não master, a URL fica em `/estoque/bloqueios` e este teste reprovaria por causa da marca, não
+    // do redirect. O redirect em si segue sendo o que se afirma.
     await mockApiRoutes(page);
-    await writeSession(page, { permissions: ADMIN_PERMISSIONS });
+    await writeSession(page, { permissions: ADMIN_PERMISSIONS, isMaster: true });
     await page.goto('/estoque/bloqueios');
 
     // Verificar que a URL foi alterada para /estoque/avancado

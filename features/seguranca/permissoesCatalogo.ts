@@ -121,6 +121,8 @@ export const PERMISSOES_CATALOGO: Record<PermissionCode, PermissaoCatalogoItem> 
     FISCAL_SERIES_CONSULTAR: { grupo: 'Fiscal', label: 'Séries · Consultar' },
     FISCAL_SERIES_GERENCIAR: { grupo: 'Fiscal', label: 'Séries · Gerenciar' },
     FISCAL_MODELOS_CONSULTAR: { grupo: 'Fiscal', label: 'Modelos de documento · Consultar' },
+    FISCAL_CONFIGURACAO_CONSULTAR: { grupo: 'Fiscal', label: 'Configuração de emissão · Consultar' },
+    FISCAL_CONFIGURACAO_GERENCIAR: { grupo: 'Fiscal', label: 'Configuração de emissão · Gerenciar' },
     // Notificações / Anexos
     NOTIFICACOES_CONSULTAR: { grupo: 'Notificações', label: 'Consultar' },
     NOTIFICACOES_GERENCIAR: { grupo: 'Notificações', label: 'Gerenciar' },

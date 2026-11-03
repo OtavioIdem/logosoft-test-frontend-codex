@@ -21,17 +21,17 @@ import { usePermissions } from '@/features/auth/hooks/usePermissions';
 import { useFornecedores } from '@/features/fornecedores/hooks/useFornecedoresResources';
 import { CodigoBarrasDialog, ProdutoFornecedorDialog } from '@/features/produtos/components/ProdutoComplementoDialogs';
 import { ProdutoFormDialog } from '@/features/produtos/components/ProdutoFormDialog';
-import { useProdutoMutations, useProdutos } from '@/features/produtos/hooks/useProdutosResources';
+import { useProduto, useProdutoMutations, useProdutos } from '@/features/produtos/hooks/useProdutosResources';
 import { isFilled } from '@/features/produtos/components/produtoFormUtils';
-import { AtualizarDadosFiscaisProdutoRequest, CodigoBarrasFormValues, ProdutoFormValues, ProdutoFornecedorFormValues, ProdutoListQuery, ProdutoResponse } from '@/features/produtos/types/produtos.types';
+import { AtualizarDadosFiscaisProdutoRequest, CodigoBarrasFormValues, ProdutoFormValues, ProdutoFornecedorFormValues, ProdutoListagemItem, ProdutoListQuery } from '@/features/produtos/types/produtos.types';
 import { useMutationWithToast } from '@/hooks/useMutationWithToast';
 import { useAppToast } from '@/hooks/useAppToast';
 import { mapApiError } from '@/lib/http/apiError';
 import { EntityStatus, TipoProduto } from '@/types/erp';
 import { formatMoney } from '@/lib/formatters/money';
 
-const isActive = (record: ProdutoResponse) => Number(record.status) === EntityStatus.Ativo;
-const filterLocal = (records: ProdutoResponse[], term: string) => {
+const isActive = (record: ProdutoListagemItem) => Number(record.status) === EntityStatus.Ativo;
+const filterLocal = (records: ProdutoListagemItem[], term: string) => {
     const normalized = term.trim().toLowerCase();
     if (!normalized) return records;
     return records.filter((record) => Object.values(record).some((value) => String(value ?? '').toLowerCase().includes(normalized)));
@@ -50,7 +50,7 @@ const tipoProdutoLabel = (tipo: number | TipoProduto) => {
     return map[Number(tipo)] ?? String(tipo);
 };
 
-type ComplementoState = { kind: 'codigo' | 'fornecedor'; record: ProdutoResponse } | null;
+type ComplementoState = { kind: 'codigo' | 'fornecedor'; record: ProdutoListagemItem } | null;
 
 // O bloco fiscal do backend é tudo-ou-nada (`ProdutoDadosFiscaisResolver.EstaEmBranco`): ou os dez
 // campos vão nulos, ou `tipoItemSped` é obrigatório. Não existe meio-termo — mandar `ncmCodigo` sem
@@ -103,11 +103,16 @@ export const ProdutosPage = () => {
     const [first, setFirst] = useState(0);
     const [rows, setRows] = useState(10);
     const [formVisible, setFormVisible] = useState(false);
-    const [selected, setSelected] = useState<ProdutoResponse | null>(null);
-    const [reasonRecord, setReasonRecord] = useState<ProdutoResponse | null>(null);
+    // A grade carrega a linha PARCIAL da listagem (ProdutoListagemItem). O formulário de edição parte do produto
+    // completo, carregado por id: guardar só o id aqui impede reidratar o formulário a partir da linha.
+    const [editId, setEditId] = useState<string | null>(null);
+    const [reasonRecord, setReasonRecord] = useState<ProdutoListagemItem | null>(null);
     const [complementoState, setComplementoState] = useState<ComplementoState>(null);
 
     const produtosQuery = useProdutos(filters);
+    const produtoDetalheQuery = useProduto(editId, formVisible);
+    const produtoEmEdicao = editId ? (produtoDetalheQuery.data ?? null) : null;
+    const erroCargaProduto = editId && produtoDetalheQuery.isError ? mapApiError(produtoDetalheQuery.error) : null;
     const fornecedoresQuery = useFornecedores({ empresaId: filters.empresaId, filialId: filters.filialId });
     const { saveMutation, precoCustoMutation, dadosFiscaisMutation, classificacaoMutation, codigoBarrasMutation, fornecedorMutation, inativarMutation } = useProdutoMutations();
 
@@ -127,6 +132,8 @@ export const ProdutosPage = () => {
         // O cadastro base e os PATCHs complementares (preço/custo, dados fiscais) são chamadas
         // separadas no backend. Se o cadastro base gravar e só um PATCH falhar, o produto já existe —
         // a mensagem de erro não pode dizer "não foi possível salvar o produto" (nega o que aconteceu).
+        // Baseline do grupo lido ANTES de qualquer await: a classificação só muda se diferir do que o servidor tinha ao abrir.
+        const grupoAnterior = produtoEmEdicao?.grupoProdutoId ?? null;
         const saved = await runWithToast(() => saveMutation.mutateAsync({ id: values.id, values }), {
             error: { summary: 'Erro ao salvar produto', detail: 'Não foi possível salvar o produto.' },
             rethrow: true
@@ -138,7 +145,7 @@ export const ProdutosPage = () => {
         const disparaDadosFiscais = hasPermission('PRODUTOS_DADOS_FISCAIS_GERENCIAR') && !dadosFiscaisEstaoEmBranco(values);
 
         if (isEdicao) {
-            if (values.grupoProdutoId !== selected?.grupoProdutoId) {
+            if ((values.grupoProdutoId ?? null) !== grupoAnterior) {
                 try {
                     await classificacaoMutation.mutateAsync({ id: produtoId, grupoProdutoId: values.grupoProdutoId ?? null });
                 } catch (error) {
@@ -170,7 +177,12 @@ export const ProdutosPage = () => {
 
         toast.success('Produto salvo', 'Cadastro do produto gravado com sucesso.');
         setFormVisible(false);
-        setSelected(null);
+        setEditId(null);
+    };
+
+    const fecharFormulario = () => {
+        setFormVisible(false);
+        setEditId(null);
     };
 
     const inativar = async (motivo: string) => {
@@ -210,7 +222,7 @@ export const ProdutosPage = () => {
         <div className="flex flex-column md:flex-row flex-wrap gap-2 md:align-items-center">
             <EmpresaFilialFilter empresaId={filters.empresaId ?? null} filialId={filters.filialId ?? null} onEmpresaChange={(value) => updateFilter('empresaId', value)} onFilialChange={(value) => updateFilter('filialId', value)} />
             <SearchInput ariaLabel="Buscar produtos" defaultValue={localSearch} onChange={(term) => { setFirst(0); setLocalSearch(term); }} />
-            <PermissionGuard permission="PRODUTOS_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Novo produto" icon="pi pi-plus" disabled={disabled} onClick={() => { setSelected(null); setFormVisible(true); }} />}</PermissionGuard>
+            <PermissionGuard permission="PRODUTOS_GERENCIAR" mode="disable">{({ disabled }) => <Button label="Novo produto" icon="pi pi-plus" disabled={disabled} onClick={() => { setEditId(null); setFormVisible(true); }} />}</PermissionGuard>
         </div>
     );
 
@@ -222,19 +234,19 @@ export const ProdutosPage = () => {
             <OperationalGovernancePanel title="Governança de catálogo" description="Resumo dos produtos carregados, com foco em disponibilidade operacional, dados fiscais e impacto em vendas, compras e estoque." records={records} activeLabel="Disponíveis" inactiveLabel="Bloqueados" complianceNote="Produtos inativos não devem ser utilizados em venda, compra ou movimentação; preço, custo e dados fiscais seguem validação do backend." />
             <Card>
                 {produtosQuery.error ? <ApiErrorPanel error={mapApiError(produtosQuery.error)} /> : null}
-                <DataTableServer<ProdutoResponse> value={visibleRecords} totalRecords={records.length} loading={produtosQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhum produto encontrado.">
+                <DataTableServer<ProdutoListagemItem> value={visibleRecords} totalRecords={records.length} loading={produtosQuery.isFetching} first={first} rows={rows} onPage={(event) => { setFirst(event.first); setRows(event.rows); }} emptyMessage="Nenhum produto encontrado.">
                     <Column field="codigo" header="Código" />
                     <Column field="descricao" header="Descrição" />
-                    <Column header="Tipo" headerClassName="hidden md:table-cell" bodyClassName="hidden md:table-cell" body={(row: ProdutoResponse) => tipoProdutoLabel(row.tipoProduto)} />
-                    <Column header="Preço" body={(row: ProdutoResponse) => formatMoney(row.precoVendaBase)} />
-                    <Column header="Custo" headerClassName="hidden md:table-cell" bodyClassName="hidden md:table-cell" body={(row: ProdutoResponse) => formatMoney(row.custoReferencial)} />
-                    <Column header="Operação" headerClassName="hidden md:table-cell" bodyClassName="hidden md:table-cell" body={(row: ProdutoResponse) => <div className="flex gap-1 flex-wrap"><Tag value={row.controlaEstoque ? 'Estoque' : 'Sem estoque'} severity={row.controlaEstoque ? 'info' : undefined} /><Tag value={row.permiteVenda ? 'Venda' : 'Venda bloqueada'} severity={row.permiteVenda ? 'success' : 'warning'} /><Tag value={row.permiteCompra ? 'Compra' : 'Compra bloqueada'} severity={row.permiteCompra ? 'success' : 'warning'} /></div>} />
-                    <Column header="Status" body={(row: ProdutoResponse) => <StatusTag status={row.status} />} />
-                    <Column header="Ações" alignHeader="right" body={(row: ProdutoResponse) => <DataTableActions actions={[{ key: 'editar', label: 'Editar', icon: 'pi pi-pencil', permission: 'PRODUTOS_GERENCIAR', disabled: !isActive(row), onClick: () => { setSelected(row); setFormVisible(true); } }, { key: 'codigo', label: 'Código', icon: 'pi pi-barcode', permission: 'PRODUTOS_GERENCIAR', disabled: !isActive(row), onClick: () => setComplementoState({ kind: 'codigo', record: row }) }, { key: 'fornecedor', label: 'Fornecedor', icon: 'pi pi-truck', permission: 'PRODUTOS_GERENCIAR', disabled: !isActive(row), onClick: () => setComplementoState({ kind: 'fornecedor', record: row }) }, { key: 'inativar', label: 'Inativar', icon: 'pi pi-ban', permission: 'PRODUTOS_INATIVAR', severity: 'danger', disabled: !isActive(row), onClick: () => setReasonRecord(row) }]} />} />
+                    <Column header="Tipo" headerClassName="hidden md:table-cell" bodyClassName="hidden md:table-cell" body={(row: ProdutoListagemItem) => tipoProdutoLabel(row.tipoProduto)} />
+                    <Column header="Preço" body={(row: ProdutoListagemItem) => formatMoney(row.precoVendaBase)} />
+                    <Column header="Custo" headerClassName="hidden md:table-cell" bodyClassName="hidden md:table-cell" body={(row: ProdutoListagemItem) => formatMoney(row.custoReferencial)} />
+                    <Column header="Operação" headerClassName="hidden md:table-cell" bodyClassName="hidden md:table-cell" body={(row: ProdutoListagemItem) => <div className="flex gap-1 flex-wrap"><Tag value={row.controlaEstoque ? 'Estoque' : 'Sem estoque'} severity={row.controlaEstoque ? 'info' : undefined} /><Tag value={row.permiteVenda ? 'Venda' : 'Venda bloqueada'} severity={row.permiteVenda ? 'success' : 'warning'} /><Tag value={row.permiteCompra ? 'Compra' : 'Compra bloqueada'} severity={row.permiteCompra ? 'success' : 'warning'} /></div>} />
+                    <Column header="Status" body={(row: ProdutoListagemItem) => <StatusTag status={row.status} />} />
+                    <Column header="Ações" alignHeader="right" body={(row: ProdutoListagemItem) => <DataTableActions actions={[{ key: 'editar', label: 'Editar', icon: 'pi pi-pencil', permission: 'PRODUTOS_GERENCIAR', disabled: !isActive(row), onClick: () => { setEditId(row.id); setFormVisible(true); } }, { key: 'codigo', label: 'Código', icon: 'pi pi-barcode', permission: 'PRODUTOS_GERENCIAR', disabled: !isActive(row), onClick: () => setComplementoState({ kind: 'codigo', record: row }) }, { key: 'fornecedor', label: 'Fornecedor', icon: 'pi pi-truck', permission: 'PRODUTOS_GERENCIAR', disabled: !isActive(row), onClick: () => setComplementoState({ kind: 'fornecedor', record: row }) }, { key: 'inativar', label: 'Inativar', icon: 'pi pi-ban', permission: 'PRODUTOS_INATIVAR', severity: 'danger', disabled: !isActive(row), onClick: () => setReasonRecord(row) }]} />} />
                 </DataTableServer>
                 {!produtosQuery.isLoading && records.length === 0 ? <EmptyState title="Nenhum produto" description="Crie um cadastro ou ajuste os filtros." /> : null}
             </Card>
-            <ProdutoFormDialog visible={formVisible} record={selected} loading={mutationLoading} onHide={() => setFormVisible(false)} onSubmit={save} />
+            <ProdutoFormDialog visible={formVisible} record={produtoEmEdicao} editando={Boolean(editId)} carregando={Boolean(editId) && produtoDetalheQuery.isLoading} erroCarga={erroCargaProduto} onRetry={() => void produtoDetalheQuery.refetch()} loading={mutationLoading} onHide={fecharFormulario} onSubmit={save} />
             <CodigoBarrasDialog visible={complementoState?.kind === 'codigo'} loading={codigoBarrasMutation.isPending} onHide={() => setComplementoState(null)} onSubmit={adicionarCodigo} />
             <ProdutoFornecedorDialog visible={complementoState?.kind === 'fornecedor'} fornecedores={fornecedoresQuery.data ?? []} loading={fornecedorMutation.isPending} onHide={() => setComplementoState(null)} onSubmit={vincularFornecedor} />
             <ReasonDialog visible={Boolean(reasonRecord)} title="Motivo da inativação" confirmLabel="Inativar" loading={inativarMutation.isPending} onHide={() => setReasonRecord(null)} onConfirm={inativar} />

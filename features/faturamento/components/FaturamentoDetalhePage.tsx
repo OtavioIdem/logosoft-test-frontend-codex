@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
@@ -22,6 +23,7 @@ import { AnexosPanel } from '@/features/anexos/components/AnexosPanel';
 import { useClientes } from '@/features/clientes/hooks/useClientesResources';
 import { usePessoas } from '@/features/pessoas/hooks/usePessoasResources';
 import { usePedidosVenda } from '@/features/vendas/hooks/useVendasResources';
+import { buscarCodigoRejeicaoNota, useCodigoRejeicaoNota, useConsultaNotaPermitida } from '@/features/faturamento/hooks/useCodigoRejeicaoNota';
 import { useFaturamento, useFaturamentoHistorico, useFaturamentoMutations, useFaturamentoOcorrencias } from '@/features/faturamento/hooks/useFaturamentoResources';
 import {
     AcaoRetomadaReversaoLeg,
@@ -34,6 +36,7 @@ import {
     StatusFaturamento
 } from '@/features/faturamento/types/faturamento.types';
 import { ConfirmarFaturamentoDialog, RetomarReversaoDialog } from '@/features/faturamento/components/FaturamentoDialogs';
+import { ProntidaoFaturamentoPanel } from '@/features/faturamento/components/ProntidaoFaturamentoPanel';
 import { ResultadoConfirmacaoPanel } from '@/features/faturamento/components/ResultadoConfirmacaoPanel';
 import {
     confirmacaoBloqueadaPorReversao,
@@ -45,9 +48,11 @@ import {
     FATURAMENTO_DETALHE,
     FATURAMENTO_LISTA,
     FATURAMENTO_RESULTADO,
+    leg4Falhou,
     legQueParou,
     LinhaLegFaturamento,
     montarLinhasDeLegs,
+    motivoLegExibicao,
     podeCancelar,
     podeConfirmar,
     resumoResultadoConfirmacao,
@@ -79,6 +84,8 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
     const router = useRouter();
     const { hasPermission } = usePermissions();
     const toast = useAppToast();
+    const queryClient = useQueryClient();
+    const consultaNotaPermitida = useConsultaNotaPermitida();
     const runWithToast = useMutationWithToast();
     const [dialog, setDialog] = useState<'confirmar' | 'cancelar' | null>(null);
     const [legEmRetomada, setLegEmRetomada] = useState<number | null>(null);
@@ -89,6 +96,8 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
     const { confirmarMutation, cancelarMutation, retomarReversaoMutation } = useFaturamentoMutations();
     const faturamento = faturamentoQuery.data ?? null;
     const [ultimaConfirmacao, setUltimaConfirmacao] = useState<ResultadoConfirmacaoFaturamento | null>(null);
+    // Emenda QA-01 da D113: a recusa local só está na nota. Lê a nota do que a tela mostra (resultado da confirmação ou detalhe).
+    const codigoRejeicaoNota = useCodigoRejeicaoNota(ultimaConfirmacao?.resposta.faturamento ?? faturamento);
 
     // D95 (FT-15): pedido por número, sem GUID cru. Uma consulta da lista de pedidos da empresa (teto do
     // backend, `VendasRepository.cs:40`), nunca uma por faturamento; fora dela, rótulo neutro (D66).
@@ -112,7 +121,10 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
                 const resposta = await confirmarMutation.mutateAsync({ id: faturamentoId, values });
                 setDialog(null);
                 setUltimaConfirmacao({ resposta, correlationId: values.correlationId });
-                const resumo = resumoResultadoConfirmacao(resposta.faturamento);
+                // O toast espera a leitura da nota (só com permissão e leg 4 Falhou); falha ou sem permissão = motivo cru.
+                const notaId = resposta.faturamento.notaFiscalId;
+                const codigo = consultaNotaPermitida && notaId && leg4Falhou(resposta.faturamento.legs) ? await buscarCodigoRejeicaoNota(queryClient, notaId) : null;
+                const resumo = resumoResultadoConfirmacao(resposta.faturamento, codigo);
                 if (resumo.severity === 'success') toast.success(resumo.titulo, resumo.detalhe);
                 else if (resumo.severity === 'error') toast.error(resumo.titulo, resumo.detalhe);
                 else toast.info(resumo.titulo, resumo.detalhe);
@@ -264,10 +276,13 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
                             resultado={ultimaConfirmacao}
                             podeConfirmarDeNovo={podeConfirmar(etapa) && hasPermission('FATURAMENTO_CONFIRMAR') && !confirmacaoBloqueadaPorReversao(faturamento)}
                             onConfirmarDeNovo={abrirConfirmar}
+                            codigoRejeicaoNota={codigoRejeicaoNota}
                         />
                     ) : legParado && etapa === StatusFaturamento.Erro ? (
-                        <Message className="w-full mb-3" severity="error" text={`${FATURAMENTO_RESULTADO.persistentePrefixo} ${descricaoLegQueParou(legParado)} ${FATURAMENTO_RESULTADO.proximoPasso}`} />
+                        <Message className="w-full mb-3" severity="error" text={`${FATURAMENTO_RESULTADO.persistentePrefixo} ${descricaoLegQueParou(legParado, codigoRejeicaoNota)} ${FATURAMENTO_RESULTADO.proximoPasso}`} />
                     ) : null}
+
+                    {podeConfirmar(etapa) ? <ProntidaoFaturamentoPanel pedidoVendaId={faturamento.pedidoVendaId} /> : null}
 
                     <Card title="Legs de integração" className="mb-3">
                         <DataTable value={linhasLegs} dataKey="key" responsiveLayout="scroll" stripedRows size="small">
@@ -283,7 +298,7 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
                                 }
                             />
                             <Column header="Ocorreu em" body={(row: LinhaLegFaturamento) => (row.registro ? formatDateTime(row.registro.ocorreuEm) : '—')} />
-                            <Column header="Motivo" body={(row: LinhaLegFaturamento) => row.registro?.motivo ?? '—'} />
+                            <Column header="Motivo" body={(row: LinhaLegFaturamento) => motivoLegExibicao(row.leg, row.registro?.motivo, codigoRejeicaoNota) ?? '—'} />
                             <Column
                                 header="Ação"
                                 body={(row: LinhaLegFaturamento) =>
@@ -329,6 +344,7 @@ export const FaturamentoDetalhePage = ({ faturamentoId }: { faturamentoId: strin
                         visible={dialog === 'confirmar'}
                         loading={confirmarMutation.isPending}
                         faturamentoId={faturamento.id}
+                        pedidoVendaId={faturamento.pedidoVendaId}
                         empresaId={faturamento.empresaId}
                         filialId={faturamento.filialId ?? null}
                         error={confirmarMutation.error}

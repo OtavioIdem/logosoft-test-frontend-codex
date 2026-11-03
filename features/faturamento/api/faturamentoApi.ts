@@ -1,7 +1,14 @@
 import { httpClient } from '@/lib/http/httpClient';
 import { mapApiError } from '@/lib/http/apiError';
 import { cleanQueryParams, sanitizePayload } from '@/lib/http/requestUtils';
-import { cancelarFaturamentoSchema, confirmarFaturamentoSchema, prepararFaturamentoSchema, retomarReversaoLegSchema } from '@/features/faturamento/schemas/faturamentoSchemas';
+import {
+    cancelarFaturamentoSchema,
+    confirmarFaturamentoSchema,
+    prepararFaturamentoSchema,
+    prontidaoFaturamentoQuerySchema,
+    prontidaoFaturamentoResponseSchema,
+    retomarReversaoLegSchema
+} from '@/features/faturamento/schemas/faturamentoSchemas';
 import {
     ConfirmarFaturamentoResponse,
     FaturamentoHistoricoResponse,
@@ -9,7 +16,9 @@ import {
     FaturamentoPaginado,
     FaturamentoResponse,
     FaturamentosListQuery,
-    PrepararFaturamentoResponse
+    PrepararFaturamentoResponse,
+    ProntidaoFaturamentoQuery,
+    ProntidaoFaturamentoResponse
 } from '@/features/faturamento/types/faturamento.types';
 
 type Schema<T> = { parse: (value: unknown) => T };
@@ -74,6 +83,15 @@ export const faturamentoApi = {
         return runRequest(async () => {
             const response = await httpClient.get<FaturamentoOcorrenciaResponse[]>(`/api/faturamento/${id}/ocorrencias`);
             return response.data;
+        });
+    },
+    // D113: somente leitura, sem efeito colateral. Mesmo escopo organizacional das demais chamadas (nenhuma opção
+    // extra no client). O 404 é "pedido fora do contexto" e sobe como erro, nunca como lista vazia.
+    async prontidao(query: ProntidaoFaturamentoQuery) {
+        const parsed = prontidaoFaturamentoQuerySchema.parse(query);
+        return runRequest(async () => {
+            const response = await httpClient.get<ProntidaoFaturamentoResponse>('/api/faturamento/prontidao', { params: cleanQueryParams(parsed) });
+            return prontidaoFaturamentoResponseSchema.parse(response.data) as ProntidaoFaturamentoResponse;
         });
     },
     async preparar(values: unknown) {

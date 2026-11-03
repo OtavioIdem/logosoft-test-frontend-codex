@@ -92,12 +92,31 @@ export const buildSnapshot = ({ contract, catalogSection, version, sourceDate })
     const sentinelsList = [...SENTINELAS].sort();
     const permissions = [...namedUnion, ...sentinelsList].sort();
     const backendDeclaradas = contract.declaredTotal;
-    const naoConciliadoQuantidade = typeof backendDeclaradas === 'number' ? Math.max(backendDeclaradas - namedUnion.length, 0) : 0;
+    // Diferença com sinal: declarado − união nomeada.
+    //   > 0  o backend declara mais permissões do que as nomeadas (sobram sem nome);
+    //   = 0  bate;
+    //   < 0  a união nomeada EXCEDE a foto do contrato v1.23 (o catálogo §12 recebeu
+    //        permissões depois da foto). Antes isso era truncado em 0 por Math.max e
+    //        o snapshot mentia "Sem divergência".
+    const naoConciliadoQuantidade = typeof backendDeclaradas === 'number' ? backendDeclaradas - namedUnion.length : 0;
+    const motivoNaoConciliado = (() => {
+        if (naoConciliadoQuantidade === 0) {
+            return 'Sem divergência: o total declarado pelo backend bate com a união nomeada medida entre as duas fontes documentais.';
+        }
+        if (naoConciliadoQuantidade > 0) {
+            return `O contrato declara ${backendDeclaradas} permissões nomeadas (docs/backend-v1.23/CONTRATO-API-v1.23.md, seção "Números"), mas a união nomeada medida entre as ${contractNamed.length} nomeadas em operações do contrato v1.23 e as ${catalogNamed.length} nomeadas no catálogo §12 de docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md resulta em ${namedUnion.length}. Fica ${naoConciliadoQuantidade} permissão(ões) sem nome: não aparece(m) em nenhuma operação do contrato v1.23 nem no catálogo §12, e não há fonte documental para nomeá-la(s) — não foi(ram) inventada(s).`;
+        }
+        // União excede o declarado: N = contractNamed + |semOperacaoEmV123| e a foto
+        // tem (declarado − contractNamed) vagas sem nome. As permissões do §12 sem
+        // operação em v1.23 ocupam essas vagas e sobra o excesso. A foto não diz
+        // QUAL delas sobra, então a lista é nominal e não se atribui sobra a nenhuma.
+        const excesso = -naoConciliadoQuantidade;
+        const vagasNaFoto = backendDeclaradas - contractNamed.length;
+        return `O contrato declara ${backendDeclaradas} permissões nomeadas (docs/backend-v1.23/CONTRATO-API-v1.23.md, seção "Números"), mas a união nomeada medida resulta em ${namedUnion.length}: ${contractNamed.length} nomeadas em operações do contrato v1.23 mais ${semOperacaoEmV123.length} nomeadas só no catálogo §12 de docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md. A união EXCEDE em ${excesso} o total declarado pela foto do contrato v1.23 (${backendDeclaradas}), porque o catálogo §12 recebeu permissões depois dessa foto. A foto deixa ${vagasNaFoto} vaga(s) sem nome; as ${semOperacaoEmV123.length} permissões do §12 ausentes das operações do v1.23 (${semOperacaoEmV123.join(', ')}) ocupam essas vagas e sobram ${excesso}. Quantidade negativa (${naoConciliadoQuantidade}) registra o excesso; nenhuma permissão foi removida nem inventada.`;
+    })();
     const naoConciliado = {
         quantidade: naoConciliadoQuantidade,
-        motivo: naoConciliadoQuantidade === 0
-            ? 'Sem divergência: o total declarado pelo backend bate com a união nomeada medida entre as duas fontes documentais.'
-            : `O contrato declara ${backendDeclaradas} permissões nomeadas (docs/backend-v1.23/CONTRATO-API-v1.23.md, seção "Números"), mas a união nomeada medida entre as ${contractNamed.length} nomeadas em operações do contrato v1.23 e as ${catalogNamed.length} nomeadas no catálogo §12 de docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md resulta em ${namedUnion.length}. Fica ${naoConciliadoQuantidade} permissão(ões) sem nome: não aparece(m) em nenhuma operação do contrato v1.23 nem no catálogo §12, e não há fonte documental para nomeá-la(s) — não foi(ram) inventada(s).`
+        motivo: motivoNaoConciliado
     };
     return {
         schemaVersion: 2,

@@ -4,6 +4,8 @@ import {
     FaturamentoLegResponse,
     FaturamentoResponse,
     LegIntegracaoFaturamento,
+    ProntidaoEtapaConhecida,
+    ProntidaoRecursoConhecido,
     StatusFaturamento,
     TipoDocumentoConfirmarFaturamento,
     TipoDocumentoFiscal,
@@ -182,10 +184,38 @@ export const cancelamentoBloqueadoTooltip = (podeRetomarReversao: boolean) =>
 export const legQueParou = (legs?: FaturamentoLegResponse[] | null): LinhaLegFaturamento | null =>
     montarLinhasDeLegs(legs).find((linha) => linha.registro !== null && n(linha.registro.estado) === EstadoLegIntegracaoFaturamento.Falhou) ?? null;
 
+// D113/AJ-37 (emenda QA-01): o envio recusado LOCALMENTE grava `RECUSA_LOCAL` só na nota (`NotaFiscal.CodigoRejeicao`).
+// O motivo do leg 4 e o alerta do Confirmar dizem "Nota fiscal rejeitada pela SEFAZ. Código: {cStat}..." mesmo na
+// recusa local (backend `ConfirmarFaturamentoUseCase.cs:275-277`). Por isso o sinal primário é o `codigoRejeicao` da nota,
+// lido pela tela (`useCodigoRejeicaoNota`); a substring no motivo é só segundo sinal, para quando o backend corrigir o texto.
+// Sem o código da nota (sem permissão, leitura falhando ou carregando), o motivo sai como veio, sem afirmar recusa local.
+export const CODIGO_RECUSA_LOCAL = 'RECUSA_LOCAL';
+export const ehRecusaLocal = (motivo?: string | null) => typeof motivo === 'string' && motivo.includes(CODIGO_RECUSA_LOCAL);
+
+/** Primeiro sinal: o código gravado na nota. */
+export const notaRecusadaLocalmente = (codigoRejeicaoNota?: string | null) => codigoRejeicaoNota === CODIGO_RECUSA_LOCAL;
+
+const PREFIXO_REJEICAO_SEFAZ = 'Nota fiscal rejeitada pela SEFAZ';
+
+/** O leg 4 (transmissão) está em `Falhou`? Só então vale ler a nota. */
+export const leg4Falhou = (legs?: FaturamentoLegResponse[] | null) =>
+    (legs ?? []).some((leg) => n(leg.leg) === LegIntegracaoFaturamento.TransmitirAutorizarSefaz && n(leg.estado) === EstadoLegIntegracaoFaturamento.Falhou);
+
+// Motivo do leg para exibição: no leg 4, recusa local troca o texto "rejeitada pela SEFAZ" pelo da recusa local.
+export const motivoLegExibicao = (leg: number, motivo?: string | null, codigoRejeicaoNota?: string | null) =>
+    n(leg) === LegIntegracaoFaturamento.TransmitirAutorizarSefaz && (notaRecusadaLocalmente(codigoRejeicaoNota) || ehRecusaLocal(motivo))
+        ? FATURAMENTO_RESULTADO.recusaLocal
+        : motivo?.trim() || null;
+
+// Alerta devolvido pelo Confirmar: o do leg 4 repete o motivo do leg. Com a nota recusada localmente, o alerta de
+// "rejeitada pela SEFAZ" recebe o texto da recusa local; sem ela, só a substring (segundo sinal) troca o texto.
+export const alertaExibicao = (alerta: string, codigoRejeicaoNota?: string | null) =>
+    ehRecusaLocal(alerta) || (notaRecusadaLocalmente(codigoRejeicaoNota) && alerta.trim().startsWith(PREFIXO_REJEICAO_SEFAZ)) ? FATURAMENTO_RESULTADO.recusaLocal : alerta;
+
 // Texto "parou no leg N (rótulo): motivo" -- lê o motivo gravado no leg, sem derivar nada (D23).
-export const descricaoLegQueParou = (linha: LinhaLegFaturamento) => {
+export const descricaoLegQueParou = (linha: LinhaLegFaturamento, codigoRejeicaoNota?: string | null) => {
     const posicao = LEGS_CATALOGO.includes(linha.leg) ? `leg ${linha.leg} (${linha.legLabel})` : linha.legLabel;
-    const motivo = linha.registro?.motivo?.trim();
+    const motivo = motivoLegExibicao(linha.leg, linha.registro?.motivo, codigoRejeicaoNota);
     return motivo ? `Parou no ${posicao}: ${motivo}` : `Parou no ${posicao}, sem motivo registrado. Veja as ocorrências.`;
 };
 
@@ -198,7 +228,7 @@ export type ResultadoConfirmacaoResumo = {
 
 // D93: o resultado sai da etapa REAL devolvida pelo Confirmar (`ConfirmarFaturamentoUseCase.cs:367-374`).
 // "Faturamento confirmado" só com etapa Faturado; HTTP 200 com etapa Erro nunca vira sucesso.
-export const resumoResultadoConfirmacao = (faturamento: FaturamentoResponse): ResultadoConfirmacaoResumo => {
+export const resumoResultadoConfirmacao = (faturamento: FaturamentoResponse, codigoRejeicaoNota?: string | null): ResultadoConfirmacaoResumo => {
     const etapa = n(faturamento.etapa);
     const parou = legQueParou(faturamento.legs);
 
@@ -207,13 +237,13 @@ export const resumoResultadoConfirmacao = (faturamento: FaturamentoResponse): Re
     }
 
     if (etapa === StatusFaturamento.Erro) {
-        return { severity: 'error', titulo: FATURAMENTO_RESULTADO.tituloErro, detalhe: parou ? descricaoLegQueParou(parou) : FATURAMENTO_RESULTADO.detalheErroSemLeg, concluido: false };
+        return { severity: 'error', titulo: FATURAMENTO_RESULTADO.tituloErro, detalhe: parou ? descricaoLegQueParou(parou, codigoRejeicaoNota) : FATURAMENTO_RESULTADO.detalheErroSemLeg, concluido: false };
     }
 
     return {
         severity: 'info',
         titulo: `${FATURAMENTO_RESULTADO.tituloParcialPrefixo} ${statusFaturamentoLabel(etapa)}`,
-        detalhe: parou ? descricaoLegQueParou(parou) : FATURAMENTO_RESULTADO.detalheParcial,
+        detalhe: parou ? descricaoLegQueParou(parou, codigoRejeicaoNota) : FATURAMENTO_RESULTADO.detalheParcial,
         concluido: false
     };
 };
@@ -234,7 +264,11 @@ export const FATURAMENTO_RESULTADO = {
     etapaRotulo: 'Etapa devolvida',
     confirmarDeNovo: 'Confirmar de novo',
     // Sinal persistente para quem abre o detalhe depois (sem resposta de confirmação na tela).
-    persistentePrefixo: 'O faturamento está em Erro.'
+    persistentePrefixo: 'O faturamento está em Erro.',
+    // D113/AJ-37: selo do servidor com SEFAZ simulada (health `fiscal.mock`) e texto da recusa local (leg 4).
+    seloSefazSimulada: 'SEFAZ simulada',
+    seloSefazSimuladaDetalhe: 'O servidor está com a SEFAZ simulada: esta nota não foi autorizada por uma SEFAZ real.',
+    recusaLocal: 'Recusado no servidor antes de sair: configuração do servidor, não rejeição da SEFAZ. Nada foi transmitido; avise quem administra o servidor.'
 } as const;
 
 export const FATURAMENTO_CONFIRMAR = {
@@ -242,7 +276,7 @@ export const FATURAMENTO_CONFIRMAR = {
     instrucao: 'Informe os dados fiscais para gerar e transmitir a nota. Campos obrigatórios marcados com *.',
     // FT-21 (D97): sem natureza e sem endereço fiscal do cliente, nenhum faturamento conclui nesta versão.
     preRequisitos:
-        'Para concluir, o faturamento precisa de uma natureza de operação ativa da empresa e do endereço fiscal do cliente cadastrados. Sem um deles, a geração da nota é recusada e o faturamento não conclui; esses cadastros ainda não têm tela no sistema.',
+        'Para concluir, o faturamento precisa de vários cadastros fiscais em dia (natureza de operação, endereço fiscal do cliente, emitente, série, entre outros). O checklist de prontidão abaixo lista o que falta, com link para a tela de cada cadastro; o Confirmar só libera quando nada estiver pendente.',
     grupoDocumento: 'Documento',
     grupoNatureza: 'Natureza de operação',
     grupoTransmissao: 'Transmissão',
@@ -252,9 +286,69 @@ export const FATURAMENTO_CONFIRMAR = {
     ajudaUnidade: 'Usada só se o produto não tiver unidade no cadastro.',
     correlationIdRotulo: 'ID de correlação',
     correlationIdAjuda: 'Gerado automaticamente a cada abertura; reenviado só se a chamada anterior não tiver resposta.',
+    rotuloConfirmar: 'Confirmar',
+    // D113: com avaliacao = Retomada o mesmo botão passa a "Retomar" (reenvia o Confirmar com os mesmos parâmetros).
+    rotuloRetomar: 'Retomar',
     indisponivelPrefixo: 'Confirmar indisponível:',
     erroTitulo: 'O backend recusou a confirmação.'
 } as const;
+
+// D113: prontidão. A rota de cada recurso mora em `prontidaoRecursos.ts`; aqui só o texto.
+export const FATURAMENTO_PRONTIDAO = {
+    titulo: 'Prontidão para faturar',
+    descricaoLeitura: 'Conferência feita pelo backend com o pedido deste faturamento. Natureza, série e número só entram na conferência quando você informa no Confirmar.',
+    consultando: 'Conferindo o que falta cadastrar…',
+    aguardandoDigitacao: 'Aguardando você terminar de preencher para conferir…',
+    semPedido: 'Este faturamento não informa o pedido de venda; a prontidão não pode ser conferida.',
+    pronto: 'Nada pendente: o backend informa que o faturamento está pronto para confirmar.',
+    prontoLeitura: 'Nada pendente com os dados do pedido. Natureza, série e número ainda são conferidos no Confirmar.',
+    pendentes: (quantidade: number) => (quantidade === 1 ? '1 pendência a resolver antes de confirmar' : `${quantidade} pendências a resolver antes de confirmar`),
+    encadeadas: 'Algumas pendências só aparecem depois que a anterior é resolvida. Use "Reconferir" após corrigir.',
+    reconferir: 'Reconferir',
+    informeNoConfirmar: 'informe no Confirmar',
+    erroTitulo: 'Não foi possível conferir a prontidão.',
+    erroBloqueio: 'O Confirmar fica bloqueado até a conferência responder. Use "Reconferir".',
+    erroNaoEncontrado: 'O pedido deste faturamento não foi encontrado neste contexto. O Confirmar fica bloqueado.',
+    retomadaTexto: 'Este faturamento já tem etapas integradas. Só faturamento, estoque e financeiro são reavaliados; o que já foi integrado não se repete.',
+    semPermissaoLink: (descricao: string) => `Peça a quem tem acesso a ${descricao} para corrigir.`,
+    confirmarBloqueado: 'Confirmar indisponível: resolva as pendências da prontidão.',
+    confirmarAguardando: 'Confirmar indisponível: aguardando a conferência da prontidão.',
+    confirmarErro: 'Confirmar indisponível: a prontidão não pôde ser conferida.'
+} as const;
+
+export const PRONTIDAO_ETAPA_ROTULO: Record<ProntidaoEtapaConhecida, string> = {
+    Pedido: 'Pedido de venda',
+    Faturamento: 'Faturamento',
+    Cliente: 'Cliente',
+    Emitente: 'Emitente (empresa e filial)',
+    ConfiguracaoFiscal: 'Configuração fiscal',
+    Certificado: 'Certificado digital',
+    Serie: 'Série e número',
+    Natureza: 'Natureza de operação',
+    Produto: 'Produtos',
+    Destinatario: 'Destinatário',
+    RegraFiscal: 'Regra fiscal',
+    Estoque: 'Estoque',
+    Financeiro: 'Financeiro'
+};
+
+// Rótulo do link que leva à tela que corrige a pendência.
+export const PRONTIDAO_RECURSO_ROTULO: Record<ProntidaoRecursoConhecido, string> = {
+    Empresas: 'Abrir Empresas e filiais',
+    ConfiguracaoFiscal: 'Abrir Configuração de emissão',
+    Certificados: 'Abrir Configuração de emissão (certificados)',
+    SeriesFiscais: 'Abrir Séries fiscais',
+    NaturezasOperacao: 'Abrir Naturezas de operação',
+    Produtos: 'Abrir Produtos',
+    Pessoas: 'Abrir Pessoas',
+    RegrasFiscais: 'Abrir Regras fiscais',
+    Estoque: 'Abrir Entradas de estoque',
+    CondicoesPagamento: 'Abrir Condições de pagamento',
+    PedidoVenda: 'Abrir Pedidos de venda',
+    Faturamento: 'Abrir Faturamentos'
+};
+
+export const prontidaoEtapaRotulo = (etapa: string) => (Object.prototype.hasOwnProperty.call(PRONTIDAO_ETAPA_ROTULO, etapa) ? PRONTIDAO_ETAPA_ROTULO[etapa as ProntidaoEtapaConhecida] : etapa);
 
 export const FATURAMENTO_PREPARAR = {
     titulo: 'Preparar faturamento',

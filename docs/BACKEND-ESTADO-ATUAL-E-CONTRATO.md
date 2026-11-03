@@ -1284,6 +1284,7 @@ Gerado do código; a ordem é a dos arquivos.
 | --- | --- | --- | --- |
 | `GET` | `/` | `FaturamentoConsultar` | `Listar([FromQuery] ListarFaturamentosRequest request)` |
 | `GET` | `/{id:guid}` | `FaturamentoConsultar` | `Obter(Guid id)` |
+| `GET` | `/prontidao` | `FaturamentoConsultar` | `ObterProntidao([FromQuery] ProntidaoFaturamentoRequest request)` — v1.26.22/F5, acrescentada na `b82` (D110, D113) |
 | `GET` | `/{id:guid}/historico` | `FaturamentoConsultar` | `ListarHistorico(Guid id)` |
 | `GET` | `/{id:guid}/ocorrencias` | `FaturamentoConsultar` | `ListarOcorrencias(Guid id)` |
 | `POST` | `/preparar` | `FaturamentoPreparar` | `Preparar([FromBody] PrepararFaturamentoRequest request)` |
@@ -1387,8 +1388,29 @@ Gerado do código; a ordem é a dos arquivos.
 | `GET` | `/cest` | `FiscalCadastrosConsultar` | `ListarCest([FromQuery] string? termo, [FromQuery] string? codigo, [FromQuery] string? segmento, [FromQuery] bool? ativo, [FromQuery] int pagina = 1, [FromQuery] int tamanhoPagina = 20,)` |
 | `GET` | `/ncm-cest` | `FiscalCadastrosConsultar` | `ListarNcmCest([FromQuery] string? ncmCodigo, [FromQuery] string? cestCodigo, [FromQuery] bool? ativo, [FromQuery] int pagina = 1, [FromQuery] int tamanhoPagina = 20,)` |
 | `GET` | `/ncm/{codigo}/validacao` | `FiscalCadastrosConsultar` | `ValidarNcmCest(string codigo, [FromQuery] string? cestCodigo, [FromQuery] DateOnly? dataOperacao,)` |
+| `GET` | `/gtin-classificacao/{gtin}` | `FiscalCadastrosConsultar` | `ConsultarGtinClassificacao(string gtin, [FromQuery] DateOnly? data,)` — v1.26.21/G1, acrescentada na `b80` (D110) |
 | `GET` | `/codigos-servico` | `FiscalCadastrosConsultar` | `ListarCodigosServico([FromQuery] string? municipioCodigoIbge, [FromQuery] string? codigoLc116, [FromQuery] string? termo, [FromQuery] bool? ativo, [FromQuery] int pagina = 1, [FromQuery] int tamanhoPagina = 20,)` |
 | `POST` | `/importar/{tabela}` | `FiscalCadastrosGerenciar` | `ImportarTabelaOficial(TabelaOficialFiscal tabela)` |
+
+### `api/fiscal/configuracao`
+
+<sub>Fiscal/ConfiguracaoFiscalController</sub>
+
+> Acrescentada na `b81` (D110, D112) a partir de `ConfiguracaoFiscalController.cs:56-106` do backend v1.26.22/F3
+> (commit `061b32e`). A empresa vem do claim `empresa_id` do token, nunca da rota nem do corpo.
+
+| Método | Caminho | Permissão | Assinatura |
+| --- | --- | --- | --- |
+| `GET` | `/empresa` | `FiscalConfiguracaoConsultar` | `ObterEmpresa()` |
+| `PUT` | `/empresa` | `FiscalConfiguracaoGerenciar` | `SalvarEmpresa([FromBody] SalvarConfiguracaoFiscalEmpresaRequest request)` |
+| `POST` | `/empresa/inativar` | `FiscalConfiguracaoGerenciar` | `InativarEmpresa([FromBody] InativarConfiguracaoFiscalRequest request)` |
+| `POST` | `/empresa/reativar` | `FiscalConfiguracaoGerenciar` | `ReativarEmpresa([FromBody] ReativarConfiguracaoFiscalRequest request)` |
+| `GET` | `/filiais/{filialId:guid}` | `FiscalConfiguracaoConsultar` | `ObterFilial(Guid filialId)` |
+| `PUT` | `/filiais/{filialId:guid}` | `FiscalConfiguracaoGerenciar` | `SalvarFilial(Guid filialId, [FromBody] SalvarConfiguracaoFiscalFilialRequest request)` |
+| `GET` | `/certificados` | `FiscalConfiguracaoConsultar` | `ListarCertificados([FromQuery] bool somenteAtivos)` |
+| `POST` | `/certificados` | `FiscalConfiguracaoGerenciar` | `CadastrarCertificado([FromBody] CadastrarCertificadoDigitalRequest request)` |
+| `POST` | `/certificados/{id:guid}/inativar` | `FiscalConfiguracaoGerenciar` | `InativarCertificado(Guid id, [FromBody] InativarCertificadoDigitalRequest request)` |
+| `POST` | `/certificados/{id:guid}/verificar` | `FiscalConfiguracaoGerenciar` | `VerificarCertificado(Guid id)` |
 
 ### `api/fiscal/excecoes`
 
@@ -3718,6 +3740,8 @@ Constante C# → código enviado no token e exigido pelo endpoint.
 | `FiscalSeriesConsultar` | `FISCAL_SERIES_CONSULTAR` |
 | `FiscalSeriesGerenciar` | `FISCAL_SERIES_GERENCIAR` |
 | `FiscalModelosConsultar` | `FISCAL_MODELOS_CONSULTAR` |
+| `FiscalConfiguracaoConsultar` | `FISCAL_CONFIGURACAO_CONSULTAR` |
+| `FiscalConfiguracaoGerenciar` | `FISCAL_CONFIGURACAO_GERENCIAR` |
 | `FaturamentoConsultar` | `FATURAMENTO_CONSULTAR` |
 | `FaturamentoPreparar` | `FATURAMENTO_PREPARAR` |
 | `FaturamentoConfirmar` | `FATURAMENTO_CONFIRMAR` |

@@ -37,7 +37,7 @@ const renderHook = (all = false) => {
 describe('lookup de filiais B47.c2', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        permissions.mockReturnValue({ hasPermission: vi.fn(() => false), hasAnyPermission: vi.fn(), hasAllPermissions: vi.fn() });
+        permissions.mockReturnValue({ isMaster: false, hasPermission: vi.fn(() => false), hasAnyPermission: vi.fn(), hasAllPermissions: vi.fn() });
         api.listarFiliais.mockResolvedValue([{ id: filialId, empresaId, nome: 'Filial atual', documento: '' }]);
     });
 

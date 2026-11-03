@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { faturamentoApi } from '@/features/faturamento/api/faturamentoApi';
-import { ConfirmarFaturamentoRequestValues, FaturamentosListQuery } from '@/features/faturamento/types/faturamento.types';
+import { ConfirmarFaturamentoRequestValues, FaturamentosListQuery, ProntidaoFaturamentoQuery } from '@/features/faturamento/types/faturamento.types';
 
 export const faturamentosQueryKey = (query?: FaturamentosListQuery) => ['faturamentos', query ?? {}] as const;
 export const faturamentoDetalheQueryKey = (id?: string | null) => ['faturamento', id ?? null] as const;
@@ -24,6 +24,34 @@ export const useFaturamentoHistorico = (id?: string | null) =>
 export const useFaturamentoOcorrencias = (id?: string | null) =>
     useQuery({ queryKey: faturamentoOcorrenciasQueryKey(id), queryFn: () => faturamentoApi.ocorrencias(id as string), enabled: Boolean(id) });
 
+// D113: a chave carrega TODOS os parâmetros da consulta (valores ausentes viram null, para a chave ser estável).
+// Resposta de parâmetros anteriores nunca serve de dado para os atuais: chave diferente, cache diferente.
+export const faturamentoProntidaoQueryKey = (query?: ProntidaoFaturamentoQuery | null) =>
+    [
+        'faturamento-prontidao',
+        {
+            pedidoVendaId: query?.pedidoVendaId ?? null,
+            naturezaOperacaoId: query?.naturezaOperacaoId || null,
+            serie: query?.serie?.trim() || null,
+            tipoDocumento: query?.tipoDocumento ?? null,
+            numero: query?.numero?.trim() || null,
+            condicaoPagamentoId: query?.condicaoPagamentoId || null
+        }
+    ] as const;
+
+// Sem retry (falha bloqueia o Confirmar e o operador usa "Reconferir"), sem staleTime e sem placeholderData: a tela só
+// habilita ação com resposta fresca dos parâmetros atuais. `gcTime: 0` descarta a resposta quando ninguém a observa.
+export const useProntidaoFaturamento = (query: ProntidaoFaturamentoQuery | null, enabled = true) =>
+    useQuery({
+        queryKey: faturamentoProntidaoQueryKey(query),
+        queryFn: () => faturamentoApi.prontidao(query as ProntidaoFaturamentoQuery),
+        enabled: enabled && Boolean(query?.pedidoVendaId),
+        retry: false,
+        staleTime: 0,
+        gcTime: 0,
+        refetchOnMount: 'always'
+    });
+
 type IdValues = { id: string; values: unknown };
 
 export const useFaturamentoMutations = () => {
@@ -33,6 +61,9 @@ export const useFaturamentoMutations = () => {
         queryClient.invalidateQueries({ queryKey: ['faturamento'] });
         queryClient.invalidateQueries({ queryKey: ['faturamento-historico'] });
         queryClient.invalidateQueries({ queryKey: ['faturamento-ocorrencias'] });
+        // D113/AJ-37: invalida e refaz o GET da prontidão; nunca setQueryData com a resposta de uma mutação.
+        queryClient.invalidateQueries({ queryKey: ['faturamento-prontidao'] });
+        queryClient.invalidateQueries({ queryKey: ['faturamento-nota-rejeicao'] });
     };
 
     const prepararMutation = useMutation({ mutationFn: (values: unknown) => faturamentoApi.preparar(values), onSuccess: invalidate });

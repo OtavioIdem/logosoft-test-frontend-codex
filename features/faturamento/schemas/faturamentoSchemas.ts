@@ -74,6 +74,34 @@ export const confirmarFaturamentoSchema = confirmarFaturamentoCamposSchema
 
 export const cancelarFaturamentoSchema = z.object({ motivo: textRequired('Informe o motivo.').max(300, 'O motivo aceita até 300 caracteres.') });
 
+// GET /api/faturamento/prontidao: query com os nomes do Confirmar. `.strict()` só aqui, no request.
+export const prontidaoFaturamentoQuerySchema = z
+    .object({
+        pedidoVendaId: requiredGuid('Pedido de venda'),
+        naturezaOperacaoId: optionalGuid,
+        serie: nullableText,
+        tipoDocumento: z.union([z.number().int(), z.null(), z.undefined()]),
+        numero: nullableText,
+        condicaoPagamentoId: optionalGuid
+    })
+    .strict();
+
+// Response SEM `.strict()` e com `etapa`/`recurso`/`avaliacao` como string: campo ou valor novo do backend não
+// pode quebrar a tela (o mapa `recurso -> rota` e o agrupamento decidem o que fazer com valor desconhecido).
+export const prontidaoPendenciaResponseSchema = z.object({
+    etapa: z.string(),
+    codigo: z.string(),
+    mensagem: z.string(),
+    recurso: z.string(),
+    recursoId: z.string().nullish()
+});
+
+export const prontidaoFaturamentoResponseSchema = z.object({
+    pronto: z.boolean(),
+    avaliacao: z.string(),
+    pendencias: z.array(prontidaoPendenciaResponseSchema)
+});
+
 // RetomarReversaoLegRequestValidator (FaturamentoValidators.cs:44-52): motivo obrigatório, até 500 caracteres.
 export const retomarReversaoLegSchema = z
     .object({

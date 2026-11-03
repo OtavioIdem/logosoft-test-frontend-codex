@@ -28,7 +28,10 @@ import { NATUREZA_OPERACAO_FIELD } from '@/features/fiscal/components/fiscalLabe
 import { gerarCorrelationId } from '@/features/fiscal/components/fiscalUiUtils';
 import { naturezaOperacaoIndisponivelMotivo, useNaturezasOperacaoOpcoes } from '@/features/fiscal/hooks/useNaturezasOperacao';
 import { respostaHttpRecebida } from '@/features/faturamento/api/faturamentoApi';
-import { useFaturamentos } from '@/features/faturamento/hooks/useFaturamentoResources';
+import { faturamentoProntidaoQueryKey, useFaturamentos, useProntidaoFaturamento } from '@/features/faturamento/hooks/useFaturamentoResources';
+import { useUfEmitenteFaturamento } from '@/features/faturamento/hooks/useUfEmitenteFaturamento';
+import { ProntidaoChecklist } from '@/features/faturamento/components/ProntidaoChecklist';
+import { confirmarLiberadoPelaProntidao, estadoProntidao, prontidaoEhRetomada } from '@/features/faturamento/components/prontidaoRecursos';
 import { confirmarFaturamentoFormSchema, prepararFaturamentoSchema, retomarReversaoLegSchema } from '@/features/faturamento/schemas/faturamentoSchemas';
 import {
     AcaoRetomadaReversaoLeg,
@@ -40,7 +43,7 @@ import {
     StatusFaturamento,
     TipoDocumentoFiscal
 } from '@/features/faturamento/types/faturamento.types';
-import { acaoRetomadaOptions, FATURAMENTO_CONFIRMAR, FATURAMENTO_PREPARAR, legFaturamentoLabel, pedidoVendaRotulo, statusFaturamentoLabel, tipoDocumentoOptions } from '@/features/faturamento/components/faturamentoLabels';
+import { acaoRetomadaOptions, FATURAMENTO_CONFIRMAR, FATURAMENTO_PREPARAR, FATURAMENTO_PRONTIDAO, legFaturamentoLabel, pedidoVendaRotulo, statusFaturamentoLabel, tipoDocumentoOptions } from '@/features/faturamento/components/faturamentoLabels';
 
 const buildErrors = (error: z.ZodError) => {
     const map: Record<string, string> = {};
@@ -173,6 +176,7 @@ export const ConfirmarFaturamentoDialog = ({
     visible,
     loading,
     faturamentoId,
+    pedidoVendaId,
     empresaId,
     filialId,
     error,
@@ -182,6 +186,8 @@ export const ConfirmarFaturamentoDialog = ({
     visible: boolean;
     loading?: boolean;
     faturamentoId?: string | null;
+    // D113: o pedido do faturamento; sem ele a prontidão não pode ser consultada e o Confirmar fica bloqueado.
+    pedidoVendaId?: string | null;
     empresaId: string | null;
     filialId?: string | null;
     error?: unknown;
@@ -192,14 +198,55 @@ export const ConfirmarFaturamentoDialog = ({
     const [errors, setErrors] = useState<Record<string, string>>({});
     // D92: um id por abertura do diálogo.
     const [correlationId, setCorrelationId] = useState(() => novoCorrelationId(faturamentoId));
+    // AJ-38: a UF sugerida (filial do faturamento, senão empresa) só entra enquanto o operador não mexeu no campo.
+    const [ufTocada, setUfTocada] = useState(false);
     useEffect(() => {
         if (visible) {
             setValues(initialConfirmar());
             setErrors({});
+            setUfTocada(false);
             setCorrelationId(novoCorrelationId(faturamentoId));
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [visible]);
+
+    const ufSugerida = useUfEmitenteFaturamento(empresaId, filialId, visible);
+    useEffect(() => {
+        if (!visible || ufTocada || !ufSugerida) return;
+        setValues((atual) => (atual.ufAutorizadora === ufSugerida ? atual : { ...atual, ufAutorizadora: ufSugerida }));
+    }, [visible, ufTocada, ufSugerida]);
+
+    // D113: a prontidão usa os mesmos parâmetros do formulário, com espera curta entre mudanças. A chave da query
+    // carrega todos eles; o Confirmar só libera com a resposta DESTA chave (sem placeholderData), sem consulta em
+    // voo e sem mudança ainda esperando o debounce.
+    const { naturezaOperacaoId, serie, tipoDocumento, numero, condicaoPagamentoId } = values;
+    const parametrosAtuais = useMemo(
+        () => (pedidoVendaId ? { pedidoVendaId, naturezaOperacaoId, serie, tipoDocumento, numero, condicaoPagamentoId } : null),
+        [pedidoVendaId, naturezaOperacaoId, serie, tipoDocumento, numero, condicaoPagamentoId]
+    );
+    const parametrosConsulta = useDebouncedValue(parametrosAtuais);
+    const aguardandoDigitacao = JSON.stringify(faturamentoProntidaoQueryKey(parametrosAtuais)) !== JSON.stringify(faturamentoProntidaoQueryKey(parametrosConsulta));
+    const prontidaoQuery = useProntidaoFaturamento(parametrosConsulta, visible);
+    const prontidaoEstado = estadoProntidao({
+        temPedido: Boolean(pedidoVendaId),
+        aguardandoDigitacao,
+        isFetching: prontidaoQuery.isFetching,
+        isError: prontidaoQuery.isError,
+        isSuccess: prontidaoQuery.isSuccess,
+        data: prontidaoQuery.data
+    });
+    const prontidaoLiberada = confirmarLiberadoPelaProntidao(prontidaoEstado);
+    const retomada = prontidaoEhRetomada(prontidaoQuery.data);
+    const motivoProntidao: string | null =
+        prontidaoEstado === 'pronto'
+            ? null
+            : prontidaoEstado === 'pendente'
+              ? FATURAMENTO_PRONTIDAO.confirmarBloqueado
+              : prontidaoEstado === 'erro'
+                ? FATURAMENTO_PRONTIDAO.confirmarErro
+                : prontidaoEstado === 'sem-pedido'
+                  ? FATURAMENTO_PRONTIDAO.semPedido
+                  : FATURAMENTO_PRONTIDAO.confirmarAguardando;
 
     const condicoes = useCondicoesPagamentoOptions(empresaId);
     const naturezas = useNaturezasOperacaoOpcoes(empresaId);
@@ -208,7 +255,7 @@ export const ConfirmarFaturamentoDialog = ({
     const update = (name: keyof ConfirmarFaturamentoFormValues, value: unknown) => { setValues((c) => ({ ...c, [name]: value })); setErrors((c) => ({ ...c, [name]: '' })); };
 
     const confirmar = async () => {
-        if (motivoIndisponivel) return;
+        if (motivoIndisponivel || !prontidaoLiberada) return;
         const parsed = confirmarFaturamentoFormSchema.safeParse(values);
         if (!parsed.success) { setErrors(buildErrors(parsed.error)); return; }
         try {
@@ -226,9 +273,17 @@ export const ConfirmarFaturamentoDialog = ({
     const dialogFooter = (
         <div className="flex flex-column gap-2">
             {motivoIndisponivel && !naturezas.isLoading ? <Message className="w-full" severity="warn" text={`${FATURAMENTO_CONFIRMAR.indisponivelPrefixo} ${motivoIndisponivel}`} /> : null}
+            {motivoProntidao && visible ? <Message className="w-full" severity="warn" text={motivoProntidao} /> : null}
             <div className="flex justify-content-end gap-2">
                 <Button type="button" label="Cancelar" icon="pi pi-times" severity="secondary" outlined onClick={onHide} disabled={loading} />
-                <Button type="button" label="Confirmar" icon="pi pi-check" loading={loading} disabled={Boolean(motivoIndisponivel)} onClick={confirmar} />
+                <Button
+                    type="button"
+                    label={retomada ? FATURAMENTO_CONFIRMAR.rotuloRetomar : FATURAMENTO_CONFIRMAR.rotuloConfirmar}
+                    icon="pi pi-check"
+                    loading={loading}
+                    disabled={Boolean(motivoIndisponivel) || !prontidaoLiberada}
+                    onClick={confirmar}
+                />
             </div>
         </div>
     );
@@ -237,6 +292,7 @@ export const ConfirmarFaturamentoDialog = ({
         <Dialog header={FATURAMENTO_CONFIRMAR.titulo} visible={visible} modal style={{ width: 'min(52rem, 98vw)' }} footer={dialogFooter} onHide={onHide}>
             <Message className="w-full mb-2" severity="warn" text={FATURAMENTO_CONFIRMAR.instrucao} />
             <Message className="w-full mb-3" severity="info" text={FATURAMENTO_CONFIRMAR.preRequisitos} />
+            <ProntidaoChecklist estado={prontidaoEstado} resposta={prontidaoQuery.data ?? null} error={prontidaoQuery.error} onReconferir={() => { void prontidaoQuery.refetch(); }} />
             {error ? <ApiErrorPanel error={mapApiError(error)} title={FATURAMENTO_CONFIRMAR.erroTitulo} /> : null}
             {error ? <FiscalErroCadastroAcao erro={mapApiError(error)} mostrarTitulo /> : null}
             <FormGrid>
@@ -268,7 +324,7 @@ export const ConfirmarFaturamentoDialog = ({
                 <div className="col-12"><span className="block font-semibold text-color-secondary">{FATURAMENTO_CONFIRMAR.grupoTransmissao}</span></div>
                 <div className="field col-12 md:col-3">
                     <label htmlFor="fatUf" className="font-medium">UF autorizadora *</label>
-                    <InputText id="fatUf" value={values.ufAutorizadora} maxLength={2} className={invalid('ufAutorizadora')} onChange={(event) => update('ufAutorizadora', event.target.value.toUpperCase())} />
+                    <InputText id="fatUf" value={values.ufAutorizadora} maxLength={2} className={invalid('ufAutorizadora')} onChange={(event) => { setUfTocada(true); update('ufAutorizadora', event.target.value.toUpperCase()); }} />
                     <FieldError message={errors.ufAutorizadora} />
                 </div>
                 <div className="field col-12 md:col-9">

@@ -1,3 +1,735 @@
+# v1.11.0a8b82.c3
+
+## Fiscal › Configuração de emissão passa a funcionar para o master, com a empresa do seletor (backend v1.26.23)
+
+**Origem:** correção v1.26.23 do backend (`docs/etapa-v1.26.23-master-na-configuracao-fiscal.md`, branch
+`fix/v1.26.23-master-configuracao-fiscal`). Decisão **D114**. Plano: `docs/fatias/v1.11.0a8b82.c3-master-configuracao-fiscal.md`.
+
+A tela da b81 nunca abriu para o login master/GOD. O backend lia a empresa só do token, e o token do master não tem
+empresa, então toda rota respondia `Fiscal.Configuracao.EmpresaObrigatoria`. O backend passou a aceitar a empresa
+escolhida em `?empresaId=`.
+
+### O que muda para quem usa
+
+- **Master:** a tela configura a **empresa escolhida no seletor de contexto**.
+  - As 10 chamadas de empresa, filiais e certificados levam `?empresaId=` dessa empresa, e nenhuma injeta
+    `filialId`.
+  - O aviso de divergência some, a aba Filiais é liberada (filiais da empresa do seletor), e o topo informa que a
+    configuração é a da empresa selecionada.
+  - Sem empresa no seletor, nada é consultado, e a tela pede para escolher uma.
+  - Trocar de empresa no seletor remonta as três abas e refaz as consultas. Ações como salvar e cadastrar usam o
+    contexto do momento do clique.
+- **Usuário comum:** nada muda. Ele continua sem `empresaId`, preso à empresa do token, com o aviso e o bloqueio da
+  aba Filiais quando o contexto diverge (D112).
+  - Injetar `empresaId` para ele, como o plano do backend sugere, faria um contexto divergente receber 404
+    mascarado, que a tela leria como "não configurada".
+
+Nenhuma permissão nova (`accessRisk: NENHUM`).
+
+### Como foi feito
+
+- `configuracaoFiscalApi.ts`: `contextoDaChamada(snapshot | null)`. Com o snapshot do master, a chamada usa o escopo
+  `query` (`required: true`, `includeFilial: false`, `snapshot`). Sem ele, usa `global`.
+  - O tipo não aceita `boolean`: o escopo `query` só existe com snapshot.
+- `useConfiguracaoFiscal.ts`: o escopo carrega `master` e `snapshot`. As queries só ficam habilitadas com o snapshot,
+  e as mutações leem o escopo corrente por `ref`.
+- `ConfiguracaoFiscalPage.tsx`: o `isMaster` vem do snapshot do contexto, que tem a mesma fonte (`user.isMaster`) do
+  `usePermissions` e do guard. Há `key={organizationalScopeKey}` nas abas.
+- **Defeito pego antes do QA:** o primeiro corte mandava o escopo `query` sem `snapshot`, e a política recusava toda
+  chamada do master antes da rede. O teste de componente pegou o problema.
+  - O unitário original fazia mock da política e escondia o defeito. Ele foi reescrito com o `httpClient` e a
+    política reais.
+
+### Testes
+
+- **Recorte:** `npx vitest run tests/unit/configuracaoFiscal* tests/components/ConfiguracaoFiscal* tests/components/CertificadosDigitaisTab* tests/components/AppMenuConfiguracaoFiscal*`.
+  São 10 arquivos, e **171/171 passaram** nas duas rodadas.
+- **Arquivos novos:**
+  - `configuracaoFiscalMasterContexto` (30): as 10 funções com master, as 10 sem master e o master sem empresa,
+    sem mock da política;
+  - `ConfiguracaoFiscalMaster` (6): AC-3 a AC-7, incluindo a troca de E1 para E2.
+- **`ConfiguracaoFiscalPage`:** a fixture tratava todo usuário como master. Os casos de usuário comum passaram a
+  `isMaster: false`, e o aviso de divergência agora é afirmado para não master e negado para master.
+- **Prova de vermelho**, por mutação temporária restaurada por hash:
+
+  | Mutação | Testes que falharam |
+  | --- | --- |
+  | escopo sempre `global` | 12 |
+  | escopo sempre `query` | 16 |
+  | divergência sem o ramo do master | 4 |
+  | snapshot retirado da metadata | 10 |
+
+- **E2E** `v1.11.0a8b81-configuracao-fiscal.spec.ts`, pela receita isolada: 2/2 nas duas rodadas.
+- **Gates e build** verdes, rodados pelo QA. Também passaram `backendContractMap` e `fiscalTransmissaoStructure`.
+- **Não verificado:** a tela no navegador e as chamadas contra o backend real. O contrato foi conferido pela leitura do
+  C# (controller, `ConfiguracaoFiscalContexto` e `EmpresaSelecionadaNaRequisicao`).
+
+### Pendências aceitas
+
+- **QA-01, baixa:** ao trocar de empresa com uma filial escolhida, a aba Filiais pode disparar uma consulta da filial
+  antiga já com `empresaId` da nova. A filial é zerada num efeito do pai, que roda depois da remontagem. O backend
+  recusa a consulta com 404, o resultado é descartado e nada da empresa anterior aparece. Isso vem da análise de
+  código, sem medição. A correção é derivar o `filialId` junto com a chave de escopo.
+- Um master com o seletor numa empresa inexistente recebe 404 mascarado, que a tela lê como "sem configuração".
+
+### Requisito de backend
+
+**O master só funciona com o backend v1.26.23**, que **ainda não está commitado** (branch
+`fix/v1.26.23-master-configuracao-fiscal`). Contra o backend v1.26.22, o `empresaId` é ignorado: o master vê o mesmo
+erro de antes, e o usuário comum segue normal.
+
+---
+
+# v1.11.0a8b82.c2
+
+## CI do PR #46: dois E2E ainda testavam como não master duas telas que a b79 tornou só de master
+
+**Origem:** o run `41717836669`, no commit `e64f03b`, passou em `test:unit`, mas no E2E mockado reprovou em 2 de 137
+testes. Os dois vêm da **b79** (`e19c869`), não das b80-b82. Ela marcou `masterOnly` em 8 regras de rota, entre elas
+`/estoque/bloqueios` e `/atividades`. Os dois specs ainda entravam como usuário comum com as permissões do módulo e
+agora recebiam "Tela em desenvolvimento". Quem está certo é a tela, e a correção é só em testes.
+
+### O que mudou
+
+- `tests/e2e/fixtures/logosoft.ts`: a sessão de teste ganhou `isMaster?: boolean`, com default `false`. Antes não havia
+  como montar uma sessão master, porque `masterOnly` ignora a permissão `*` e o `/api/auth/me` fixava
+  `isMaster: false`. É uma mudança aditiva: com o default, os demais specs não mudam.
+- `tests/e2e/navegacao-estoque.spec.ts`, AC-8: o redirect de `/estoque/bloqueios` para `/estoque/avancado` passa a
+  rodar com sessão master. As asserções são as mesmas.
+- `tests/e2e/permissions.spec.ts`, AC-6: o teste virou dois.
+  - Um usuário **não master** com `ATIVIDADES_CONSULTAR` e `COMENTAR` recebe a tela de desenvolvimento.
+  - O **master** vê "Atividades".
+  - A verificação das ações por permissão fica suspensa enquanto `/atividades` for `masterOnly`. O comentário do teste
+    diz como reabri-la quando a marca sair.
+- Grep das 8 rotas marcadas nos specs: só esses dois navegavam para elas com sessão não master.
+
+### Testes
+
+E2E pela receita isolada (porta 3411 livre, um único `next dev`, rotas aquecidas):
+- **vermelho medido antes da correção:** 2 de 13 falharam nos dois specs;
+- **depois da correção, 14/14 nas duas rodadas.**
+
+Não rodei a suíte E2E completa localmente: quem confere é o CI.
+
+O carimbo `.c2` fica só no CHANGELOG, como nos precedentes.
+
+---
+
+# v1.11.0a8b82.c1
+
+## CI do PR #46: dois testes unitários e um E2E presos ao estado anterior às b80-b82
+
+**Origem:** o run `41707679025` do PR #46 reprovou em `npm run test:unit` (2 de 2088). Os dois arquivos ficaram
+fora dos recortes das b80-b82. Não há mudança de produção: só testes.
+
+### O que mudou
+
+- `tests/unit/backendContractMap.test.ts`: o catálogo de rotas foi de 617 para 629, com +12 rotas documentais: 1 da
+  b80 (GTIN), 10 da b81 (`api/fiscal/configuracao`) e 1 da b82 (`/prontidao`). A contagem foi atualizada e cada uma
+  das 12 chaves ganhou asserção nominal. A conta fecha sem rota inesperada.
+- `tests/unit/fiscalTransmissaoStructure.test.ts`: a linha esperada do item pai Fiscal no `AppMenu.tsx` passou a
+  incluir `FISCAL_CONFIGURACAO_CONSULTAR` e `FISCAL_CONFIGURACAO_GERENCIAR`, acrescentadas na b81 (D109).
+- `tests/e2e/v1.11.0a8b71-faturamento.spec.ts`: o CI ainda não tinha chegado a este spec, porque parou antes, nos
+  testes unitários. Ele quebrava com a b82: o catch-all do fixture responde `[]` para `GET /api/faturamento/prontidao`,
+  o schema rejeita essa resposta, e o Confirmar fica bloqueado. O `routeDetalhe` ganhou o mock dessa rota com
+  `pronto: true`. A asserção "Confirmar desabilitado sem natureza" continua a mesma.
+
+### Testes
+
+- Os 35 arquivos unitários e de componente que fazem asserção sobre o `AppMenu` ou sobre o contract map passaram:
+  **276/276**. O `typecheck` também passou.
+- E2E pela receita isolada (porta 3411 livre, um único `next dev`, rotas aquecidas):
+  - **vermelho medido antes da correção:** 4 de 10 falharam em `v1.11.0a8b71-faturamento.spec.ts` e
+    `faturamento-legs.spec.ts`: o Confirmar não habilitava, e o POST não saía;
+  - **depois da correção, 10/10 nas duas rodadas;**
+  - `contrato-listagens-escopadas.spec.ts`: 32/32.
+- Não rodei localmente a suíte E2E completa nem a unitária completa: quem confere é o CI.
+
+### Ambiente
+
+O `next dev` devolvia 500 porque o `@hookform/resolvers` estava sem `dist/`. Foi o mesmo dano da limpeza de worktree
+da b81. O pacote foi reinstalado com `--no-save`, e todos os 477 pacotes de `node_modules` resolvem por
+`require.resolve`. Nada disso entra no commit.
+
+O carimbo `.c1` fica só no CHANGELOG, como nos precedentes b76.c2/c3 e b77.c1.
+
+---
+
+# v1.11.0a8b82
+
+## Faturamento › Confirmar só libera quando o backend diz que está pronto (backend v1.26.22, AJ-36 e restos de AJ-37/AJ-38)
+
+**Origem:** frente do planejador do backend, `docs/frontend/PLANO-FRONTEND-v1.26.22-faturamento.md` §2,
+§5.2 e §5.3. Decisões **D110** e **D113**, mais as duas emendas logo abaixo da D113. Plano:
+`docs/fatias/v1.11.0a8b82-prontidao-faturamento.md`.
+
+### O que muda para quem usa
+
+- **Checklist de prontidão no Confirmar.** Ao abrir o diálogo, a tela consulta
+  `GET /api/faturamento/prontidao` com o pedido e com os parâmetros preenchidos no formulário: natureza,
+  série, tipo de documento, número e condição de pagamento. As pendências aparecem agrupadas por etapa,
+  na ordem dos legs.
+  - Cada pendência tem link para a tela do cadastro. Se você não tem permissão para essa tela, o checklist
+    diz "peça a quem tem acesso". Um recurso que a tela não conhece aparece sem link.
+  - Mudar um parâmetro refaz a consulta. **Reconferir** refaz na hora.
+- **O botão Confirmar só habilita** quando o backend responde `pronto = true` **para os parâmetros que
+  estão no formulário agora**. Ele fica desabilitado enquanto você digita (há uma espera de 350 ms antes de
+  consultar), enquanto a consulta está em andamento e quando a consulta falha. Um 404 mostra uma mensagem
+  genérica, sem lista.
+- **Retomada:** quando a avaliação é `Retomada`, o botão passa a dizer **Retomar**, e o checklist explica
+  que o faturamento continua de onde parou.
+- **No detalhe do faturamento**, fora de Faturado e de Cancelado, há um painel de prontidão só para leitura.
+  As pendências que dependem de um parâmetro do Confirmar trazem a marca "informe no Confirmar".
+- **UF autorizadora pré-preenchida** com a UF do endereço fiscal da filial do faturamento, ou, se a filial
+  não tiver, com a da empresa. O campo continua editável, e o que você digitar nunca é sobrescrito.
+  - A sugestão só aparece para quem tem `ADMINISTRACAO_CONSULTAR`, ou para master, porque as duas listas
+    exigem essa permissão no backend. Sem ela, o campo fica vazio, como antes.
+  - Quando o contexto organizacional é de outra empresa (master trocando de empresa), a sugestão usa a UF
+    da empresa.
+- **Selo "SEFAZ simulada"** no resultado da confirmação, junto dos alertas, quando o health do backend diz
+  `fiscal.mock = true`.
+- **Recusa local no leg 4.** Quando a nota foi recusada **no servidor, antes de sair** (código
+  `RECUSA_LOCAL`), a tela diz isso, e não "rejeitada pela SEFAZ": é configuração do servidor. O texto vale
+  no resultado, na descrição do leg que parou, na coluna Motivo dos legs e no toast.
+  - Para saber disso, a tela lê a nota fiscal (`GET /api/fiscal/notas-fiscais/{id}`), e só quem tem
+    `FISCAL_CONSULTAR`, ou é master, faz essa leitura. Sem a permissão, ou se a leitura falhar, aparece o
+    motivo do backend como veio.
+
+Nenhuma permissão nova. A consulta de prontidão usa `FATURAMENTO_CONSULTAR`, e ninguém perdeu acesso
+(`accessRisk: NENHUM`).
+
+### Como foi feito
+
+- `features/faturamento`:
+  - tipos e schemas da prontidão. O request é `.strict()`; o response não é, e usa `z.string()` em `etapa`,
+    `recurso` e `avaliacao`;
+  - `faturamentoApi.prontidao`;
+  - `useProntidaoFaturamento`, com a chave de 6 parâmetros, sem `placeholderData` e com `gcTime: 0`;
+  - `prontidaoRecursos.ts`: o mapa fechado `recurso → rota`, o agrupamento e `estadoProntidao`;
+  - `ProntidaoChecklist`, `ProntidaoFaturamentoPanel`, `useUfEmitenteFaturamento` e `useCodigoRejeicaoNota`.
+- Depois do Confirmar, as queries `['faturamento-prontidao']` e `['faturamento-nota-rejeicao']` são
+  invalidadas, e a resposta nunca é escrita com `setQueryData` (AJ-37).
+- A rota de Estoque no checklist aponta para `/estoque/entradas`, porque a pendência típica é saldo
+  insuficiente.
+- A UF e a prontidão do diálogo só consultam com o Confirmar aberto. Abrir o detalhe não dispara
+  `/api/administracao/*`.
+- Contrato documental: `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md` ganhou a linha `GET /prontidao` na tabela
+  de `api/faturamento`.
+- O texto de pré-requisitos do Confirmar deixou de dizer que os cadastros fiscais não têm tela.
+
+### Diferença encontrada no backend (pergunta B-31)
+
+`ConfirmarFaturamentoUseCase.cs:275-277` grava, para toda transmissão não autorizada e sem reprocessamento,
+o texto "Nota fiscal rejeitada pela SEFAZ. Código: {cStat}...", **inclusive na recusa local**. O
+`RECUSA_LOCAL` fica só em `NotaFiscal.CodigoRejeicao`. O próprio comentário da F6 (D-F6-6) diz que a recusa
+local não deve dizer "rejeitada pela SEFAZ".
+
+O frontend contorna lendo a nota. A tabela de Ocorrências do detalhe continua mostrando o texto cru do
+backend. A correção certa é no backend.
+
+### Testes
+
+- **Recorte:** `npx vitest run tests/unit/faturamento* tests/components/Faturamento* tests/components/ConfirmarFaturamento* tests/components/useFaturamentos* tests/components/PrepararFaturamento*`.
+  São 18 arquivos, e **218/218 passaram**, em duas execuções.
+- **10 arquivos novos:** `faturamentoProntidao{Rotas,Estado,Labels,Uf,Payload}`, `faturamentoRecusaLocalNota`,
+  `ConfirmarFaturamentoProntidao`, `FaturamentoProntidaoPainel`, `FaturamentoResultadoSefazSimulada` e
+  `FaturamentoRecusaLocalNota`.
+- **3 arquivos existentes** só ganharam setup e mocks, mais a espera do botão habilitar.
+- **Prova de vermelho**, por mutação temporária, com o arquivo restaurado e conferido por hash:
+
+  | Mutação | Testes que falharam |
+  | --- | --- |
+  | `estadoProntidao` ignorando `isFetching` | 2 |
+  | `ehRecusaLocal` sempre falso | 5 |
+  | sem a guarda `ufTocada` | 1 |
+  | `enabled` da UF sempre verdadeiro | 1 |
+  | `notaRecusadaLocalmente` sempre falso | 13 |
+  | sem a guarda de permissão da leitura da nota | 2 |
+
+- **Fixture corrigida:** a primeira versão usava o texto sintético "Código: RECUSA_LOCAL" no motivo e
+  passava sem que a regra funcionasse. O QA bloqueou (QA-01). As fixtures agora usam o texto real do C#.
+- **Gates verdes, rodados pelo QA:** `validate:source`, `typecheck`, `lint`, `validate:ci`,
+  `validate:backend-permissions`, `validate:guard-permission-map`, `validate:backend-contract-map`,
+  `validate:mocks-isolation` e `build`.
+- **Não verificado:** a tela no navegador e o fluxo contra um backend real com a F5. Não há backend
+  v1.26.22 disponível nesta máquina. Também não há E2E nesta versão; ele era opcional no plano.
+
+### Pendências aceitas
+
+- Depois de um Confirmar com o leg 4 falho, a nota é lida duas vezes, uma para o toast e uma para o
+  resultado. É uma requisição a mais, só nesse caminho.
+- O título do painel de erro da prontidão cede lugar à mensagem do backend quando ela existe. A frase de
+  bloqueio aparece sempre.
+- A prontidão na tela do pedido de venda ficou de fora (D113).
+
+### Requisito de backend
+
+**Esta versão exige um backend com a F5 da v1.26.22** (`GET /api/faturamento/prontidao`), do commit
+`061b32e`, PR #83 do backend, **ainda não mergeado na `main`**. Contra um backend sem a rota, a prontidão
+falha, e o Confirmar fica bloqueado. Não suba esta versão antes do backend.
+
+---
+
+# v1.11.0a8b81
+
+## Fiscal › Configuração de emissão: empresa, filiais e certificados digitais pela tela (backend v1.26.22, AJ-34 e AJ-35)
+
+**Origem:** frente do planejador do backend, `docs/frontend/PLANO-FRONTEND-v1.26.22-faturamento.md` §3 e
+§5.1. Decisões **D110** e **D112**, mais a emenda logo abaixo da D112. Plano:
+`docs/fatias/v1.11.0a8b81-configuracao-fiscal-certificados.md`.
+
+Até esta versão, a configuração fiscal de emissão e o certificado só existiam por insert no banco. Sem eles,
+o faturamento reprova no leg 2 e no leg 3.
+
+### O que muda para quem usa
+
+O grupo **Fiscal** ganha **Configuração de emissão** (`/fiscal/configuracao`), com três abas:
+
+- **Empresa:** ambiente (Homologação/Produção), emitir NF-e, NFC-e e NFS-e, certificado vinculado e
+  observação. Empresa sem configuração aparece como **"ainda não configurada"**, com o formulário vazio
+  para criar. Inativar e reativar pedem motivo.
+- **Filiais:** escolhida a filial, a tela mostra se ela **herda da empresa** ou tem configuração própria.
+  Com "herda" ligado, ambiente, certificado e séries padrão ficam desabilitados, e o texto diz que eles
+  são ignorados na emissão.
+- **Certificados:** lista com apelido, tipo, final do thumbprint, validade no fuso local (com destaque
+  quando faltam menos de 30 dias) e situação. Também permite cadastrar o metadado (apelido, tipo A1/A3,
+  thumbprint, validade, filial e observação), **Verificar** se o servidor encontra o certificado, e
+  inativar. Inativar o certificado vinculado a uma configuração ativa pede confirmação: a emissão vai
+  falhar.
+- **O thumbprint completo só é digitado no cadastro.** O formulário é zerado ao salvar e ao fechar, nada
+  o guarda em cache, e a lista mostra só os 6 últimos caracteres. Não há upload de `.pfx` nem de senha:
+  eles ficam no servidor.
+- Selo **"SEFAZ simulada"** no topo quando o health do backend diz `fiscal.mock = true`. Sem esse bloco o
+  selo não aparece, e a tela também não afirma SEFAZ real.
+- **A empresa é a do usuário logado** (claim `empresa_id` do token), não a selecionada no seletor. Quando
+  as duas divergem (master trocando de empresa), a tela avisa, e a aba Filiais fica bloqueada.
+
+### Seção operacional — permissões a conceder ANTES do deploy
+
+Duas permissões novas, que o backend criou na migration `V1_26_22_F3_PermissoesConfiguracaoFiscal`
+**sem conceder a nenhum perfil**:
+
+| Permissão | Dá acesso a | Conceder a |
+| --- | --- | --- |
+| `FISCAL_CONFIGURACAO_CONSULTAR` | ver a tela, a configuração e os certificados | grupos que operam o fiscal ou o faturamento |
+| `FISCAL_CONFIGURACAO_GERENCIAR` | salvar, inativar, reativar, cadastrar, **Verificar** e inativar certificado | só quem administra a emissão |
+
+Sem nenhuma das duas, o item não aparece e a URL é negada. Ninguém perdeu acesso (`accessRisk: NENHUM`).
+Master enxerga tudo, como em qualquer permissão.
+
+### Como foi feito
+
+- Permissões no union `PermissionCode`, no catálogo, na regra de rota e no menu. O pai Fiscal ganhou as
+  duas na união (D109).
+- Feature em `features/fiscal/`: `configuracaoFiscal.types.ts`, `configuracaoFiscalSchemas.ts` (`.strict()`
+  só nos requests), `configuracaoFiscalApi.ts` (escopo organizacional `global`, sem injetar empresa),
+  `useConfiguracaoFiscal.ts`, `useSefazSimulada.ts` (reutilizado na `b82`) e os componentes da página, das
+  três abas e dos diálogos, com `configuracaoFiscalLabels.ts` mapeando por `code` o catálogo de erros do
+  §5.1, mais `Fiscal.Configuracao.InativaReativeAntes`.
+- `lib/api/healthApi.ts`: `HealthResponse` ganhou `fiscal?: { mock; ambiente } | null`.
+- `validoAte` sai em UTC (`toISOString()`), e a tela mostra no fuso local.
+- Contrato documental: `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md` ganhou a seção `api/fiscal/configuracao`
+  (10 rotas, das assinaturas do C#) e as duas linhas no §12. O snapshot de permissões foi regenerado pelo
+  script (179 → 181).
+
+### Diferença encontrada entre o contrato e o backend (pergunta B-30)
+
+O plano do backend promete códigos específicos nos 404 (`EmpresaNaoEncontrada`, `FilialNaoEncontrada`,
+`FilialInexistente`, `CertificadoNaoEncontrado`), mas `ApiErrorResponseFilter.cs:87-89` troca todo 404 por
+`Recurso.NaoEncontrado`. A tela trata como "não configurada" e "herda" tanto o código genérico quanto o
+específico. Um 404 sem corpo reconhecido continua sendo erro. `FilialInexistente` não se distingue mais de
+"herda": a mitigação é bloquear a aba Filiais quando o contexto diverge da empresa do usuário.
+
+### Testes
+
+- **Recorte:** 18 arquivos, 289/289 passaram (`npx vitest run` nos 13 arquivos de permissão, menu e rota e
+  nos 5 da fatia). São 133 testes novos de unit e componente. As contagens de três testes existentes
+  mudaram por desenho: snapshot 179 → 181, itens de menu 49 → 50. Elas ganharam asserção nominal dos itens
+  novos.
+- **E2E mockado** (`tests/e2e/v1.11.0a8b81-configuracao-fiscal.spec.ts`), pela receita isolada: porta 3411
+  livre antes, um único servidor, rotas aquecidas. Duas rodadas, **2/2 passaram nas duas**.
+
+### Corrigido nesta versão: o snapshot de permissões dizia "Sem divergência" quando havia
+
+Achado do QA (QA-01, bloqueante). O gerador (`scripts/lib/backend-permissions.mjs`) limitava
+`naoConciliado.quantidade` com `Math.max(..., 0)`. Com as duas permissões novas, a união nomeada (179)
+passou o total declarado pela foto do contrato v1.23 (178), e o snapshot gravava "Sem divergência".
+Agora a quantidade tem sinal (**-1**), e o motivo diz que a união excede a foto em 1 porque o §12 recebeu
+permissões depois dela. Ele também lista as 7 permissões do §12 sem operação no v1.23, sem atribuir a sobra
+a nenhuma, porque a foto não diz qual é. `backendDeclaradas` continua 178: é a foto v1.23, que é gerada e
+não se edita. Asserção nominal em `tests/unit/backendPermissions.test.ts`, medida reprovando com o
+`Math.max` antigo (2 falhas e o gate vermelho).
+
+Também do QA (QA-02): o teste do certificado passou a conferir a mutação **em voo**. Com o POST pendente,
+nem `state.variables` nem cache algum contém o thumbprint. Medido reprovando com a linha
+`caixa.valores = null;` removida de `useConfiguracaoFiscal.ts:86`.
+
+### Requisito de backend
+
+Precisa do backend v1.26.22 com a F3 (commit `061b32e`, PR #83 do backend), **ainda não mergeado na
+`main`**, e da migration das permissões aplicada.
+
+---
+
+# v1.11.0a8b80
+
+## O cadastro fiscal do produto passa a sugerir a classificação IBS/CBS pelo GTIN (backend v1.26.21/G1)
+
+**Origem:** frente aberta pelo planejador do backend em
+`docs/frontend/PLANO-FRONTEND-v1.26.21-g1-sugestao-por-gtin.md`. Decisões **D110** (as duas frentes viram
+`b80`, `b81` e `b82`) e **D111** (forma desta). Plano: `docs/fatias/v1.11.0a8b80-sugestao-classificacao-gtin.md`.
+
+### O que muda para quem usa
+
+Na edição de um produto, a aba **Dados fiscais** ganha o botão **Sugerir classificação** quando o produto tem
+código de barras de 8, 12, 13 ou 14 dígitos. O código consultado é o principal, ou o primeiro se nenhum for
+principal. O clique consulta a tabela de benefícios da LC 214/2025 e mostra anexo e item, NCM, cClassTrib,
+CST IBS/CBS, as reduções de IBS e de CBS e a vigência. Quando a origem tem mais de uma classificação para o
+mesmo GTIN, as outras aparecem como texto, em "Outras classificações possíveis".
+
+- **Nada é preenchido sozinho, e o salvar não depende da sugestão.** O painel diz que a fonte não é oficial
+  e que a decisão é do operador.
+- **Única cópia: "Usar este NCM"**, quando o NCM sugerido difere do atual. Ela passa pelo mesmo caminho do
+  select, então o CEST é reconferido. O **cClassTrib não é copiável**: o formulário não tem esse campo, que
+  mora nos dados fiscais complementares, e o frontend ainda não os consome (dívida da D111).
+- GTIN fora da tabela é informação, não erro: o produto segue com tributação normal.
+- Sem código de barras, ou com o código principal fora do formato, a tela diz o motivo e não oferece o
+  botão. Na criação de produto o painel não existe.
+
+### Permissão
+
+Nenhuma nova. O botão exige **`FISCAL_CADASTROS_CONSULTAR`**, além da `PRODUTOS_DADOS_FISCAIS_GERENCIAR` que
+a aba já exigia. Quem tem só a segunda vê a aba sem o botão, e 403 esconde a sugestão sem mostrar erro.
+**Para quem administra grupos:** conceda `FISCAL_CADASTROS_CONSULTAR` aos grupos que editam o fiscal do
+produto, se quiser que eles vejam a sugestão. A validação de NCM já exigia a mesma.
+
+### Como foi feito
+
+- `features/fiscal`: tipo, schema de response (sem `.strict()`), `obterClassificacaoPorGtin` no
+  `cadastrosFiscaisApi` e `useGtinClassificacao`, de disparo manual. O GTIN trafega sempre como texto.
+- `features/produtos/components/GtinClassificacaoSugestao.tsx`, `gtinClassificacaoUtils.ts` e
+  `gtinClassificacaoLabels.ts`, montados na aba Dados fiscais do `ProdutoFormDialog`.
+- Contrato documental: `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md` ganhou a linha da rota, a partir da
+  assinatura do C# (`CadastrosFiscaisController.cs:279`).
+- Corrigido de passagem: os 3 `TS2802` de `tests/unit/desenvolvimentoMasterOnly.test.ts` (b79), que deixavam
+  o `typecheck` vermelho. A iteração direta virou `Array.from`, sem mudar nenhuma asserção.
+
+### Testes
+
+O recorte medido foi `npx vitest run tests/unit/gtin* tests/components/Gtin* tests/unit/desenvolvimentoMasterOnly.test.ts
+tests/unit/produto*.test.ts tests/components/Produto*.test.tsx`: 11 arquivos e 155 testes passaram, nenhum
+falhou. Os arquivos novos são `gtinClassificacaoUxRules`, `gtinClassificacaoPayload`,
+`GtinClassificacaoSugestao` e `ProdutoFormDialogGtinClassificacao`.
+
+### Requisito de backend
+
+Esta versão precisa de um backend com a G1, do commit `c7e18db`, branch
+`feat/v1.26.21-g1-sugestao-de-classificacao-por-gtin`, que **ainda não está na `main` do backend**. Contra
+um backend sem ela, o clique recebe 404 e mostra erro recuperável, e o resto do cadastro não é afetado.
+
+---
+
+# v1.11.0a8b79
+
+## Sete telas saem dos módulos de origem e passam a viver num grupo "Desenvolvimento", só para master
+
+**Pedido (usuário, 2026-10-29):** no estágio atual do produto, Transferências, Ajustes, Estoque avançado,
+Qualidade, CRM, Atividades e Patrimônio não fecham rotina nenhuma isoladas — faltam os fluxos que as
+alimentam. A instrução foi explícita: **não excluir**, e sim recolher numa aba separada chamada
+Desenvolvimento, limitada ao usuário master.
+
+**Nada foi excluído.** Rota, feature, hooks, schemas, componentes e testes dos sete módulos continuam
+exatamente onde estavam. O que mudou é **onde o menu oferece** e **para quem a rota abre**.
+
+**Risco de acesso: `CAPACIDADE`** — ver a seção operacional no fim desta entrada. Nenhuma permissão foi
+retirada de nenhum grupo de acesso; o que foi restrito é a tela.
+
+### O que muda para quem usa
+
+Para o **usuário master**, o menu ganha um grupo **Desenvolvimento** no fim, com onze itens de rótulo
+prefixado pelo módulo de origem:
+
+| Item | Rota |
+| --- | --- |
+| Estoque · Transferências | `/estoque/transferencias` |
+| Estoque · Ajustes | `/estoque/ajustes` |
+| Estoque · Avançado | `/estoque/avancado` |
+| Qualidade · Inspeções | `/qualidade/inspecoes` |
+| Qualidade · Não-conformidades | `/qualidade/nao-conformidades` |
+| CRM · Leads | `/crm/leads` |
+| CRM · Oportunidades | `/crm/oportunidades` |
+| CRM · Propostas | `/crm/propostas` |
+| Atividades · Workflow operacional | `/atividades` |
+| Patrimônio · Depreciação | `/patrimonio/depreciacao` |
+| Patrimônio · Inventário | `/patrimonio/inventarios` |
+
+Para **quem não é master**, esses onze itens desapareceram do menu, os grupos **Qualidade**, **CRM**,
+**Atividades** e **Patrimônio** deixaram de existir, e **Estoque** passou a ter quatro itens — Saldos,
+Movimentos, Reservas e Inventários. Digitar qualquer uma das rotas acima na barra de endereço devolve
+**"Tela em desenvolvimento"**, com o texto dizendo que a permissão do módulo continua sendo da pessoa e
+que o que está restrito é a tela.
+
+O cadastro de **Bens** (`/patrimonio/bens`) vivia como card da Central de cadastros, não do grupo
+Patrimônio. Ele acompanhou o módulo: para quem não é master o card saiu da Central, e a rota recusa.
+Patrimônio não ficou com porta lateral aberta.
+
+`/estoque/bloqueios` também foi marcada, embora não tenha item de menu desde a b62: a página só
+redireciona para `/estoque/avancado`, e sem a marca o não-master seria levado de uma rota liberada
+direto para uma negação.
+
+### Como foi feito
+
+`masterOnly?: boolean` entrou como **eixo próprio, separado de permissão**, em três lugares:
+`AppMenuItem` (`types/layout.d.ts`), `CadastroItem` (`features/cadastros/types/cadastros.types.ts`) e
+`RoutePermissionRule` (`lib/security/routePermissions.ts`). `usePermissions` passou a expor
+`isMaster: user?.isMaster === true`.
+
+Não é permissão nem permissão sentinela, e a razão é mecânica: `hasPermission` devolve `true` para
+master em **qualquer** código (`lib/permissions/permissions.ts:8`), então nenhum código de permissão
+consegue separar master de não-master. As sentinelas existentes (`MASTER_GOD`, `*`) fazem o oposto —
+recusam todo mundo, master incluído. **O union `PermissionCode` não mudou**: nenhuma permissão entrou
+ou saiu, e `features/seguranca/permissoesCatalogo.ts` está intocado.
+
+No menu (`layout/AppMenu.tsx`), `masterOnly` é **conjunção** com as três formas de permissão, não uma
+quarta forma. No guard (`components/security/RoutePermissionGate.tsx`) é checado **antes** de
+`hasAnyPermission`, e a ordem é o ponto: a sessão que a marca precisa recusar é justamente a que tem a
+permissão do módulo e passaria pelo teste de permissão.
+
+O `anyPermissions` do grupo Desenvolvimento é a **união exata** das permissões dos onze filhos — 21
+códigos, medidos por contagem direta no modelo e conferidos contra C2 de
+`validate:guard-permission-map`, que exige que o pai admita toda sessão que um filho admite. O grupo
+**Estoque** teve a união reduzida a `ESTOQUE_CONSULTAR`, `ESTOQUE_RESERVAR` e
+`ESTOQUE_INVENTARIO_GERENCIAR`: `ESTOQUE_MOVIMENTAR`, `ESTOQUE_AJUSTAR` e `ESTOQUE_BLOQUEIO_GERENCIAR`
+saíram com as telas. Quem só tem `ESTOQUE_MOVIMENTAR` continua entrando por `/estoque/entradas` e
+`/estoque/saidas`, que nunca estiveram no menu (D76).
+
+O guard de `/cadastros` **não mudou**. `cadastrosAnyPermissions` é derivado dos `anyPermissions` dos
+itens do catálogo, e `masterOnly` não toca `anyPermissions` — a união segue idêntica e ninguém perde a
+Central.
+
+### A classe de defeito que esta fatia abriu, e o que a contém
+
+`validate:guard-permission-map` lê o menu pela AST, mas conhece apenas `permission`, `anyPermissions` e
+`allPermissions` (`scripts/lib/guard-permission-map.mjs`, `parseMenuPermissions`). **`masterOnly` é
+invisível para ele.** Marcar o item de menu e esquecer a regra de rota — ou o contrário — não reprova em
+gate nenhum, e o sintoma em produção seria a tela sumir do menu enquanto a URL digitada continua
+entrando.
+
+A contenção é `tests/unit/desenvolvimentoMasterOnly.test.ts`, com asserção **por item nominal nos dois
+sentidos**. E, como gate não é aceito por ficar verde, **foi medido que ele reprova**, contra esta
+árvore e não contra fixture:
+
+| Defeito injetado | Resultado medido |
+| --- | --- |
+| `masterOnly` removido da regra `/crm` | 3 testes vermelhos, nomeando `menu-sem-rota-/crm/leads`, `menu-sem-rota-/crm/oportunidades` e `menu-sem-rota-/crm/propostas`, e a regra `"CRM (leads, oportunidades e propostas)"` como não marcada |
+| item `CRM · Leads` devolvido ao grupo Vendas | 1 teste vermelho, nomeando `rota-sem-menu-/crm/leads` |
+
+Em ambos os casos a árvore foi restaurada e o arquivo conferido por `git diff` depois. O leitor de menu
+do teste também tem prova própria: lê `masterOnly` no grupo e no item e herda a marca do grupo para o
+filho, verificado contra um modelo de menu escrito à mão no próprio teste.
+
+### Medições desta fatia
+
+| O que | Valor | Como foi medido |
+| --- | --- | --- |
+| Itens no grupo Desenvolvimento | 11 | contagem direta no modelo de `layout/AppMenu.tsx`, assertada nominalmente no teste |
+| Permissões na união do grupo | 21 | `[...new Set(filhos.flatMap(permissoes))]` no teste, com asserção nos dois sentidos contra a lista do grupo |
+| Regras de rota marcadas | 8 | `routePermissionRules.filter((r) => r.masterOnly === true)`, nomeadas uma a uma |
+| `validate:guard-permission-map` | 549 chamadas, 36 módulos, 7 faltas registradas | execução do gate; as 7 são as mesmas da b77, nenhuma exceção nova |
+| `validate:backend-permissions` | union com 175 códigos, 2 fantasmas, 4 pendências | execução do gate; idênticos à b77 |
+| `validate:backend-contract-map` | 525 rotas únicas e compatíveis | execução do gate |
+| `validate:source`, `next lint`, `tsc --noEmit` | sem divergência / sem warning / sem erro | execução direta |
+| Testes do recorte | 188 passando em 18 arquivos | `npx vitest run` nos arquivos de CRM, Qualidade, Patrimônio, Atividades, Estoque, cadastros, rotas, permissões, guard-map e auth |
+
+### O que NÃO foi medido
+
+**E2E não rodou nesta fatia.** `risk.yaml` liga E2E para fatia de permissão, e a receita obrigatória
+exige servidor isolado na porta 3411, aferição de quem atende a porta e duas execuções. Isso não foi
+feito, e nada foi afirmado em seu lugar. Fica como pendência explícita: **a prova ao vivo de que a
+sessão com `CRM_CONSULTAR` e sem `isMaster` recebe a negação é a que falta**, e a cobertura atual dela é
+unitária.
+
+### Dívida registrada
+
+**Perfil só-Patrimônio cai em catálogo vazio.** Quem tiver exclusivamente permissões `PATRIMONIO_*`
+continua vendo "Cadastros" no menu e agora encontra o estado vazio "Nenhum cadastro encontrado". É
+`ILUSAO` nova e pequena: o item existe, a Central abre, e não há cadastro a oferecer. Corrigir exige
+mexer no `anyOf` da regra `/cadastros`, que tem accessRisk próprio e ficou fora desta fatia.
+
+**`b78` não foi usada.** D107 a reserva para a fatia de Boletos, já desenhada e ainda não entregue. O
+buraco numérico entre b77 e b79 é intencional, e não indica entrega perdida.
+
+### Seção operacional — risco de acesso `CAPACIDADE`
+
+**Quem perde o quê.** Todo usuário **não master** que hoje tem qualquer uma destas permissões perde
+acesso real — não ilusão de clicar — às telas correspondentes:
+
+| Permissões | Telas que deixam de abrir |
+| --- | --- |
+| `ESTOQUE_MOVIMENTAR` | Transferências e Ajustes de estoque |
+| `ESTOQUE_CONSULTAR`, `ESTOQUE_INVENTARIO_GERENCIAR`, `ESTOQUE_AJUSTAR`, `ESTOQUE_BLOQUEIO_GERENCIAR` | Estoque avançado |
+| `QUALIDADE_CONSULTAR`, `QUALIDADE_INSPECIONAR`, `QUALIDADE_NAO_CONFORMIDADE_GERENCIAR` | Inspeções e Não-conformidades |
+| `CRM_CONSULTAR`, `CRM_LEADS_GERENCIAR`, `CRM_OPORTUNIDADES_GERENCIAR`, `CRM_PROPOSTAS_GERENCIAR` | Leads, Oportunidades e Propostas |
+| `ATIVIDADES_*` | Workflow operacional |
+| `PATRIMONIO_CONSULTAR`, `PATRIMONIO_BENS_GERENCIAR`, `PATRIMONIO_DEPRECIAR`, `PATRIMONIO_INVENTARIO_GERENCIAR` | Bens, Depreciação e Inventário de patrimônio |
+
+**Não há permissão a conceder antes do deploy.** Esta é a diferença entre este caso e os anteriores de
+`CAPACIDADE` registrados aqui: nenhuma permissão foi retirada de nenhum grupo no backend, e o backend
+continua autorizando essas operações para quem as tem. A restrição é do frontend, e **devolver uma tela
+à operação é remover `masterOnly` dos dois lados** — do item em `layout/AppMenu.tsx` e da regra em
+`lib/security/routePermissions.ts` — numa fatia nova. Tirar de um lado só é o defeito que
+`tests/unit/desenvolvimentoMasterOnly.test.ts` reprova.
+
+**Quem administra grupos de acesso não precisa fazer nada** para este deploy. Não há ordem de concessão,
+e não existe risco de auto-bloqueio: `SEGURANCA_USUARIOS_*` e `SEGURANCA_GRUPOS_ACESSO_*` não foram
+tocadas.
+
+---
+
+# v1.11.0a8b77.c1
+
+## Produto: editar abre o produto completo por id, e não a linha da listagem
+
+**Defeito (relatado após teste da b77 no Docker):** Origem, Tipo fiscal, Unidade tributável (sigla e medida interna),
+Código de benefício fiscal e Código fiscal externo "não persistiam" ao reabrir o produto para editar.
+
+**Causa (diagnóstico recebido do orquestrador, a partir de logs do backend e do banco; não reverificado nesta
+fatia, que não leu o C#):** `GET /api/produtos` (listagem) devolve `ProdutoListagemItemResponse`, um DTO enxuto que do bloco
+fiscal traz só `ncm` e `tipoItemSped`; não traz CEST, origem, tipo fiscal, unidade tributável (sigla e medida), EX-TIPI,
+benefício, código externo nem grupo. `ProdutosPage` guardava a linha da listagem em `selected` e o `ProdutoFormDialog`
+reidratava o formulário a partir dela. Os dados estavam gravados (o PATCH `dados-fiscais` respondia 200 e o banco tinha
+os valores); a tela é que os lia de um registro que não os tinha. Pior: ao salvar a edição, o formulário reenviava o
+bloco fiscal com esses campos vazios, e `values.grupoProdutoId !== selected?.grupoProdutoId` comparava contra um campo
+que a listagem não traz. Não é defeito do backend; nenhum contorno foi feito nele.
+
+**Risco de acesso: `NENHUM`**: nenhuma permissão, guard, rota ou item de menu mudou. `GET /api/produtos/{id}` já era
+consumido (`produtosApi.obter`).
+
+### O que muda para quem usa
+
+- **Editar** carrega o produto completo (`GET /api/produtos/{id}`) antes de montar o formulário. Enquanto carrega: o
+  diálogo "Editar produto" mostra "Carregando dados do produto..." e **Salvar fica desabilitado**. Se a carga falha:
+  mensagem com o motivo, botão **Tentar novamente** e Salvar desabilitado. **Sem fallback para a linha da listagem**: nunca
+  se edita sobre dado parcial.
+- A comparação do grupo (para decidir o PUT `/classificacao`) usa o grupo do produto completo, lido antes de qualquer
+  `await` do salvamento, e normaliza `null`/`undefined`.
+- Código de barras, fornecedor e inativar continuam usando a linha só para `id` (lido em `ProdutoComplementoDialogs` e
+  nas mutações); não eram afetados. `CatalogoProdutoPage` trata categorias, unidades e marcas, não produtos: fora do defeito.
+
+### Como foi feito
+
+- `useProduto(id, enabled)` em `useProdutosResources.ts`, `queryKey` `['produtos', 'detalhe', id]` (`produtoDetalheQueryKey`),
+  `gcTime: 0` e sem refetch em foco/reconexão: cada abertura parte de carga nova e o formulário não é reidratado por
+  baixo do operador.
+- As mutações continuam invalidando `['produtos']`; o detalhe é marcado como velho (`refetchType: 'none'`) e **não** refeito
+  com o diálogo aberto. Motivo: o salvamento é em etapas (PUT, PATCH preço, PATCH fiscal); refazer o detalhe no meio trocaria
+  o `record`, o formulário seria reidratado e o que o operador digitou se perderia quando um PATCH posterior falha.
+- `ProdutoListagemItem` (`produtos.types.ts`): `ProdutoResponse` sem os nove campos ausentes da listagem, documentado no tipo.
+  Usado na grade; `ProdutoResponse` segue como contrato do detalhe. `produtosApi.listar` não mudou de tipo de retorno (mudar
+  repercutiria em dezenas de consumidores fora do escopo).
+
+### Achados não bloqueantes do QA da b77, fechados aqui
+
+1. `obterCestPorCodigo` devolvia `items[0]`; o backend filtra `codigo` por prefixo. Agora
+   `items.find((i) => i.codigo === codigo) ?? null`, e a página pedida passou de 1 para 20 itens (com 1, um prefixo na
+   frente esconderia o código exato).
+2. Janela de corrida: trocado o NCM e salvo antes de a lista de vínculos carregar, o CEST antigo seguia no payload. Salvar
+   fica desabilitado (e o `submit` recusa) enquanto o NCM foi alterado e a consulta de vínculos está em andamento.
+3. Falta de espaço em `if (...)data = ...` em `ProdutoFormDialogCest.test.tsx`.
+
+### Testes
+
+- `tests/components/ProdutosPageEdicaoDetalhe.test.tsx` (novo, 4 casos; página, diálogo, hooks, client e `httpClient` reais, rede
+  por `httpClient.defaults.adapter`, listagem com o DTO enxuto e detalhe completo): o formulário mostra os campos fiscais do
+  detalhe; salvar sem mexer envia o PATCH `dados-fiscais` com os valores (não `null`) e não regrava o grupo; loading desabilita
+  Salvar; erro da carga mostra a mensagem e "Tentar novamente" recupera.
+- `ProdutoFormDialogCest.test.tsx` (caso da janela de corrida) e `produtosFiscaisDropdowns.test.ts` (CEST por prefixo).
+- **Prova de vermelho:** os três arquivos, copiados para um `git worktree` de `c0217cf` (b77 sem a correção): 6 reprovam
+  (4 da página, 1 da corrida, 1 do CEST por prefixo); com a correção, todos passam.
+
+### Pendente / não verificado
+
+- **Sem E2E Playwright e sem preview no navegador.**
+- **Sem chamada à API HTTP autenticada**: o comportamento foi provado contra o `httpClient` real com adaptador de teste, com a
+  forma do DTO da listagem e do detalhe conforme descrita no relato do defeito, não contra o backend vivo.
+- O usuário ainda não retestou no Docker.
+- Carimbo de versão só no CHANGELOG, como nas corretivas b76.c1 a c3 (`package.json`, `config/app.ts`, `.env*`, workflow,
+  README e JSONs de `scripts/` seguem em `1.11.0a8b77`; o gate `validate:ci` compara por prefixo).
+
+### Arquivos
+
+`features/produtos/{hooks/useProdutosResources.ts,components/ProdutosPage.tsx,components/ProdutoFormDialog.tsx,types/produtos.types.ts}`,
+`features/fiscal/api/cadastrosFiscaisApi.ts`. Testes: `tests/components/ProdutosPageEdicaoDetalhe.test.tsx` (novo),
+`tests/components/ProdutoFormDialogCest.test.tsx`, `tests/unit/produtosFiscaisDropdowns.test.ts`.
+
+# v1.11.0a8b77
+
+## Produto: NCM, CEST e origem da mercadoria viram listas alimentadas pelo cadastro fiscal
+
+Na aba "Dados fiscais" do produto, NCM, CEST e Origem eram texto livre e chegavam vazios ou inválidos ao backend.
+Agora são seletores alimentados pelos GETs de referência do módulo fiscal. O valor enviado continua sendo o
+**código** (`ncmCodigo` de 8 dígitos, `cestCodigo` de 7, `origemMercadoriaCodigo` de `'0'` a `'8'`), porque o backend
+resolve o produto pelo código (`ProdutoDadosFiscaisResolver`), nunca pelo Id. Nenhum Id é enviado.
+
+**Risco de acesso: `NENHUM`**: nenhuma permissão, guard, rota ou item de menu mudou. As três consultas exigem
+`FISCAL_CADASTROS_CONSULTAR`, que já existe em `PermissionCode`.
+
+### O que muda para quem usa
+
+- **NCM**: busca no servidor (`/api/fiscal/cadastros/ncm`, 350 ms de debounce, 20 por página).
+- **CEST**: depende do NCM. Sem NCM o campo fica desabilitado ("Selecione o NCM"). Com NCM, lista só os CESTs
+  vinculados a ele (`/api/fiscal/cadastros/ncm-cest?ncmCodigo=`), com a descrição vinda de `/cest?codigo=`. NCM sem
+  vínculo mostra "Este NCM não exige CEST". Trocar o NCM limpa o CEST quando ele não pertence aos vínculos do novo NCM;
+  limpar o NCM limpa o CEST. Um produto legado com CEST fora dos vínculos não é alterado em silêncio ao abrir a
+  edição: só uma troca de NCM feita pelo operador limpa o CEST. Se a lista de vínculos do NCM vier parcial
+  (`totalItems` maior que a página carregada), o CEST **não** é limpo: a lista incompleta não prova que ele é inválido,
+  e a tela avisa que a lista está incompleta.
+- **Origem**: lista fechada de 9 itens (`/api/fiscal/cadastros/origens-mercadoria`, só ativas).
+- **Sem `FISCAL_CADASTROS_CONSULTAR`** (D61): só o campo afetado é desabilitado, com aviso; o código já gravado continua
+  visível (o rótulo é o próprio código, como em `comSiglaSelecionada`). Falha de consulta aparece com "Tentar novamente".
+
+### O que ficou de fora de propósito
+
+`EX-TIPI`, `codigoBeneficioFiscalPadrao` e `codigoFiscalExterno` continuam texto livre: **não há endpoint de
+referência** para eles no backend. `tipoItemFiscal`, `tipoItemSped` e `unidadeTributavelSigla` já eram listas.
+A obrigatoriedade da origem (quando o tipo exige NCM) e do CEST (quando o NCM tem vínculo) é regra do backend: a tela
+só orienta, não bloqueia o envio por regra local.
+
+### Como foi medido
+
+Contrato lido no C# (`../New project 3/src`) e no banco de desenvolvimento. **A API HTTP autenticada não foi
+chamada**: o comportamento da tela foi provado contra o `httpClient` real com adaptador de teste, não contra o
+backend vivo. O CEST faz uma consulta `/cest?codigo=` por vínculo para obter a descrição (um NCM com muitos CESTs
+gera muitas chamadas paralelas; se uma falhar, o rótulo mostra só o código). Os vínculos vêm numa página de 100 (o teto
+do backend é 200, `CadastrosFiscaisFiltroFactory.cs`, `TamanhoPaginaMaximo`).
+
+### Correção do QA dentro da b77
+
+- O reset de `values` e do flag "NCM alterado" na abertura/troca de registro passou de `useEffect` para ajuste de estado
+  durante o render, no mesmo passo: o diálogo fica sempre montado em `ProdutosPage` e a limpeza do CEST não depende mais
+  da ordem de efeitos. Medido: com o reset antigo em efeito os 8 testes novos também passam (o batching do React 18
+  já impedia a corrida); a mudança remove a dependência de ordem, não corrige defeito reproduzido.
+- Lista parcial de vínculos não limpa o CEST (N4). Comentário do tamanho de página corrigido (N1). O
+  `eslint-disable` de `useCestPorNcm` foi trocado por chave estável (N2).
+- Teste de comportamento `tests/components/ProdutoFormDialogCest.test.tsx` (diálogo real, rede por
+  `httpClient.defaults.adapter`): removendo o efeito de limpeza do CEST, 2 de 8 reprovam; removendo a guarda de lista
+  parcial, 1 de 8 reprova.
+
+### Pendente / aguardando análise
+
+- Item (a) do B1 (reset síncrono) é robustez, não defeito reproduzido; decisão do usuário: aceitar.
+- Teto de 200 por página do backend confirmado no C# (`CadastrosFiscaisFiltroFactory.cs:13`, aplicado na linha 184).
+- Sem E2E Playwright e sem preview da tela no navegador (porta 3000 ocupada pelo frontend em Docker).
+- Sem chamada à API HTTP autenticada (contrato lido no C# e no banco de dev).
+- QA ainda não reaprovou após a correção do B1.
+
+### Arquivos
+
+`features/fiscal/{types,schemas,api,hooks}` (client e hooks de `ncm-cest`, `cest` por código e `origens-mercadoria`),
+`features/fiscal/components/CodigoFiscalSelects.tsx` (novo), `features/produtos/components/ProdutoFormDialog.tsx`.
+Testes: `tests/unit/produtosFiscaisDropdowns.test.ts`, `tests/components/CodigoFiscalSelects.test.tsx`,
+`tests/components/ProdutoFormDialogCest.test.tsx`.
+
 # v1.11.0a8b76.c3
 
 ## Seletores de busca e campos de data passam a ter nome no elemento que recebe o foco

@@ -119,6 +119,69 @@ export type ConfirmarFaturamentoResponse = {
     alertas: string[];
 };
 
+// GET /api/faturamento/prontidao (backend v1.26.22/F5, `ProntidaoFaturamentoContracts.cs`). `etapa`, `recurso` e
+// `avaliacao` trafegam como string e podem ganhar valor (campo aditivo): por isso string, não union fechada.
+export type ProntidaoPendencia = {
+    etapa: string;
+    codigo: string;
+    mensagem: string;
+    recurso: string;
+    recursoId?: Guid | null;
+};
+
+export type ProntidaoFaturamentoResponse = {
+    pronto: boolean;
+    avaliacao: string;
+    pendencias: ProntidaoPendencia[];
+};
+
+// Valores que o backend conhece hoje (`ProntidaoFaturamentoEtapas.cs`). A lista de etapas está NA ORDEM DOS LEGS,
+// que é a ordem em que o checklist agrupa. Valor fora da lista continua válido na resposta (campo aditivo).
+export const PRONTIDAO_ETAPAS = [
+    'Pedido',
+    'Faturamento',
+    'Cliente',
+    'Emitente',
+    'ConfiguracaoFiscal',
+    'Certificado',
+    'Serie',
+    'Natureza',
+    'Produto',
+    'Destinatario',
+    'RegraFiscal',
+    'Estoque',
+    'Financeiro'
+] as const;
+export type ProntidaoEtapaConhecida = (typeof PRONTIDAO_ETAPAS)[number];
+
+export const PRONTIDAO_RECURSOS = [
+    'Empresas',
+    'ConfiguracaoFiscal',
+    'Certificados',
+    'SeriesFiscais',
+    'NaturezasOperacao',
+    'Produtos',
+    'Pessoas',
+    'RegrasFiscais',
+    'Estoque',
+    'CondicoesPagamento',
+    'PedidoVenda',
+    'Faturamento'
+] as const;
+export type ProntidaoRecursoConhecido = (typeof PRONTIDAO_RECURSOS)[number];
+
+export const PRONTIDAO_AVALIACAO_RETOMADA = 'Retomada';
+
+// Os nomes seguem o Confirmar. Só `pedidoVendaId` é obrigatório; `tipoDocumento` ausente vale NF-e no backend.
+export type ProntidaoFaturamentoQuery = {
+    pedidoVendaId: Guid;
+    naturezaOperacaoId?: Guid | null;
+    serie?: string | null;
+    tipoDocumento?: TipoDocumentoConfirmarFaturamento | number | null;
+    numero?: string | null;
+    condicaoPagamentoId?: Guid | null;
+};
+
 export type FaturamentosListQuery = {
     empresaId?: Guid | null;
     filialId?: Guid | null;

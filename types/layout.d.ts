@@ -69,6 +69,11 @@ export interface AppMenuItem extends Omit<MenuModel, 'items'> {
     permission?: PermissionCode;
     anyPermissions?: PermissionCode[];
     allPermissions?: PermissionCode[];
+    // Eixo próprio, separado de permissão: a tela existe e o backend a autoriza para quem tem a
+    // permissão do módulo, mas o frontend só a oferece ao usuário master enquanto o módulo não
+    // tiver fluxo que a sustente (D109). Não é `allPermissions` nem permissão sentinela —
+    // nenhuma permissão entra ou sai do union por causa disto.
+    masterOnly?: boolean;
     command?: ({ originalEvent, item }: { originalEvent: React.MouseEvent<HTMLAnchorElement, MouseEvent>; item: MenuModelItem }) => void;
 }
 

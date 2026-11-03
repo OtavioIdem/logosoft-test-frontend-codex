@@ -67,25 +67,28 @@ test.describe('AC-4/5/6: permissões granulares', () => {
         }
     });
 
-    test('AC-6: sessão com ATIVIDADES_CONSULTAR e COMENTAR limita ações disponíveis', async ({ page }) => {
+    // AC-6 (b79, D109): a verificação granular de ações de Atividades (botão "Nova atividade" desabilitado sem
+    // ATIVIDADES_CRIAR, e só "Detalhe"/"Comentar" disponíveis) fica SUSPENSA enquanto `/atividades` for `masterOnly`:
+    // o guard recusa a tela inteira a quem não é master, antes de qualquer permissão granular. Quando a marca sair de
+    // routePermissions.ts e de AppMenu.tsx, a verificação granular volta: reabra as ações neste teste, com sessão não master.
+    test('AC-6: sessão NÃO master com ATIVIDADES_CONSULTAR e COMENTAR recebe a tela de desenvolvimento (b79)', async ({ page }) => {
         await mockApiRoutes(page);
-        await writeSession(page, {
-            permissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_COMENTAR'],
-            email: 'atividades@logosoft.local',
-            name: 'Usuário Atividades'
-        });
+        await writeSession(page, { permissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_COMENTAR'], email: 'atividades@logosoft.local', name: 'Usuário Atividades' });
 
         await page.goto('/atividades');
-        // Verificar que a página carrega
+        // Texto real de RoutePermissionGate (masterOnly, checado antes da permissão): título e descrição.
+        await expect(page.getByRole('heading', { name: 'Tela em desenvolvimento' })).toBeVisible();
+        await expect(page.getByText(/só é liberada para o usuário master/)).toBeVisible();
+        // A tela de Atividades não renderiza para quem não é master.
+        await expect(page.getByRole('heading', { name: /^Atividades$/ })).toHaveCount(0);
+    });
+
+    test('AC-6 (master): sessão master vê o heading "Atividades" na tela', async ({ page }) => {
+        await mockApiRoutes(page);
+        await writeSession(page, { permissions: ['ATIVIDADES_CONSULTAR', 'ATIVIDADES_COMENTAR'], email: 'atividades@logosoft.local', name: 'Usuário Atividades', isMaster: true });
+
+        await page.goto('/atividades');
         await expect(page.getByRole('heading', { name: /atividades/i })).toBeVisible();
-        // Verificar que botão "Nova atividade" está desabilitado (não tem ATIVIDADES_CRIAR)
-        const novaAtividadeBtn = page.getByRole('button', { name: /nova atividade|criar/i });
-        if (await novaAtividadeBtn.isVisible()) {
-            await expect(novaAtividadeBtn).toBeDisabled();
-        }
-        // Verificar que ações de "Editar", "Status", "Atribuir", "Cancelar" não estão disponíveis
-        // Apenas "Detalhe" e "Comentar" devem estar disponíveis
-        await expect(page.locator('text=/Detalhe|Comentar/')).toBeVisible();
     });
 
     test('AC-13: sessão com TABELAS_PRECO_CONSULTAR e ATIVAR vê ações granulares', async ({ page }) => {

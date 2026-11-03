@@ -56,11 +56,20 @@ vi.mock('@/components/forms/DateInput', () => ({
 vi.mock('@/features/fiscal/components/NotaFiscalSerieField', () => ({
     NotaFiscalSerieField: ({ value, onChange }: { value: string; onChange: (value: string) => void }) => <input aria-label="Série" value={value} onChange={(event) => onChange(event.target.value)} />
 }));
+// Contexto organizacional da empresa do faturamento (padrão dos testes de componente com org context): o diálogo
+// consulta filiais e empresas por ele; sem provider, o hook lança erro.
+vi.mock('@/hooks/useOrganizationalContext', () => ({
+    useOrganizationalContext: () => ({ snapshot: { empresaId: '11111111-1111-1111-1111-111111111111', filialId: null, isMaster: false, revision: 0 } })
+}));
 
 const empresaId = '11111111-1111-1111-1111-111111111111';
 const faturamentoId = '99999999-9999-9999-9999-999999999999';
+const pedidoVendaId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 const naturezaVendaId = '44444444-4444-4444-4444-444444444444';
 const naturezaDevolucaoId = '55555555-5555-5555-5555-555555555555';
+
+// D113: o Confirmar só habilita com a prontidão `pronto = true` dos parâmetros atuais.
+const prontidaoPronta = { pronto: true, avaliacao: 'PrimeiraConfirmacao', pendencias: [] };
 
 type Capturado = { method?: string; url?: string; params?: Record<string, unknown>; body: Record<string, unknown> };
 type RespostaConfirmar = 'rede' | 400 | 200;
@@ -101,6 +110,12 @@ describe('ConfirmarFaturamentoDialog — b71 (D91, D92, D94)', () => {
             capturados.push({ method: config.method, url: config.url, params: config.params, body: config.data ? JSON.parse(String(config.data)) : {} });
             if (config.method === 'get' && config.url === '/api/fiscal/naturezas-operacao') {
                 return { data: { items: naturezas, page: 1, pageSize: 200, totalItems: naturezas.length, totalPages: 1 }, status: 200, statusText: 'OK', headers: {}, config };
+            }
+            if (config.method === 'get' && config.url === '/api/administracao/empresas') {
+                return { data: [], status: 200, statusText: 'OK', headers: {}, config };
+            }
+            if (config.method === 'get' && config.url === '/api/faturamento/prontidao') {
+                return { data: prontidaoPronta, status: 200, statusText: 'OK', headers: {}, config };
             }
             if (config.method === 'post' && config.url === `/api/faturamento/${faturamentoId}/confirmar`) {
                 const proxima = respostasConfirmar.shift() ?? 200;
@@ -145,6 +160,7 @@ describe('ConfirmarFaturamentoDialog — b71 (D91, D92, D94)', () => {
                 <ConfirmarFaturamentoDialog
                     visible={visible}
                     faturamentoId={faturamentoId}
+                    pedidoVendaId={pedidoVendaId}
                     empresaId={empresaId}
                     filialId={null}
                     onHide={() => {
@@ -189,6 +205,8 @@ describe('ConfirmarFaturamentoDialog — b71 (D91, D92, D94)', () => {
         await colar(user, screen.getByLabelText('UF autorizadora *'), uf);
         await colar(user, screen.getByLabelText('Unidade comercial padrão *'), 'UN');
         await user.click(screen.getByRole('button', { name: 'Escolher vencimento' }));
+        // A prontidão confere os parâmetros depois do debounce; o Confirmar só libera com a resposta deles.
+        await waitFor(() => expect(confirmarButton()).toBeEnabled(), { timeout: 3000 });
     };
 
     it('AC-1: o body do POST confirmar leva naturezaOperacaoId da natureza escolhida e o correlationId, e não leva cfopPadrao', async () => {

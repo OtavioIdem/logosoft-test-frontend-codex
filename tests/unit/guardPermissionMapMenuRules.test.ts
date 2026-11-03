@@ -457,7 +457,7 @@ export const MenuFixtureFRulePrecedence = () => {
   });
 
   describe('AC-1: parser enumera todo universo', () => {
-    it('parser deve enumerar 49 itens do AppMenu.tsx atual', () => {
+    it('parser deve enumerar 50 itens do AppMenu.tsx atual', () => {
       const appMenuSource = readFileSync(
         join(root, 'layout/AppMenu.tsx'),
         'utf8'
@@ -473,7 +473,12 @@ export const MenuFixtureFRulePrecedence = () => {
       // Número total deve refletir a contagem
       expect(result.hierarchy.length).toBeGreaterThan(0);
       // D106: 34 atalhos de cadastro foram substituídos por uma única entrada /cadastros.
-      expect(itemsWithTo).toBe(49);
+      // v1.11.0a8b81: +1 "Configuração de emissão" (/fiscal/configuracao). Razão confirmada pelo nome logo abaixo.
+      expect(itemsWithTo).toBe(50);
+      const itemConfiguracao = result.hierarchy.filter((item: any) => item.rota === '/fiscal/configuracao');
+      expect(itemConfiguracao).toHaveLength(1);
+      expect(itemConfiguracao[0]).toMatchObject({ group: 'Fiscal' });
+      expect(itemConfiguracao[0].permissions).toEqual(expect.arrayContaining(['FISCAL_CONFIGURACAO_CONSULTAR', 'FISCAL_CONFIGURACAO_GERENCIAR']));
       const itemNovo = result.hierarchy.filter((item: any) => item.rota === '/cadastros');
       expect(itemNovo).toHaveLength(1);
       expect(itemNovo[0]).toMatchObject({ group: 'Cadastros' });

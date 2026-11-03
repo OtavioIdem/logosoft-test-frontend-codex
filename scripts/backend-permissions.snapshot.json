@@ -1,6 +1,6 @@
 {
     "schemaVersion": 2,
-    "version": "1.11.0a8b76",
+    "version": "1.11.0a8b82",
     "sources": [
         {
             "document": "docs/backend-v1.23/CONTRATO-API-v1.23.md",
@@ -13,7 +13,7 @@
     ],
     "sourceDate": "2026-09-08",
     "generatedAt": "2026-09-08T00:00:00-03:00",
-    "count": 179,
+    "count": 181,
     "sentinels": [
         "*",
         "MASTER_GOD"
@@ -25,14 +25,16 @@
     "semOperacaoEmV123": [
         "FINANCEIRO_BANCO_GERENCIAR",
         "FINANCEIRO_CAIXA_GERENCIAR",
+        "FISCAL_CONFIGURACAO_CONSULTAR",
+        "FISCAL_CONFIGURACAO_GERENCIAR",
         "POLITICA_COMERCIAL_GERENCIAR",
         "SEGURANCA_SESSOES_GERENCIAR",
         "VENDAS_PRECO_MINIMO_SOBRESCREVER"
     ],
     "backendDeclaradas": 178,
     "naoConciliado": {
-        "quantidade": 1,
-        "motivo": "O contrato declara 178 permissões nomeadas (docs/backend-v1.23/CONTRATO-API-v1.23.md, seção \"Números\"), mas a união nomeada medida entre as 172 nomeadas em operações do contrato v1.23 e as 175 nomeadas no catálogo §12 de docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md resulta em 177. Fica 1 permissão(ões) sem nome: não aparece(m) em nenhuma operação do contrato v1.23 nem no catálogo §12, e não há fonte documental para nomeá-la(s) — não foi(ram) inventada(s)."
+        "quantidade": -1,
+        "motivo": "O contrato declara 178 permissões nomeadas (docs/backend-v1.23/CONTRATO-API-v1.23.md, seção \"Números\"), mas a união nomeada medida resulta em 179: 172 nomeadas em operações do contrato v1.23 mais 7 nomeadas só no catálogo §12 de docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md. A união EXCEDE em 1 o total declarado pela foto do contrato v1.23 (178), porque o catálogo §12 recebeu permissões depois dessa foto. A foto deixa 6 vaga(s) sem nome; as 7 permissões do §12 ausentes das operações do v1.23 (FINANCEIRO_BANCO_GERENCIAR, FINANCEIRO_CAIXA_GERENCIAR, FISCAL_CONFIGURACAO_CONSULTAR, FISCAL_CONFIGURACAO_GERENCIAR, POLITICA_COMERCIAL_GERENCIAR, SEGURANCA_SESSOES_GERENCIAR, VENDAS_PRECO_MINIMO_SOBRESCREVER) ocupam essas vagas e sobram 1. Quantidade negativa (-1) registra o excesso; nenhuma permissão foi removida nem inventada."
     },
     "permissions": [
         "*",
@@ -115,6 +117,8 @@
         "FISCAL_CADASTROS_GERENCIAR",
         "FISCAL_CANCELAR",
         "FISCAL_CARTA_CORRECAO",
+        "FISCAL_CONFIGURACAO_CONSULTAR",
+        "FISCAL_CONFIGURACAO_GERENCIAR",
         "FISCAL_CONSULTAR",
         "FISCAL_EMITIR",
         "FISCAL_EXPORTAR",

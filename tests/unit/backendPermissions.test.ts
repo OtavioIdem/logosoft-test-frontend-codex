@@ -53,14 +53,17 @@ describe('backend permissions', () => {
         expect(snapshot.novasEmV123).toContain('FATURAMENTO_RETOMAR_REVERSAO');
     });
 
-    it('snapshot contém 179 permissões: 177 nomeadas (union ∪ catálogo) + 2 sentinelas', () => {
+    it('snapshot contém 181 permissões: 179 nomeadas (union ∪ catálogo) + 2 sentinelas', () => {
         const snapshot = JSON.parse(read('scripts/backend-permissions.snapshot.json'));
 
-        // 177 nomeadas + 2 sentinelas (MASTER_GOD, *)
-        expect(snapshot.count).toBe(179);
-        expect(snapshot.permissions.length).toBe(179);
+        // 179 nomeadas + 2 sentinelas (MASTER_GOD, *). +2 sobre as 177 anteriores: FISCAL_CONFIGURACAO_CONSULTAR
+        // e FISCAL_CONFIGURACAO_GERENCIAR (v1.11.0a8b81, AJ-34/AJ-35). A contagem sozinha não prova o nome: abaixo.
+        expect(snapshot.count).toBe(181);
+        expect(snapshot.permissions.length).toBe(181);
         expect(snapshot.permissions).toContain('MASTER_GOD');
         expect(snapshot.permissions).toContain('*');
+        expect(snapshot.permissions).toContain('FISCAL_CONFIGURACAO_CONSULTAR');
+        expect(snapshot.permissions).toContain('FISCAL_CONFIGURACAO_GERENCIAR');
     });
 
     it('snapshot mantém permissões ordenadas alfabeticamente sem duplicata', () => {
@@ -195,6 +198,81 @@ Permissões no backend | **2** (mais MASTER_GOD e *)`;
         expect(scenario1.permissions).toContain('*');
         expect(scenario1.permissions).toContain('MASTER_GOD');
         expect(scenario1.count).toBe(6);
+    });
+
+    it('naoConciliado do snapshot real registra excesso com sinal: união 179 excede foto 178 em -1 e nomeia as 7 do §12', () => {
+        const snapshot = JSON.parse(read('scripts/backend-permissions.snapshot.json'));
+        const named = snapshot.count - snapshot.sentinels.length;
+
+        expect(named).toBe(179);
+        expect(snapshot.backendDeclaradas).toBe(178);
+        expect(snapshot.naoConciliado.quantidade).toBe(-1);
+        expect(snapshot.naoConciliado.quantidade).toBe(snapshot.backendDeclaradas - named);
+
+        // Reconstrói pelo gerador a partir das fontes reais: prova que o gerador (não só o artefato) grava -1.
+        const inputs = readPermissionInputs(root);
+        const rebuilt = buildSnapshot({ contract: inputs.contract, catalogSection: inputs.catalogSection, version: snapshot.version, sourceDate: snapshot.sourceDate });
+        expect(rebuilt.naoConciliado.quantidade).toBe(-1);
+        expect(rebuilt.naoConciliado.motivo).toBe(snapshot.naoConciliado.motivo);
+
+        const motivo: string = snapshot.naoConciliado.motivo;
+        expect(motivo).not.toContain('Sem divergência');
+        expect(motivo).toContain('179');
+        expect(motivo).toContain('178');
+        expect(motivo).toContain('EXCEDE em 1');
+        // Lista nominal do §12 sem operação em v1.23 — inclui as duas FISCAL_CONFIGURACAO_* desta versão.
+        expect(snapshot.semOperacaoEmV123).toHaveLength(7);
+        for (const code of snapshot.semOperacaoEmV123) {
+            expect(motivo).toContain(code);
+        }
+        expect(motivo).toContain('FISCAL_CONFIGURACAO_CONSULTAR');
+        expect(motivo).toContain('FISCAL_CONFIGURACAO_GERENCIAR');
+    });
+
+    it('naoConciliado com união igual ao declarado é 0 e diz "Sem divergência"', () => {
+        const rebuilt = buildSnapshot({
+            contract: { permissions: ['PERM_A', 'PERM_B'], semRequiredPermissionCount: 0, declaredTotal: 2 },
+            catalogSection: { rows: [{ csharp: 'PermA', code: 'PERM_A' }, { csharp: 'PermB', code: 'PERM_B' }] },
+            version: '1.0.0',
+            sourceDate: '2026-09-08'
+        });
+
+        expect(rebuilt.naoConciliado.quantidade).toBe(0);
+        expect(rebuilt.naoConciliado.motivo.startsWith('Sem divergência')).toBe(true);
+    });
+
+    it('naoConciliado com união menor que o declarado é positivo e mantém o texto de "sem nome"', () => {
+        const rebuilt = buildSnapshot({
+            contract: { permissions: ['PERM_A'], semRequiredPermissionCount: 0, declaredTotal: 3 },
+            catalogSection: { rows: [{ csharp: 'PermA', code: 'PERM_A' }] },
+            version: '1.0.0',
+            sourceDate: '2026-09-08'
+        });
+
+        expect(rebuilt.naoConciliado.quantidade).toBe(2);
+        expect(rebuilt.naoConciliado.motivo).toContain('Fica 2 permissão(ões) sem nome');
+        expect(rebuilt.naoConciliado.motivo).not.toContain('EXCEDE');
+    });
+
+    it('naoConciliado com união acima do declarado é negativo, cita 4 e 3 e nomeia as permissões do §12 que sobram', () => {
+        // Fixture: 2 nomeadas em operações (PERM_A, PERM_B) + 2 só no §12 (PERM_C, PERM_D) = união 4.
+        // Foto declara 3 → 1 vaga sem nome para 2 permissões do §12 → excesso 1.
+        const rebuilt = buildSnapshot({
+            contract: { permissions: ['PERM_A', 'PERM_B'], semRequiredPermissionCount: 0, declaredTotal: 3 },
+            catalogSection: { rows: [{ csharp: 'PermA', code: 'PERM_A' }, { csharp: 'PermC', code: 'PERM_C' }, { csharp: 'PermD', code: 'PERM_D' }] },
+            version: '1.0.0',
+            sourceDate: '2026-09-08'
+        });
+
+        expect(rebuilt.naoConciliado.quantidade).toBe(-1);
+        const motivo = rebuilt.naoConciliado.motivo;
+        expect(motivo).toContain('resulta em 4');
+        expect(motivo).toContain('declara 3');
+        expect(motivo).toContain('EXCEDE em 1');
+        expect(motivo).toContain('PERM_C');
+        expect(motivo).toContain('PERM_D');
+        expect(motivo).not.toContain('Sem divergência');
+        expect(motivo).not.toContain('Fica ');
     });
 
     it('comparePermissions detecta fantasma quando sentinela entra no union', () => {

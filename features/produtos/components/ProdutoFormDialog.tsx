@@ -17,12 +17,15 @@ import { MoneyInput } from '@/components/forms/MoneyInput';
 import { FormGrid } from '@/components/forms/FormGrid';
 import { SearchSelect } from '@/components/forms/SearchSelect';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
+import { CestCodigoSelect, NcmCodigoSelect, OrigemMercadoriaSelect } from '@/features/fiscal/components/CodigoFiscalSelects';
+import { useCestPorNcm } from '@/features/fiscal/hooks/useCadastrosFiscais';
+import { GtinClassificacaoSugestao } from '@/features/produtos/components/GtinClassificacaoSugestao';
 import { atualizarProdutoSchema, criarProdutoSchema } from '@/features/produtos/schemas/produtosSchemas';
 import { CatalogoListQuery, ProdutoFormValues, ProdutoResponse } from '@/features/produtos/types/produtos.types';
 import { useCategoriasProduto, useGruposProduto, useMarcas, useUnidadesMedida } from '@/features/produtos/hooks/useProdutosResources';
 import { useUnidadesTributaveis } from '@/features/produtos/hooks/useUnidadeTributavelCatalogo';
 import { FieldErrors, fieldErrorMap, textValue, toOptions } from '@/features/produtos/components/produtoFormUtils';
-import { SelectOption, TipoItemFiscal, TipoItemSped, TipoProduto } from '@/types/erp';
+import { ApiError, SelectOption, TipoItemFiscal, TipoItemSped, TipoProduto } from '@/types/erp';
 
 const tipoProdutoOptions = [
     { label: 'Mercadoria', value: TipoProduto.Mercadoria },
@@ -137,17 +140,30 @@ export const ProdutoFormDialog = ({
     visible,
     loading,
     record,
+    editando = false,
+    carregando = false,
+    erroCarga = null,
+    onRetry,
     onHide,
     onSubmit
 }: {
     visible: boolean;
     loading?: boolean;
+    // Na edição, o `record` TEM de ser o produto completo (`GET /api/produtos/{id}`), nunca a linha da listagem.
     record?: ProdutoResponse | null;
+    // Edição em curso (mesmo antes de o `record` chegar): impede que o diálogo se apresente como "Novo produto".
+    editando?: boolean;
+    carregando?: boolean;
+    erroCarga?: ApiError | null;
+    onRetry?: () => void;
     onHide: () => void;
     onSubmit: (values: ProdutoFormValues) => Promise<void>;
 }) => {
     const [values, setValues] = useState<ProdutoFormValues>(() => buildInitialValues(record));
     const [errors, setErrors] = useState<FieldErrors>({});
+    // Só uma troca de NCM feita pelo operador pode limpar o CEST: um produto legado com CEST fora dos vínculos
+    // não é alterado em silêncio ao abrir a edição (o backend é quem recusa, e o erro aparece).
+    const [ncmAlterado, setNcmAlterado] = useState(false);
 
     // Catálogos (unidade/categoria/marca) são carregados pela empresa efetiva do próprio modal:
     // na edição usa a empresa do produto; na criação, a empresa escolhida no formulário. Assim o
@@ -177,19 +193,50 @@ export const ProdutoFormDialog = ({
     const unidadeTributavelCatalogo = useUnidadesTributaveis(visible);
     const unidadeTributavelOptions = useMemo(() => comSiglaSelecionada(unidadeTributavelCatalogo.options, textValue(values.unidadeTributavelSigla) || null), [unidadeTributavelCatalogo.options, values.unidadeTributavelSigla]);
 
-    useEffect(() => {
+    // Mesma consulta de vínculos do select de CEST (React Query deduplica pela chave): decide se o CEST gravado ainda
+    // pertence ao NCM escolhido.
+    const cestVinculos = useCestPorNcm(textValue(values.ncmCodigo) || null, visible);
+    const cestAtual = textValue(values.cestCodigo);
+    // Lista parcial (`totalItems` > página carregada) não prova que o CEST é inválido: não limpa (a tela já avisa que está incompleta).
+    const cestForaDosVinculos = visible && ncmAlterado && cestVinculos.isSuccess && !cestVinculos.parcial && Boolean(cestAtual) && !cestVinculos.codigos.includes(cestAtual);
+
+    // Reset por abertura/registro feito DURANTE o render (padrão "ajustar estado quando a prop muda"), não em efeito:
+    // `values` e `ncmAlterado` são trocados no mesmo passo e o React refaz o render antes de qualquer efeito rodar.
+    // O dialog fica montado em ProdutosPage; com efeito, o render da reabertura ainda enxergava o `ncmAlterado` e o CEST
+    // do registro anterior, e a limpeza abaixo podia zerar o CEST do produto recém-aberto.
+    const [aberturaAtual, setAberturaAtual] = useState({ record, visible });
+    if (aberturaAtual.record !== record || aberturaAtual.visible !== visible) {
+        setAberturaAtual({ record, visible });
         if (visible) {
             setValues(buildInitialValues(record));
             setErrors({});
+            setNcmAlterado(false);
         }
-    }, [record, visible]);
+    }
+
+    useEffect(() => {
+        if (cestForaDosVinculos) setValues((current) => ({ ...current, cestCodigo: null }));
+    }, [cestForaDosVinculos]);
 
     const update = (name: keyof ProdutoFormValues, value: unknown) => {
         setValues((current) => ({ ...current, [name]: value }));
         setErrors((current) => ({ ...current, [name]: undefined }));
     };
 
+    const trocarNcm = (codigo: string | null) => {
+        setNcmAlterado(true);
+        setValues((current) => ({ ...current, ncmCodigo: codigo, ...(codigo ? {} : { cestCodigo: null }) }));
+        setErrors((current) => ({ ...current, ncmCodigo: undefined }));
+    };
+
+    // Trocou o NCM e a lista de vínculos ainda não respondeu: o CEST antigo ainda não pôde ser conferido. Salvar agora
+    // mandaria o CEST do NCM anterior no payload.
+    const aguardandoVinculosCest = visible && ncmAlterado && cestVinculos.isFetching;
+    const emEdicaoSemRegistro = editando && !record;
+    const salvarIndisponivel = carregando || Boolean(erroCarga) || emEdicaoSemRegistro || aguardandoVinculosCest;
+
     const submit = async () => {
+        if (salvarIndisponivel) return;
         const schema = record ? atualizarProdutoSchema : criarProdutoSchema;
         const parsed = schema.safeParse(values);
         if (!parsed.success) {
@@ -202,10 +249,30 @@ export const ProdutoFormDialog = ({
     const footer = (
         <div className="flex justify-content-end gap-2">
             <Button type="button" label="Cancelar" icon="pi pi-times" severity="secondary" outlined onClick={onHide} disabled={loading} />
-            <Button type="button" label="Salvar" icon="pi pi-check" loading={loading} onClick={submit} />
+            <Button type="button" label="Salvar" icon="pi pi-check" loading={loading} disabled={salvarIndisponivel} title={aguardandoVinculosCest ? 'Aguarde a consulta dos CESTs do NCM escolhido.' : undefined} onClick={submit} />
         </div>
     );
     const className = (field: string) => classNames({ 'p-invalid': errors[field] });
+
+    // Edição sobre dados parciais é proibida: enquanto o produto completo não chega (ou se a carga falhou), o formulário
+    // nem é montado — só o estado de carga/erro, com Salvar desabilitado. Sem fallback para a linha da listagem.
+    if (emEdicaoSemRegistro) {
+        return (
+            <Dialog header="Editar produto" visible={visible} modal style={{ width: 'min(72rem, 98vw)' }} footer={footer} onHide={onHide}>
+                {erroCarga ? (
+                    <div role="alert" className="flex flex-column gap-2 align-items-start">
+                        <Message severity="error" className="w-full" text={`Não foi possível carregar o produto: ${erroCarga.message}`} />
+                        <Button type="button" label="Tentar novamente" icon="pi pi-refresh" severity="secondary" outlined onClick={onRetry} />
+                    </div>
+                ) : (
+                    <div role="status" aria-live="polite" className="flex align-items-center gap-2">
+                        <i className="pi pi-spin pi-spinner" aria-hidden="true" />
+                        <span>Carregando dados do produto...</span>
+                    </div>
+                )}
+            </Dialog>
+        );
+    }
 
     return (
         <Dialog header={record ? 'Editar produto' : 'Novo produto'} visible={visible} modal style={{ width: 'min(72rem, 98vw)' }} footer={footer} onHide={onHide}>
@@ -302,17 +369,17 @@ export const ProdutoFormDialog = ({
                         <FormGrid>
                             <div className="field col-12 md:col-3">
                                 <label htmlFor="ncmCodigo" className="font-medium">NCM</label>
-                                <InputText id="ncmCodigo" value={textValue(values.ncmCodigo)} className={className('ncmCodigo')} onChange={(event) => update('ncmCodigo', event.target.value)} />
+                                <NcmCodigoSelect id="ncmCodigo" value={textValue(values.ncmCodigo) || null} onChange={trocarNcm} />
                                 <FieldError message={errors.ncmCodigo} />
                             </div>
                             <div className="field col-12 md:col-3">
                                 <label htmlFor="cestCodigo" className="font-medium">CEST</label>
-                                <InputText id="cestCodigo" value={textValue(values.cestCodigo)} className={className('cestCodigo')} onChange={(event) => update('cestCodigo', event.target.value)} />
+                                <CestCodigoSelect id="cestCodigo" ncmCodigo={textValue(values.ncmCodigo) || null} value={textValue(values.cestCodigo) || null} onChange={(codigo) => update('cestCodigo', codigo)} />
                                 <FieldError message={errors.cestCodigo} />
                             </div>
                             <div className="field col-12 md:col-3">
                                 <label htmlFor="origemMercadoriaCodigo" className="font-medium">Origem</label>
-                                <InputText id="origemMercadoriaCodigo" value={textValue(values.origemMercadoriaCodigo)} className={className('origemMercadoriaCodigo')} onChange={(event) => update('origemMercadoriaCodigo', event.target.value)} />
+                                <OrigemMercadoriaSelect id="origemMercadoriaCodigo" value={textValue(values.origemMercadoriaCodigo) || null} onChange={(codigo) => update('origemMercadoriaCodigo', codigo)} />
                                 <FieldError message={errors.origemMercadoriaCodigo} />
                             </div>
                             <div className="field col-12 md:col-3">
@@ -365,6 +432,7 @@ export const ProdutoFormDialog = ({
                                 <FieldError message={errors.codigoFiscalExterno} />
                             </div>
                         </FormGrid>
+                        {record ? <GtinClassificacaoSugestao key={record.id} codigosBarras={record.codigosBarras} ncmAtual={textValue(values.ncmCodigo) || null} onUsarNcm={trocarNcm} /> : null}
                     </PermissionGuard>
                 </TabPanel>
                 <TabPanel header="Códigos e fornecedores">
