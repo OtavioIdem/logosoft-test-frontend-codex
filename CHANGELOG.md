@@ -1,3 +1,38 @@
+# v1.11.0a8b82.c2
+
+## CI do PR #46: dois E2E ainda testavam como não master duas telas que a b79 tornou só de master
+
+**Origem:** o run `41717836669`, no commit `e64f03b`, passou em `test:unit`, mas no E2E mockado reprovou em 2 de 137
+testes. Os dois vêm da **b79** (`e19c869`), não das b80-b82. Ela marcou `masterOnly` em 8 regras de rota, entre elas
+`/estoque/bloqueios` e `/atividades`. Os dois specs ainda entravam como usuário comum com as permissões do módulo e
+agora recebiam "Tela em desenvolvimento". Quem está certo é a tela, e a correção é só em testes.
+
+### O que mudou
+
+- `tests/e2e/fixtures/logosoft.ts`: a sessão de teste ganhou `isMaster?: boolean`, com default `false`. Antes não havia
+  como montar uma sessão master, porque `masterOnly` ignora a permissão `*` e o `/api/auth/me` fixava
+  `isMaster: false`. É uma mudança aditiva: com o default, os demais specs não mudam.
+- `tests/e2e/navegacao-estoque.spec.ts`, AC-8: o redirect de `/estoque/bloqueios` para `/estoque/avancado` passa a
+  rodar com sessão master. As asserções são as mesmas.
+- `tests/e2e/permissions.spec.ts`, AC-6: o teste virou dois.
+  - Um usuário **não master** com `ATIVIDADES_CONSULTAR` e `COMENTAR` recebe a tela de desenvolvimento.
+  - O **master** vê "Atividades".
+  - A verificação das ações por permissão fica suspensa enquanto `/atividades` for `masterOnly`. O comentário do teste
+    diz como reabri-la quando a marca sair.
+- Grep das 8 rotas marcadas nos specs: só esses dois navegavam para elas com sessão não master.
+
+### Testes
+
+E2E pela receita isolada (porta 3411 livre, um único `next dev`, rotas aquecidas):
+- **vermelho medido antes da correção:** 2 de 13 falharam nos dois specs;
+- **depois da correção, 14/14 nas duas rodadas.**
+
+Não rodei a suíte E2E completa localmente: quem confere é o CI.
+
+O carimbo `.c2` fica só no CHANGELOG, como nos precedentes.
+
+---
+
 # v1.11.0a8b82.c1
 
 ## CI do PR #46: dois testes unitários e um E2E presos ao estado anterior às b80-b82

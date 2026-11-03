@@ -9,7 +9,7 @@ const e2eUsuarioId = '33333333-3333-3333-3333-333333333333';
 
 // Estado compartilhado para armazenar opções de sessão por página
 // Usado para que writeSession() possa configurar a resposta de /api/auth/me em mockApiRoutes()
-const sessionConfigByPage = new WeakMap<Page, { usuarioId: string; nome: string; email: string; empresaId: string; filialId: string; permissoes: string[] }>();
+const sessionConfigByPage = new WeakMap<Page, { usuarioId: string; nome: string; email: string; empresaId: string; filialId: string; permissoes: string[]; isMaster: boolean }>();
 
 export const ADMIN_PERMISSIONS = [
     'AUDITORIA_CONSULTAR',
@@ -103,6 +103,8 @@ type SessionOptions = {
     permissions?: string[];
     email?: string;
     name?: string;
+    // Sessão master (`user.isMaster === true`): o cliente só libera `masterOnly` (b79) com esta flag crua. Default false.
+    isMaster?: boolean;
 };
 
 export const writeSession = async (page: Page, options: SessionOptions = {}) => {
@@ -113,7 +115,8 @@ export const writeSession = async (page: Page, options: SessionOptions = {}) => 
         email: options.email ?? 'admin@logosoft.local',
         empresaId: '11111111-1111-1111-1111-111111111111',
         filialId: '22222222-2222-2222-2222-222222222222',
-        permissoes: options.permissions ?? ADMIN_PERMISSIONS
+        permissoes: options.permissions ?? ADMIN_PERMISSIONS,
+        isMaster: options.isMaster === true
     };
 
     const sessionData = {
@@ -132,7 +135,8 @@ export const writeSession = async (page: Page, options: SessionOptions = {}) => 
         email: sessionUser.email,
         empresaId: sessionUser.empresaId,
         filialId: sessionUser.filialId,
-        permissoes: sessionUser.permissoes
+        permissoes: sessionUser.permissoes,
+        isMaster: sessionUser.isMaster
     });
 
     // Usar page.addInitScript para escrever a sessão em localStorage ANTES de qualquer script de página
@@ -496,7 +500,8 @@ export const mockApiRoutes = async (page: Page) => {
             email: 'admin@logosoft.local',
             empresaId: '11111111-1111-1111-1111-111111111111',
             filialId: '22222222-2222-2222-2222-222222222222',
-            permissoes: ADMIN_PERMISSIONS
+            permissoes: ADMIN_PERMISSIONS,
+            isMaster: false
         };
 
 
@@ -606,7 +611,7 @@ export const mockApiRoutes = async (page: Page) => {
                 email: config.email,
                 empresaId: config.empresaId,
                 filialId: config.filialId,
-                isMaster: false,
+                isMaster: config.isMaster,
                 permissoes: config.permissoes
             }));
         }
