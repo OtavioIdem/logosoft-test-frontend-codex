@@ -1,3 +1,68 @@
+# v1.11.0a8b82.c4
+
+## Fiscal › Configuração de emissão: empresa e filial só pelo seletor de contexto do header
+
+**Origem:** pedido do usuário. A tela não deve oferecer seleção de empresa nem de filial: as duas vêm sempre do
+seletor de contexto do header. Decisão **D115**. Plano: `docs/fatias/v1.11.0a8b82.c4-contexto-do-header-na-configuracao.md`.
+
+### O que muda para quem usa
+
+- **Aba Filiais:** sai o seletor de filial. A tela configura a filial escolhida no header. Sem filial no header, a
+  aba pede para escolher uma lá e não consulta nada. Trocar a filial no header troca a filial exibida.
+- **Cadastro de certificado:** sai o seletor de filial. A empresa e a filial do contexto aparecem só para leitura.
+  - Com filial no header, há uma caixa "Vincular à filial do contexto", desmarcada por padrão. Desmarcada, o
+    certificado fica para a empresa toda.
+  - Sem filial no header, o certificado é sempre da empresa toda.
+  - A lista de certificados continua com todos os da empresa, com a coluna Filial.
+- **Empresa:** nunca teve seletor na tela. Continua a do header para o master (D114) e a do token para o usuário
+  comum, com o aviso e o bloqueio da D112 quando o header diverge.
+- **Corrigido junto:** a QA-01 da `.c3` deixou de existir. A tela não guarda mais filial própria, então nenhuma
+  requisição mistura a filial antiga com a empresa nova.
+
+Nenhuma permissão nova (`accessRisk: NENHUM`).
+
+### Diagnóstico do "não consegue buscar a empresa"
+
+O backend em execução era `logosoft-backend:v1.26.21` (branch da G1), e ele **não tem** as rotas
+`api/fiscal/configuracao` nem `/prontidao`. Sem login, essas rotas respondem 404, enquanto as que existem respondem
+401. O frontend envia a empresa como devia: `?empresaId=` do header para o master e nenhum parâmetro para o usuário
+comum.
+
+**Nenhum branch do backend reúne tudo hoje:**
+- a G1 (GTIN) está só em `feat/v1.26.21-…`;
+- a configuração fiscal e a prontidão estão na `main`, pelo PR #83;
+- a correção do master (v1.26.23) está só em `fix/v1.26.23-…`.
+
+Para usar esta tela, o backend precisa ser o `fix/v1.26.23-master-configuracao-fiscal`.
+
+**Correção de registro:** as entradas b81, b82 e `.c3` dizem que a v1.26.22 não estava na `main` do backend. O PR #83
+foi mergeado em 2026-11-02. Ficaram fora dele só o `33d3d62` (Preparar com pedido misto; `validoAte` em UTC, que o
+frontend já envia) e o `061b32e` (docs).
+
+### Testes
+
+- **Recorte:** `npx vitest run tests/unit/configuracaoFiscal* tests/components/ConfiguracaoFiscal* tests/components/CertificadosDigitaisTab* tests/components/AppMenuConfiguracaoFiscal*`.
+  São 11 arquivos, e **179/179 passaram** nas duas rodadas.
+- **`ConfiguracaoFiscalHeaderContexto` (novo, 8 testes):**
+  - nenhum combobox de empresa ou filial;
+  - `/filiais/{filial do header}`, e zero requisições sem filial;
+  - troca de F1 para F2, e de E1/F1 para E2/F2 no master, sem requisição à filial antiga;
+  - os três casos da caixa do certificado.
+- **Três testes antigos** foram ajustados ao comportamento novo: a troca de filial agora acontece no header, não num
+  seletor interno.
+- **Prova de vermelho:**
+  - o diálogo ignorando a caixa: 1 falha;
+  - a filial fixa em vez da do contexto: 5 falhas.
+- **E2E** `v1.11.0a8b81-configuracao-fiscal.spec.ts`: 2/2 nas duas rodadas.
+- **Gates e build** verdes. O QA bloqueou uma vez por uma linha em branco no fim de um arquivo de teste
+  (`validate:source`). Isso foi corrigido.
+- **A caixa marcada:** o QA confirmou que o estado e a aparência estão corretos. O `checked` do input escondido do
+  PrimeReact chega atrasado no jsdom, o mesmo efeito de `ConfirmarFaturamentoDialog.test.tsx:318-320`. Por isso a
+  prova do caso marcado é o POST.
+- **Não verificado:** a tela no navegador contra um backend com as rotas.
+
+---
+
 # v1.11.0a8b82.c3
 
 ## Fiscal › Configuração de emissão passa a funcionar para o master, com a empresa do seletor (backend v1.26.23)

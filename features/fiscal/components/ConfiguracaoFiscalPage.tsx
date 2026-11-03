@@ -8,7 +8,7 @@
 // Master (D114): não tem empresa no token; as chamadas levam `?empresaId=` da empresa do seletor de contexto, não há
 // divergência, a aba Filiais fica liberada e, sem empresa no seletor, a tela pede para escolher e não consulta nada.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Message } from 'primereact/message';
 import { TabPanel, TabView } from 'primereact/tabview';
 import { Tag } from 'primereact/tag';
@@ -35,7 +35,6 @@ export const ConfiguracaoFiscalPage = () => {
     const context = useOrganizationalContext();
     const sefazSimulada = useSefazSimulada();
     const [abaAtiva, setAbaAtiva] = useState(0);
-    const [filialId, setFilialId] = useState<string | null>(null);
 
     const podeConsultar = hasPermission('FISCAL_CONFIGURACAO_CONSULTAR');
     const podeGerenciar = hasPermission('FISCAL_CONFIGURACAO_GERENCIAR');
@@ -50,11 +49,9 @@ export const ConfiguracaoFiscalPage = () => {
         [context.organizationalScopeKey, usuarioEmpresaId, master, empresaContextoId, context.snapshot]
     );
     const masterSemEmpresa = master && !empresaContextoId;
-
-    // Trocar o contexto organizacional invalida a filial escolhida (ela pertencia a outra empresa).
-    useEffect(() => {
-        setFilialId(null);
-    }, [context.organizationalScopeKey]);
+    // D115: a filial é SEMPRE a do seletor de contexto (nada de estado local). `organizationalScopeKey` inclui a filial, então
+    // trocar só a filial do header também remonta as abas pelo `key`, e nenhuma recebe filial antiga com empresa nova.
+    const filialId = context.filialId;
 
     if (!podeConsultar) {
         return <UnauthorizedState description={CONFIGURACAO_FISCAL_PERMISSAO.unauthorizedDescription} />;
@@ -79,7 +76,7 @@ export const ConfiguracaoFiscalPage = () => {
                         <ConfiguracaoFiscalEmpresaTab key={context.organizationalScopeKey} escopo={escopo} podeConsultar={podeConsultar} podeGerenciar={podeGerenciar} />
                     </TabPanel>
                     <TabPanel header={CONFIGURACAO_FISCAL_PAGINA.abaFiliais}>
-                        <ConfiguracaoFiscalFilialTab key={context.organizationalScopeKey} escopo={escopo} empresaContextoId={empresaContextoId} filialId={filialId} onFilialChange={setFilialId} contextoDivergente={contextoDivergente} podeConsultar={podeConsultar} podeGerenciar={podeGerenciar} />
+                        <ConfiguracaoFiscalFilialTab key={context.organizationalScopeKey} escopo={escopo} filialId={filialId} contextoDivergente={contextoDivergente} podeConsultar={podeConsultar} podeGerenciar={podeGerenciar} />
                     </TabPanel>
                     <TabPanel header={CONFIGURACAO_FISCAL_PAGINA.abaCertificados}>
                         <CertificadosDigitaisTab key={context.organizationalScopeKey} escopo={escopo} empresaContextoId={empresaContextoId} filialSelecionadaId={filialId} contextoDivergente={contextoDivergente} sefazSimulada={sefazSimulada} podeConsultar={podeConsultar} podeGerenciar={podeGerenciar} />

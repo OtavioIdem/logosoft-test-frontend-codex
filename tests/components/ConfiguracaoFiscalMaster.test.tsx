@@ -16,6 +16,7 @@ import {
     empresaConfigurada,
     erroServidor,
     FILIAL_ID,
+    filialConfigurada,
     instalarServidorFiscal,
     RotaServidor
 } from '@/tests/mocks/fiscal/configuracaoFiscalServidor';
@@ -46,11 +47,11 @@ const mockedUseOrganizationalContext = vi.mocked(useOrganizationalContext) as un
 const mockedUsePermissions = vi.mocked(usePermissions) as unknown as ReturnType<typeof vi.fn>;
 const mockedUseAuth = vi.mocked(useAuth) as unknown as ReturnType<typeof vi.fn>;
 
-const contextoPara = (empresaId: string | null, isMaster: boolean, revision = 1) => {
-    const snapshot = Object.freeze({ empresaId, filialId: null, isMaster, revision });
+const contextoPara = (empresaId: string | null, isMaster: boolean, revision = 1, filialId: string | null = null) => {
+    const snapshot = Object.freeze({ empresaId, filialId, isMaster, revision });
     return {
         empresaId,
-        filialId: null,
+        filialId,
         isGlobal: false,
         canChangeOrganization: isMaster,
         requiresOrganizationSelection: false,
@@ -61,14 +62,14 @@ const contextoPara = (empresaId: string | null, isMaster: boolean, revision = 1)
     };
 };
 
-const sessao = (permissoes: string[], empresaUsuario: string, contextoEmpresa: string | null, isMaster: boolean) => {
+const sessao = (permissoes: string[], empresaUsuario: string, contextoEmpresa: string | null, isMaster: boolean, filialContexto: string | null = null) => {
     mockedUsePermissions.mockReturnValue({
         hasPermission: (code: string) => permissoes.includes(code),
         hasAnyPermission: (codes: string[]) => codes.some((code) => permissoes.includes(code)),
         hasAllPermissions: (codes: string[]) => codes.every((code) => permissoes.includes(code))
     });
     mockedUseAuth.mockReturnValue({ user: { id: 'u-1', nome: 'Operador', email: 'op@logosoft.local', empresaId: empresaUsuario, permissoes } });
-    const contexto = contextoPara(contextoEmpresa, isMaster);
+    const contexto = contextoPara(contextoEmpresa, isMaster, 1, filialContexto);
     mockedUseOrganizationalContext.mockReturnValue(contexto);
     return contexto;
 };
@@ -127,9 +128,12 @@ describe('D114 — AC-4: master com empresa no seletor', () => {
     });
 
     it('sem aviso de divergência, com a mensagem da empresa selecionada, e a aba Filiais liberada', async () => {
-        // Seletor em E2 (outra empresa do usuário, que é E1): para o master não existe divergência.
-        sessao(PERMISSOES_GERENCIAR, EMPRESA_USUARIO_ID, EMPRESA_OUTRA_ID, true);
-        const servidor = instalarServidorFiscal(rotasPorEmpresa);
+        // Seletor em E2 (outra empresa do usuário, que é E1) e filial F1 no header: para o master não há divergência.
+        sessao(PERMISSOES_GERENCIAR, EMPRESA_USUARIO_ID, EMPRESA_OUTRA_ID, true, FILIAL_ID);
+        const servidor = instalarServidorFiscal({
+            ...rotasPorEmpresa,
+            [`GET /api/fiscal/configuracao/filiais/${FILIAL_ID}`]: { status: 200, body: filialConfigurada() }
+        });
         restaurar = servidor.restaurar;
         const usuario = userEvent.setup();
 
@@ -138,8 +142,9 @@ describe('D114 — AC-4: master com empresa no seletor', () => {
         expect(await screen.findByText(CONFIGURACAO_FISCAL_PAGINA.masterEmpresaSelecionada)).toBeInTheDocument();
         expect(screen.queryByText(CONFIGURACAO_FISCAL_PAGINA.avisoContextoDivergente)).not.toBeInTheDocument();
 
+        // D115: sem seletor de filial; a aba consulta a filial do header.
         await usuario.click(screen.getByRole('tab', { name: CONFIGURACAO_FISCAL_PAGINA.abaFiliais }));
-        expect(await screen.findByRole('combobox', { name: CONFIGURACAO_FISCAL_FILIAL.selecionar })).toBeEnabled();
+        await waitFor(() => expect(servidor.chamadasDe(`GET /api/fiscal/configuracao/filiais/${FILIAL_ID}`)).toHaveLength(1));
         expect(screen.queryByText(CONFIGURACAO_FISCAL_FILIAL.contextoDivergenteBloqueio)).not.toBeInTheDocument();
     });
 

@@ -3063,3 +3063,26 @@ filial; com escolha, a filial tem de ser dela (D3).
   o erro de antes. Não há regressão para o usuário comum.
 
 `accessRisk: NENHUM`: o master ganha uso, e ninguém perde. Reversível: sim.
+
+## D115 — Configuração de emissão: empresa e filial só pelo seletor de contexto do header (2026-11-03, v1.11.0a8b82.c4)
+
+**Pedido do usuário:** a tela não deve oferecer seleção de empresa nem de filial. As duas vêm sempre do seletor de
+contexto do header.
+
+**Decidido:**
+- **Aba Filiais:** sai o seletor de filial (`EntitySelect` em `ConfiguracaoFiscalFilialTab.tsx:118`). A filial é a do
+  header (`context.filialId`). Sem filial no header, a aba diz "Selecione uma filial no seletor de contexto" e não
+  consulta. Trocar a filial no header remonta a aba, porque o `organizationalScopeKey` muda.
+- **Cadastro de certificado:** sai o seletor de filial (`ConfiguracaoFiscalDialogs.tsx:216`).
+  - O diálogo mostra, só para leitura, a empresa e a filial do contexto.
+  - Com filial no header, há uma única caixa "Vincular à filial do contexto". O padrão é desmarcada, ou seja,
+    certificado da empresa toda. Ela escolhe entre "empresa toda" e "esta filial", e não é uma lista de filiais.
+  - Sem filial no header, o certificado é da empresa toda.
+- **Empresa:** continua a do header para o master (D114). Para o usuário comum, continua a do token; com o header em
+  outra empresa, aparecem o aviso e o bloqueio da D112, que agora valem para as abas que dependem do contexto.
+- **Lista de certificados:** continua mostrando os da empresa, com a coluna Filial. A filial do header não filtra a lista.
+- `accessRisk: NENHUM`: o mesmo acesso, por outro caminho.
+
+**Diagnóstico registrado junto (2026-11-03):** o "não consegue buscar a empresa" relatado era o backend em execução
+(`logosoft-backend:v1.26.21`, o branch da G1), sem as rotas `api/fiscal/configuracao` nem `/prontidao`. Elas
+respondiam 404 sem login. Nenhum branch do backend reúne G1, F3/F5 e v1.26.23.

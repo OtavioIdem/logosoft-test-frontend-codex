@@ -82,6 +82,9 @@ export const CONFIGURACAO_FISCAL_FILIAL = {
     selecionar: 'Filial',
     selecionarPlaceholder: 'Selecione uma filial',
     selecionarVazio: 'Selecione uma filial para ver a configuração.',
+    // D115: a filial vem do seletor de contexto do header; a aba não tem seletor próprio.
+    selecionarNoContexto: 'Selecione uma filial no seletor de contexto para ver e editar a configuração dela.',
+    filialDoContexto: 'Filial selecionada no seletor de contexto',
     semFiliais: 'A empresa não tem filiais cadastradas.',
     herdaTitulo: 'Esta filial herda a configuração da empresa (sem configuração própria).',
     herdaDescricao: 'Salve para criar uma configuração própria para a filial.',
@@ -125,7 +128,13 @@ export const CERTIFICADO_CADASTRAR_DIALOG = {
     thumbprint: 'Thumbprint',
     thumbprintHint: 'Informe o thumbprint exibido pelo Windows. Ele é usado só neste cadastro: depois de salvo, a tela mostra apenas os últimos 6 caracteres.',
     validoAte: 'Válido até',
-    filial: 'Filial (opcional)',
+    // D115: empresa e filial vêm do seletor de contexto e aparecem só para leitura.
+    empresaContexto: 'Empresa',
+    empresaContextoValor: 'Empresa selecionada no seletor de contexto',
+    filialContexto: 'Filial',
+    filialContextoValor: 'Filial selecionada no seletor de contexto',
+    vincularFilial: 'Vincular à filial do contexto',
+    vincularFilialAjuda: 'Desmarcado, o certificado é da empresa toda. Marcado, fica vinculado só à filial do contexto.',
     observacao: 'Observação',
     semUpload: 'Não há upload do arquivo .pfx nem da senha: eles ficam no servidor.'
 } as const;

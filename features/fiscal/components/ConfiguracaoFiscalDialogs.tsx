@@ -14,13 +14,13 @@ import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { Message } from 'primereact/message';
-import { EntitySelect } from '@/components/forms/EntitySelect';
+import { Checkbox } from 'primereact/checkbox';
 import { DateTimeInput } from '@/components/forms/DateTimeInput';
 import { FieldError } from '@/components/forms/FieldError';
 import { APELIDO_CERTIFICADO_MAX, cadastrarCertificadoDigitalSchema, MOTIVO_CONFIGURACAO_MAX, motivoConfiguracaoFiscalSchema, OBSERVACAO_CONFIGURACAO_MAX } from '@/features/fiscal/schemas/configuracaoFiscalSchemas';
 import { CERTIFICADO_CADASTRAR_DIALOG, CERTIFICADOS_DIGITAIS, MOTIVO_DIALOG, TIPO_CERTIFICADO_OPTIONS, mensagemErroConfiguracaoFiscal } from '@/features/fiscal/components/configuracaoFiscalLabels';
 import { TIPO_CERTIFICADO_DIGITAL, TipoCertificadoDigital, VerificarCertificadoDigitalResponse } from '@/features/fiscal/types/configuracaoFiscal.types';
-import { ApiError, SelectOption } from '@/types/erp';
+import { ApiError } from '@/types/erp';
 import { z } from 'zod';
 
 const buildFieldErrors = (error: z.ZodError) => {
@@ -109,7 +109,8 @@ type CadastrarFormValues = {
     tipo: TipoCertificadoDigital;
     thumbprint: string;
     validoAte: Date | null;
-    filialId: string;
+    // D115: "Vincular à filial do contexto" (desmarcada = certificado da empresa toda, `filialId` null).
+    vincularFilial: boolean;
     observacao: string;
 };
 
@@ -118,7 +119,7 @@ const cadastrarInitialValues = (): CadastrarFormValues => ({
     tipo: TIPO_CERTIFICADO_DIGITAL.a1,
     thumbprint: '',
     validoAte: null,
-    filialId: '',
+    vincularFilial: false,
     observacao: ''
 });
 
@@ -131,19 +132,18 @@ export const CertificadoCadastrarDialog = ({
     visible,
     loading,
     error,
-    filialOptions,
-    filialLoading,
-    filialIndisponivel,
+    filialContextoId,
+    filialContextoRotulo,
     onHide,
     onSubmit
 }: {
     visible: boolean;
     loading?: boolean;
     error?: ApiError | null;
-    filialOptions: SelectOption<string>[];
-    filialLoading?: boolean;
-    /** Motivo pelo qual a escolha de filial não está disponível (o campo fica desabilitado e o texto aparece). */
-    filialIndisponivel?: string;
+    /** Filial do seletor de contexto (header), ou `null` quando não há (ou quando ela não vale para esta empresa). */
+    filialContextoId: string | null;
+    /** Nome da filial do contexto, se já conhecido; senão o texto neutro. Só leitura. */
+    filialContextoRotulo?: string;
     onHide: () => void;
     onSubmit: (values: unknown) => Promise<void> | void;
 }) => {
@@ -168,7 +168,7 @@ export const CertificadoCadastrarDialog = ({
             tipo: values.tipo,
             thumbprint: values.thumbprint,
             validoAte: values.validoAte,
-            filialId: values.filialId || null,
+            filialId: values.vincularFilial && filialContextoId ? filialContextoId : null,
             observacao: values.observacao
         });
         if (!parsed.success) {
@@ -212,11 +212,25 @@ export const CertificadoCadastrarDialog = ({
                     <FieldError message={fieldErrors.validoAte} />
                 </div>
                 <div className="field col-12 md:col-6">
-                    <label className="font-medium block mb-2">{CERTIFICADO_CADASTRAR_DIALOG.filial}</label>
-                    <EntitySelect ariaLabel={CERTIFICADO_CADASTRAR_DIALOG.filial} entityName="filial" value={values.filialId || null} options={filialOptions} loading={filialLoading} disabled={Boolean(filialIndisponivel)} onChange={(value) => setValues((v) => ({ ...v, filialId: value ?? '' }))} />
-                    {filialIndisponivel ? <small className="text-color-secondary block mt-1 line-height-3">{filialIndisponivel}</small> : null}
-                    <FieldError message={fieldErrors.filialId} />
+                    <span className="font-medium block mb-1">{CERTIFICADO_CADASTRAR_DIALOG.empresaContexto}</span>
+                    <span data-testid="certificado-empresa-contexto">{CERTIFICADO_CADASTRAR_DIALOG.empresaContextoValor}</span>
                 </div>
+                {filialContextoId ? (
+                    <div className="field col-12 md:col-6">
+                        <span className="font-medium block mb-1">{CERTIFICADO_CADASTRAR_DIALOG.filialContexto}</span>
+                        <span data-testid="certificado-filial-contexto">{filialContextoRotulo ?? CERTIFICADO_CADASTRAR_DIALOG.filialContextoValor}</span>
+                    </div>
+                ) : null}
+                {filialContextoId ? (
+                    <div className="field col-12">
+                        <div className="flex align-items-center gap-2">
+                            <Checkbox inputId="certificado-vincular-filial" checked={values.vincularFilial} onChange={(event) => setValues((v) => ({ ...v, vincularFilial: Boolean(event.checked) }))} />
+                            <label htmlFor="certificado-vincular-filial">{CERTIFICADO_CADASTRAR_DIALOG.vincularFilial}</label>
+                        </div>
+                        <small className="text-color-secondary block mt-1 line-height-3">{CERTIFICADO_CADASTRAR_DIALOG.vincularFilialAjuda}</small>
+                        <FieldError message={fieldErrors.filialId} />
+                    </div>
+                ) : null}
                 <div className="field col-12">
                     <label htmlFor="certificado-observacao" className="font-medium block mb-2">{CERTIFICADO_CADASTRAR_DIALOG.observacao}</label>
                     <InputTextarea id="certificado-observacao" value={values.observacao} rows={3} maxLength={OBSERVACAO_CONFIGURACAO_MAX} onChange={(event) => setValues((v) => ({ ...v, observacao: event.target.value }))} />

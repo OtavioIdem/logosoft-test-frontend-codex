@@ -42,9 +42,7 @@ const renderAba = (props: { podeGerenciar?: boolean; contextoDivergente?: boolea
         <QueryClientProvider client={queryClient}>
             <ConfiguracaoFiscalFilialTab
                 escopo={ESCOPO}
-                empresaContextoId={EMPRESA_USUARIO_ID}
                 filialId={FILIAL_ID}
-                onFilialChange={vi.fn()}
                 contextoDivergente={props.contextoDivergente ?? false}
                 podeConsultar
                 podeGerenciar={props.podeGerenciar ?? true}
@@ -163,16 +161,25 @@ describe('AC-1 (leitura) e contexto divergente (AC-11)', () => {
     });
 });
 
-describe('estado inicial sem filial escolhida', () => {
-    it('sem filial, mostra a instrução e nenhum campo de configuração', () => {
+describe('estado inicial sem filial no header (D115, AC-2)', () => {
+    let restaurar: (() => void) | undefined;
+    afterEach(() => {
+        restaurar?.();
+        restaurar = undefined;
+    });
+
+    it('sem filial, mostra a instrução para escolher no header, nenhum campo, e zero requisições a /filiais/', () => {
+        const servidor = instalarServidorFiscal({});
+        restaurar = servidor.restaurar;
         const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
         render(
             <QueryClientProvider client={queryClient}>
-                <ConfiguracaoFiscalFilialTab escopo={ESCOPO} empresaContextoId={EMPRESA_USUARIO_ID} filialId={null} onFilialChange={vi.fn()} contextoDivergente={false} podeConsultar podeGerenciar />
+                <ConfiguracaoFiscalFilialTab escopo={ESCOPO} filialId={null} contextoDivergente={false} podeConsultar podeGerenciar />
             </QueryClientProvider>
         );
 
-        expect(screen.getByText(CONFIGURACAO_FISCAL_FILIAL.selecionarVazio)).toBeInTheDocument();
+        expect(screen.getByText(CONFIGURACAO_FISCAL_FILIAL.selecionarNoContexto)).toBeInTheDocument();
         expect(within(document.body).queryByLabelText(SERIE_NFE)).not.toBeInTheDocument();
+        expect(servidor.chamadas.filter((chamada) => chamada.url.includes('/filiais/'))).toHaveLength(0);
     });
 });
