@@ -182,13 +182,23 @@ describe('Gate de menu (C2 e C3) — prova histórica da b53', () => {
   });
 
   describe('Contagem de itens do menu', () => {
-    it('parser enumera 49 itens na árvore atual', () => {
+    it('parser enumera 50 itens na árvore atual', () => {
       // b58: +1 "Séries fiscais" (84). b62: −1 "Bloqueios" (`/estoque/bloqueios`,
       // ESTOQUE_MOVIMENTAR), removido em 6d42c62 por levar a rota inexistente — a contagem caiu
       // para 83 e esta prova não foi atualizada junto, então `test:unit` ficou vermelho da b62 em
       // diante e assim foi commitado pela b62, b63 e b64. Corrigido aqui.
       // D106: 34 atalhos cadastrais foram consolidados na entrada /cadastros.
-      expect(hierarchyCountAtuais).toBe(49);
+      // v1.11.0a8b81: +1 "Configuração de emissão" (/fiscal/configuracao). Razão confirmada pelo nome abaixo.
+      expect(hierarchyCountAtuais).toBe(50);
+    });
+
+    it('v1.11.0a8b81: /fiscal/configuracao fica no grupo Fiscal e o pai carrega as duas permissões do filho', () => {
+      const item = divergenciasHoje.itens.filter((candidato) => candidato.rota === '/fiscal/configuracao');
+      expect(item).toHaveLength(1);
+      expect(item[0].grupo).toBe('Fiscal');
+      expect(item[0].permissoes).toEqual(expect.arrayContaining(['FISCAL_CONFIGURACAO_CONSULTAR', 'FISCAL_CONFIGURACAO_GERENCIAR']));
+      expect(item[0].permissoesDoPai).toEqual(expect.arrayContaining(['FISCAL_CONFIGURACAO_CONSULTAR', 'FISCAL_CONFIGURACAO_GERENCIAR']));
+      expect(divergenciasHoje.c2.filter((par) => par.grupo === 'Fiscal' && par.permissao.startsWith('FISCAL_CONFIGURACAO_'))).toEqual([]);
     });
 
     it('D106: /cadastros fica no grupo Cadastros e o pai carrega suas permissões', () => {

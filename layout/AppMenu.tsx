@@ -98,12 +98,13 @@ const AppMenu = () => {
             },
             {
                 label: 'Fiscal',
-                anyPermissions: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_CANCELAR', 'FISCAL_INUTILIZAR', 'FISCAL_CARTA_CORRECAO', 'FISCAL_REGRAS_CONSULTAR', 'FISCAL_REPROCESSAR'],
+                anyPermissions: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_CANCELAR', 'FISCAL_INUTILIZAR', 'FISCAL_CARTA_CORRECAO', 'FISCAL_REGRAS_CONSULTAR', 'FISCAL_REPROCESSAR', 'FISCAL_CONFIGURACAO_CONSULTAR', 'FISCAL_CONFIGURACAO_GERENCIAR'],
                 items: [
                     { label: 'Notas fiscais', icon: 'pi pi-fw pi-file', to: '/fiscal/notas', anyPermissions: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_REPROCESSAR'] },
                     { label: 'Simulador de tributação', icon: 'pi pi-fw pi-calculator', to: '/fiscal/simulador', permission: 'FISCAL_REGRAS_CONSULTAR' },
                     { label: 'Observabilidade', icon: 'pi pi-fw pi-chart-line', to: '/fiscal/observabilidade', permission: 'FISCAL_CONSULTAR' },
-                    { label: 'Inutilizações', icon: 'pi pi-fw pi-ban', to: '/fiscal/inutilizacoes', permission: 'FISCAL_INUTILIZAR' }
+                    { label: 'Inutilizações', icon: 'pi pi-fw pi-ban', to: '/fiscal/inutilizacoes', permission: 'FISCAL_INUTILIZAR' },
+                    { label: 'Configuração de emissão', icon: 'pi pi-fw pi-sliders-h', to: '/fiscal/configuracao', anyPermissions: ['FISCAL_CONFIGURACAO_CONSULTAR', 'FISCAL_CONFIGURACAO_GERENCIAR'] }
                 ]
             },
             {

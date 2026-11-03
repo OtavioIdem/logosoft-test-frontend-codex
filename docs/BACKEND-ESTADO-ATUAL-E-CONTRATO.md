@@ -1391,6 +1391,26 @@ Gerado do código; a ordem é a dos arquivos.
 | `GET` | `/codigos-servico` | `FiscalCadastrosConsultar` | `ListarCodigosServico([FromQuery] string? municipioCodigoIbge, [FromQuery] string? codigoLc116, [FromQuery] string? termo, [FromQuery] bool? ativo, [FromQuery] int pagina = 1, [FromQuery] int tamanhoPagina = 20,)` |
 | `POST` | `/importar/{tabela}` | `FiscalCadastrosGerenciar` | `ImportarTabelaOficial(TabelaOficialFiscal tabela)` |
 
+### `api/fiscal/configuracao`
+
+<sub>Fiscal/ConfiguracaoFiscalController</sub>
+
+> Acrescentada na `b81` (D110, D112) a partir de `ConfiguracaoFiscalController.cs:56-106` do backend v1.26.22/F3
+> (commit `061b32e`). A empresa vem do claim `empresa_id` do token, nunca da rota nem do corpo.
+
+| Método | Caminho | Permissão | Assinatura |
+| --- | --- | --- | --- |
+| `GET` | `/empresa` | `FiscalConfiguracaoConsultar` | `ObterEmpresa()` |
+| `PUT` | `/empresa` | `FiscalConfiguracaoGerenciar` | `SalvarEmpresa([FromBody] SalvarConfiguracaoFiscalEmpresaRequest request)` |
+| `POST` | `/empresa/inativar` | `FiscalConfiguracaoGerenciar` | `InativarEmpresa([FromBody] InativarConfiguracaoFiscalRequest request)` |
+| `POST` | `/empresa/reativar` | `FiscalConfiguracaoGerenciar` | `ReativarEmpresa([FromBody] ReativarConfiguracaoFiscalRequest request)` |
+| `GET` | `/filiais/{filialId:guid}` | `FiscalConfiguracaoConsultar` | `ObterFilial(Guid filialId)` |
+| `PUT` | `/filiais/{filialId:guid}` | `FiscalConfiguracaoGerenciar` | `SalvarFilial(Guid filialId, [FromBody] SalvarConfiguracaoFiscalFilialRequest request)` |
+| `GET` | `/certificados` | `FiscalConfiguracaoConsultar` | `ListarCertificados([FromQuery] bool somenteAtivos)` |
+| `POST` | `/certificados` | `FiscalConfiguracaoGerenciar` | `CadastrarCertificado([FromBody] CadastrarCertificadoDigitalRequest request)` |
+| `POST` | `/certificados/{id:guid}/inativar` | `FiscalConfiguracaoGerenciar` | `InativarCertificado(Guid id, [FromBody] InativarCertificadoDigitalRequest request)` |
+| `POST` | `/certificados/{id:guid}/verificar` | `FiscalConfiguracaoGerenciar` | `VerificarCertificado(Guid id)` |
+
 ### `api/fiscal/excecoes`
 
 <sub>Fiscal/ExcecoesFiscaisController</sub>
@@ -3719,6 +3739,8 @@ Constante C# → código enviado no token e exigido pelo endpoint.
 | `FiscalSeriesConsultar` | `FISCAL_SERIES_CONSULTAR` |
 | `FiscalSeriesGerenciar` | `FISCAL_SERIES_GERENCIAR` |
 | `FiscalModelosConsultar` | `FISCAL_MODELOS_CONSULTAR` |
+| `FiscalConfiguracaoConsultar` | `FISCAL_CONFIGURACAO_CONSULTAR` |
+| `FiscalConfiguracaoGerenciar` | `FISCAL_CONFIGURACAO_GERENCIAR` |
 | `FaturamentoConsultar` | `FATURAMENTO_CONSULTAR` |
 | `FaturamentoPreparar` | `FATURAMENTO_PREPARAR` |
 | `FaturamentoConfirmar` | `FATURAMENTO_CONFIRMAR` |

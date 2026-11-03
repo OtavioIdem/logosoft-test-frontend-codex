@@ -3001,3 +3001,16 @@ Decisão:
   pedido ainda nem tem faturamento e o lugar natural é o Preparar).
 
 `accessRisk: NENHUM`. Reversível: sim.
+
+Emenda à D112 (2026-11-03, nó `builder` da `b81`): o backend **mascara o código de todo 404**.
+`ApiErrorResponseFilter.cs:87-89` (backend v1.26.22) troca `NotFound` e `Forbidden` por `404
+Recurso.NaoEncontrado`, então `EmpresaNaoEncontrada`, `FilialNaoEncontrada`, `FilialInexistente` e
+`CertificadoNaoEncontrado`, do §5.1 do plano do backend, nunca chegam ao navegador. Decidido: 404 com
+`Recurso.NaoEncontrado` ou com o código específico vira "ainda não configurada" (empresa) e "herda da
+empresa" (filial). 404 sem corpo reconhecido (rota ausente, backend sem a F3) continua erro. A aba
+Filiais fica bloqueada quando o contexto diverge da empresa do usuário, que é o caso realista de
+`FilialInexistente`, porque o frontend não consegue mais distinguir os dois. **Pergunta ao backend
+(B-30):** a tabela do §5.1 promete códigos que o filtro apaga. Ou o plano corrige a tabela, ou o filtro
+preserva o código nos 404 de "ainda não configurado", que não denunciam recurso de outro tenant. Fora,
+mantido: a Central de cadastros não ganha o card nesta versão (pede o catálogo, a regra `/cadastros` e
+o teste de 38 itens). Código fora do §5.1 mapeado: `Fiscal.Configuracao.InativaReativeAntes` (409).

@@ -1,3 +1,104 @@
+# v1.11.0a8b81
+
+## Fiscal › Configuração de emissão: empresa, filiais e certificados digitais pela tela (backend v1.26.22, AJ-34 e AJ-35)
+
+**Origem:** frente do planejador do backend, `docs/frontend/PLANO-FRONTEND-v1.26.22-faturamento.md` §3 e
+§5.1. Decisões **D110** e **D112**, mais a emenda logo abaixo da D112. Plano:
+`docs/fatias/v1.11.0a8b81-configuracao-fiscal-certificados.md`.
+
+Até esta versão, a configuração fiscal de emissão e o certificado só existiam por insert no banco. Sem eles,
+o faturamento reprova no leg 2 e no leg 3.
+
+### O que muda para quem usa
+
+O grupo **Fiscal** ganha **Configuração de emissão** (`/fiscal/configuracao`), com três abas:
+
+- **Empresa:** ambiente (Homologação/Produção), emitir NF-e, NFC-e e NFS-e, certificado vinculado e
+  observação. Empresa sem configuração aparece como **"ainda não configurada"**, com o formulário vazio
+  para criar. Inativar e reativar pedem motivo.
+- **Filiais:** escolhida a filial, a tela mostra se ela **herda da empresa** ou tem configuração própria.
+  Com "herda" ligado, ambiente, certificado e séries padrão ficam desabilitados, e o texto diz que eles
+  são ignorados na emissão.
+- **Certificados:** lista com apelido, tipo, final do thumbprint, validade no fuso local (com destaque
+  quando faltam menos de 30 dias) e situação. Também permite cadastrar o metadado (apelido, tipo A1/A3,
+  thumbprint, validade, filial e observação), **Verificar** se o servidor encontra o certificado, e
+  inativar. Inativar o certificado vinculado a uma configuração ativa pede confirmação: a emissão vai
+  falhar.
+- **O thumbprint completo só é digitado no cadastro.** O formulário é zerado ao salvar e ao fechar, nada
+  o guarda em cache, e a lista mostra só os 6 últimos caracteres. Não há upload de `.pfx` nem de senha:
+  eles ficam no servidor.
+- Selo **"SEFAZ simulada"** no topo quando o health do backend diz `fiscal.mock = true`. Sem esse bloco o
+  selo não aparece, e a tela também não afirma SEFAZ real.
+- **A empresa é a do usuário logado** (claim `empresa_id` do token), não a selecionada no seletor. Quando
+  as duas divergem (master trocando de empresa), a tela avisa, e a aba Filiais fica bloqueada.
+
+### Seção operacional — permissões a conceder ANTES do deploy
+
+Duas permissões novas, que o backend criou na migration `V1_26_22_F3_PermissoesConfiguracaoFiscal`
+**sem conceder a nenhum perfil**:
+
+| Permissão | Dá acesso a | Conceder a |
+| --- | --- | --- |
+| `FISCAL_CONFIGURACAO_CONSULTAR` | ver a tela, a configuração e os certificados | grupos que operam o fiscal ou o faturamento |
+| `FISCAL_CONFIGURACAO_GERENCIAR` | salvar, inativar, reativar, cadastrar, **Verificar** e inativar certificado | só quem administra a emissão |
+
+Sem nenhuma das duas, o item não aparece e a URL é negada. Ninguém perdeu acesso (`accessRisk: NENHUM`).
+Master enxerga tudo, como em qualquer permissão.
+
+### Como foi feito
+
+- Permissões no union `PermissionCode`, no catálogo, na regra de rota e no menu. O pai Fiscal ganhou as
+  duas na união (D109).
+- Feature em `features/fiscal/`: `configuracaoFiscal.types.ts`, `configuracaoFiscalSchemas.ts` (`.strict()`
+  só nos requests), `configuracaoFiscalApi.ts` (escopo organizacional `global`, sem injetar empresa),
+  `useConfiguracaoFiscal.ts`, `useSefazSimulada.ts` (reutilizado na `b82`) e os componentes da página, das
+  três abas e dos diálogos, com `configuracaoFiscalLabels.ts` mapeando por `code` o catálogo de erros do
+  §5.1, mais `Fiscal.Configuracao.InativaReativeAntes`.
+- `lib/api/healthApi.ts`: `HealthResponse` ganhou `fiscal?: { mock; ambiente } | null`.
+- `validoAte` sai em UTC (`toISOString()`), e a tela mostra no fuso local.
+- Contrato documental: `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md` ganhou a seção `api/fiscal/configuracao`
+  (10 rotas, das assinaturas do C#) e as duas linhas no §12. O snapshot de permissões foi regenerado pelo
+  script (179 → 181).
+
+### Diferença encontrada entre o contrato e o backend (pergunta B-30)
+
+O plano do backend promete códigos específicos nos 404 (`EmpresaNaoEncontrada`, `FilialNaoEncontrada`,
+`FilialInexistente`, `CertificadoNaoEncontrado`), mas `ApiErrorResponseFilter.cs:87-89` troca todo 404 por
+`Recurso.NaoEncontrado`. A tela trata como "não configurada" e "herda" tanto o código genérico quanto o
+específico. Um 404 sem corpo reconhecido continua sendo erro. `FilialInexistente` não se distingue mais de
+"herda": a mitigação é bloquear a aba Filiais quando o contexto diverge da empresa do usuário.
+
+### Testes
+
+- **Recorte:** 18 arquivos, 289/289 passaram (`npx vitest run` nos 13 arquivos de permissão, menu e rota e
+  nos 5 da fatia). São 133 testes novos de unit e componente. As contagens de três testes existentes
+  mudaram por desenho: snapshot 179 → 181, itens de menu 49 → 50. Elas ganharam asserção nominal dos itens
+  novos.
+- **E2E mockado** (`tests/e2e/v1.11.0a8b81-configuracao-fiscal.spec.ts`), pela receita isolada: porta 3411
+  livre antes, um único servidor, rotas aquecidas. Duas rodadas, **2/2 passaram nas duas**.
+
+### Corrigido nesta versão: o snapshot de permissões dizia "Sem divergência" quando havia
+
+Achado do QA (QA-01, bloqueante). O gerador (`scripts/lib/backend-permissions.mjs`) limitava
+`naoConciliado.quantidade` com `Math.max(..., 0)`. Com as duas permissões novas, a união nomeada (179)
+passou o total declarado pela foto do contrato v1.23 (178), e o snapshot gravava "Sem divergência".
+Agora a quantidade tem sinal (**-1**), e o motivo diz que a união excede a foto em 1 porque o §12 recebeu
+permissões depois dela. Ele também lista as 7 permissões do §12 sem operação no v1.23, sem atribuir a sobra
+a nenhuma, porque a foto não diz qual é. `backendDeclaradas` continua 178: é a foto v1.23, que é gerada e
+não se edita. Asserção nominal em `tests/unit/backendPermissions.test.ts`, medida reprovando com o
+`Math.max` antigo (2 falhas e o gate vermelho).
+
+Também do QA (QA-02): o teste do certificado passou a conferir a mutação **em voo**. Com o POST pendente,
+nem `state.variables` nem cache algum contém o thumbprint. Medido reprovando com a linha
+`caixa.valores = null;` removida de `useConfiguracaoFiscal.ts:86`.
+
+### Requisito de backend
+
+Precisa do backend v1.26.22 com a F3 (commit `061b32e`, PR #83 do backend), **ainda não mergeado na
+`main`**, e da migration das permissões aplicada.
+
+---
+
 # v1.11.0a8b80
 
 ## O cadastro fiscal do produto passa a sugerir a classificação IBS/CBS pelo GTIN (backend v1.26.21/G1)
