@@ -28,7 +28,8 @@ describe('AC-8: menu Fiscal e Notas fiscais ganham FISCAL_REPROCESSAR', () => {
     });
 
     it('o item pai "Fiscal" ganha FISCAL_REPROCESSAR no fim da lista atual', () => {
-        const anyPermissionsLine = "anyPermissions: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_CANCELAR', 'FISCAL_INUTILIZAR', 'FISCAL_CARTA_CORRECAO', 'FISCAL_REGRAS_CONSULTAR', 'FISCAL_REPROCESSAR'],";
+        // b81 (D109): o pai ganhou FISCAL_CONFIGURACAO_CONSULTAR e FISCAL_CONFIGURACAO_GERENCIAR no fim, sem mexer no filho.
+        const anyPermissionsLine = "anyPermissions: ['FISCAL_CONSULTAR', 'FISCAL_EXPORTAR', 'FISCAL_GERENCIAR', 'FISCAL_EMITIR', 'FISCAL_CANCELAR', 'FISCAL_INUTILIZAR', 'FISCAL_CARTA_CORRECAO', 'FISCAL_REGRAS_CONSULTAR', 'FISCAL_REPROCESSAR', 'FISCAL_CONFIGURACAO_CONSULTAR', 'FISCAL_CONFIGURACAO_GERENCIAR'],";
         expect(source).toContain(anyPermissionsLine);
         expect(source.indexOf("label: 'Fiscal',")).toBeLessThan(source.indexOf(anyPermissionsLine));
         expect(source.indexOf(anyPermissionsLine) - source.indexOf("label: 'Fiscal',")).toBeLessThan(60);

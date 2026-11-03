@@ -1,3 +1,43 @@
+# v1.11.0a8b82.c1
+
+## CI do PR #46: dois testes unitários e um E2E presos ao estado anterior às b80-b82
+
+**Origem:** o run `41707679025` do PR #46 reprovou em `npm run test:unit` (2 de 2088). Os dois arquivos ficaram
+fora dos recortes das b80-b82. Não há mudança de produção: só testes.
+
+### O que mudou
+
+- `tests/unit/backendContractMap.test.ts`: o catálogo de rotas foi de 617 para 629, com +12 rotas documentais: 1 da
+  b80 (GTIN), 10 da b81 (`api/fiscal/configuracao`) e 1 da b82 (`/prontidao`). A contagem foi atualizada e cada uma
+  das 12 chaves ganhou asserção nominal. A conta fecha sem rota inesperada.
+- `tests/unit/fiscalTransmissaoStructure.test.ts`: a linha esperada do item pai Fiscal no `AppMenu.tsx` passou a
+  incluir `FISCAL_CONFIGURACAO_CONSULTAR` e `FISCAL_CONFIGURACAO_GERENCIAR`, acrescentadas na b81 (D109).
+- `tests/e2e/v1.11.0a8b71-faturamento.spec.ts`: o CI ainda não tinha chegado a este spec, porque parou antes, nos
+  testes unitários. Ele quebrava com a b82: o catch-all do fixture responde `[]` para `GET /api/faturamento/prontidao`,
+  o schema rejeita essa resposta, e o Confirmar fica bloqueado. O `routeDetalhe` ganhou o mock dessa rota com
+  `pronto: true`. A asserção "Confirmar desabilitado sem natureza" continua a mesma.
+
+### Testes
+
+- Os 35 arquivos unitários e de componente que fazem asserção sobre o `AppMenu` ou sobre o contract map passaram:
+  **276/276**. O `typecheck` também passou.
+- E2E pela receita isolada (porta 3411 livre, um único `next dev`, rotas aquecidas):
+  - **vermelho medido antes da correção:** 4 de 10 falharam em `v1.11.0a8b71-faturamento.spec.ts` e
+    `faturamento-legs.spec.ts`: o Confirmar não habilitava, e o POST não saía;
+  - **depois da correção, 10/10 nas duas rodadas;**
+  - `contrato-listagens-escopadas.spec.ts`: 32/32.
+- Não rodei localmente a suíte E2E completa nem a unitária completa: quem confere é o CI.
+
+### Ambiente
+
+O `next dev` devolvia 500 porque o `@hookform/resolvers` estava sem `dist/`. Foi o mesmo dano da limpeza de worktree
+da b81. O pacote foi reinstalado com `--no-save`, e todos os 477 pacotes de `node_modules` resolvem por
+`require.resolve`. Nada disso entra no commit.
+
+O carimbo `.c1` fica só no CHANGELOG, como nos precedentes b76.c2/c3 e b77.c1.
+
+---
+
 # v1.11.0a8b82
 
 ## Faturamento › Confirmar só libera quando o backend diz que está pronto (backend v1.26.22, AJ-36 e restos de AJ-37/AJ-38)

@@ -67,7 +67,27 @@ describe('backend contract map', () => {
 
     it('resolve constantes, templates e clients indiretos sem divergências do contrato canônico', () => {
         const result = readContractMapInputs(root);
-        expect(result.backendRoutes).toHaveLength(617);
+        // b80-b82: 617 -> 629, +12 rotas documentais (diff de docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md desde e19c869):
+        // b80 (D110) GET /gtin-classificacao/{gtin}; b81 (D109) 10 rotas de api/fiscal/configuracao; b82 (D110, D113) GET /prontidao.
+        expect(result.backendRoutes).toHaveLength(629);
+        const chavesB80B82 = [
+            'GET /api/fiscal/cadastros/gtin-classificacao/{param}',
+            'GET /api/fiscal/configuracao/empresa',
+            'PUT /api/fiscal/configuracao/empresa',
+            'POST /api/fiscal/configuracao/empresa/inativar',
+            'POST /api/fiscal/configuracao/empresa/reativar',
+            'GET /api/fiscal/configuracao/filiais/{param}',
+            'PUT /api/fiscal/configuracao/filiais/{param}',
+            'GET /api/fiscal/configuracao/certificados',
+            'POST /api/fiscal/configuracao/certificados',
+            'POST /api/fiscal/configuracao/certificados/{param}/inativar',
+            'POST /api/fiscal/configuracao/certificados/{param}/verificar',
+            'GET /api/faturamento/prontidao'
+        ];
+        const chavesDoCatalogo = new Set(result.backendRoutes.map((route: { key: string }) => route.key));
+        for (const chave of chavesB80B82) {
+            expect(chavesDoCatalogo.has(chave), `rota ausente do catálogo: ${chave}`).toBe(true);
+        }
         expect(new Set(result.frontendRoutes.map((route: { key: string }) => route.key)).size).toBeGreaterThanOrEqual(450);
         expect(result.comparison.incompatible).toEqual([]);
         expect(result.comparison.methodMismatch).toEqual([]);

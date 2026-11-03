@@ -126,6 +126,13 @@ const routeDetalhe = async (page: Page, cenario: Cenario) => {
         (url) => url.pathname === '/api/fiscal/naturezas-operacao',
         (route) => (route.request().method() === 'GET' ? route.fulfill(json(paged(cenario.naturezas))) : route.fallback())
     );
+    // D113 (b82): o Confirmar só habilita com a prontidão `pronto = true`. Sem esta rota, o catch-all do fixture devolve
+    // `[]`, que o schema da prontidão rejeita, e o botão fica bloqueado. A rota é de `/api/faturamento/prontidao`, que não
+    // casa com o prefixo `/api/faturamento/{id}` abaixo.
+    await page.route(
+        (url) => url.pathname === '/api/faturamento/prontidao',
+        (route) => (route.request().method() === 'GET' ? route.fulfill(json({ pronto: true, avaliacao: 'PrimeiraConfirmacao', pendencias: [] })) : route.fallback())
+    );
     await page.route(
         (url) => url.pathname.startsWith(`/api/faturamento/${FATURAMENTO_ID}`),
         (route) => {
