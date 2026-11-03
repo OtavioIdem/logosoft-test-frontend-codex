@@ -24,7 +24,7 @@ const read = (path: string) => readFileSync(join(root, path), 'utf8');
 type ItemMenu = { label: string; to: string; permissoes: string[]; masterOnly: boolean };
 type GrupoMenu = { label: string; masterOnly: boolean; anyPermissions: string[]; itens: ItemMenu[] };
 
-const listaDeStrings = (trecho: string | undefined) => (trecho ? [...trecho.matchAll(/'([A-Z][A-Z0-9_]*)'/g)].map((m) => m[1]) : []);
+const listaDeStrings = (trecho: string | undefined) => (trecho ? Array.from(trecho.matchAll(/'([A-Z][A-Z0-9_]*)'/g)).map((m) => m[1]) : []);
 
 export const lerGruposDoMenu = (fonte: string): GrupoMenu[] => {
     // O repositório grava AppMenu.tsx com CRLF; sem normalizar, todo recorte por '\n' falha.
@@ -47,7 +47,7 @@ export const lerGruposDoMenu = (fonte: string): GrupoMenu[] => {
                 label: cabecalho.match(/label: '([^']+)'/)?.[1] ?? '',
                 masterOnly: grupoMasterOnly,
                 anyPermissions: listaDeStrings(cabecalho.match(/anyPermissions: \[([^\]]*)\]/)?.[1]),
-                itens: [...corpo.matchAll(/\{ label: '([^']+)'[^\n]*?to: '([^']+)'([^\n]*)/g)].map(([, label, to, resto]) => ({
+                itens: Array.from(corpo.matchAll(/\{ label: '([^']+)'[^\n]*?to: '([^']+)'([^\n]*)/g)).map(([, label, to, resto]) => ({
                     label,
                     to,
                     permissoes: listaDeStrings(resto),
@@ -167,7 +167,7 @@ describe('v1.11.0a8b79 — grupo Desenvolvimento restrito ao usuário master (D1
     });
 
     it('anyPermissions do grupo é a união EXATA das permissões dos filhos (C2 do gate exige o pai admitir toda sessão do filho)', () => {
-        const uniaoDosFilhos = [...new Set((desenvolvimento?.itens ?? []).flatMap((item) => item.permissoes))];
+        const uniaoDosFilhos = Array.from(new Set((desenvolvimento?.itens ?? []).flatMap((item) => item.permissoes)));
 
         for (const permissao of uniaoDosFilhos) {
             expect(desenvolvimento?.anyPermissions, `filho declara ${permissao} e o grupo não`).toContain(permissao);

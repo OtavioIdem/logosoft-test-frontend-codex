@@ -23,6 +23,7 @@ export const cfopOptionsQueryKey = (termo?: string | null, filtros: CfopBuscaFil
 
 export const origensMercadoriaQueryKey = () => ['fiscal', 'cadastros', 'origens-mercadoria'] as const;
 export const vinculosNcmCestQueryKey = (ncmCodigo?: string | null) => ['fiscal', 'cadastros', 'ncm-cest', ncmCodigo ?? null] as const;
+export const gtinClassificacaoQueryKey = (gtin?: string | null) => ['fiscal-gtin-classificacao', gtin ?? null] as const;
 export const cestPorCodigoQueryKey = (codigo?: string | null) => ['fiscal', 'cadastros', 'cest', 'codigo', codigo ?? null] as const;
 
 const CADASTROS_FISCAIS_STALE_MS = 5 * 60 * 1000;
@@ -121,4 +122,24 @@ export const useCestPorNcm = (ncmCodigo?: string | null, habilitado = true) => {
     const parcial = vinculos.isSuccess && (vinculos.data?.totalItems ?? 0) > (vinculos.data?.items.length ?? 0);
 
     return { ...vinculos, options, codigos, permitido, exigeCest, semVinculos, parcial, descricoesCarregando: descricoes.some((consulta) => consulta.isFetching) };
+};
+
+/**
+ * Sugestão de classificação por GTIN (D111): leitura SOB DEMANDA. `enabled: false` de propósito -- nada roda ao abrir a
+ * aba; quem dispara é o `refetch` do botão. Sem `FISCAL_CADASTROS_CONSULTAR` (`permitido: false`) a tela nem oferece o botão.
+ * `retry: false`: 400 e 403 são respostas definitivas, não falha de rede.
+ */
+export const useGtinClassificacao = (gtin?: string | null) => {
+    const { hasPermission } = usePermissions();
+    const permitido = hasPermission(CADASTROS_FISCAIS_PERMISSAO);
+    const escopo = gtin ? gtin.trim() : null;
+
+    const query = useQuery({
+        queryKey: gtinClassificacaoQueryKey(escopo),
+        queryFn: () => cadastrosFiscaisApi.obterClassificacaoPorGtin(escopo as string),
+        enabled: false,
+        retry: false
+    });
+
+    return { ...query, permitido };
 };

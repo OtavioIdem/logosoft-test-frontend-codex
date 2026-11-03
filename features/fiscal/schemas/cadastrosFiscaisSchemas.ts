@@ -59,3 +59,25 @@ export const cfopResumoPagedSchema = pagedSchema(cfopResumoResponseSchema);
 export const cestResumoPagedSchema = pagedSchema(cestResumoResponseSchema);
 export const ncmCestVinculoPagedSchema = pagedSchema(ncmCestVinculoResponseSchema);
 export const origemMercadoriaPagedSchema = pagedSchema(origemMercadoriaResponseSchema);
+
+// Sugestão por GTIN (v1.11.0a8b80, D110). Só RESPOSTA e SEM `.strict()`: campo aditivo do backend não pode quebrar o painel.
+export const gtinClassificacaoItemSchema = z.object({
+    anexo: z.string(),
+    itemAnexo: z.string(),
+    descricaoItemAnexo: z.string().nullish(),
+    ncmCodigo: z.string(),
+    descricao: z.string().nullish(),
+    cstIbsCbs: z.string(),
+    classificacaoTributaria: z.string(),
+    percentualReducaoIbs: z.number(),
+    percentualReducaoCbs: z.number(),
+    vigenciaInicio: z.string(),
+    vigenciaFim: z.string().nullish(),
+    alternativas: z.string().nullish()
+});
+
+export const gtinClassificacaoResponseSchema = z.object({
+    gtin: z.string(),
+    encontrado: z.boolean(),
+    classificacao: gtinClassificacaoItemSchema.nullable()
+});

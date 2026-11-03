@@ -1,3 +1,61 @@
+# v1.11.0a8b80
+
+## O cadastro fiscal do produto passa a sugerir a classificação IBS/CBS pelo GTIN (backend v1.26.21/G1)
+
+**Origem:** frente aberta pelo planejador do backend em
+`docs/frontend/PLANO-FRONTEND-v1.26.21-g1-sugestao-por-gtin.md`. Decisões **D110** (as duas frentes viram
+`b80`, `b81` e `b82`) e **D111** (forma desta). Plano: `docs/fatias/v1.11.0a8b80-sugestao-classificacao-gtin.md`.
+
+### O que muda para quem usa
+
+Na edição de um produto, a aba **Dados fiscais** ganha o botão **Sugerir classificação** quando o produto tem
+código de barras de 8, 12, 13 ou 14 dígitos. O código consultado é o principal, ou o primeiro se nenhum for
+principal. O clique consulta a tabela de benefícios da LC 214/2025 e mostra anexo e item, NCM, cClassTrib,
+CST IBS/CBS, as reduções de IBS e de CBS e a vigência. Quando a origem tem mais de uma classificação para o
+mesmo GTIN, as outras aparecem como texto, em "Outras classificações possíveis".
+
+- **Nada é preenchido sozinho, e o salvar não depende da sugestão.** O painel diz que a fonte não é oficial
+  e que a decisão é do operador.
+- **Única cópia: "Usar este NCM"**, quando o NCM sugerido difere do atual. Ela passa pelo mesmo caminho do
+  select, então o CEST é reconferido. O **cClassTrib não é copiável**: o formulário não tem esse campo, que
+  mora nos dados fiscais complementares, e o frontend ainda não os consome (dívida da D111).
+- GTIN fora da tabela é informação, não erro: o produto segue com tributação normal.
+- Sem código de barras, ou com o código principal fora do formato, a tela diz o motivo e não oferece o
+  botão. Na criação de produto o painel não existe.
+
+### Permissão
+
+Nenhuma nova. O botão exige **`FISCAL_CADASTROS_CONSULTAR`**, além da `PRODUTOS_DADOS_FISCAIS_GERENCIAR` que
+a aba já exigia. Quem tem só a segunda vê a aba sem o botão, e 403 esconde a sugestão sem mostrar erro.
+**Para quem administra grupos:** conceda `FISCAL_CADASTROS_CONSULTAR` aos grupos que editam o fiscal do
+produto, se quiser que eles vejam a sugestão. A validação de NCM já exigia a mesma.
+
+### Como foi feito
+
+- `features/fiscal`: tipo, schema de response (sem `.strict()`), `obterClassificacaoPorGtin` no
+  `cadastrosFiscaisApi` e `useGtinClassificacao`, de disparo manual. O GTIN trafega sempre como texto.
+- `features/produtos/components/GtinClassificacaoSugestao.tsx`, `gtinClassificacaoUtils.ts` e
+  `gtinClassificacaoLabels.ts`, montados na aba Dados fiscais do `ProdutoFormDialog`.
+- Contrato documental: `docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md` ganhou a linha da rota, a partir da
+  assinatura do C# (`CadastrosFiscaisController.cs:279`).
+- Corrigido de passagem: os 3 `TS2802` de `tests/unit/desenvolvimentoMasterOnly.test.ts` (b79), que deixavam
+  o `typecheck` vermelho. A iteração direta virou `Array.from`, sem mudar nenhuma asserção.
+
+### Testes
+
+O recorte medido foi `npx vitest run tests/unit/gtin* tests/components/Gtin* tests/unit/desenvolvimentoMasterOnly.test.ts
+tests/unit/produto*.test.ts tests/components/Produto*.test.tsx`: 11 arquivos e 155 testes passaram, nenhum
+falhou. Os arquivos novos são `gtinClassificacaoUxRules`, `gtinClassificacaoPayload`,
+`GtinClassificacaoSugestao` e `ProdutoFormDialogGtinClassificacao`.
+
+### Requisito de backend
+
+Esta versão precisa de um backend com a G1, do commit `c7e18db`, branch
+`feat/v1.26.21-g1-sugestao-de-classificacao-por-gtin`, que **ainda não está na `main` do backend**. Contra
+um backend sem ela, o clique recebe 404 e mostra erro recuperável, e o resto do cadastro não é afetado.
+
+---
+
 # v1.11.0a8b79
 
 ## Sete telas saem dos módulos de origem e passam a viver num grupo "Desenvolvimento", só para master

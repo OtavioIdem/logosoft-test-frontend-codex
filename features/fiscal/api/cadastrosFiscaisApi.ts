@@ -5,8 +5,8 @@
 
 import { httpClient } from '@/lib/http/httpClient';
 import { cleanQueryParams } from '@/lib/http/requestUtils';
-import { cestResumoPagedSchema, cfopResumoPagedSchema, ncmCestVinculoPagedSchema, ncmResumoPagedSchema, origemMercadoriaPagedSchema } from '@/features/fiscal/schemas/cadastrosFiscaisSchemas';
-import { CestResumoResponse, CfopBuscaFiltros, CfopResumoResponse, NcmCestVinculoResponse, NcmResumoResponse, OrigemMercadoriaResponse } from '@/features/fiscal/types/cadastrosFiscais.types';
+import { cestResumoPagedSchema, cfopResumoPagedSchema, gtinClassificacaoResponseSchema, ncmCestVinculoPagedSchema, ncmResumoPagedSchema, origemMercadoriaPagedSchema } from '@/features/fiscal/schemas/cadastrosFiscaisSchemas';
+import { CestResumoResponse, CfopBuscaFiltros, CfopResumoResponse, GtinClassificacaoResponse, NcmCestVinculoResponse, NcmResumoResponse, OrigemMercadoriaResponse } from '@/features/fiscal/types/cadastrosFiscais.types';
 import { PagedResult } from '@/types/erp';
 
 export const CADASTROS_FISCAIS_TAMANHO_PAGINA = 20;
@@ -49,5 +49,11 @@ export const cadastrosFiscaisApi = {
             params: cleanQueryParams({ ativo: true, pagina: 1, tamanhoPagina: 50 })
         });
         return origemMercadoriaPagedSchema.parse(response.data) as PagedResult<OrigemMercadoriaResponse>;
+    },
+    // Sugestão por GTIN (D111): o GTIN segue como texto (zero à esquerda) e vai codificado no caminho; sem `data` (default do
+    // backend = hoje). 400 `FISCAL_CADASTROS_GTIN_FORMATO_INVALIDO` e 403 sobem crus e o chamador decide.
+    async obterClassificacaoPorGtin(gtin: string): Promise<GtinClassificacaoResponse> {
+        const response = await httpClient.get<unknown>(`/api/fiscal/cadastros/gtin-classificacao/${encodeURIComponent(gtin.trim())}`);
+        return gtinClassificacaoResponseSchema.parse(response.data) as GtinClassificacaoResponse;
     }
 };

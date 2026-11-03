@@ -19,6 +19,7 @@ import { SearchSelect } from '@/components/forms/SearchSelect';
 import { PermissionGuard } from '@/components/security/PermissionGuard';
 import { CestCodigoSelect, NcmCodigoSelect, OrigemMercadoriaSelect } from '@/features/fiscal/components/CodigoFiscalSelects';
 import { useCestPorNcm } from '@/features/fiscal/hooks/useCadastrosFiscais';
+import { GtinClassificacaoSugestao } from '@/features/produtos/components/GtinClassificacaoSugestao';
 import { atualizarProdutoSchema, criarProdutoSchema } from '@/features/produtos/schemas/produtosSchemas';
 import { CatalogoListQuery, ProdutoFormValues, ProdutoResponse } from '@/features/produtos/types/produtos.types';
 import { useCategoriasProduto, useGruposProduto, useMarcas, useUnidadesMedida } from '@/features/produtos/hooks/useProdutosResources';
@@ -431,6 +432,7 @@ export const ProdutoFormDialog = ({
                                 <FieldError message={errors.codigoFiscalExterno} />
                             </div>
                         </FormGrid>
+                        {record ? <GtinClassificacaoSugestao key={record.id} codigosBarras={record.codigosBarras} ncmAtual={textValue(values.ncmCodigo) || null} onUsarNcm={trocarNcm} /> : null}
                     </PermissionGuard>
                 </TabPanel>
                 <TabPanel header="Códigos e fornecedores">

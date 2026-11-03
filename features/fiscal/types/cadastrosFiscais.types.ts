@@ -67,3 +67,30 @@ export type OrigemMercadoriaResponse = {
     ativo: boolean;
     motivoInativacao?: string | null;
 };
+
+// Sugestão de classificação IBS/CBS por GTIN (v1.11.0a8b80, D110/D111). Origem: contrato G1 do backend
+// (`PLANO-FRONTEND-v1.26.21-g1-sugestao-por-gtin.md`), `GET /api/fiscal/cadastros/gtin-classificacao/{gtin}`.
+// Dado global (CadastroFiscalGlobal). O GTIN é SEMPRE texto: como número perderia o zero à esquerda.
+
+/** Classificação que a tabela de benefícios da LC 214/2025 associa ao GTIN (fonte não oficial). */
+export type GtinClassificacaoItem = {
+    anexo: string;
+    itemAnexo: string;
+    descricaoItemAnexo?: string | null;
+    ncmCodigo: string;
+    descricao?: string | null;
+    cstIbsCbs: string;
+    classificacaoTributaria: string;
+    percentualReducaoIbs: number;
+    percentualReducaoCbs: number;
+    vigenciaInicio: string;
+    vigenciaFim?: string | null;
+    /** Texto informativo `ANEXO:NCM:cClassTrib:reducao` separado por ` | `. Nunca parsear para regra. */
+    alternativas?: string | null;
+};
+
+export type GtinClassificacaoResponse = {
+    gtin: string;
+    encontrado: boolean;
+    classificacao: GtinClassificacaoItem | null;
+};

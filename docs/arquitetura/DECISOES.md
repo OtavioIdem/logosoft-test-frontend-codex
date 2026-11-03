@@ -2867,3 +2867,137 @@ teste reprova. Risco remanescente: `accessRisk CAPACIDADE` assumido de propósit
 conceder antes do deploy (nenhuma foi retirada no backend); e a prova ao vivo da negação por URL para a
 sessão com permissão do módulo e sem `isMaster` ficou **não medida** nesta fatia — a cobertura é
 unitária, e o E2E da receita isolada é pendência declarada.
+
+### D110 — as duas frentes do backend (G1 e v1.26.22) viram três versões: `b80`, `b81`, `b82`
+
+Data: 2026-11-03. Pedido do usuário: analisar as duas frentes abertas pelo planejador do backend
+(`PLANO-FRONTEND-v1.26.21-g1-sugestao-por-gtin.md` e `PLANO-FRONTEND-v1.26.22-faturamento.md`),
+planejar e implementar. Quem arbitrou: orquestrador.
+
+Decisão:
+
+- **`b80` — G1, sugestão por GTIN** (D111). Independente das outras, e a menor.
+- **`b81` — AJ-34 e AJ-35, configuração fiscal e certificados** (D112). Tela nova, duas permissões novas.
+- **`b82` — AJ-36, prontidão, mais o que sobra de AJ-37 e AJ-38** (D113).
+- **A ordem inverte a sugestão do backend** (que punha AJ-37/38 primeiro e AJ-34/35 por último) por um
+  motivo medido: AJ-37 e AJ-38 já estão quase todos entregues desde a `b71` (D92 a D97: painel dos legs,
+  sem thumbprint, sem CFOP, `correlationId` por abertura, `validarDadosFiscaisProduto = true`). Sobram a
+  UF pré-preenchida, o selo "SEFAZ simulada", o alerta do mock e o `RECUSA_LOCAL`. E o mapa
+  `recurso → rota` da prontidão precisa da rota `/fiscal/configuracao` para nascer completo: com a
+  `b81` antes, `ConfiguracaoFiscal` e `Certificados` já têm destino quando a `b82` nasce.
+- **Sem rodada de arquitetura (quarteto).** Nenhuma das três abre módulo, nem padrão de tela que
+  outras herdem: a configuração fiscal é tela de cadastro dentro do Fiscal, no padrão das Séries. O
+  planner também é pulado: o orquestrador conhece o gap e escreve os planos direto.
+- **Base do contrato:** os commits do backend `c7e18db` (G1, branch
+  `feat/v1.26.21-g1-sugestao-de-classificacao-por-gtin`) e `061b32e` (v1.26.22, branch
+  `feat/v1.26.22-f1-f2-mock-e-estoque-fiscal`, PR #83 do backend). **Nenhum dos dois está na `main`
+  do backend.** As três versões só funcionam ponta a ponta contra um backend com esses merges, e o
+  CHANGELOG diz isso.
+- **As rotas e as permissões novas entram na fonte documental** (`docs/BACKEND-ESTADO-ATUAL-E-CONTRATO.md`,
+  tabelas de rota e §12) pelo orquestrador, a partir das assinaturas do C#, antes do builder. O
+  snapshot de permissões é regenerado por `npm run generate:backend-permissions-snapshot`, nunca
+  escrito à mão.
+
+Gatilho de revisita: o backend mudar o contrato das duas branches antes do merge.
+`accessRisk`: NENHUM nas três (só capacidade nova). Reversível: sim.
+
+### D111 — `b80`: a sugestão por GTIN é painel de leitura; o único "copiar" é o NCM
+
+Data: 2026-11-03. Quem arbitrou: orquestrador.
+
+Decisão:
+
+- **Onde:** aba "Dados fiscais" do `ProdutoFormDialog`, só na edição (é quando o produto tem códigos de
+  barras). **GTIN consultado = o código de barras principal**, ou o primeiro se nenhum for principal,
+  mantido como texto (zero à esquerda preservado). Código fora de 8/12/13/14 dígitos não oferece o
+  botão: a tela explica, em vez de pagar o 400.
+- **Botão "Sugerir classificação"**, sob demanda (nunca ao abrir a aba). Sem
+  `FISCAL_CADASTROS_CONSULTAR` o botão não aparece, e 403 esconde o painel sem erro (contrato G1).
+- **O painel mostra** anexo e item do anexo, NCM, cClassTrib, CST IBS/CBS, as duas reduções e a
+  vigência. `alternativas` aparece **como texto cru** sob "Outras classificações possíveis", sem
+  parse. `encontrado: false` diz que o GTIN não está na tabela de benefícios da LC 214/2025 e que isso
+  não é erro: o produto é tributado normalmente.
+- **Única ação de cópia: "Usar este NCM"**, quando o NCM sugerido difere do atual, pelo mesmo
+  `trocarNcm` do select (para o CEST ser reconferido). **O cClassTrib não é copiável**: o formulário
+  não tem o campo, e ele mora em `dados-fiscais-complementares`, que o frontend nunca consumiu. Ligar
+  essa rota é escopo de outra fatia (dívida registrada).
+- **Nunca preenche sozinho e nunca bloqueia o salvar.** O aviso "fonte não oficial; a decisão é do
+  operador" fica sempre no painel.
+- Sem o parâmetro `data`: o default do backend (hoje) é o que o cadastro quer.
+
+Alternativa descartada: incluir o cClassTrib no formulário nesta versão. Abriria um client, um schema e
+um request novos para uma fatia cujo contrato o próprio backend chama de "ajuste opcional".
+Gatilho de revisita: o frontend passar a editar os dados fiscais complementares.
+`accessRisk: NENHUM`. Reversível: sim.
+
+### D112 — `b81`: Fiscal › Configuração de emissão, com três abas e o selo "SEFAZ simulada"
+
+Data: 2026-11-03. Quem arbitrou: orquestrador.
+
+Decisão:
+
+- **Rota `/fiscal/configuracao`**, item **"Configuração de emissão"** no grupo Fiscal. Feature nova em
+  `features/fiscal/` (`configuracaoFiscal*`), no padrão das Séries fiscais.
+- **Permissões novas no union, no catálogo e na regra de rota:** `FISCAL_CONFIGURACAO_CONSULTAR` e
+  `FISCAL_CONFIGURACAO_GERENCIAR`. A regra de rota e o item aceitam as duas, e **o pai Fiscal ganha as
+  duas** na união (C2 do `validate:guard-permission-map`; a armadilha do item filho que esconde o
+  grupo).
+- **Três abas.** *Empresa*: 404 `EmpresaNaoEncontrada` é estado "ainda não configurada", com o
+  formulário vazio para criar (o `PUT` é upsert); inativar e reativar pedem motivo. *Filiais*: lista
+  as filiais da empresa; 404 `FilialNaoEncontrada` é "herda da empresa (sem configuração própria)";
+  com `herdaConfiguracaoEmpresa = true` os campos próprios ficam desabilitados e o texto diz que são
+  ignorados na emissão. *Certificados*: lista, cadastrar, Verificar e inativar.
+- **Thumbprint:** digitado só no cadastro; o formulário é zerado ao fechar e ao salvar; a lista mostra
+  só `thumbprintMascarado`. Sem upload de `.pfx` nem senha.
+- **Validade:** o request manda `toISOString()` (UTC), e a tela mostra no fuso local. Menos de 30 dias
+  ganha destaque.
+- **Verificar exige `_GERENCIAR`** (o C# diz isso em `ConfiguracaoFiscalController.cs:105`; a tabela do
+  plano do backend também): o botão segue a permissão.
+- **Inativar certificado vinculado** a uma configuração ativa pede confirmação com aviso (o backend não
+  bloqueia: ARCH-002/SEC-003).
+- **Selo "SEFAZ simulada"** quando `GET /api/health` traz `fiscal.mock === true`. O bloco só existe com
+  opt-in fora de Production, então ausência de bloco **não** afirma SEFAZ real: o selo só aparece com a
+  prova. `HealthResponse` ganha `fiscal?: { mock: boolean; ambiente: string } | null`, e o hook fica
+  reutilizável, porque a `b82` usa o mesmo selo.
+- **Empresa vem do token** (`empresa_id` do JWT, `CurrentUserService.cs:20`), não do contexto
+  selecionado na tela. As chamadas não injetam `empresaId`. Quando o contexto selecionado diverge da
+  empresa do usuário (master trocando de empresa), a tela avisa que mostra a configuração da empresa do
+  usuário.
+- **Erros** pelo catálogo do §5.1 do plano do backend, num `configuracaoFiscalLabels.ts`. 409
+  `ConflitoDeGravacao` recarrega.
+
+Fora: upload de certificado, séries padrão por dropdown (texto livre, como o contrato), e o vínculo
+automático da série padrão com as Séries fiscais.
+`accessRisk: NENHUM` (capacidade nova; o CHANGELOG diz a quem conceder as duas permissões).
+Reversível: sim.
+
+### D113 — `b82`: a prontidão governa o Confirmar; o resto de AJ-37 e AJ-38
+
+Data: 2026-11-03. Quem arbitrou: orquestrador.
+
+Decisão:
+
+- **No diálogo de Confirmar:** a prontidão é consultada com os mesmos parâmetros do formulário
+  (`naturezaOperacaoId`, `serie`, `tipoDocumento`, `numero`, `condicaoPagamentoId`), com espera curta
+  entre mudanças. A query key carrega todos eles. **Confirmar só fica habilitado com `pronto = true` e
+  sem consulta em voo.** Botão "Reconferir" refaz a consulta (pendências encadeadas, §5.2).
+- **Falha da prontidão bloqueia**, com `ApiErrorPanel` e "Reconferir". Não há confirmação às cegas. O
+  custo assumido é que a `b82` exige backend com a F5; o CHANGELOG diz isso.
+- **Com `avaliacao = 'Retomada'`** o botão diz "Retomar", e o texto diz que só faturamento, estoque e
+  financeiro são reavaliados.
+- **Checklist agrupado por `etapa`, na ordem do tipo** (a ordem dos legs). Cada pendência vira link pelo
+  mapa `recurso → rota` (`prontidaoRecursos.ts`), um mapa fechado e tipado: um `recurso` desconhecido
+  mostra a pendência sem link, nunca quebra (campo aditivo é a norma). `recursoId` não monta URL: as
+  telas de destino não abrem registro por query.
+- **No detalhe do faturamento**, painel de leitura com a prontidão só com `pedidoVendaId`, enquanto o
+  faturamento não estiver `Faturado` nem `Cancelado`. As pendências de natureza e de regra que só
+  existem por falta de parâmetro são marcadas "informe no Confirmar".
+- **AJ-38, o que falta:** `ufAutorizadora` pré-preenchida com a UF do endereço fiscal do emitente (filial
+  do faturamento quando houver e tiver endereço, senão a empresa). Continua editável e validada (D94).
+- **AJ-37, o que falta:** o selo "SEFAZ simulada" (hook da `b81`) no resultado da confirmação, junto do
+  alerta "XML técnico do mock"; e o `RECUSA_LOCAL` no leg 4, que ganha texto próprio: "recusado no
+  servidor antes de sair: configuração do servidor, não rejeição da SEFAZ".
+- **Fora:** prontidão na tela do pedido de venda aprovado (o backend sugere; fica como dívida, porque o
+  pedido ainda nem tem faturamento e o lugar natural é o Preparar).
+
+`accessRisk: NENHUM`. Reversível: sim.

@@ -1387,6 +1387,7 @@ Gerado do código; a ordem é a dos arquivos.
 | `GET` | `/cest` | `FiscalCadastrosConsultar` | `ListarCest([FromQuery] string? termo, [FromQuery] string? codigo, [FromQuery] string? segmento, [FromQuery] bool? ativo, [FromQuery] int pagina = 1, [FromQuery] int tamanhoPagina = 20,)` |
 | `GET` | `/ncm-cest` | `FiscalCadastrosConsultar` | `ListarNcmCest([FromQuery] string? ncmCodigo, [FromQuery] string? cestCodigo, [FromQuery] bool? ativo, [FromQuery] int pagina = 1, [FromQuery] int tamanhoPagina = 20,)` |
 | `GET` | `/ncm/{codigo}/validacao` | `FiscalCadastrosConsultar` | `ValidarNcmCest(string codigo, [FromQuery] string? cestCodigo, [FromQuery] DateOnly? dataOperacao,)` |
+| `GET` | `/gtin-classificacao/{gtin}` | `FiscalCadastrosConsultar` | `ConsultarGtinClassificacao(string gtin, [FromQuery] DateOnly? data,)` — v1.26.21/G1, acrescentada na `b80` (D110) |
 | `GET` | `/codigos-servico` | `FiscalCadastrosConsultar` | `ListarCodigosServico([FromQuery] string? municipioCodigoIbge, [FromQuery] string? codigoLc116, [FromQuery] string? termo, [FromQuery] bool? ativo, [FromQuery] int pagina = 1, [FromQuery] int tamanhoPagina = 20,)` |
 | `POST` | `/importar/{tabela}` | `FiscalCadastrosGerenciar` | `ImportarTabelaOficial(TabelaOficialFiscal tabela)` |
 
