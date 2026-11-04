@@ -40,8 +40,7 @@ const AppTopbar = forwardRef<AppTopbarRef>((_, ref) => {
     return (
         <div className="layout-topbar">
             <Link href="/dashboard" className="layout-topbar-logo">
-                <img src={`/layout/images/logo-${layoutConfig.colorScheme !== 'light' ? 'white' : 'dark'}.svg`} width="47.22px" height="35px" alt="logosoft" />
-                <span>logosoft</span>
+                <img src={`/layout/images/idem-logo-${layoutConfig.colorScheme !== 'light' ? 'white' : 'dark'}.svg`} width="140" height="35" alt="Idem ERP" />
             </Link>
 
             <button ref={menubuttonRef} type="button" className="p-link layout-menu-button layout-topbar-button" onClick={onMenuToggle} aria-label="Abrir menu">

@@ -9,7 +9,7 @@ export default function SessaoExpiradaPage() {
             <div className="surface-card border-round p-5 text-center shadow-2 max-w-30rem">
                 <i className="pi pi-clock text-6xl text-primary mb-4" />
                 <h1 className="mt-0">Sessão expirada</h1>
-                <p className="line-height-3 text-color-secondary">Faça login novamente para continuar usando a logosoft com segurança.</p>
+                <p className="line-height-3 text-color-secondary">Faça login novamente para continuar usando a Idem com segurança.</p>
                 <Link href="/login">
                     <Button label="Entrar novamente" icon="pi pi-sign-in" />
                 </Link>
