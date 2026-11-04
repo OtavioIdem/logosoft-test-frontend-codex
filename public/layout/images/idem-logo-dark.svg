@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="180" viewBox="0 0 720 180" role="img" aria-labelledby="title desc">
+  <title id="title">Idem ERP</title>
+  <desc id="desc">Marca Idem ERP com dois toggles que representam a mudança de desligado para ligado.</desc>
+  <g transform="translate(24 30)">
+    <rect width="130" height="48" rx="24" fill="#CBD5E1"/>
+    <circle cx="24" cy="24" r="18" fill="#FFFFFF"/>
+    <rect y="72" width="130" height="48" rx="24" fill="#102A43"/>
+    <circle cx="106" cy="96" r="18" fill="#FFFFFF"/>
+  </g>
+  <text x="190" y="96" fill="#102A43" font-family="Arial, Helvetica, sans-serif" font-size="92" font-weight="700" letter-spacing="-5">Idem</text>
+  <text x="195" y="132" fill="#159E91" font-family="Arial, Helvetica, sans-serif" font-size="20" font-weight="700" letter-spacing="6">ERP PARA GESTÃO</text>
+</svg>

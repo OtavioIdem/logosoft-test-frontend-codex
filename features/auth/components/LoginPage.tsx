@@ -5,7 +5,7 @@ import { LoginForm } from '@/features/auth/components/LoginForm';
 
 export const LoginPage = () => (
     <main className="login-shell">
-        <section className="login-card" aria-label="Login logosoft">
+        <section className="login-card" aria-label="Login Idem">
             <div className="login-card__form">
                 <LoginForm />
             </div>

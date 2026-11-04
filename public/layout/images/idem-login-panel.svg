@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Painel de login Idem ERP</title>
+  <desc id="desc">Arte de fundo azul-petróleo para o painel de login, com uma grade sutil, toggles e a marca Idem ERP.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#102A43"/><stop offset="0.52" stop-color="#0A5C59"/><stop offset="1" stop-color="#159E91"/></linearGradient>
+    <pattern id="grid" width="56" height="56" patternUnits="userSpaceOnUse"><path d="M 56 0 L 0 0 0 56" fill="none" stroke="#FFFFFF" stroke-opacity="0.12" stroke-width="1"/></pattern>
+  </defs>
+  <rect width="1600" height="900" fill="url(#background)"/><rect width="1600" height="900" fill="url(#grid)" transform="skewY(-7) translate(0 -100)"/>
+  <g transform="translate(1160 106) rotate(14)"><rect width="246" height="88" rx="44" fill="#FFFFFF" fill-opacity="0.16" stroke="#FFFFFF" stroke-opacity="0.30" stroke-width="2"/><circle cx="44" cy="44" r="32" fill="#FFFFFF"/><rect y="136" width="246" height="88" rx="44" fill="#FFFFFF"/><circle cx="202" cy="180" r="32" fill="#102A43"/></g>
+  <g transform="translate(118 634)"><rect width="120" height="44" rx="22" fill="#FFFFFF" fill-opacity="0.26"/><circle cx="22" cy="22" r="16" fill="#FFFFFF"/><rect y="66" width="120" height="44" rx="22" fill="#FFFFFF"/><circle cx="98" cy="88" r="16" fill="#102A43"/></g>
+  <g fill="#FFFFFF"><text x="288" y="730" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" letter-spacing="7">IDEM ERP</text><text x="284" y="806" font-family="Arial, Helvetica, sans-serif" font-size="86" font-weight="700" letter-spacing="-5">Idem</text><text x="288" y="852" font-family="Arial, Helvetica, sans-serif" font-size="27" fill-opacity="0.82">Gestão que acompanha sua operação.</text></g>
+</svg>

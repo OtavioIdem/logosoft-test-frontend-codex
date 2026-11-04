@@ -16,8 +16,8 @@ export default function RootLayout({ children }: RootLayoutProps) {
     return (
         <html lang="pt-BR" suppressHydrationWarning>
             <head>
-                <title>logosoft</title>
-                <meta name="description" content="Frontend ERP logosoft com Next.js e PrimeReact" />
+                <title>Idem</title>
+                <meta name="description" content="ERP Idem com Next.js e PrimeReact" />
                 {/* eslint-disable-next-line @next/next/no-css-tags -- PrimeReact Sakai troca o tema dinamicamente pelo id theme-css. */}
                 <link id="theme-css" href="/themes/lara-light-indigo/theme.css" rel="stylesheet" />
             </head>

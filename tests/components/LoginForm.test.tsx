@@ -21,7 +21,7 @@ vi.mock('next/image', () => ({
 
 vi.mock('@/config/app', () => ({
     appConfig: {
-        name: 'logosoft',
+        name: 'Idem',
         version: '1.11.0a7',
         env: 'production',
         apiUrl: 'http://localhost:8080'
@@ -39,7 +39,7 @@ describe('LoginForm', () => {
     it('renderiza login corporativo sem expor identificador tecnico', () => {
         render(<LoginForm />);
 
-        expect(screen.getByRole('heading', { name: 'Bem-vindo ao logosoft' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'Bem-vindo à Idem' })).toBeInTheDocument();
         expect(screen.getByText('Acesse sua operação empresarial com segurança')).toBeInTheDocument();
         expect(screen.getByLabelText('E-mail')).toBeInTheDocument();
         expect(screen.getByLabelText('Senha')).toBeInTheDocument();
@@ -90,7 +90,7 @@ describe('LoginPage', () => {
     it('renderiza layout dividido com painel institucional configuravel', () => {
         render(<LoginPage />);
 
-        expect(screen.getByLabelText('Login logosoft')).toBeInTheDocument();
+        expect(screen.getByLabelText('Login Idem')).toBeInTheDocument();
         expect(screen.getByTestId('login-brand-panel')).toBeInTheDocument();
     });
 });

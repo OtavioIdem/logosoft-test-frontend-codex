@@ -10,8 +10,8 @@ interface AppLayoutProps {
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-    title: 'logosoft',
-    description: 'ERP logosoft com Next.js, TypeScript e PrimeReact.',
+    title: 'Idem',
+    description: 'ERP Idem com Next.js, TypeScript e PrimeReact.',
     robots: { index: false, follow: false },
     viewport: { initialScale: 1, width: 'device-width' },
     icons: {

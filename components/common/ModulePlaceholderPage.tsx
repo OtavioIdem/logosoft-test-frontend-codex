@@ -36,7 +36,7 @@ export const ModulePlaceholderPage = ({ title, description, permissions, actions
                 <div className="col-12 lg:col-8">
                     <Card title="Fundação da tela">
                         <p className="line-height-3 mt-0">
-                            Esta rota já está posicionada no layout da logosoft, com proteção de autenticação, menu por permissão e ponto de integração reservado para API REST do backend.
+                            Esta rota já está posicionada no layout da Idem, com proteção de autenticação, menu por permissão e ponto de integração reservado para API REST do backend.
                         </p>
                         <div className="flex gap-2 flex-wrap mb-3">
                             {permissions.map((permission) => (

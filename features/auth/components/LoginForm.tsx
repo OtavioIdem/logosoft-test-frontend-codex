@@ -36,11 +36,11 @@ export const LoginForm = () => {
         <div className="login-form">
             <div className="login-form__header">
                 <div className="login-form__logo-row">
-                    <Image src="/layout/images/logo-dark.svg" alt="logosoft" width={148} height={34} priority className="login-form__logo" />
+                    <Image src="/layout/images/idem-logo-dark.svg" alt="Idem ERP" width={148} height={37} priority className="login-form__logo" />
                     <LoginEnvironmentBadge />
                 </div>
 
-                <h1>Bem-vindo ao logosoft</h1>
+                <h1>Bem-vindo à Idem</h1>
                 <p>Acesse sua operação empresarial com segurança</p>
             </div>
 

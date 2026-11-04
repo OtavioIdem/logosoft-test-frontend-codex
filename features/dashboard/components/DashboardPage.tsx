@@ -146,7 +146,7 @@ export const DashboardPage = () => {
     return (
         <>
             <PageHeader
-                title="Dashboard logosoft"
+                title="Dashboard Idem"
                 description="Painel operacional com dados reais da API, permissões por módulo e atalhos para fluxos críticos."
                 actions={<Button label="Atualizar" icon="pi pi-refresh" outlined loading={dashboardQuery.isFetching} onClick={() => dashboardQuery.refetch()} />}
             />

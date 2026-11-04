@@ -13,7 +13,7 @@ test('navega pelos módulos críticos do ERP', async ({ page }) => {
     // o que descreve o que ele é, em vez de deixar o gate mais valioso da suíte intermitente.
     test.slow();
 
-    await expectPageHeading(page, '/dashboard', /Dashboard logosoft/i);
+    await expectPageHeading(page, '/dashboard', /Dashboard Idem/i);
     await expectPageHeading(page, '/administracao/empresas', 'Empresas');
     await expectPageHeading(page, '/pessoas', 'Pessoas');
     await expectPageHeading(page, '/clientes', 'Clientes');

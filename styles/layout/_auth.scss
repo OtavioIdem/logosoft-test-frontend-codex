@@ -119,99 +119,9 @@
 .login-brand-panel {
     position: relative;
     display: flex;
-    align-items: flex-end;
     min-height: 100vh;
     overflow: hidden;
-    padding: clamp(3rem, 5vw, 6rem);
-    color: #ffffff;
-    background:
-        linear-gradient(135deg, rgba(28, 64, 214, 0.94), rgba(101, 45, 190, 0.94) 50%, rgba(199, 32, 132, 0.94)),
-        #2733a6;
-}
-
-.login-brand-panel__grid {
-    position: absolute;
-    inset: 0;
-    opacity: 0.24;
-    background-image:
-        linear-gradient(rgba(255, 255, 255, 0.24) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.24) 1px, transparent 1px);
-    background-size: 48px 48px;
-    transform: skewY(-8deg) translateY(-32px);
-    transform-origin: top left;
-}
-
-.login-brand-panel__shape {
-    position: absolute;
-    border: 1px solid rgba(255, 255, 255, 0.28);
-    background: rgba(255, 255, 255, 0.14);
-    backdrop-filter: blur(8px);
-}
-
-.login-brand-panel__shape--primary {
-    top: 7rem;
-    right: 5rem;
-    width: 14rem;
-    height: 14rem;
-    transform: rotate(45deg);
-}
-
-.login-brand-panel__shape--accent {
-    top: 3rem;
-    left: 4rem;
-    width: 9rem;
-    height: 9rem;
-    background: rgba(27, 208, 210, 0.22);
-    transform: rotate(18deg) skew(-8deg);
-}
-
-.login-brand-panel__shape--line {
-    right: -4rem;
-    bottom: 7rem;
-    width: 20rem;
-    height: 5rem;
-    background: rgba(255, 209, 102, 0.18);
-    transform: rotate(-22deg);
-}
-
-.login-brand-panel__content {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    max-width: 22rem;
-    flex-direction: column;
-    gap: 0.75rem;
-
-    strong {
-        font-size: 2.75rem;
-        line-height: 1;
-        letter-spacing: 0;
-    }
-
-    span {
-        color: rgba(255, 255, 255, 0.82);
-        font-size: 1rem;
-        line-height: 1.5;
-    }
-}
-
-.login-brand-panel__eyebrow {
-    font-weight: 800;
-    text-transform: uppercase;
-}
-
-.login-brand-panel__campaign {
-    position: absolute;
-    top: 2rem;
-    right: 2rem;
-    z-index: 1;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid rgba(255, 255, 255, 0.32);
-    border-radius: 8px;
-    color: rgba(255, 255, 255, 0.86);
-    background: rgba(255, 255, 255, 0.14);
-    font-size: 0.8125rem;
-    font-weight: 700;
+    background: #0a5c59 url('/layout/images/idem-login-panel.svg') center / cover no-repeat;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -247,14 +157,6 @@
         padding: 1.5rem 2.25rem;
     }
 
-    .login-brand-panel__content strong {
-        font-size: 2rem;
-    }
-
-    .login-brand-panel__campaign {
-        top: 1.25rem;
-        right: 1.25rem;
-    }
 }
 
 @media (max-width: 767px) {
